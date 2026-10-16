@@ -90,6 +90,10 @@ public class AppSettings
     public double? MiniLeft { get; set; }
     public double? MiniTop { get; set; }
     public double? MiniWidth { get; set; }
+    /// <summary>Pause &amp; rewind live TV (buffers the channel you're watching to disk).</summary>
+    public bool Timeshift { get; set; } = true;
+    /// <summary>How far back you can rewind live TV.</summary>
+    public int TimeshiftMinutes { get; set; } = 60;
     /// <summary>Multi-view layout: 4, 6 or 8 screens.</summary>
     public int MultiViewLayout { get; set; } = 4;
 }

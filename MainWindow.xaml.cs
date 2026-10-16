@@ -874,7 +874,9 @@ public partial class MainWindow : Window
         ChUpButton.Visibility = ChDownButton.Visibility = live ? Visibility.Visible : Visibility.Collapsed;
         MultiViewButton.Visibility = live ? Visibility.Visible : Visibility.Collapsed;
         LastChButton.Visibility = live && _prevChannelId != null ? Visibility.Visible : Visibility.Collapsed;
-        BackSeekButton.Visibility = FwdSeekButton.Visibility = live ? Visibility.Collapsed : Visibility.Visible;
+        BackSeekButton.Visibility = FwdSeekButton.Visibility = !live || _svc?.CanTimeshift == true ? Visibility.Visible : Visibility.Collapsed;
+        BackSeekButton.ToolTip = "Back 10 seconds (←)";
+        FwdSeekButton.ToolTip = live ? "Forward 10 seconds (→)" : "Forward 30 seconds (→)";
         NextEpisodeButton.Visibility = !live && _vod?.Next != null ? Visibility.Visible : Visibility.Collapsed;
         QualityButton.Visibility = live && _variants.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
         if (live && _variants.Count > 1 && _variantIdx < _variants.Count)
@@ -1128,7 +1130,7 @@ public partial class MainWindow : Window
             LiveTimes.Text = "";
             return;
         }
-        var now = DateTime.Now;
+        var now = DateTime.Now - (_svc?.BehindLive ?? TimeSpan.Zero); // where you are, if paused/rewound
         ChromeSubtitle.Text = p.Title;
         var next = _guide.NextOn(ch);
         ChromeNext.Text = next != null ? $"Next   {next.Start:HH:mm}   {next.Title}" : "";
@@ -1180,6 +1182,7 @@ public partial class MainWindow : Window
         if (_nowLive)
         {
             UpdateLiveInfo(_nowChannel);
+            UpdateTimeshiftUi();
             return;
         }
         long len = mp.Length, time = mp.Time;
@@ -1777,9 +1780,14 @@ public partial class MainWindow : Window
                 break;
             case Key.Left:
                 if (!_nowLive) { _svc?.SeekBy(-10_000); return true; }
+                if (_svc?.CanTimeshift == true) { _svc.JumpLive(-10); ShowToast("Back 10 seconds"); return true; }
                 break;
             case Key.Right:
                 if (!_nowLive) { _svc?.SeekBy(30_000); return true; }
+                if (_svc?.CanTimeshift == true && _svc.BehindLive > TimeSpan.FromSeconds(4)) { _svc.JumpLive(10); return true; }
+                break;
+            case Key.End:
+                if (_nowLive && _svc?.CanTimeshift == true) { _svc.GoLive(); ShowToast("Back to live"); return true; }
                 break;
         }
         return false;
@@ -1927,8 +1935,8 @@ public partial class MainWindow : Window
 
     void Back_Click(object sender, RoutedEventArgs e) => ExitPlayer();
     void PlayPause_Click(object sender, RoutedEventArgs e) => _svc?.TogglePause();
-    void SeekBack_Click(object sender, RoutedEventArgs e) => _svc?.SeekBy(-10_000);
-    void SeekFwd_Click(object sender, RoutedEventArgs e) => _svc?.SeekBy(30_000);
+    void SeekBack_Click(object sender, RoutedEventArgs e) { if (_nowLive) _svc?.JumpLive(-10); else _svc?.SeekBy(-10_000); }
+    void SeekFwd_Click(object sender, RoutedEventArgs e) { if (_nowLive) _svc?.JumpLive(10); else _svc?.SeekBy(30_000); }
     void ChUp_Click(object sender, RoutedEventArgs e) => Zap(-1);
     void ChDown_Click(object sender, RoutedEventArgs e) => Zap(1);
     void LastCh_Click(object sender, RoutedEventArgs e) => GoToPreviousChannel();

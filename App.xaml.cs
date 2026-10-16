@@ -49,6 +49,7 @@ public partial class App : Application
 
         LibVLCSharp.Shared.Core.Initialize();
         SettingsStore.Load();
+        TimeshiftSession.CleanUp(); // live TV buffers from last time
         ThemeService.Apply(Resources, SettingsStore.Current); // before any window is created
         if (SettingsStore.Current.LowMemoryInterface)
             System.Windows.Media.RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;

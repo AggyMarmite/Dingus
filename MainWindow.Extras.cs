@@ -182,3 +182,37 @@ public partial class MainWindow
         return m <= 1 ? "1 min left" : m < 60 ? $"{m} min left" : $"{m / 60} h {m % 60:00} min left";
     }
 }
+
+// Live pause & rewind controls.
+public partial class MainWindow
+{
+    void UpdateTimeshiftUi()
+    {
+        bool ts = _svc?.CanTimeshift == true;
+        var behind = ts ? _svc.BehindLive : TimeSpan.Zero;
+        bool atLive = behind < TimeSpan.FromSeconds(4) && _svc?.Player.State != LibVLCSharp.Shared.VLCState.Paused;
+
+        var seekVis = ts ? Visibility.Visible : Visibility.Collapsed;
+        if (BackSeekButton.Visibility != seekVis)
+        {
+            BackSeekButton.Visibility = FwdSeekButton.Visibility = seekVis;
+            BackSeekButton.ToolTip = "Back 10 seconds (←)";
+            FwdSeekButton.ToolTip = "Forward 10 seconds (→)";
+        }
+        GoLiveButton.Visibility = ts && !atLive ? Visibility.Visible : Visibility.Collapsed;
+        if (atLive)
+        {
+            LiveBadgeText.Text = "LIVE";
+            LiveBadge.Background = (System.Windows.Media.Brush)FindResource("LiveBrush");
+            LiveBadge.ToolTip = ts ? $"Live  ·  you can rewind up to {Math.Floor(_svc.Buffered.TotalMinutes):0} min" : "Live";
+        }
+        else
+        {
+            LiveBadgeText.Text = "−" + (behind.TotalHours >= 1 ? behind.ToString(@"h\:mm\:ss") : behind.ToString(@"m\:ss"));
+            LiveBadge.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x55, 0xFF, 0xFF, 0xFF));
+            LiveBadge.ToolTip = "Behind live – press End or \"Go live\" to catch up";
+        }
+    }
+
+    void GoLive_Click(object sender, RoutedEventArgs e) => _svc?.GoLive();
+}

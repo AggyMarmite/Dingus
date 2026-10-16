@@ -57,6 +57,8 @@ public partial class SettingsView : UserControl, IPage
             StartGuideToggle.IsChecked = S.StartOnGuide;
             BatteryToggle.IsChecked = S.BatteryAware;
             LowMemToggle.IsChecked = S.LowMemoryInterface;
+            TimeshiftToggle.IsChecked = S.Timeshift;
+            CheckChip(TimeshiftChips, S.TimeshiftMinutes.ToString());
             S.StartWithWindows = ThemeService.IsStartWithWindows(); // the installer can switch it on too
             StartWinToggle.IsChecked = S.StartWithWindows;
             CheckChip(ThemeChips, S.Theme ?? "midnight");
@@ -76,6 +78,20 @@ public partial class SettingsView : UserControl, IPage
             VersionText.Text = $"Dingus {v?.ToString(3)}  ·  Video engine: VLC  ·  Using {Memory.WorkingSetMB():N0} MB of memory";
         }
         finally { _loading = false; }
+    }
+
+    void Timeshift_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        S.Timeshift = TimeshiftToggle.IsChecked == true;
+        SettingsStore.Save();
+    }
+
+    void TimeshiftLen_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_loading || sender is not RadioButton { Tag: string t } || !int.TryParse(t, out var m)) return;
+        S.TimeshiftMinutes = m;
+        SettingsStore.Save();
     }
 
     // ------------------------------------------------------------------ appearance

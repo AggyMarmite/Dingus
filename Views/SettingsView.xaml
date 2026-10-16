@@ -185,6 +185,22 @@
                                        Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
                     </CheckBox>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                    <CheckBox x:Name="TimeshiftToggle" Style="{StaticResource Toggle}" Checked="Timeshift_Changed" Unchecked="Timeshift_Changed">
+                        <StackPanel>
+                            <TextBlock Text="Pause &amp; rewind live TV" FontWeight="SemiBold"/>
+                            <TextBlock Text="Keeps the channel you're watching in a buffer on disk, so you can pause (Space), go back (←) and catch up (End). Uses one connection, like normal viewing. Not available for HLS streams."
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Rewind up to"/>
+                    <StackPanel x:Name="TimeshiftChips" Orientation="Horizontal">
+                        <RadioButton Style="{StaticResource Chip}" Content="30 minutes" Tag="30" Checked="TimeshiftLen_Checked"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="1 hour" Tag="60" Checked="TimeshiftLen_Checked"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="2 hours" Tag="120" Checked="TimeshiftLen_Checked"/>
+                    </StackPanel>
+                    <TextBlock Text="An HD channel uses about 2–4 GB an hour (4K: up to 10 GB). It's never more than a quarter of your free space, and it's deleted when you change channel."
+                               Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"/>
                     <TextBlock Style="{StaticResource FieldLabel}" Text="Live stream format"/>
                     <StackPanel x:Name="FormatChips" Orientation="Horizontal">
                         <RadioButton Style="{StaticResource Chip}" Content="MPEG-TS (recommended)" Tag="ts" Checked="Format_Checked"/>

@@ -57,6 +57,102 @@ public sealed class PlayerService
             EnableMouseInput = false,
             EnableHardwareDecoding = SettingsStore.Current.HardwareDecoding,
         };
+
+        // The play clock for live pause & rewind: runs only while the picture is actually moving.
+        Player.Playing += (_, _) => { lock (_tsLock) _tsClock.Start(); };
+        Player.Paused += (_, _) => { lock (_tsLock) _tsClock.Stop(); };
+        Player.Stopped += (_, _) => { lock (_tsLock) _tsClock.Stop(); };
+        Player.EndReached += (_, _) => { lock (_tsLock) _tsClock.Stop(); };
+    }
+
+    // ------------------------------------------------------------------ live pause & rewind
+
+    readonly object _tsLock = new();
+    readonly System.Diagnostics.Stopwatch _tsClock = new();
+    TimeshiftSession _ts;
+    DateTime _tsBaseUtc; // stream time at the point VLC was started from
+    int _gen;            // bumps on every Play/Stop, so a slow start-up for an old channel is dropped
+
+    /// <summary>The live channel is being buffered, so it can be paused and rewound.</summary>
+    public bool CanTimeshift { get { lock (_tsLock) return _ts != null && !_ts.Closed; } }
+
+    /// <summary>How far behind live the picture is (zero when not buffering).</summary>
+    public TimeSpan BehindLive
+    {
+        get
+        {
+            lock (_tsLock)
+            {
+                if (_ts == null) return TimeSpan.Zero;
+                var behind = _ts.LatestUtc - (_tsBaseUtc + _tsClock.Elapsed);
+                return behind < TimeSpan.Zero ? TimeSpan.Zero : behind;
+            }
+        }
+    }
+
+    /// <summary>How much of the channel is in the buffer.</summary>
+    public TimeSpan Buffered { get { lock (_tsLock) return _ts == null ? TimeSpan.Zero : _ts.LatestUtc - _ts.OldestUtc; } }
+
+    /// <summary>Moves back (negative) or forward through the live buffer.</summary>
+    public void JumpLive(double seconds)
+    {
+        TimeshiftSession ts;
+        DateTime target;
+        lock (_tsLock)
+        {
+            ts = _ts;
+            if (ts == null) return;
+            var pos = _tsBaseUtc + _tsClock.Elapsed;
+            target = pos.AddSeconds(seconds);
+            var oldest = ts.OldestUtc;
+            if (target < oldest) target = oldest;
+            if (target >= ts.LatestUtc.AddSeconds(-3)) { GoLive(); return; }
+        }
+        PlayFromBuffer(ts, target);
+    }
+
+    /// <summary>Catches up to the live picture.</summary>
+    public void GoLive()
+    {
+        TimeshiftSession ts;
+        lock (_tsLock) ts = _ts;
+        if (ts == null) return;
+        PlayFromBuffer(ts, ts.LatestUtc.AddSeconds(-1));
+    }
+
+    void PlayFromBuffer(TimeshiftSession ts, DateTime at)
+    {
+        int gen = Interlocked.Increment(ref _gen);
+        var (offset, utc) = ts.Locate(at);
+        var opts = LiveOptions(local: true);
+        Enqueue(() =>
+        {
+            if (gen != _gen) return;
+            lock (_tsLock)
+            {
+                if (_ts != ts) return;
+                _tsBaseUtc = utc;
+                _tsClock.Reset();
+            }
+            using var media = new Media(Vlc, new Uri(LocalStreamServer.UrlFor(ts, offset)), opts);
+            Player.Play(media);
+            Player.Volume = SettingsStore.Current.Volume;
+        });
+    }
+
+    string[] LiveOptions(bool local)
+    {
+        var s = SettingsStore.Current;
+        // From the local buffer there's nothing to wait for, so a short cache is enough (and uses less memory).
+        var cache = local ? 800 : Math.Clamp(s.NetworkCachingMs, 300, 10000);
+        return new[] { $":network-caching={cache}", $":live-caching={cache}", ":adaptive-maxbuffer=12000" };
+    }
+
+    void EndTimeshift()
+    {
+        TimeshiftSession old;
+        lock (_tsLock) { old = _ts; _ts = null; _tsClock.Reset(); }
+        old?.Dispose();
     }
 
     void Enqueue(Action a)
@@ -82,9 +178,24 @@ public sealed class PlayerService
         if (startMs > 0) opts.Add($":start-time={startMs / 1000.0:0.0}".Replace(',', '.'));
 
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) throw new ArgumentException("Invalid stream address.");
+        int gen = Interlocked.Increment(ref _gen);
+        bool buffer = live && s.Timeshift && TimeshiftSession.Eligible(url);
 
         Enqueue(() =>
         {
+            if (gen != _gen) return; // you've already moved on to something else
+            EndTimeshift();          // one connection to the provider at a time
+            if (buffer)
+            {
+                var ts = TimeshiftSession.TryStart(url, s.TimeshiftMinutes, TimeSpan.FromSeconds(10));
+                if (gen != _gen) { ts?.Dispose(); return; }
+                if (ts != null)
+                {
+                    lock (_tsLock) { _ts = ts; _tsBaseUtc = ts.OldestUtc; _tsClock.Reset(); }
+                    uri = new Uri(LocalStreamServer.UrlFor(ts, 0));
+                    opts = LiveOptions(local: true).ToList();
+                }
+            }
             GpuDecoding = null;
             _playingSince = DateTime.MaxValue;
             Player.EnableHardwareDecoding = s.HardwareDecoding;
@@ -94,7 +205,11 @@ public sealed class PlayerService
         });
     }
 
-    public void Stop() => Enqueue(() => Player.Stop());
+    public void Stop()
+    {
+        Interlocked.Increment(ref _gen);
+        Enqueue(() => { Player.Stop(); EndTimeshift(); });
+    }
     public void TogglePause() => Enqueue(() => Player.Pause());
 
     public void SeekBy(long ms) => Enqueue(() =>
