@@ -36,6 +36,7 @@ public partial class MainWindow
         ("S", "Sleep timer"),
         ("N", "Next episode"),
         ("Home", "Films: start from the beginning"),
+        ("Ctrl + F", "Search everything"),
         ("? / F1", "This list"),
     };
 
@@ -600,7 +601,6 @@ public partial class MainWindow
         var now = DateTime.Now;
         var p = epg.At(id, now);
         var n = p != null ? epg.StartingFrom(id, p.End) : epg.StartingFrom(id, now);
-        InfoNumber.Text = row.Number;
         InfoName.Text = row.DisplayName;
         InfoInitials.Text = row.Initials;
         ImageLoader.SetUrl(InfoLogo, row.Logo);

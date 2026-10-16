@@ -32,6 +32,8 @@
                     </Border>
                     <RadioButton x:Name="NavHome" DockPanel.Dock="Top" Style="{StaticResource NavButton}" Tag="&#xE80F;" Content="Home" Checked="Nav_Checked"/>
                     <RadioButton x:Name="NavGuide" DockPanel.Dock="Top" Style="{StaticResource NavButton}" Tag="&#xE8FD;" Content="Guide" Checked="Nav_Checked"/>
+                    <RadioButton x:Name="NavSearch" DockPanel.Dock="Top" Style="{StaticResource NavButton}" Tag="&#xE721;" Content="Search" Checked="Nav_Checked"
+                                 ToolTip="Search everything (Ctrl+F)"/>
                     <RadioButton x:Name="NavFilms" DockPanel.Dock="Top" Style="{StaticResource NavButton}" Tag="&#xE8B2;" Content="Films" Checked="Nav_Checked"/>
                     <RadioButton x:Name="NavShows" DockPanel.Dock="Top" Style="{StaticResource NavButton}" Tag="&#xE8F1;" Content="TV Shows" Checked="Nav_Checked"/>
                     <RadioButton x:Name="NavSettings" DockPanel.Dock="Bottom" Style="{StaticResource NavButton}" Tag="&#xE713;" Content="Settings"
@@ -434,11 +436,10 @@
                                 <DataTemplate>
                                     <Grid Height="50">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="40"/>
+                                            <ColumnDefinition Width="0"/>
                                             <ColumnDefinition Width="58"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{Binding Number}" Foreground="#8B94A7" FontSize="12" VerticalAlignment="Center"/>
                                         <Border Grid.Column="1" Width="50" Height="34" CornerRadius="5" Background="#1AFFFFFF">
                                             <Grid>
                                                 <TextBlock Text="{Binding Initials}" Foreground="#8B94A7" FontSize="11" FontWeight="SemiBold"
@@ -487,7 +488,6 @@
                                     <Image x:Name="InfoLogo" Margin="8" svc:ImageLoader.DecodeWidth="200"/>
                                 </Grid>
                             </Border>
-                            <TextBlock x:Name="InfoNumber" Foreground="#AAFFFFFF" FontSize="13" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Margin="22,0,16,0" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal">

@@ -1,4 +1,17 @@
-## What's new in Dingus 0.5.0
+## What's new in Dingus 0.6.0
+
+* **Search everything** – a new **Search** page (left rail, or **Ctrl+F** from anywhere) finds channels, programmes
+  in the TV guide, films and TV shows at once. Click a programme that's on to watch it, or right-click a future one
+  for a reminder.
+* **Rearrange categories** – right-click any category in the Guide, Films or TV Shows → Move up / down / to the top /
+  to the bottom. Kept when the playlist refreshes.
+* **Cleaner lists** – channel numbers and the channel counts next to categories are gone (typing a number still tunes).
+* **Smooth button feedback** – buttons, chips, menus, the left rail, list rows and switches now fade their highlights,
+  buttons give a tiny press, posters lift slightly on hover and switches slide.
+* **Screen stays on while you watch** – Windows won't dim the screen or go to sleep while something's playing.
+* **Fixed:** sub-menus in the player's picture & sound menu (aspect ratio, crop, audio sync, picture fixes) now open.
+
+## Dingus 0.5.0
 
 * **Fix the guide yourself** – right-click a channel with the wrong (or no) guide → **Match TV guide…**, search, and pick
   the right one; each guide channel shows what's on now so you can tell them apart. Or choose "No guide". Your choices
@@ -34,4 +47,4 @@
   the video engine have been left out. If your PC doesn't have Microsoft's .NET 8 Desktop Runtime yet, the installer
   fetches it once (most PCs already have it).
 
-**Install:** download `Dingus-Setup-0.5.0.exe` below – or, if you already have Dingus, it will offer this update itself.
+**Install:** download `Dingus-Setup-0.6.0.exe` below – or, if you already have Dingus, it will offer this update itself.

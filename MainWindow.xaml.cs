@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     readonly LibraryView _films;
     readonly LibraryView _shows;
     readonly SettingsView _settings;
+    readonly SearchView _search;
     IPage _page;
 
     // ----- what's playing
@@ -80,6 +81,7 @@ public partial class MainWindow : Window
         _films = new LibraryView(LibraryMode.Movies);
         _shows = new LibraryView(LibraryMode.Series);
         _settings = new SettingsView();
+        _search = new SearchView { Guide = _guide };
         _guide.PreviewRequested += row => PlayLive(row.Channel, false);
         _mediaKeys = new MediaKeys(this, HandleMediaKey);
         ReminderService.Watch = id =>
@@ -442,6 +444,7 @@ public partial class MainWindow : Window
         else if (sender == NavFilms) page = _films;
         else if (sender == NavShows) page = _shows;
         else if (sender == NavSettings) page = _settings;
+        else if (sender == NavSearch) page = _search;
         Navigate(page);
     }
 
@@ -484,6 +487,22 @@ public partial class MainWindow : Window
     }
 
     public void SetSearchHint(string hint) => SearchBox.Tag = hint;
+
+    /// <summary>Ctrl+F: search this page, or everything if this page has no search of its own.</summary>
+    void SearchShortcut()
+    {
+        if (_page?.SupportsSearch != true || _page == _home) NavSearch.IsChecked = true;
+        FocusSearch();
+    }
+
+    /// <summary>"Show all in the TV Guide" from Search: the guide's programme finder with the same words.</summary>
+    public void FindProgrammeInGuide(string query)
+    {
+        NavGuide.IsChecked = true;
+        _guide.SelfTestMode("find");
+        SearchBox.Text = query;
+        FocusSearch();
+    }
 
     public void OpenChannelEditor()
     {
@@ -842,6 +861,7 @@ public partial class MainWindow : Window
         _currentUrl = null;
         _mediaKeys?.Enable(false);
         _healthTimer?.Stop();
+        KeepAwake.Set(false);
         UpdateTaskbar();
         _guide?.SetPreviewPlaying(false);
         _home?.SetPreviewPlaying(false);
@@ -1169,7 +1189,7 @@ public partial class MainWindow : Window
         if (ch != null)
         {
             var row = _guide.RowFor(ch.Id);
-            ChromeTitle.Text = row != null ? $"{row.Number}   {ch.Name}" : ch.Name;
+            ChromeTitle.Text = row?.DisplayName ?? ch.Name;
             MiniTitle.Text = ch.Name;
             ImageLoader.SetUrl(ChromeLogo, row?.Logo);
             ChromeLogoBox.Visibility = string.IsNullOrEmpty(row?.Logo) ? Visibility.Collapsed : Visibility.Visible;
@@ -1360,6 +1380,7 @@ public partial class MainWindow : Window
         if (url != _currentUrl) return; // stream changed while we were reading
 
         UpdateTaskbar(h);
+        KeepAwake.Set(h.State is VLCState.Playing or VLCState.Buffering or VLCState.Opening);
         var now = DateTime.UtcNow;
         bool progressed = h.DisplayedPictures != _lastShown || Math.Abs(h.TimeMs - _lastTime) > 200;
         int lostDelta = Math.Max(0, h.LostPictures - _lastLost);
@@ -1763,6 +1784,7 @@ public partial class MainWindow : Window
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
 
         bool typing = Keyboard.FocusedElement is TextBox || Keyboard.FocusedElement is PasswordBox;
+        if (key == Key.F && Keyboard.Modifiers == ModifierKeys.Control) { SearchShortcut(); e.Handled = true; return; }
         if (IsSheetKey(key) && (!typing || key == Key.F1)) { ToggleShortcutSheet(); e.Handled = true; return; }
         if (SheetOpen && key == Key.Escape) { CloseShortcutSheet(); e.Handled = true; return; }
         if (key == Key.F11 && _nowLive) { EnterPlayer(true); e.Handled = true; return; }

@@ -156,7 +156,7 @@ public partial class GuideView : UserControl, IPage
             _favCat,
             _recentCat,
         };
-        foreach (var c in data.LiveCategories)
+        foreach (var c in CategoryOrder.Apply("live", data.LiveCategories))
             if (!hidden.Contains(c.Id) && counts.TryGetValue(c.Id, out var n))
                 cats.Add(new CategoryItem { Id = c.Id, Name = c.Name, Count = n });
 
@@ -407,7 +407,7 @@ public partial class GuideView : UserControl, IPage
         _heroProg = p;
 
         HeroPanel.Visibility = Visibility.Visible;
-        HeroChannel.Text = $"{r.Number}   {r.DisplayName}";
+        HeroChannel.Text = r.DisplayName;
         ImageLoader.SetUrl(HeroLogo, r.Logo);
 
         if (p == null)
@@ -456,6 +456,18 @@ public partial class GuideView : UserControl, IPage
     }
 
     // ------------------------------------------------------------------ interaction
+
+    /// <summary>Right-click a category to move it.</summary>
+    void CategoryList_RightUp(object sender, MouseButtonEventArgs e)
+    {
+        if (ItemsControl.ContainerFromElement(CategoryList, e.OriginalSource as DependencyObject) is not ListBoxItem { DataContext: CategoryItem c }) return;
+        if (c.Id is AllId or FavId or RecentId) return; // these always stay at the top
+        var shown = Categories.Where(x => x.Id is not (AllId or FavId or RecentId)).Select(x => x.Id).ToList();
+        var menu = CategoryOrder.Menu("live", shown, c.Id, Rebuild);
+        menu.PlacementTarget = CategoryList;
+        menu.IsOpen = true;
+        e.Handled = true;
+    }
 
     void CategoryList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {

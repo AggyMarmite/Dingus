@@ -43,6 +43,11 @@ public static class SelfTest
             await Page(main, main.NavFilms, "06-films");
             await Page(main, main.NavShows, "07-shows");
             await Page(main, main.NavSettings, "09-settings", fullScroll: true);
+            main.NavSearch.IsChecked = true;
+            main.SelfTestSearch("news");
+            await Idle(1500);
+            Snap(main.SelfTestRoot, "14-search");
+            main.SelfTestSearch("");
             await Page(main, main.NavGuide, null);
 
             main.SelfTestShortcuts(true);

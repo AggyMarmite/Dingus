@@ -31,6 +31,8 @@ public class PlaylistConfig
     public Dictionary<string, string> EpgOverrides { get; set; } = new();
     /// <summary>Channel editor: channels you've hidden (every version's id).</summary>
     public List<string> HiddenChannels { get; set; } = new();
+    /// <summary>Your own category order per kind ("live" / "vod" / "series" → category ids, top first).</summary>
+    public Dictionary<string, List<string>> CategoryOrder { get; set; } = new();
     /// <summary>Channel editor: your own order per category (category id → channel ids, top first).</summary>
     public Dictionary<string, List<string>> ChannelOrder { get; set; } = new();
     public DateTime LastRefreshUtc { get; set; }

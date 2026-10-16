@@ -218,7 +218,7 @@ public partial class HomeView : UserControl, IPage
         if (_bannerRow == null) { Banner.Visibility = Visibility.Collapsed; return; }
 
         Banner.Visibility = Visibility.Visible;
-        BannerChannel.Text = $"{_bannerRow.Number}   {_bannerRow.DisplayName}";
+        BannerChannel.Text = _bannerRow.DisplayName;
         ImageLoader.SetUrl(BannerLogo, _bannerRow.Logo);
         var id = Guide.EpgIdOf(_bannerRow);
         var p = epg.At(id, now);

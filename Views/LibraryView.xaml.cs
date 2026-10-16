@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using Dingus.Models;
 using Dingus.Services;
 
@@ -89,7 +90,7 @@ public partial class LibraryView : UserControl, IPage
         if (_mode == LibraryMode.Movies)
         {
             var hidden = ds.HiddenSet("vod");
-            cats = data.VodCategories.Where(c => !hidden.Contains(c.Id)).ToList();
+            cats = CategoryOrder.Apply("vod", data.VodCategories.Where(c => !hidden.Contains(c.Id)));
             _all = data.Movies.Where(m => !hidden.Contains(m.CategoryId)).Select(m => new PosterItem
             {
                 Id = m.Id, Title = m.Name, Image = m.Poster, CategoryId = m.CategoryId, Added = m.Added,
@@ -99,7 +100,7 @@ public partial class LibraryView : UserControl, IPage
         else
         {
             var hidden = ds.HiddenSet("series");
-            cats = data.SeriesCategories.Where(c => !hidden.Contains(c.Id)).ToList();
+            cats = CategoryOrder.Apply("series", data.SeriesCategories.Where(c => !hidden.Contains(c.Id)));
             _all = data.Series.Where(s => !hidden.Contains(s.CategoryId)).Select(s => new PosterItem
             {
                 Id = s.Id, Title = s.Name, Image = s.Cover, CategoryId = s.CategoryId, Added = s.Added,
@@ -234,6 +235,18 @@ public partial class LibraryView : UserControl, IPage
     }
 
     // ------------------------------------------------------------------ interaction
+
+    void CategoryList_RightUp(object sender, MouseButtonEventArgs e)
+    {
+        if (ItemsControl.ContainerFromElement(CategoryList, e.OriginalSource as DependencyObject) is not ListBoxItem { DataContext: CategoryItem c }) return;
+        if (c.Id is AllId or ContinueId) return;
+        var shown = (CategoryList.ItemsSource as IEnumerable<CategoryItem> ?? Array.Empty<CategoryItem>())
+            .Where(x => x.Id is not (AllId or ContinueId)).Select(x => x.Id).ToList();
+        var menu = CategoryOrder.Menu(_mode == LibraryMode.Movies ? "vod" : "series", shown, c.Id, Rebuild);
+        menu.PlacementTarget = CategoryList;
+        menu.IsOpen = true;
+        e.Handled = true;
+    }
 
     void CategoryList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {

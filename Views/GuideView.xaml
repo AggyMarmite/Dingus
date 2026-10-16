@@ -30,12 +30,11 @@
                            Foreground="{StaticResource MutedBrush}"/>
                 <ListBox x:Name="CategoryList" Style="{StaticResource CleanList}" ItemContainerStyle="{StaticResource CategoryItem}"
                          VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
-                         SelectionChanged="CategoryList_SelectionChanged" Padding="0,0,0,12">
+                         SelectionChanged="CategoryList_SelectionChanged" Padding="0,0,0,12"
+                         PreviewMouseRightButtonUp="CategoryList_RightUp">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <DockPanel>
-                                <TextBlock DockPanel.Dock="Right" Text="{Binding Count}" FontSize="11" Margin="8,0,0,0"
-                                           Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
                                 <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis"/>
                             </DockPanel>
                         </DataTemplate>
@@ -180,14 +179,13 @@
 
                             <Grid Margin="14,0,10,0">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="34"/>
+                                    <ColumnDefinition Width="18"/>
                                     <ColumnDefinition Width="60"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Number}" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
                                     <TextBlock x:Name="Star" Text="&#xE735;" FontFamily="{StaticResource IconFont}" FontSize="10"
-                                               Foreground="#FBBF24" Margin="0,4,0,0" Visibility="Collapsed"/>
+                                               Foreground="#FBBF24" Visibility="Collapsed" ToolTip="Favourite"/>
                                 </StackPanel>
                                 <Border Grid.Column="1" Width="56" Height="40" CornerRadius="6" Background="{StaticResource Surface2Brush}">
                                     <Grid>
@@ -316,7 +314,6 @@
                                     <StackPanel Grid.Column="3" Margin="12,0,10,0" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Row.DisplayName}" ToolTip="{Binding Row.Name}" FontSize="13" FontWeight="SemiBold"
                                                    TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="36" LineHeight="17" LineStackingStrategy="BlockLineHeight"/>
-                                        <TextBlock Text="{Binding Row.Number}" FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="4" Margin="0,0,20,0" VerticalAlignment="Center">
                                         <DockPanel>

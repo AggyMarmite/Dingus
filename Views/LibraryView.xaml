@@ -15,12 +15,11 @@
                            Foreground="{StaticResource MutedBrush}"/>
                 <ListBox x:Name="CategoryList" Style="{StaticResource CleanList}" ItemContainerStyle="{StaticResource CategoryItem}"
                          VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
-                         SelectionChanged="CategoryList_SelectionChanged" Padding="0,0,0,12">
+                         SelectionChanged="CategoryList_SelectionChanged" Padding="0,0,0,12"
+                         PreviewMouseRightButtonUp="CategoryList_RightUp">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <DockPanel>
-                                <TextBlock DockPanel.Dock="Right" Text="{Binding Count}" FontSize="11" Margin="8,0,0,0"
-                                           Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
                                 <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis"/>
                             </DockPanel>
                         </DataTemplate>

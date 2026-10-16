@@ -276,7 +276,8 @@ public partial class MultiViewWindow : Window
         t.AddPrompt.Visibility = has ? Visibility.Collapsed : Visibility.Visible;
         t.Info.Visibility = has ? Visibility.Visible : Visibility.Collapsed;
         if (!has) { ShowStatus(t, null); return; }
-        t.Number.Text = t.Row.Number;
+        t.Number.Text = "";
+        t.Number.Visibility = Visibility.Collapsed;
         t.Name.Text = t.Row.DisplayName;
         var p = DataService.Instance.Epg.At(_guide.EpgIdOf(t.Row), DateTime.Now);
         t.Now.Text = p == null ? "" : $"{p.Title}  ·  until {p.End:HH:mm}";

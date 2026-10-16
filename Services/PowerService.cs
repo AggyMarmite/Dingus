@@ -71,4 +71,24 @@ public static class PowerService
     public static string Describe() => OnBattery
         ? "On battery – using built-in graphics, 4K channels play in 1080p where available, background refreshes paused."
         : "Plugged in – using your dedicated graphics card.";
+
+}
+
+/// <summary>Keeps the screen on and the PC awake while video is playing (like any video player should).</summary>
+public static class KeepAwake
+{
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+    static extern uint SetThreadExecutionState(uint flags);
+    const uint ES_CONTINUOUS = 0x80000000, ES_SYSTEM_REQUIRED = 0x1, ES_DISPLAY_REQUIRED = 0x2;
+
+    static bool _on;
+
+    /// <summary>Call from the UI thread (the setting belongs to the thread that makes it).</summary>
+    public static void Set(bool on)
+    {
+        if (on == _on) return;
+        _on = on;
+        try { SetThreadExecutionState(on ? ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED : ES_CONTINUOUS); }
+        catch { }
+    }
 }

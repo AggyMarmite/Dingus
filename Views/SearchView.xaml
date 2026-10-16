@@ -1,0 +1,121 @@
+<UserControl x:Class="Dingus.Views.SearchView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svc="clr-namespace:Dingus.Services">
+    <UserControl.Resources>
+        <ItemsPanelTemplate x:Key="Row">
+            <WrapPanel/>
+        </ItemsPanelTemplate>
+        <DataTemplate x:Key="SearchPoster">
+            <Button Style="{StaticResource PosterCard}" Width="140" Margin="8,6,8,12" Click="Poster_Click" ToolTip="{Binding Title}">
+                <StackPanel>
+                    <Grid Width="140" Height="210">
+                        <Grid.Clip>
+                            <RectangleGeometry Rect="0,0,140,210" RadiusX="8" RadiusY="8"/>
+                        </Grid.Clip>
+                        <Border Background="{StaticResource Surface2Brush}">
+                            <TextBlock Text="{Binding Title}" TextWrapping="Wrap" TextAlignment="Center" Margin="10"
+                                       VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
+                        </Border>
+                        <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="220" svc:ImageLoader.Url="{Binding Image}"/>
+                    </Grid>
+                    <TextBlock Text="{Binding Title}" FontSize="13" Margin="2,8,2,0" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding Subtitle}" FontSize="11" Margin="2,2,2,0" Foreground="{StaticResource MutedBrush}" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+            </Button>
+        </DataTemplate>
+    </UserControl.Resources>
+    <Grid>
+        <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="28,10,28,40">
+
+                <!-- Channels -->
+                <StackPanel x:Name="ChannelSection" Visibility="Collapsed">
+                    <TextBlock x:Name="ChannelHeader" Style="{StaticResource SectionHeader}" Margin="8,14,0,8"/>
+                    <ItemsControl x:Name="ChannelResults" ItemsPanel="{StaticResource Row}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Style="{StaticResource PosterCard}" Width="236" Margin="8,6,8,10" Click="Channel_Click">
+                                    <Border CornerRadius="10" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}"
+                                            BorderThickness="1" Padding="12">
+                                        <DockPanel>
+                                            <Border DockPanel.Dock="Left" Width="64" Height="44" CornerRadius="6" Background="{StaticResource Surface2Brush}">
+                                                <Grid>
+                                                    <TextBlock Text="{Binding Row.Initials}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    <Image Margin="4" svc:ImageLoader.DecodeWidth="128" svc:ImageLoader.Url="{Binding Row.Logo}"/>
+                                                </Grid>
+                                            </Border>
+                                            <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Row.DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding Title}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </Border>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- Programmes -->
+                <StackPanel x:Name="ProgSection" Visibility="Collapsed">
+                    <TextBlock x:Name="ProgHeader" Style="{StaticResource SectionHeader}" Margin="8,22,0,8"/>
+                    <ItemsControl x:Name="ProgResults" MaxWidth="1100" HorizontalAlignment="Left">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Style="{StaticResource RowButton}" Click="Prog_Click" MouseRightButtonUp="Prog_RightClick" Margin="0,0,0,2">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="4"/>
+                                            <ColumnDefinition Width="110"/>
+                                            <ColumnDefinition Width="230"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Background="{Binding GenreBrush}" CornerRadius="2" Margin="0,4"/>
+                                        <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding TimeText}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding SubTime}" FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2" Text="{Binding Row.DisplayName}" VerticalAlignment="Center" Margin="0,0,12,0"
+                                                   Foreground="{StaticResource MutedBrush}" TextTrimming="CharacterEllipsis"/>
+                                        <DockPanel Grid.Column="3" VerticalAlignment="Center">
+                                            <TextBlock x:Name="RB" DockPanel.Dock="Left" Text="&#xEA8F;" FontFamily="{StaticResource IconFont}" FontSize="11"
+                                                       Margin="0,2,6,0" Foreground="{StaticResource AccentBrush}" Visibility="Collapsed"/>
+                                            <TextBlock Text="{Binding Title}" FontSize="14" TextTrimming="CharacterEllipsis"/>
+                                        </DockPanel>
+                                    </Grid>
+                                </Button>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding HasReminder}" Value="True">
+                                        <Setter TargetName="RB" Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button x:Name="MoreProgs" Style="{StaticResource GhostButton}" HorizontalAlignment="Left" Margin="0,6,0,0"
+                            Content="Show all in the TV Guide" Click="MoreProgs_Click"/>
+                </StackPanel>
+
+                <!-- Films & shows -->
+                <StackPanel x:Name="FilmSection" Visibility="Collapsed">
+                    <TextBlock x:Name="FilmHeader" Style="{StaticResource SectionHeader}" Margin="8,22,0,8"/>
+                    <ItemsControl x:Name="FilmResults" ItemsPanel="{StaticResource Row}" ItemTemplate="{StaticResource SearchPoster}"/>
+                </StackPanel>
+                <StackPanel x:Name="ShowSection" Visibility="Collapsed">
+                    <TextBlock x:Name="ShowHeader" Style="{StaticResource SectionHeader}" Margin="8,22,0,8"/>
+                    <ItemsControl x:Name="ShowResults" ItemsPanel="{StaticResource Row}" ItemTemplate="{StaticResource SearchPoster}"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel x:Name="EmptyState" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="480">
+            <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="34" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="EmptyTitle" Text="Search everything" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,14,0,0"/>
+            <TextBlock x:Name="EmptyBody" TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0"
+                       Text="Channels, programmes in the TV guide, films and TV shows – all at once. Type in the search box above (Ctrl+F from anywhere)."/>
+        </StackPanel>
+    </Grid>
+</UserControl>

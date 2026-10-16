@@ -76,6 +76,7 @@ git push origin v0.3.0
 | Home | Live TV: start of the programme (catch-up channels) |
 | Ctrl + ← → | Live TV: back / forward 5 minutes |
 | S | Sleep timer |
+| Ctrl + F | Search everything |
 | ? / F1 | Keyboard shortcut list |
 | Home | Start a film or episode from the beginning |
 | N | Next episode |
@@ -115,6 +116,10 @@ git push origin v0.3.0
 - **Reminders**: right-click a future programme (guide, lists, Home) or use "Remind me" – a pop-up with a Watch button
   appears a minute before it starts. Your reminders are on Home.
 - **Find a programme**: in the guide, "Find a programme" searches every channel's listings by title.
+- **Search everything** (Search in the left rail, or Ctrl+F): channels, programmes in the TV guide, films and TV shows
+  in one go. Right-click a future programme for a reminder.
+- **Rearrange categories**: right-click a category in the Guide, Films or TV Shows to move it up, down, to the top or
+  bottom (or back to the provider's order).
 - **Fix the guide yourself**: right-click a channel → "Match TV guide…" to pick the right guide channel (with what's on
   now, to tell them apart), or "No guide". Kept across refreshes.
 - **Info bar** (↑ / ↓ while watching): what's on other channels now and next, without leaving the one you're on.

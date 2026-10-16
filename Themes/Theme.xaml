@@ -44,10 +44,14 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Grid x:Name="Root">
+                    <Grid x:Name="Root" RenderTransformOrigin="0.5,0.5">
+                        <Grid.RenderTransform>
+                            <ScaleTransform x:Name="Squeeze"/>
+                        </Grid.RenderTransform>
                         <Border Background="{TemplateBinding Background}" CornerRadius="8"
                                 BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"/>
                         <Border x:Name="Hover" Background="{StaticResource HoverBrush}" CornerRadius="8" Opacity="0"/>
+                        <Border x:Name="Focus" Background="{StaticResource HoverBrush}" CornerRadius="8" Opacity="0"/>
                         <ContentPresenter Margin="{TemplateBinding Padding}"
                                           HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
@@ -55,13 +59,30 @@
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Hover" Property="Opacity" Value="1"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.120"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.200"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="Hover" Property="Background" Value="{StaticResource PressBrush}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard><Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="Squeeze" Storyboard.TargetProperty="ScaleX" To="0.96" Duration="0:0:0.070"/>
+                                    <DoubleAnimation Storyboard.TargetName="Squeeze" Storyboard.TargetProperty="ScaleY" To="0.96" Duration="0:0:0.070"/>
+                                </Storyboard></BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard><Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="Squeeze" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.180"><DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.4"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                    <DoubleAnimation Storyboard.TargetName="Squeeze" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.180"><DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.4"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                </Storyboard></BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Hover" Property="Opacity" Value="1"/>
+                            <Setter TargetName="Focus" Property="Opacity" Value="1"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Root" Property="Opacity" Value="0.45"/>
@@ -112,14 +133,31 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Grid>
+                    <Grid RenderTransformOrigin="0.5,0.5">
+                        <Grid.RenderTransform>
+                            <ScaleTransform x:Name="Lift"/>
+                        </Grid.RenderTransform>
+                        <Border x:Name="Glow" CornerRadius="12" Margin="-6" Background="{StaticResource HoverBrush}" Opacity="0"/>
                         <Border x:Name="Ring" CornerRadius="12" Margin="-6" Background="Transparent"
                                 BorderBrush="Transparent" BorderThickness="2"/>
                         <ContentPresenter/>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Ring" Property="Background" Value="{StaticResource HoverBrush}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard><Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="Glow" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.150"/>
+                                    <DoubleAnimation Storyboard.TargetName="Lift" Storyboard.TargetProperty="ScaleX" To="1.03" Duration="0:0:0.180"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                    <DoubleAnimation Storyboard.TargetName="Lift" Storyboard.TargetProperty="ScaleY" To="1.03" Duration="0:0:0.180"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                </Storyboard></BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard><Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="Glow" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.220"/>
+                                    <DoubleAnimation Storyboard.TargetName="Lift" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.220"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                    <DoubleAnimation Storyboard.TargetName="Lift" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.220"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                </Storyboard></BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="Ring" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
@@ -139,12 +177,20 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Bd" Background="Transparent" CornerRadius="10" Padding="10">
-                        <ContentPresenter HorizontalAlignment="Stretch"/>
-                    </Border>
+                    <Grid>
+                        <Border x:Name="HoverBg" Background="{StaticResource Surface2Brush}" CornerRadius="10" Opacity="0"/>
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="10" Padding="10">
+                            <ContentPresenter HorizontalAlignment="Stretch"/>
+                        </Border>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource Surface2Brush}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.120"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.200"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource Surface2Brush}"/>
@@ -165,7 +211,8 @@
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
                     <Grid Height="66" Background="Transparent">
-                        <Border x:Name="Pill" Width="56" Height="56" CornerRadius="12" Background="Transparent"/>
+                        <Border x:Name="HoverPill" Width="56" Height="56" CornerRadius="12" Background="{StaticResource HoverBrush}" Opacity="0"/>
+                        <Border x:Name="Pill" Width="56" Height="56" CornerRadius="12" Background="{StaticResource AccentSoftBrush}" Opacity="0"/>
                         <Border x:Name="Bar" Width="3" Height="24" CornerRadius="2" HorizontalAlignment="Left"
                                 Background="{StaticResource AccentBrush}" Visibility="Collapsed"/>
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
@@ -176,11 +223,21 @@
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Pill" Property="Background" Value="{StaticResource HoverBrush}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverPill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.120"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverPill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.200"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.ExitActions>
                             <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Pill" Property="Background" Value="{StaticResource AccentSoftBrush}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Pill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.160"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Pill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.160"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.ExitActions>
                             <Setter TargetName="Bar" Property="Visibility" Value="Visible"/>
                             <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
                         </Trigger>
@@ -200,15 +257,30 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
-                    <Border x:Name="Bd" CornerRadius="15" Padding="13,6" Background="{StaticResource Surface2Brush}">
-                        <ContentPresenter VerticalAlignment="Center"/>
-                    </Border>
+                    <Grid>
+                        <Border CornerRadius="15" Background="{StaticResource Surface2Brush}"/>
+                        <Border x:Name="HoverBg" CornerRadius="15" Background="{StaticResource Surface3Brush}" Opacity="0"/>
+                        <Border x:Name="OnBg" CornerRadius="15" Background="{StaticResource AccentBrush}" Opacity="0"/>
+                        <Border Padding="13,6">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource Surface3Brush}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.120"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.200"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentBrush}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="OnBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.160"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="OnBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.160"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.ExitActions>
                             <Setter Property="Foreground" Value="White"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -228,14 +300,29 @@
                     <DockPanel Background="Transparent">
                         <Grid DockPanel.Dock="Right" Width="42" Height="22" Margin="16,0,0,0">
                             <Border x:Name="Track" CornerRadius="11" Background="{StaticResource Surface3Brush}"/>
-                            <Ellipse x:Name="Knob" Width="16" Height="16" Margin="3,0" Fill="#C8CFDB" HorizontalAlignment="Left"/>
+                            <Border x:Name="TrackOn" CornerRadius="11" Background="{StaticResource AccentBrush}" Opacity="0"/>
+                            <Ellipse x:Name="Knob" Width="16" Height="16" Margin="3,0" Fill="#C8CFDB" HorizontalAlignment="Left">
+                                <Ellipse.RenderTransform>
+                                    <TranslateTransform x:Name="KnobMove"/>
+                                </Ellipse.RenderTransform>
+                            </Ellipse>
                         </Grid>
                         <ContentPresenter VerticalAlignment="Center"/>
                     </DockPanel>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Track" Property="Background" Value="{StaticResource AccentBrush}"/>
-                            <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard><Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="TrackOn" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.150"/>
+                                    <DoubleAnimation Storyboard.TargetName="KnobMove" Storyboard.TargetProperty="X" To="20" Duration="0:0:0.180"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                </Storyboard></BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard><Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="TrackOn" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.150"/>
+                                    <DoubleAnimation Storyboard.TargetName="KnobMove" Storyboard.TargetProperty="X" To="0" Duration="0:0:0.180"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                </Storyboard></BeginStoryboard>
+                            </Trigger.ExitActions>
                             <Setter TargetName="Knob" Property="Fill" Value="White"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -435,16 +522,30 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListBoxItem">
-                    <Border x:Name="Bd" CornerRadius="8" Padding="12,9" Margin="8,1" Background="Transparent">
-                        <ContentPresenter HorizontalAlignment="Stretch"/>
-                    </Border>
+                    <Grid Margin="8,1">
+                        <Border x:Name="HoverBg" CornerRadius="8" Background="{StaticResource HoverBrush}" Opacity="0"/>
+                        <Border x:Name="SelBg" CornerRadius="8" Background="{StaticResource AccentSoftBrush}" Opacity="0"/>
+                        <Border x:Name="Bd" CornerRadius="8" Padding="12,9" Background="Transparent">
+                            <ContentPresenter HorizontalAlignment="Stretch"/>
+                        </Border>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource HoverBrush}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.120"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.200"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.ExitActions>
                             <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentSoftBrush}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="SelBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.150"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="SelBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.150"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.ExitActions>
                             <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -461,16 +562,28 @@
                 <ControlTemplate TargetType="ListBoxItem">
                     <Grid>
                         <Border x:Name="Bd" Background="Transparent" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1"/>
+                        <Border x:Name="HoverBg" Background="#0AFFFFFF" Opacity="0" Margin="0,0,0,1"/>
+                        <Border x:Name="SelBg" Background="#14FFFFFF" Opacity="0" Margin="0,0,0,1"/>
                         <Border x:Name="Bar" Width="3" HorizontalAlignment="Left" Background="{StaticResource AccentBrush}"
                                 Visibility="Collapsed" Margin="0,8"/>
                         <ContentPresenter/>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#0AFFFFFF"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.120"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.200"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#14FFFFFF"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="SelBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.120"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="SelBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.150"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.ExitActions>
                             <Setter TargetName="Bar" Property="Visibility" Value="Visible"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -499,15 +612,30 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListBoxItem">
-                    <Border x:Name="Bd" CornerRadius="16" Padding="16,7" Background="{StaticResource Surface2Brush}">
-                        <ContentPresenter/>
-                    </Border>
+                    <Grid>
+                        <Border CornerRadius="16" Background="{StaticResource Surface2Brush}"/>
+                        <Border x:Name="HoverBg" CornerRadius="16" Background="{StaticResource Surface3Brush}" Opacity="0"/>
+                        <Border x:Name="OnBg" CornerRadius="16" Background="{StaticResource AccentBrush}" Opacity="0"/>
+                        <Border Padding="16,7">
+                            <ContentPresenter/>
+                        </Border>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource Surface3Brush}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.120"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.200"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentBrush}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="OnBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.160"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="OnBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.160"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.ExitActions>
                             <Setter Property="Foreground" Value="White"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -608,17 +736,40 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="MenuItem">
-                    <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="12,8" MinWidth="200">
-                        <DockPanel>
-                            <TextBlock x:Name="Check" DockPanel.Dock="Right" Text="&#xE73E;" FontFamily="{StaticResource IconFont}"
-                                       FontSize="12" Foreground="{StaticResource AccentBrush}" Margin="16,0,0,0"
-                                       VerticalAlignment="Center" Visibility="Collapsed"/>
-                            <ContentPresenter ContentSource="Header" RecognizesAccessKey="True" VerticalAlignment="Center"/>
-                        </DockPanel>
-                    </Border>
+                    <Grid>
+                        <Border x:Name="Hi" Background="{StaticResource Surface3Brush}" CornerRadius="6" Opacity="0"/>
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="12,8" MinWidth="200">
+                            <DockPanel>
+                                <TextBlock x:Name="Arrow" DockPanel.Dock="Right" Text="&#xE76C;" FontFamily="{StaticResource IconFont}"
+                                           FontSize="10" Foreground="{StaticResource MutedBrush}" Margin="16,0,0,0"
+                                           VerticalAlignment="Center" Visibility="Collapsed"/>
+                                <TextBlock x:Name="Check" DockPanel.Dock="Right" Text="&#xE73E;" FontFamily="{StaticResource IconFont}"
+                                           FontSize="12" Foreground="{StaticResource AccentBrush}" Margin="16,0,0,0"
+                                           VerticalAlignment="Center" Visibility="Collapsed"/>
+                                <ContentPresenter ContentSource="Header" RecognizesAccessKey="True" VerticalAlignment="Center"/>
+                            </DockPanel>
+                        </Border>
+                        <!-- Sub-menu (e.g. Aspect ratio ▸) -->
+                        <Popup x:Name="PART_Popup" Placement="Right" HorizontalOffset="6" VerticalOffset="-6" AllowsTransparency="True"
+                               Focusable="False" PopupAnimation="Fade"
+                               IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}">
+                            <Border Background="{StaticResource Surface2Brush}" BorderBrush="{StaticResource LineBrush}"
+                                    BorderThickness="1" CornerRadius="10" Padding="5">
+                                <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                            </Border>
+                        </Popup>
+                    </Grid>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="Role" Value="SubmenuHeader">
+                            <Setter TargetName="Arrow" Property="Visibility" Value="Visible"/>
+                        </Trigger>
                         <Trigger Property="IsHighlighted" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource Surface3Brush}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Hi" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.090"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Hi" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.150"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Check" Property="Visibility" Value="Visible"/>

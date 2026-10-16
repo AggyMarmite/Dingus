@@ -69,15 +69,13 @@
                             <Grid Height="56" Margin="20,0,16,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="36"/>
-                                    <ColumnDefinition Width="44"/>
+                                    <ColumnDefinition Width="6"/>
                                     <ColumnDefinition Width="58"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <CheckBox Style="{StaticResource Tick}" IsChecked="{Binding Visible}" VerticalAlignment="Center" Margin="0"
                                           ToolTip="Show this channel in the guide"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Row.Number}" Foreground="{StaticResource MutedBrush}" FontSize="12"
-                                           VerticalAlignment="Center"/>
                                 <Border Grid.Column="2" Width="50" Height="36" CornerRadius="6" Background="{StaticResource Surface2Brush}">
                                     <Grid>
                                         <TextBlock Text="{Binding Row.Initials}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}"
