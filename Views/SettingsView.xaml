@@ -96,6 +96,15 @@
                     </StackPanel>
                     <TextBlock x:Name="EpgMatchText" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,14,0,0"/>
                     <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                    <DockPanel Margin="0,0,0,16">
+                        <Button DockPanel.Dock="Right" Style="{StaticResource BaseButton}" Content="Edit channels…" Click="EditChannels_Click"
+                                VerticalAlignment="Center"/>
+                        <StackPanel>
+                            <TextBlock Text="Channel editor" FontWeight="SemiBold"/>
+                            <TextBlock Text="Rename, hide and reorder channels (also on the guide's right-click menu)."
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </DockPanel>
                     <CheckBox x:Name="StartGuideToggle" Style="{StaticResource Toggle}" Checked="StartGuide_Changed" Unchecked="StartGuide_Changed"
                               Margin="0,0,0,16">
                         <StackPanel>

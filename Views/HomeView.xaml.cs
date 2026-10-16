@@ -36,6 +36,7 @@ public partial class HomeView : UserControl, IPage
         DataService.Instance.CatalogChanged += () => { if (_shown) Dispatcher.InvokeAsync(Build, DispatcherPriority.Background); };
         DataService.Instance.EpgChanged += () => { if (_shown) Build(); };
         HistoryStore.Changed += () => { if (_shown) Build(); };
+        ReminderService.Changed += () => { if (_shown) Build(); };
     }
 
     public void ApplySearch(string query) { }
@@ -53,7 +54,7 @@ public partial class HomeView : UserControl, IPage
     {
         _shown = false;
         _refresh.Stop();
-        foreach (var list in new ItemsControl[] { NextList, SportList, PicksList, ResumeList, RecentList, FavList, NewFilmsList, NewShowsList })
+        foreach (var list in new ItemsControl[] { NextList, SportList, RemindList, PicksList, ResumeList, RecentList, FavList, NewFilmsList, NewShowsList })
             list.ItemsSource = null;
     }
 
@@ -132,6 +133,24 @@ public partial class HomeView : UserControl, IPage
         }
         SportList.ItemsSource = sport.OrderByDescending(x => x.Fav).ThenBy(x => x.End).Take(30).Select(x => x.Card).ToList();
         SportSection.Visibility = sport.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+
+        // Your reminders.
+        var reminders = new List<HomeChannelCard>();
+        foreach (var rem in ReminderService.Upcoming)
+        {
+            var r = Guide.RowFor(rem.ChannelId);
+            if (r == null) continue;
+            bool on = rem.Start <= now;
+            reminders.Add(new HomeChannelCard
+            {
+                Row = r, ListId = GuideView.AllId, Title = rem.Title,
+                Upcoming = epg.At(Guide.EpgIdOf(r), rem.Start.AddSeconds(1)) ?? new Programme { Title = rem.Title, Start = rem.Start, End = rem.End },
+                When = on ? "On now" : $"{(rem.Start.Date == DateTime.Today ? "Today" : rem.Start.ToString("ddd d MMM"))}  {rem.Start:HH:mm}",
+                Soon = !on && rem.Start - now < TimeSpan.FromMinutes(30),
+            });
+        }
+        RemindList.ItemsSource = reminders;
+        RemindSection.Visibility = reminders.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
 
         // Tonight's picks: films and sport starting this evening (6pm–midnight, or from now if later).
         var start = DateTime.Today.AddHours(18);
@@ -282,6 +301,26 @@ public partial class HomeView : UserControl, IPage
         // Channel up/down in the player then moves through this row's list (favourites, recent, all).
         Guide.ShowAndSelect(c.ListId, c.Row);
         MainWindow.Instance?.PlayLive(c.Row.Channel, true);
+    }
+
+    /// <summary>Right-click a programme that hasn't started yet: set or cancel a reminder.</summary>
+    void Card_RightClick(object sender, MouseButtonEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not HomeChannelCard c || c.Upcoming == null || c.Upcoming.Start <= DateTime.Now) return;
+        e.Handled = true;
+        bool set = ReminderService.Has(c.Row.Channel.Id, c.Upcoming.Start);
+        var menu = new ContextMenu { PlacementTarget = sender as UIElement };
+        var item = new MenuItem { Header = set ? "Cancel reminder" : $"Remind me ({c.Upcoming.Start:ddd HH:mm})" };
+        item.Click += (_, _) =>
+        {
+            bool on = ReminderService.Toggle(c.Row.Channel.Id, c.Row.DisplayName, c.Upcoming);
+            MainWindow.Instance?.ShowToast(on ? $"Reminder set for {c.Upcoming.Title}" : "Reminder removed");
+        };
+        var guide = new MenuItem { Header = "Show in the guide" };
+        guide.Click += (_, _) => MainWindow.Instance?.ShowInGuide(c.Row, c.Upcoming);
+        menu.Items.Add(item);
+        menu.Items.Add(guide);
+        menu.IsOpen = true;
     }
 
     void Resume_Click(object sender, RoutedEventArgs e)

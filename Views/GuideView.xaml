@@ -11,14 +11,21 @@
         <!-- ===== Categories ===== -->
         <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,1,0">
             <DockPanel>
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="14,16,0,6">
+                <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="14,16,0,6">
                     <RadioButton x:Name="ModeGrid" Style="{StaticResource Chip}" GroupName="GuideMode" Content="Guide" Tag="grid"
                                  IsChecked="True" Checked="Mode_Checked" ToolTip="The full TV guide grid"/>
                     <RadioButton Style="{StaticResource Chip}" GroupName="GuideMode" Content="On now" Tag="now"
                                  Checked="Mode_Checked" ToolTip="What's on right now"/>
                     <RadioButton Style="{StaticResource Chip}" GroupName="GuideMode" Content="Tonight" Tag="tonight"
                                  Checked="Mode_Checked" ToolTip="What's on this evening"/>
-                </StackPanel>
+                    <RadioButton Style="{StaticResource Chip}" GroupName="GuideMode" Tag="find" Margin="0,8,0,0"
+                                 Checked="Mode_Checked" ToolTip="Find a programme by name, on any channel">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Find a programme"/>
+                        </StackPanel>
+                    </RadioButton>
+                </WrapPanel>
                 <TextBlock DockPanel.Dock="Top" Text="CATEGORIES" Margin="20,12,0,8" FontSize="11" FontWeight="SemiBold"
                            Foreground="{StaticResource MutedBrush}"/>
                 <ListBox x:Name="CategoryList" Style="{StaticResource CleanList}" ItemContainerStyle="{StaticResource CategoryItem}"
@@ -99,6 +106,13 @@
                                 <TextBlock x:Name="CatchupText" Text="Start over"/>
                             </StackPanel>
                         </Button>
+                        <Button x:Name="RemindButton" Style="{StaticResource BaseButton}" Margin="8,0,0,0" Click="Remind_Click"
+                                Visibility="Collapsed" ToolTip="Get a pop-up a minute before it starts">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE7ED;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock x:Name="RemindText" Text="Remind me"/>
+                            </StackPanel>
+                        </Button>
                         <Button Style="{StaticResource BaseButton}" Margin="8,0,0,0" Click="MultiView_Click"
                                 ToolTip="Watch 4, 6 or 8 channels at once (V)">
                             <StackPanel Orientation="Horizontal">
@@ -141,12 +155,18 @@
                      VirtualizingPanel.CacheLengthUnit="Page"
                      SelectionChanged="ChannelList_SelectionChanged"
                      MouseDoubleClick="ChannelList_MouseDoubleClick"
-                     KeyDown="ChannelList_KeyDown">
+                     KeyDown="ChannelList_KeyDown" PreviewMouseRightButtonDown="List_RightDown">
                 <ListBox.ContextMenu>
-                    <ContextMenu>
+                    <ContextMenu Opened="Ctx_Opened">
+                        <MenuItem x:Name="CtxRemind" Header="Remind me" Click="CtxRemind_Click"/>
+                        <Separator x:Name="CtxRemindSep"/>
                         <MenuItem Header="Watch full screen" Click="WatchFull_Click"/>
                         <MenuItem Header="Watch in picture-in-picture" Click="Mini_Click"/>
                         <MenuItem Header="Add / remove favourite" Click="Fav_Click"/>
+                        <Separator/>
+                        <MenuItem Header="Rename channel…" Click="Rename_Click"/>
+                        <MenuItem Header="Hide channel" Click="Hide_Click"/>
+                        <MenuItem Header="Edit channels (order, names, hidden)…" Click="EditChannels_Click"/>
                     </ContextMenu>
                 </ListBox.ContextMenu>
                 <ListBox.ItemTemplate>
@@ -205,6 +225,9 @@
                                                     <TextBlock x:Name="CU" DockPanel.Dock="Left" Text="&#xE81C;" FontFamily="{StaticResource IconFont}"
                                                                FontSize="11" Margin="0,2,6,0" Foreground="#FBBF24" Visibility="Collapsed"
                                                                ToolTip="Catch-up available"/>
+                                                    <TextBlock x:Name="RB" DockPanel.Dock="Left" Text="&#xE7ED;" FontFamily="{StaticResource IconFont}"
+                                                               FontSize="11" Margin="0,2,6,0" Foreground="{StaticResource AccentBrush}" Visibility="Collapsed"
+                                                               ToolTip="Reminder set"/>
                                                     <TextBlock x:Name="T" Text="{Binding Title}" FontSize="13" TextTrimming="CharacterEllipsis"/>
                                                 </DockPanel>
                                                 <TextBlock Text="{Binding TimeText}" FontSize="11" Margin="0,3,0,0"
@@ -221,6 +244,9 @@
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding CanCatchup}" Value="True">
                                                 <Setter TargetName="CU" Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding HasReminder}" Value="True">
+                                                <Setter TargetName="RB" Property="Visibility" Value="Visible"/>
                                             </DataTrigger>
                                         </DataTemplate.Triggers>
                                     </DataTemplate>
@@ -254,7 +280,16 @@
                              VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
                              VirtualizingPanel.ScrollUnit="Item"
                              SelectionChanged="NowList_SelectionChanged" MouseDoubleClick="NowList_MouseDoubleClick"
-                             KeyDown="NowList_KeyDown">
+                             KeyDown="NowList_KeyDown" PreviewMouseRightButtonDown="List_RightDown">
+                        <ListBox.ContextMenu>
+                            <ContextMenu Opened="Ctx_Opened">
+                                <MenuItem x:Name="CtxRemind2" Header="Remind me" Click="CtxRemind_Click"/>
+                                <Separator x:Name="CtxRemindSep2"/>
+                                <MenuItem Header="Watch full screen" Click="WatchFull_Click"/>
+                                <MenuItem Header="Watch in picture-in-picture" Click="Mini_Click"/>
+                                <MenuItem Header="Add / remove favourite" Click="Fav_Click"/>
+                            </ContextMenu>
+                        </ListBox.ContextMenu>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Grid Height="66">
@@ -286,6 +321,8 @@
                                         <DockPanel>
                                             <TextBlock x:Name="CU" DockPanel.Dock="Left" Text="&#xE81C;" FontFamily="{StaticResource IconFont}"
                                                        FontSize="11" Margin="0,2,6,0" Foreground="#FBBF24" Visibility="Collapsed" ToolTip="Catch-up available"/>
+                                            <TextBlock x:Name="RB" DockPanel.Dock="Left" Text="&#xE7ED;" FontFamily="{StaticResource IconFont}"
+                                                       FontSize="11" Margin="0,2,6,0" Foreground="{StaticResource AccentBrush}" Visibility="Collapsed" ToolTip="Reminder set"/>
                                             <TextBlock Text="{Binding Title}" FontSize="14" TextTrimming="CharacterEllipsis"/>
                                         </DockPanel>
                                         <TextBlock Text="{Binding Genre}" FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0"
@@ -300,6 +337,9 @@
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding CanCatchup}" Value="True">
                                         <Setter TargetName="CU" Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding HasReminder}" Value="True">
+                                        <Setter TargetName="RB" Property="Visibility" Value="Visible"/>
                                     </DataTrigger>
                                 </DataTemplate.Triggers>
                             </DataTemplate>

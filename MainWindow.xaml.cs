@@ -82,6 +82,16 @@ public partial class MainWindow : Window
         _settings = new SettingsView();
         _guide.PreviewRequested += row => PlayLive(row.Channel, false);
         _mediaKeys = new MediaKeys(this, HandleMediaKey);
+        ReminderService.Watch = id =>
+        {
+            BringToFront();
+            var row = _guide.RowFor(id);
+            if (row == null) { ShowToast("That channel isn't in your playlist any more."); return; }
+            NavGuide.IsChecked = true;
+            _guide.SelectChannel(row.Channel.Id);
+            PlayLive(row.Channel, true);
+        };
+        ReminderService.Start();
         _healthPinned = SettingsStore.Current.ShowStreamInfo;
 
         _uiTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(500) };
@@ -446,6 +456,21 @@ public partial class MainWindow : Window
     {
         ClearSearchBoxOnly();
         _page?.ApplySearch("");
+    }
+
+    public void SetSearchHint(string hint) => SearchBox.Tag = hint;
+
+    public void OpenChannelEditor()
+    {
+        if (DataService.Instance.Active == null) { ShowToast("Add a playlist first."); return; }
+        new Views.ChannelEditorWindow(_guide, GuideView.AllId) { Owner = this }.ShowDialog();
+        _guide.ApplyChannelEdits();
+    }
+
+    public void FocusSearch()
+    {
+        SearchBox.Focus();
+        SearchBox.SelectAll();
     }
 
     /// <summary>Empties the search box without re-filtering the current page.</summary>

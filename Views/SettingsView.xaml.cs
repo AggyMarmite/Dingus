@@ -80,6 +80,8 @@ public partial class SettingsView : UserControl, IPage
         finally { _loading = false; }
     }
 
+    void EditChannels_Click(object sender, RoutedEventArgs e) => MainWindow.Instance?.OpenChannelEditor();
+
     void Timeshift_Changed(object sender, RoutedEventArgs e)
     {
         if (_loading) return;

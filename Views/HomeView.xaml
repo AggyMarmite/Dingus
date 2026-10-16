@@ -5,7 +5,8 @@
     <UserControl.Resources>
         <!-- Channel card: logo, channel, programme, progress or start time -->
         <DataTemplate x:Key="ChannelCardTemplate">
-            <Button Style="{StaticResource PosterCard}" Width="236" Margin="8,6,8,10" Click="Channel_Click" ToolTip="{Binding Row.Name}">
+            <Button Style="{StaticResource PosterCard}" Width="236" Margin="8,6,8,10" Click="Channel_Click" ToolTip="{Binding Row.Name}"
+                    MouseRightButtonUp="Card_RightClick">
                 <Border CornerRadius="10" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
                     <StackPanel>
                         <Grid Height="104">
@@ -143,6 +144,13 @@
             </StackPanel>
 
             <!-- Tonight's picks: films and sport starting this evening -->
+            <StackPanel x:Name="RemindSection" Visibility="Collapsed">
+                <TextBlock Style="{StaticResource SectionHeader}" Text="YOUR REMINDERS" Margin="8,22,0,6"/>
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Row_PreviewMouseWheel">
+                    <ItemsControl x:Name="RemindList" ItemsPanel="{StaticResource RowPanel}" ItemTemplate="{StaticResource ChannelCardTemplate}"/>
+                </ScrollViewer>
+            </StackPanel>
+
             <StackPanel x:Name="PicksSection" Visibility="Collapsed">
                 <TextBlock x:Name="PicksHeader" Style="{StaticResource SectionHeader}" Text="TONIGHT'S PICKS" Margin="8,22,0,6"/>
                 <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Row_PreviewMouseWheel">

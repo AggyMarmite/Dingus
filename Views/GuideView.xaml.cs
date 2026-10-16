@@ -15,7 +15,7 @@ public partial class GuideView : UserControl, IPage
 
     public string Title => "TV Guide";
     public bool SupportsSearch => true;
-    public string SearchHint => "Search all channels";
+    public string SearchHint => _mode == "find" ? "Find a programme on any channel…" : "Search all channels";
 
     /// <summary>Raised (debounced) when the selection settles on a channel – starts the mini player.</summary>
     public event Action<GuideRow> PreviewRequested;
@@ -24,6 +24,8 @@ public partial class GuideView : UserControl, IPage
     public FrameworkElement PreviewSlotElement => PreviewSlot;
 
     List<GuideRow> _all = new();
+    /// <summary>Every row, including channels hidden in the channel editor.</summary>
+    List<GuideRow> _everything = new();
     List<GuideRow> _shown = new();
     /// <summary>Any channel id (every merged version) → its guide row.</summary>
     Dictionary<string, GuideRow> _byId = new();
@@ -59,6 +61,7 @@ public partial class GuideView : UserControl, IPage
         DataService.Instance.CatalogChanged += Rebuild;
         DataService.Instance.EpgChanged += OnEpgChanged;
         HistoryStore.Changed += OnHistoryChanged;
+        ReminderService.Changed += OnRemindersChanged;
 
         ChannelList.SizeChanged += (_, e) =>
         {
@@ -82,6 +85,7 @@ public partial class GuideView : UserControl, IPage
     public void ApplySearch(string query)
     {
         _search = query ?? "";
+        if (_mode == "find") { BuildList(); return; } // programme search: the channel list stays as it is
         ApplyFilter();
     }
 
@@ -109,6 +113,8 @@ public partial class GuideView : UserControl, IPage
         var hidden = ds.HiddenSet("live");
         var favs = ds.FavouriteSet();
         var epg = ds.Epg;
+        var hiddenCh = new HashSet<string>(ds.Active?.HiddenChannels ?? new List<string>());
+        var names = ds.Active?.ChannelNames ?? new Dictionary<string, string>();
 
         _all = new List<GuideRow>(data.Channels.Count);
         _byId = new Dictionary<string, GuideRow>(data.Channels.Count);
@@ -133,7 +139,11 @@ public partial class GuideView : UserControl, IPage
             r.IsFavourite = r.Variants.Any(v => favs.Contains(v.Id));
             r.Logo = r.Variants.Select(v => v.Logo).FirstOrDefault(l => l != null) ?? r.Variants.Select(v => epg.Icon(v.Id)).FirstOrDefault(l => l != null);
             r.EpgId = PickEpgId(r, epg);
+            r.CustomName = r.Variants.Select(v => names.TryGetValue(v.Id, out var n) ? n : null).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
+            r.IsHidden = hiddenCh.Count > 0 && r.Variants.Any(v => hiddenCh.Contains(v.Id));
         }
+        _everything = _all;
+        if (hiddenCh.Count > 0) _all = _all.Where(r => !r.IsHidden).ToList();
 
         var counts = new Dictionary<string, int>();
         foreach (var r in _all)
@@ -197,9 +207,7 @@ public partial class GuideView : UserControl, IPage
         IEnumerable<GuideRow> q;
         if (_search.Length > 0) q = _all.Where(r => r.Name.Contains(_search, StringComparison.OrdinalIgnoreCase));
         else if (_cat == FavId) q = _all.Where(r => r.IsFavourite);
-        else if (_cat == RecentId) q = RecentRows();
-        else if (_cat == AllId) q = _all;
-        else q = _all.Where(r => r.CategoryIds.Contains(_cat));
+        else q = RowsIn(_cat);
         _shown = q.ToList();
 
         RecomputeBlocks();
@@ -294,6 +302,7 @@ public partial class GuideView : UserControl, IPage
                     IsNow = p.Start <= now && p.End > now,
                     IsPast = p.End <= now,
                     CanCatchup = r.CatchupChannel != null && ds.CanCatchup(r.CatchupChannel, p),
+                    HasReminder = p.Start > now && ReminderService.Has(r.Channel.Id, p.Start),
                     Programme = p,
                     Row = r,
                 });
@@ -436,6 +445,7 @@ public partial class GuideView : UserControl, IPage
         CatchupButton.Visibility = cu ? Visibility.Visible : Visibility.Collapsed;
         CatchupText.Text = p != null && p.End > now ? "Start over" : "Watch catch-up";
         UpdateFavButton();
+        UpdateRemindButton();
     }
 
     void UpdateFavButton()
@@ -451,6 +461,7 @@ public partial class GuideView : UserControl, IPage
     {
         if (_suppressCat || CategoryList.SelectedItem is not CategoryItem c) return;
         _cat = c.Id;
+        if (_mode == "find") { ApplyFilter(); return; } // keep the programme search, now within this category
         if (_search.Length > 0) MainWindow.Instance?.ClearSearch(); // ClearSearch re-applies the filter
         else ApplyFilter();
     }
@@ -602,12 +613,132 @@ public partial class GuideView : UserControl, IPage
     public string CurrentCategoryId => _search.Length > 0 ? AllId : _cat;
 
     /// <summary>The channels in a category, in guide order.</summary>
-    public List<GuideRow> RowsIn(string catId)
+    public List<GuideRow> RowsIn(string catId) => RowsIn(catId, _all);
+
+    List<GuideRow> RowsIn(string catId, List<GuideRow> from)
     {
-        if (catId == FavId) return _all.Where(r => r.IsFavourite).ToList();
         if (catId == RecentId) return RecentRows();
-        if (catId == AllId) return _all;
-        return _all.Where(r => r.CategoryIds.Contains(catId)).ToList();
+        IEnumerable<GuideRow> q = catId == FavId ? from.Where(r => r.IsFavourite)
+            : catId == AllId ? from
+            : from.Where(r => r.CategoryIds.Contains(catId));
+        return Ordered(catId, q);
+    }
+
+    /// <summary>Applies your own order from the channel editor (channels you haven't moved keep their place after).</summary>
+    List<GuideRow> Ordered(string catId, IEnumerable<GuideRow> rows)
+    {
+        var list = rows as List<GuideRow> ?? rows.ToList();
+        var order = DataService.Instance.Active?.ChannelOrder;
+        if (order == null || !order.TryGetValue(catId, out var ids) || ids.Count == 0) return list;
+        var rank = new Dictionary<GuideRow, int>();
+        for (int i = 0; i < ids.Count; i++)
+            if (_byId.TryGetValue(ids[i], out var r)) rank.TryAdd(r, i);
+        return list.Select((r, i) => (r, k: rank.TryGetValue(r, out var k) ? k : ids.Count + i)).OrderBy(x => x.k).Select(x => x.r).ToList();
+    }
+
+    // ------------------------------------------------------------------ channel editor
+
+    /// <summary>The channels in a category for the channel editor, including hidden ones, in your order.</summary>
+    public List<GuideRow> EditableRows(string catId) => RowsIn(catId, _everything);
+
+    /// <summary>Categories for the channel editor (no "Recently watched" – it orders itself).</summary>
+    public List<CategoryItem> EditableCategories() => Categories.Where(c => c.Id != RecentId).ToList();
+
+    /// <summary>Re-reads names, hidden channels and order after the channel editor changed them.</summary>
+    public void ApplyChannelEdits() => Rebuild();
+
+    void Rename_Click(object sender, RoutedEventArgs e)
+    {
+        var r = _ctxRow ?? ChannelList.SelectedItem as GuideRow;
+        if (r == null) return;
+        var name = ChannelEditorWindow.Ask(Window.GetWindow(this), "Rename channel", $"New name for {r.DisplayName}:", r.DisplayName);
+        if (name == null) return;
+        ChannelEditorWindow.SetName(r, name);
+        SettingsStore.Save();
+        Rebuild();
+    }
+
+    void Hide_Click(object sender, RoutedEventArgs e)
+    {
+        var r = _ctxRow ?? ChannelList.SelectedItem as GuideRow;
+        if (r == null) return;
+        ChannelEditorWindow.SetHidden(r, true);
+        SettingsStore.Save();
+        Rebuild();
+        MainWindow.Instance?.ShowToast($"{r.DisplayName} hidden – right-click a channel → Edit channels to show it again.");
+    }
+
+    void EditChannels_Click(object sender, RoutedEventArgs e)
+    {
+        var w = new ChannelEditorWindow(this, _cat == RecentId ? AllId : _cat) { Owner = Window.GetWindow(this) };
+        w.ShowDialog();
+        Rebuild();
+    }
+
+    // ------------------------------------------------------------------ reminders & right-click
+
+    GuideRow _ctxRow;
+    Programme _ctxProg;
+
+    void List_RightDown(object sender, MouseButtonEventArgs e)
+    {
+        _ctxRow = null;
+        _ctxProg = null;
+        var d = e.OriginalSource as DependencyObject;
+        if (sender == ChannelList)
+        {
+            if (ItemsControl.ContainerFromElement(ChannelList, d) is ListBoxItem { DataContext: GuideRow r }) _ctxRow = r;
+            if (FindBlock(d) is { } b) { _ctxRow = b.Row; _ctxProg = b.Programme; }
+            if (_ctxRow != null)
+            {
+                if (!ReferenceEquals(ChannelList.SelectedItem, _ctxRow)) ChannelList.SelectedItem = _ctxRow;
+                ShowHero(_ctxRow, _ctxProg);
+            }
+        }
+        else if (ItemsControl.ContainerFromElement(NowList, d) is ListBoxItem { DataContext: NowItem it })
+        {
+            NowList.SelectedItem = it;
+            _ctxRow = it.Row;
+            _ctxProg = it.Programme;
+        }
+    }
+
+    void Ctx_Opened(object sender, RoutedEventArgs e)
+    {
+        bool future = _ctxProg != null && _ctxProg.Start > DateTime.Now && _ctxRow != null;
+        bool set = future && ReminderService.Has(_ctxRow.Channel.Id, _ctxProg.Start);
+        foreach (var mi in new[] { CtxRemind, CtxRemind2 })
+        {
+            mi.Visibility = future ? Visibility.Visible : Visibility.Collapsed;
+            mi.Header = set ? "Cancel reminder" : $"Remind me ({_ctxProg?.Start:ddd HH:mm})";
+        }
+        CtxRemindSep.Visibility = CtxRemindSep2.Visibility = future ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    void CtxRemind_Click(object sender, RoutedEventArgs e) => ToggleReminder(_ctxRow, _ctxProg);
+    void Remind_Click(object sender, RoutedEventArgs e) => ToggleReminder(_heroRow, _heroProg);
+
+    void ToggleReminder(GuideRow r, Programme p)
+    {
+        if (r == null || p == null || p.Start <= DateTime.Now) return;
+        bool on = ReminderService.Toggle(r.Channel.Id, r.DisplayName, p);
+        MainWindow.Instance?.ShowToast(on
+            ? $"Reminder set – you'll get a pop-up at {p.Start.AddMinutes(-1):HH:mm} for {p.Title}"
+            : "Reminder removed");
+    }
+
+    void OnRemindersChanged()
+    {
+        RecomputeBlocks();
+        if (_mode != "grid") BuildList();
+        UpdateRemindButton();
+    }
+
+    void UpdateRemindButton()
+    {
+        bool future = _heroRow != null && _heroProg != null && _heroProg.Start > DateTime.Now;
+        RemindButton.Visibility = future ? Visibility.Visible : Visibility.Collapsed;
+        RemindText.Text = future && ReminderService.Has(_heroRow.Channel.Id, _heroProg.Start) ? "Reminder set" : "Remind me";
     }
 
     /// <summary>Switches the guide to a category (so channel up/down stays inside it) and selects a channel.</summary>
@@ -642,8 +773,12 @@ public partial class GuideView : UserControl, IPage
     void Mode_Checked(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.Tag is not string mode || ListMode == null) return;
+        bool wasFind = _mode == "find";
         _mode = mode;
         bool list = mode != "grid";
+        MainWindow.Instance?.SetSearchHint(SearchHint);
+        if (mode == "find") MainWindow.Instance?.FocusSearch();
+        if (wasFind && mode != "find" && _search.Length > 0) ApplyFilter(); // the search box filters channels again
         ListMode.Visibility = list ? Visibility.Visible : Visibility.Collapsed;
         TimelineHeader.Visibility = list ? Visibility.Hidden : Visibility.Visible;
         NowLayer.Visibility = list ? Visibility.Hidden : Visibility.Visible;
@@ -658,9 +793,50 @@ public partial class GuideView : UserControl, IPage
         var ds = DataService.Instance;
         var now = DateTime.Now;
         var items = new List<NowItem>();
-        var catName = _search.Length > 0 ? $"“{_search}”" : (CategoryList.SelectedItem as CategoryItem)?.Name ?? "All channels";
+        var catName = _search.Length > 0 && _mode != "find" ? $"“{_search}”" : (CategoryList.SelectedItem as CategoryItem)?.Name ?? "All channels";
+        string emptyTitle = null, emptyBody = null;
 
-        if (_mode == "now")
+        if (_mode == "find")
+        {
+            ListTitle.Text = "Find a programme";
+            if (_search.Length < 2)
+            {
+                ListSub.Text = catName;
+                emptyTitle = "Search the whole TV guide";
+                emptyBody = "Type a programme name in the search box at the top – e.g. “match of the day” or “news”.";
+            }
+            else
+            {
+                const int Max = 400;
+                foreach (var r in RowsIn(_cat))
+                {
+                    var l = epg.Get(r.EpgId);
+                    if (l == null) continue;
+                    for (int i = EpgData.FirstEndingAfter(l, now); i < l.Count; i++)
+                    {
+                        var p = l[i];
+                        if (!p.Title.Contains(_search, StringComparison.OrdinalIgnoreCase)) continue;
+                        bool live = p.Start <= now && p.End > now;
+                        items.Add(new NowItem
+                        {
+                            Row = r, Programme = p, IsLive = live,
+                            TimeText = live ? "On now" : p.Start.ToString("HH:mm"),
+                            SubTime = live ? $"until {p.End:HH:mm}" : DayLabel(p.Start),
+                            Progress = live ? (now - p.Start).TotalSeconds / Math.Max(1, (p.End - p.Start).TotalSeconds) : 0,
+                            CanCatchup = live && r.CatchupChannel != null && ds.CanCatchup(r.CatchupChannel, p),
+                            HasReminder = !live && ReminderService.Has(r.Channel.Id, p.Start),
+                        });
+                    }
+                    if (items.Count > Max * 3) break;
+                }
+                items = items.OrderBy(x => x.IsLive ? DateTime.MinValue : x.Programme.Start).Take(Max).ToList();
+                ListSub.Text = $"“{_search}”  ·  {catName}  ·  {(items.Count >= Max ? $"first {Max}" : items.Count.ToString("N0"))} programmes" +
+                               "  ·  right-click one to set a reminder";
+                emptyTitle = "No programmes found";
+                emptyBody = $"Nothing called “{_search}” in the guide from now on.";
+            }
+        }
+        else if (_mode == "now")
         {
             foreach (var r in _shown)
             {
@@ -703,6 +879,7 @@ public partial class GuideView : UserControl, IPage
                         TimeText = live ? "On now" : p.Start.ToString("HH:mm"),
                         SubTime = live ? $"until {p.End:HH:mm}" : $"until {p.End:HH:mm}",
                         Progress = live ? (now - p.Start).TotalSeconds / Math.Max(1, (p.End - p.Start).TotalSeconds) : 0,
+                        HasReminder = !live && ReminderService.Has(r.Channel.Id, p.Start),
                     });
                 }
             }
@@ -714,7 +891,12 @@ public partial class GuideView : UserControl, IPage
         NowList.ItemsSource = items;
         bool empty = items.Count == 0;
         ListEmpty.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
-        if (empty)
+        if (empty && epg.MatchedChannels > 0 && emptyTitle != null)
+        {
+            ListEmptyTitle.Text = emptyTitle;
+            ListEmptyBody.Text = emptyBody;
+        }
+        else if (empty)
         {
             ListEmptyTitle.Text = epg.MatchedChannels == 0 ? "No TV guide yet" : "Nothing to show";
             ListEmptyBody.Text = epg.MatchedChannels == 0

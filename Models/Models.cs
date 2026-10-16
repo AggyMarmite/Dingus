@@ -21,6 +21,12 @@ public class PlaylistConfig
     public string EpgUrl { get; set; } = "";
     public List<string> HiddenCategories { get; set; } = new();
     public List<string> Favourites { get; set; } = new();
+    /// <summary>Channel editor: your own names (channel id → name), kept across refreshes.</summary>
+    public Dictionary<string, string> ChannelNames { get; set; } = new();
+    /// <summary>Channel editor: channels you've hidden (every version's id).</summary>
+    public List<string> HiddenChannels { get; set; } = new();
+    /// <summary>Channel editor: your own order per category (category id → channel ids, top first).</summary>
+    public Dictionary<string, List<string>> ChannelOrder { get; set; } = new();
     public DateTime LastRefreshUtc { get; set; }
     public DateTime LastEpgRefreshUtc { get; set; }
 
@@ -174,6 +180,17 @@ public class Programme
     public long DescOffset;
     public int DescLength;
     public string Desc => DescLength > 0 ? Store?.Read(DescOffset, DescLength) : null;
+}
+
+/// <summary>"Remind me" for a programme that hasn't started yet.</summary>
+public class Reminder
+{
+    public string PlaylistId { get; set; }
+    public string ChannelId { get; set; }
+    public string ChannelName { get; set; }
+    public string Title { get; set; }
+    public DateTime Start { get; set; }
+    public DateTime End { get; set; }
 }
 
 public class AccountInfo

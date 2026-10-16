@@ -33,9 +33,15 @@ public class GuideRow : Observable
     /// <summary>The channel as listed (first version found). Its id identifies the row for favourites/history.</summary>
     public Channel Channel { get; }
     public string Number { get; }
-    public string Name => Channel.Name;
+    public string Name => CustomName ?? Channel.Name;
     /// <summary>Name without the leading country tag ("UK| ", "[UK] ", "UK: ") that repeats on every row.</summary>
-    public string DisplayName => _display ??= CleanName(Channel.Name);
+    public string DisplayName => CustomName ?? (_display ??= CleanName(Channel.Name));
+    /// <summary>The provider's name, tidied – what the channel editor resets to.</summary>
+    public string OriginalName => _display ??= CleanName(Channel.Name);
+    /// <summary>Your own name for the channel (channel editor), or null.</summary>
+    public string CustomName { get; set; }
+    /// <summary>Hidden in the channel editor.</summary>
+    public bool IsHidden { get; set; }
     string _display;
     public string Initials { get; }
 
@@ -173,6 +179,7 @@ public class ProgBlock
     public bool CanCatchup { get; set; }
     public Programme Programme { get; set; }
     public GuideRow Row { get; set; }
+    public bool HasReminder { get; set; }
     public System.Windows.Media.Brush GenreBrush => Services.Genres.Brush(Programme?.Genre);
 }
 
@@ -188,6 +195,7 @@ public class NowItem
     public double Progress { get; init; }
     public bool IsLive { get; init; }
     public bool CanCatchup { get; init; }
+    public bool HasReminder { get; init; }
     public System.Windows.Media.Brush GenreBrush => Services.Genres.Brush(Programme?.Genre);
 }
 
