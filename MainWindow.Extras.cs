@@ -334,7 +334,8 @@ public partial class MainWindow
     {
         var now = DateTime.UtcNow;
         var pos = LivePositionUtc;
-        var p = _nowChannel == null ? null : DataService.Instance.Epg.At(_guide.EpgIdOf(_guide.RowFor(_nowChannel.Id)), pos.ToLocalTime());
+        var row = _nowChannel == null ? null : _guide.RowFor(_nowChannel.Id);
+        var p = row == null ? null : DataService.Instance.Epg.At(_guide.EpgIdOf(row), pos.ToLocalTime());
         DateTime start = p?.Start.ToUniversalTime() ?? pos.AddMinutes(-30);
         DateTime end = p?.End.ToUniversalTime() ?? now;
         if (end > now) end = now;
@@ -379,7 +380,8 @@ public partial class MainWindow
     void StartOfProgramme()
     {
         if (!LiveSeekable || _nowChannel == null) return;
-        var p = DataService.Instance.Epg.At(_guide.EpgIdOf(_guide.RowFor(_nowChannel.Id)), LivePositionUtc.ToLocalTime());
+        var row = _guide.RowFor(_nowChannel.Id);
+        var p = row == null ? null : DataService.Instance.Epg.At(_guide.EpgIdOf(row), LivePositionUtc.ToLocalTime());
         if (p == null) return;
         SeekLiveTo(p.Start.ToUniversalTime());
         ShowToast($"From the start: {p.Title}");
