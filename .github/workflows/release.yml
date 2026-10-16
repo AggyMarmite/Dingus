@@ -34,10 +34,10 @@ jobs:
           else { "skip=false" >> $env:GITHUB_OUTPUT }
           exit 0
 
-      # Self-contained, so people installing it don't need the .NET runtime first.
+      # Framework-dependent: the installer adds the .NET 8 Desktop Runtime only if the PC doesn't have it.
       - name: Publish
         if: steps.ver.outputs.skip == 'false'
-        run: dotnet publish Dingus.csproj -c Release -r win-x64 --self-contained true -p:Version=${{ steps.ver.outputs.version }} -o publish
+        run: dotnet publish Dingus.csproj -c Release -r win-x64 --self-contained false -p:Version=${{ steps.ver.outputs.version }} -o publish
 
       - name: Build installer
         if: steps.ver.outputs.skip == 'false'

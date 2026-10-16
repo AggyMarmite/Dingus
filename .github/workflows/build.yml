@@ -57,6 +57,29 @@ jobs:
           name: selftest
           path: ${{ runner.temp }}/selftest
           retention-days: 7
+      # Builds the installer exactly as a release would, installs it silently and runs the installed copy.
+      - name: Installer test
+        shell: pwsh
+        run: |
+          dotnet publish Dingus.csproj -c Release -r win-x64 --self-contained false -o publish
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          & $iscc /Q /DAppVersion=0.0.0 /DSourceDir=..\publish installer\Dingus.iss
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          $setup = Get-Item installer\Output\Dingus-Setup-0.0.0.exe
+          $size = [math]::Round($setup.Length / 1MB, 1)
+          $r = Invoke-WebRequest -Method Head -Uri 'https://aka.ms/dotnet/8.0/windowsdesktop-runtime-win-x64.exe' -MaximumRedirection 5 -UseBasicParsing
+          $rt = Get-ChildItem "$env:ProgramFiles\dotnet\shared\Microsoft.WindowsDesktop.App" -Directory | ForEach-Object Name
+          $dir = Join-Path $env:RUNNER_TEMP 'installed'
+          $p = Start-Process $setup.FullName -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=`"$dir`"" -PassThru -Wait
+          $ok = Test-Path "$dir\Dingus.exe"
+          $out = Join-Path $env:RUNNER_TEMP 'selftest-installed'
+          $q = Start-Process "$dir\Dingus.exe" -ArgumentList '--self-test', "`"$out`"" -PassThru
+          if (-not $q.WaitForExit(240000)) { $q.Kill() }
+          $res = if (Test-Path "$out\result.txt") { (Get-Content "$out\result.txt" | Select-Object -Last 1) } else { 'no result' }
+          Write-Host "::notice title=installer::installer $size MB · .NET link $($r.StatusCode) ($([math]::Round([long]$r.Headers['Content-Length'][0]/1MB,1)) MB) · runtimes on runner: $($rt -join ', ') · setup exit $($p.ExitCode) · installed: $ok · installed self-test: $res"
+          if (-not $ok -or $res -ne 'PASSED') { exit 1 }
+
       # Screenshots also go to the "selftest" branch, so they can be looked at without downloading artifacts.
       - name: Publish screenshots to the selftest branch
         if: always() && github.event_name == 'push'
