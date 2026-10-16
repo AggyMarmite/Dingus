@@ -237,11 +237,7 @@ public partial class SettingsView : UserControl, IPage
         try { what = Backup.Describe(dlg.FileName); }
         catch (Exception ex) { MainWindow.Instance?.ShowToast(ex.Message); return; }
         var ok = MessageBox.Show(owner,
-            $"Restore this backup?
-
-{what}
-
-Your current settings, playlists, favourites, history and reminders will be replaced, and Dingus will restart.",
+            $"Restore this backup?\n\n{what}\n\nYour current settings, playlists, favourites, history and reminders will be replaced, and Dingus will restart.",
             "Restore backup", MessageBoxButton.OKCancel, MessageBoxImage.Question);
         if (ok != MessageBoxResult.OK) return;
         try { Backup.Restore(dlg.FileName); }
