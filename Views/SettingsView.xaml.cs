@@ -62,7 +62,6 @@ public partial class SettingsView : UserControl, IPage
             CheckChip(SubLangChips, S.SubtitleLanguage ?? "");
             NightToggle.IsChecked = S.NightMode;
             PopulateParental();
-            PopulatePlex();
             AutoUpdateToggle.IsChecked = S.AutoUpdate;
             CheckChip(TimeshiftChips, S.TimeshiftMinutes.ToString());
             S.StartWithWindows = ThemeService.IsStartWithWindows(); // the installer can switch it on too
@@ -123,26 +122,6 @@ public partial class SettingsView : UserControl, IPage
         if (_loading) return;
         S.AutoUpdate = AutoUpdateToggle.IsChecked == true;
         SettingsStore.Save();
-    }
-
-    // ------------------------------------------------------------------ Plex
-
-    void PopulatePlex()
-    {
-        bool on = Plex.SignedIn;
-        PlexSignInButton.Content = on ? "Open Plex" : "Sign in with Plex";
-        PlexSignOutButton.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
-        PlexStatus.Text = !on ? "Watch films and shows from your Plex server, with watch progress kept in step with Plex."
-            : Plex.Server != null ? $"Signed in · {Plex.Server.Name}" : "Signed in";
-    }
-
-    void PlexSignIn_Click(object sender, RoutedEventArgs e) => MainWindow.Instance?.OpenPlex(signIn: true);
-
-    void PlexSignOut_Click(object sender, RoutedEventArgs e)
-    {
-        Plex.SignOut();
-        PopulatePlex();
-        MainWindow.Instance?.ShowToast("Signed out of Plex.");
     }
 
     // ------------------------------------------------------------------ parental controls

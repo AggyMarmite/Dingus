@@ -158,45 +158,6 @@
                 </ScrollViewer>
             </StackPanel>
 
-            <!-- Continue watching on Plex -->
-            <StackPanel x:Name="PlexSection" Visibility="Collapsed">
-                <TextBlock Style="{StaticResource SectionHeader}" Text="CONTINUE WATCHING ON PLEX" Margin="8,22,0,6"/>
-                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Row_PreviewMouseWheel">
-                    <ItemsControl x:Name="PlexList" ItemsPanel="{StaticResource RowPanel}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Style="{StaticResource PosterCard}" Width="156" Margin="8,6,8,10" Click="PlexCard_Click" ToolTip="{Binding Title}">
-                                    <StackPanel>
-                                        <Grid Width="156" Height="234">
-                                            <Grid.Clip>
-                                                <RectangleGeometry Rect="0,0,156,234" RadiusX="8" RadiusY="8"/>
-                                            </Grid.Clip>
-                                            <Border Background="{StaticResource Surface2Brush}">
-                                                <TextBlock Text="{Binding Title}" TextWrapping="Wrap" TextAlignment="Center" Margin="12"
-                                                           VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
-                                            </Border>
-                                            <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="240" svc:ImageLoader.Url="{Binding Image}"/>
-                                            <Border VerticalAlignment="Bottom" Height="5" Background="#99000000">
-                                                <ProgressBar Style="{StaticResource ThinProgress}" Maximum="1" Value="{Binding Progress, Mode=OneTime}"
-                                                             Margin="8,0" VerticalAlignment="Center" Height="3"/>
-                                            </Border>
-                                            <Border HorizontalAlignment="Center" VerticalAlignment="Center" Width="46" Height="46" CornerRadius="23"
-                                                    Background="#99000000">
-                                                <TextBlock Text="&#xE768;" FontFamily="{StaticResource IconFont}" FontSize="18" Foreground="White"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center" Margin="3,0,0,0"/>
-                                            </Border>
-                                        </Grid>
-                                        <TextBlock Text="{Binding Title}" FontSize="13" Margin="2,9,2,0" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="{Binding Subtitle}" FontSize="11" Margin="2,3,2,0" Foreground="{StaticResource MutedBrush}"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                    </StackPanel>
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
-            </StackPanel>
-
             <!-- Continue watching (films and episodes) -->
             <StackPanel x:Name="ResumeSection">
                 <TextBlock Style="{StaticResource SectionHeader}" Text="CONTINUE WATCHING" Margin="8,22,0,6"/>

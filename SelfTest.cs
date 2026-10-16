@@ -42,7 +42,6 @@ public static class SelfTest
             await GuideMode(main, "grid", null);
             await Page(main, main.NavFilms, "06-films");
             await Page(main, main.NavShows, "07-shows");
-            await Page(main, main.NavPlex, "08-plex");
             await Page(main, main.NavSettings, "09-settings", fullScroll: true);
             await Page(main, main.NavGuide, null);
 

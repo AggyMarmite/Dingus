@@ -54,7 +54,6 @@ public partial class HomeView : UserControl, IPage
     {
         _shown = false;
         _refresh.Stop();
-        PlexList.ItemsSource = null;
         foreach (var list in new ItemsControl[] { NextList, SportList, RemindList, PicksList, ResumeList, RecentList, FavList, NewFilmsList, NewShowsList })
             list.ItemsSource = null;
     }
@@ -134,8 +133,6 @@ public partial class HomeView : UserControl, IPage
         }
         SportList.ItemsSource = sport.OrderByDescending(x => x.Fav).ThenBy(x => x.End).Take(30).Select(x => x.Card).ToList();
         SportSection.Visibility = sport.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
-
-        LoadPlexRow();
 
         // Your reminders.
         var reminders = new List<HomeChannelCard>();
@@ -324,42 +321,6 @@ public partial class HomeView : UserControl, IPage
         menu.Items.Add(item);
         menu.Items.Add(guide);
         menu.IsOpen = true;
-    }
-
-    // ------------------------------------------------------------------ Plex
-
-    List<PlexItem> _plexCache;
-    DateTime _plexLoadedUtc;
-    bool _plexLoading;
-
-    async void LoadPlexRow()
-    {
-        if (!Plex.SignedIn) { PlexSection.Visibility = Visibility.Collapsed; return; }
-        if (_plexCache != null && DateTime.UtcNow - _plexLoadedUtc < TimeSpan.FromMinutes(2)) { ShowPlexRow(); return; }
-        if (_plexLoading) return;
-        _plexLoading = true;
-        try
-        {
-            _plexCache = await Plex.ContinueWatchingAsync();
-            _plexLoadedUtc = DateTime.UtcNow;
-        }
-        catch (Exception ex) { Log.Error(ex); _plexCache ??= new(); }
-        finally { _plexLoading = false; }
-        if (_shown) ShowPlexRow();
-    }
-
-    void ShowPlexRow()
-    {
-        var items = _plexCache ?? new();
-        PlexList.ItemsSource = items.Take(20).ToList();
-        PlexSection.Visibility = items.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
-    }
-
-    async void PlexCard_Click(object sender, RoutedEventArgs e)
-    {
-        if ((sender as FrameworkElement)?.DataContext is not PlexItem it) return;
-        _plexCache = null; // progress will have moved on when you come back
-        await PlexView.Play(it);
     }
 
     void Resume_Click(object sender, RoutedEventArgs e)

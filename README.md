@@ -113,8 +113,6 @@ git push origin v0.3.0
   Preferred audio and subtitle languages in Settings → Playback.
 - **Parental PIN**: lock categories (adult categories automatically). Locked categories are hidden everywhere until
   the PIN is entered with the lock button at the top.
-- **Plex**: sign in with a code at plex.tv/link, browse your server's films and shows, and pick up where you left off –
-  progress is kept in step with Plex. "Continue watching on Plex" is on Home.
 - **Backup & restore** (Settings): everything in one .zip – passwords only if you choose to include them.
 - **Themes**: Midnight, Slate (lighter grey) or Black, and six accent colours including teal.
 - **Updates**: Dingus checks the GitHub releases once a day and offers new versions (always asks first).
