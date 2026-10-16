@@ -464,6 +464,11 @@ public partial class MainWindow : Window
         page.ApplySearch("");
         page.OnShown();
         UpdateWelcome();
+        // The loading screen covers every page except Settings – re-check it for the page you've just opened.
+        bool overlay = UpdateLoadingOverlay(_busyStep);
+        bool busy = DataService.Instance.IsBusy;
+        BusyPanel.Visibility = busy && !overlay ? Visibility.Visible : Visibility.Collapsed;
+        Spin(BusyRotate, busy && !overlay);
     }
 
     void UpdateWelcome() =>
@@ -567,23 +572,29 @@ public partial class MainWindow : Window
         var ds = DataService.Instance;
         if (!busy || ds.BusyIsGuide) _startupLoading = false; // playlist done (the guide carries on in the pill)
         if (busy && ds.IsFirstLoad && !ds.BusyIsGuide && !_startupLoading && !LoadingOverlayShown) _loadingDismissed = false;
+        _busyStep = busy ? text : null;
         bool overlay = UpdateLoadingOverlay(text);
 
         BusyPanel.Visibility = busy && !overlay ? Visibility.Visible : Visibility.Collapsed;
-        BusyTitle.Text = ds.BusyIsGuide ? "Updating TV guide" : "Refreshing playlist";
+        BusyTitle.Text = ds.BusyIsGuide ? "Updating TV guide" : ds.IsFirstLoad ? "Loading playlist" : "Refreshing playlist";
         BusyText.Text = text == null ? "" : StepText(text);
         RefreshButton.IsEnabled = !busy && ds.Active != null;
         Spin(BusyRotate, busy && !overlay);
     }
 
     bool LoadingOverlayShown => LoadingOverlay.Visibility == Visibility.Visible;
+    string _busyStep;
+
+    /// <summary>Settings stay usable while a playlist loads: the loading screen steps aside for it (the pill shows progress).</summary>
+    void LoadingSettings_Click(object sender, RoutedEventArgs e) => NavSettings.IsChecked = true;
 
     /// <returns>True if the loading screen is showing.</returns>
     bool UpdateLoadingOverlay(string step)
     {
         var ds = DataService.Instance;
         bool playlistWork = ds.IsBusy && !ds.BusyIsGuide && ds.IsFirstLoad;
-        bool show = !_loadingDismissed && (playlistWork || _startupLoading) && SettingsStore.Current.Playlists.Count > 0;
+        bool show = !_loadingDismissed && (playlistWork || _startupLoading) && SettingsStore.Current.Playlists.Count > 0 &&
+                    _page != _settings;
         bool was = LoadingOverlayShown;
 
         LoadingOverlay.Visibility = show ? Visibility.Visible : Visibility.Collapsed;

@@ -108,9 +108,18 @@
                         <TextBlock x:Name="LoadingStep" FontSize="14" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" Margin="0,8,0,0"/>
                         <TextBlock x:Name="LoadingHint" Text="Large playlists can take a minute the first time."
                                    FontSize="12" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,18,0,0"/>
-                        <Button x:Name="LoadingSkip" Style="{StaticResource BaseButton}" HorizontalAlignment="Center" Margin="0,22,0,0"
-                                Content="Use saved channels" Visibility="Collapsed" Click="LoadingSkip_Click"
-                                ToolTip="Start watching now – the playlist keeps refreshing in the background"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,22,0,0">
+                            <Button x:Name="LoadingSkip" Style="{StaticResource BaseButton}"
+                                    Content="Use saved channels" Visibility="Collapsed" Click="LoadingSkip_Click" Margin="0,0,8,0"
+                                    ToolTip="Start watching now – the playlist keeps refreshing in the background"/>
+                            <Button Style="{StaticResource GhostButton}" Click="LoadingSettings_Click"
+                                    ToolTip="Settings work while the playlist loads – e.g. to fix a login or switch playlist">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE713;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Open Settings"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
 

@@ -1,4 +1,11 @@
-## What's new in Dingus 0.4.1
+## What's new in Dingus 0.4.2
+
+* **Settings work while a playlist loads** – the "Loading playlist" screen no longer blocks the app. Open Settings
+  (from the left, or the new "Open Settings" button on the loading screen) to fix a login, switch playlist or change
+  anything else; the loading carries on in the corner. Go back to any other page and the loading screen returns
+  until the playlist is ready.
+
+## Dingus 0.4.1
 
 * Updating from 0.3.x now clears out the old program files first, so the smaller version starts cleanly.
 
@@ -13,4 +20,4 @@
   the video engine have been left out. If your PC doesn't have Microsoft's .NET 8 Desktop Runtime yet, the installer
   fetches it once (most PCs already have it).
 
-**Install:** download `Dingus-Setup-0.4.1.exe` below – or, if you already have Dingus, it will offer this update itself.
+**Install:** download `Dingus-Setup-0.4.2.exe` below – or, if you already have Dingus, it will offer this update itself.
