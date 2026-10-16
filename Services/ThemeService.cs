@@ -86,6 +86,16 @@ public static class ThemeService
 
     const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
 
+    public static bool IsStartWithWindows()
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(RunKey);
+            return key?.GetValue("Dingus") != null;
+        }
+        catch { return false; }
+    }
+
     public static void ApplyStartWithWindows(bool on)
     {
         try

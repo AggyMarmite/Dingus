@@ -885,6 +885,7 @@ public partial class MainWindow : Window
     void ExitPlayer()
     {
         if (!_playerMode) return;
+        CloseShortcutSheet();
         SaveVodProgress();
         ExitPlayerLayout();
         if (_nowLive && (_page == _guide || _page == _home))
@@ -1688,6 +1689,9 @@ public partial class MainWindow : Window
         if (_playerMode) return; // handled app-wide in OnThreadMessage
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
 
+        bool typing = Keyboard.FocusedElement is TextBox || Keyboard.FocusedElement is PasswordBox;
+        if (IsSheetKey(key) && (!typing || key == Key.F1)) { ToggleShortcutSheet(); e.Handled = true; return; }
+        if (SheetOpen && key == Key.Escape) { CloseShortcutSheet(); e.Handled = true; return; }
         if (key == Key.F11 && _nowLive) { EnterPlayer(true); e.Handled = true; return; }
         if (key == Key.P && _nowLive && !(Keyboard.FocusedElement is TextBox)) { EnterMini(); e.Handled = true; return; }
         if (key == Key.V && _page == _guide && !(Keyboard.FocusedElement is TextBox)) { OpenMultiView(null); e.Handled = true; return; }
@@ -1704,6 +1708,8 @@ public partial class MainWindow : Window
     bool HandleKey(Key key)
     {
         if (!_playerMode) return false;
+        if (IsSheetKey(key)) { ToggleShortcutSheet(); return true; }
+        if (SheetOpen) { CloseShortcutSheet(); if (key == Key.Escape) return true; }
         if (_panelOpen && HandlePanelKey(key)) return true;
         ShowChrome();
 
@@ -1737,6 +1743,9 @@ public partial class MainWindow : Window
             case Key.I:
                 ToggleHealthPinned();
                 return true;
+            case Key.S:
+                if (!_mini) { ShowSleepMenu(); return true; }
+                break;
             case Key.V:
                 if (_nowLive && !_mini) { OpenMultiView(null); return true; }
                 break;

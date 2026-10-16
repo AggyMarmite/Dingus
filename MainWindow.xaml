@@ -141,6 +141,19 @@
             <TextBlock x:Name="ToastText" FontSize="13"/>
         </Border>
 
+        <!-- Keyboard shortcuts (? or F1) -->
+        <Border x:Name="ShortcutSheet" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="28,22,28,24" CornerRadius="14"
+                Background="{StaticResource Surface2Brush}" BorderBrush="#22FFFFFF" BorderThickness="1" Visibility="Collapsed" MaxWidth="900"
+                MouseLeftButtonDown="Sheet_MouseDown">
+            <StackPanel>
+                <DockPanel Margin="0,0,0,14">
+                    <TextBlock DockPanel.Dock="Right" Text="? or Esc to close" Foreground="#99FFFFFF" FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock Text="Keyboard shortcuts" FontSize="20" FontWeight="SemiBold" Foreground="White"/>
+                </DockPanel>
+                <UniformGrid x:Name="ShortcutSheetGrid" Columns="2"/>
+            </StackPanel>
+        </Border>
+
         <!-- Channel number being typed (Guide) -->
         <Border x:Name="NumberBox" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,76,28,0" Padding="20,8"
                 CornerRadius="10" Background="{StaticResource Surface3Brush}" BorderBrush="{StaticResource AccentBrush}"
@@ -338,6 +351,8 @@
                                     </Button>
                                 </StackPanel>
                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                    <Button x:Name="SleepButton" Style="{StaticResource OverlayIconButton}" Content="&#xE708;"
+                                            ToolTip="Sleep timer (S)" Click="Sleep_Click"/>
                                     <Button x:Name="InfoButton" Style="{StaticResource OverlayIconButton}" Content="&#xE946;"
                                             ToolTip="Stream info (I)" Click="Info_Click"/>
                                     <Button x:Name="QualityButton" Style="{StaticResource OverlayIconButton}" Content="&#xE7F4;"
@@ -424,6 +439,19 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
                     </DockPanel>
+                </Border>
+
+                <!-- Keyboard shortcuts over the video -->
+                <Border x:Name="OverlaySheet" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="28,22,28,24" CornerRadius="14"
+                        Background="#F20C1018" BorderBrush="#22FFFFFF" BorderThickness="1" Visibility="Collapsed" MaxWidth="900"
+                        MouseLeftButtonDown="Sheet_MouseDown">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,14">
+                            <TextBlock DockPanel.Dock="Right" Text="? or Esc to close" Foreground="#99FFFFFF" FontSize="12" VerticalAlignment="Center"/>
+                            <TextBlock Text="Keyboard shortcuts" FontSize="20" FontWeight="SemiBold" Foreground="White"/>
+                        </DockPanel>
+                        <UniformGrid x:Name="OverlaySheetGrid" Columns="2"/>
+                    </StackPanel>
                 </Border>
             </Grid>
         </vlc:VideoView>

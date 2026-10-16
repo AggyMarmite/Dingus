@@ -57,6 +57,10 @@ public partial class SettingsView : UserControl, IPage
             StartGuideToggle.IsChecked = S.StartOnGuide;
             BatteryToggle.IsChecked = S.BatteryAware;
             LowMemToggle.IsChecked = S.LowMemoryInterface;
+            S.StartWithWindows = ThemeService.IsStartWithWindows(); // the installer can switch it on too
+            StartWinToggle.IsChecked = S.StartWithWindows;
+            CheckChip(ThemeChips, S.Theme ?? "midnight");
+            BuildAccentChips();
             BatteryStatus.Text = S.BatteryAware ? PowerService.Describe() : "";
             CheckChip(QualityChips, S.PreferredQuality ?? "best");
             CheckChip(IntervalChips, S.RefreshIntervalHours.ToString());
@@ -72,6 +76,62 @@ public partial class SettingsView : UserControl, IPage
             VersionText.Text = $"Dingus {v?.ToString(3)}  ·  Video engine: VLC  ·  Using {Memory.WorkingSetMB():N0} MB of memory";
         }
         finally { _loading = false; }
+    }
+
+    // ------------------------------------------------------------------ appearance
+
+    // What the app started with – the restart bar shows only when that's been changed.
+    static readonly string StartTheme = SettingsStore.Current.Theme, StartAccent = SettingsStore.Current.Accent;
+
+    void BuildAccentChips()
+    {
+        if (AccentChips.Children.Count == 0)
+            foreach (var (id, name, color) in ThemeService.Accents)
+            {
+                var swatch = new System.Windows.Shapes.Ellipse
+                {
+                    Width = 12, Height = 12, Margin = new Thickness(0, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center,
+                    Fill = new System.Windows.Media.SolidColorBrush(color),
+                };
+                var content = new StackPanel { Orientation = Orientation.Horizontal };
+                content.Children.Add(swatch);
+                content.Children.Add(new TextBlock { Text = name, VerticalAlignment = VerticalAlignment.Center });
+                var rb = new RadioButton { Style = (Style)FindResource("Chip"), Content = content, Tag = id, GroupName = "Accent" };
+                rb.Checked += Accent_Checked;
+                AccentChips.Children.Add(rb);
+            }
+        foreach (var rb in AccentChips.Children.OfType<RadioButton>())
+            rb.IsChecked = (rb.Tag as string) == (S.Accent ?? "blue");
+        UpdateRestartBar();
+    }
+
+    void Theme_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_loading || sender is not RadioButton { Tag: string t }) return;
+        S.Theme = t;
+        SettingsStore.Save();
+        UpdateRestartBar();
+    }
+
+    void Accent_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_loading || sender is not RadioButton { Tag: string t }) return;
+        S.Accent = t;
+        SettingsStore.Save();
+        UpdateRestartBar();
+    }
+
+    void UpdateRestartBar() =>
+        RestartBar.Visibility = S.Theme != StartTheme || S.Accent != StartAccent ? Visibility.Visible : Visibility.Collapsed;
+
+    void Restart_Click(object sender, RoutedEventArgs e) => App.Restart();
+
+    void StartWin_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        S.StartWithWindows = StartWinToggle.IsChecked == true;
+        ThemeService.ApplyStartWithWindows(S.StartWithWindows);
+        SettingsStore.Save();
     }
 
     static void CheckChip(Panel panel, string tag)
