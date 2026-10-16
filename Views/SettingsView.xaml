@@ -291,6 +291,21 @@
                 </StackPanel>
             </Border>
 
+            <!-- Plex -->
+            <TextBlock Style="{StaticResource SectionHeader}" Text="PLEX"/>
+            <Border Style="{StaticResource Card}">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="PlexSignInButton" Style="{StaticResource BaseButton}" Content="Sign in with Plex" Click="PlexSignIn_Click"/>
+                        <Button x:Name="PlexSignOutButton" Style="{StaticResource GhostButton}" Content="Sign out" Margin="8,0,0,0" Click="PlexSignOut_Click"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="Plex Media Server" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="PlexStatus" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
             <!-- Parental controls -->
             <TextBlock Style="{StaticResource SectionHeader}" Text="PARENTAL CONTROLS"/>
             <Border Style="{StaticResource Card}">

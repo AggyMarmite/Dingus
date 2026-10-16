@@ -34,6 +34,7 @@
                     <RadioButton x:Name="NavGuide" DockPanel.Dock="Top" Style="{StaticResource NavButton}" Tag="&#xE8FD;" Content="Guide" Checked="Nav_Checked"/>
                     <RadioButton x:Name="NavFilms" DockPanel.Dock="Top" Style="{StaticResource NavButton}" Tag="&#xE8B2;" Content="Films" Checked="Nav_Checked"/>
                     <RadioButton x:Name="NavShows" DockPanel.Dock="Top" Style="{StaticResource NavButton}" Tag="&#xE8F1;" Content="TV Shows" Checked="Nav_Checked"/>
+                    <RadioButton x:Name="NavPlex" DockPanel.Dock="Top" Style="{StaticResource NavButton}" Tag="&#xE714;" Content="Plex" Checked="Nav_Checked"/>
                     <RadioButton x:Name="NavSettings" DockPanel.Dock="Bottom" Style="{StaticResource NavButton}" Tag="&#xE713;" Content="Settings"
                                  Checked="Nav_Checked" Margin="0,0,0,12"/>
                 </DockPanel>

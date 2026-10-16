@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     readonly LibraryView _films;
     readonly LibraryView _shows;
     readonly SettingsView _settings;
+    readonly PlexView _plex;
     IPage _page;
 
     // ----- what's playing
@@ -34,6 +35,7 @@ public partial class MainWindow : Window
     string _prevChannelId;
     VodItem _vod;
     string _currentUrl;
+    DateTime _lastPlexReportUtc;
     DateTime _liveStartedUtc;
     bool _recentRecorded;
 
@@ -80,6 +82,7 @@ public partial class MainWindow : Window
         _films = new LibraryView(LibraryMode.Movies);
         _shows = new LibraryView(LibraryMode.Series);
         _settings = new SettingsView();
+        _plex = new PlexView();
         _guide.PreviewRequested += row => PlayLive(row.Channel, false);
         _mediaKeys = new MediaKeys(this, HandleMediaKey);
         ReminderService.Watch = id =>
@@ -432,6 +435,7 @@ public partial class MainWindow : Window
         else if (sender == NavFilms) page = _films;
         else if (sender == NavShows) page = _shows;
         else if (sender == NavSettings) page = _settings;
+        else if (sender == NavPlex) page = _plex;
         Navigate(page);
     }
 
@@ -466,6 +470,13 @@ public partial class MainWindow : Window
     }
 
     public void SetSearchHint(string hint) => SearchBox.Tag = hint;
+
+    /// <summary>Opens the Plex page (and starts signing in if you aren't yet).</summary>
+    public async void OpenPlex(bool signIn)
+    {
+        NavPlex.IsChecked = true;
+        if (signIn && !Plex.SignedIn) await _plex.SignIn();
+    }
 
     public void OpenChannelEditor()
     {
@@ -773,6 +784,7 @@ public partial class MainWindow : Window
         long start = 0;
         var h = resume ? HistoryStore.Get(item.ResumeKey) : null;
         if (h != null && h.CanResume) start = Math.Max(0, h.PositionMs - 3000); // a few seconds of context
+        else if (resume && item.StartMs > 30_000) start = Math.Max(0, item.StartMs - 3000);
 
         try { _svc.Play(item.Url, false, start); }
         catch (Exception ex) { ShowToast(ex.Message); return; }
@@ -1370,6 +1382,11 @@ public partial class MainWindow : Window
                 _lastSaveUtc = now;
                 HistoryStore.UpdateProgress(_vod, h.TimeMs, h.LengthMs);
             }
+            if (_vod.PlexKey != null && now - _lastPlexReportUtc > TimeSpan.FromSeconds(10))
+            {
+                _lastPlexReportUtc = now;
+                Plex.ReportProgress(_vod.PlexKey, "playing", h.TimeMs, h.LengthMs);
+            }
         }
 
         // Badge text and colour.
@@ -1628,6 +1645,18 @@ public partial class MainWindow : Window
 
     void SaveVodProgress()
     {
+        if (_vod?.PlexKey != null && _svc != null)
+        {
+            // Plex keeps its own progress: tell the server where you stopped.
+            long pt = _lastVodTime, plen = _lastVodLen;
+            try { var p = _svc.Player; if (p.Length > 0) { pt = p.Time; plen = p.Length; } } catch { }
+            if (plen > 0)
+            {
+                Plex.ReportProgress(_vod.PlexKey, "stopped", pt, plen);
+                if (pt >= plen * 0.9) Plex.MarkWatched(_vod.PlexKey);
+            }
+            return;
+        }
         if (_vod?.ResumeKey == null || _svc == null) return;
         long t = _lastVodTime, len = _lastVodLen;
         try
@@ -1642,6 +1671,7 @@ public partial class MainWindow : Window
     void OnVodEnded()
     {
         if (_vod == null) { ExitPlayer(); return; }
+        if (_vod.PlexKey != null) Plex.MarkWatched(_vod.PlexKey);
         HistoryStore.UpdateProgress(_vod, _lastVodLen, _lastVodLen, ended: true);
         var next = _vod.Next?.Invoke();
         if (next == null) { _vod = null; ExitPlayer(); return; }

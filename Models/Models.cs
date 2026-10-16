@@ -115,6 +115,12 @@ public class AppSettings
     public string AudioLanguage { get; set; }
     public string SubtitleLanguage { get; set; }
 
+    // Plex
+    /// <summary>Plex account token, encrypted for this Windows account.</summary>
+    public string PlexToken { get; set; }
+    public string PlexClientId { get; set; }
+    public string PlexServerId { get; set; }
+
     /// <summary>Pause &amp; rewind live TV (buffers the channel you're watching to disk).</summary>
     public bool Timeshift { get; set; } = true;
     /// <summary>How far back you can rewind live TV.</summary>
@@ -240,6 +246,10 @@ public class VodItem
     public string NextLabel { get; set; }
     /// <summary>File type (mp4/mkv…) – lets "Continue watching" rebuild the address without storing your login.</summary>
     public string Ext { get; set; }
+    /// <summary>Where to start (ms) when there's no local history – e.g. Plex's own resume point.</summary>
+    public long StartMs { get; set; }
+    /// <summary>Plex item id – progress is reported back to the Plex server.</summary>
+    public string PlexKey { get; set; }
 }
 
 public class ResumeEntry
