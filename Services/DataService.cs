@@ -401,6 +401,13 @@ public sealed class DataService
     }
     public string EpisodeUrl(Episode e) => e.Url ?? Xtream?.EpisodeUrl(e);
 
+    /// <summary>Catch-up from any moment (not just a programme's start), running up to about now.</summary>
+    public string CatchupUrlAt(Channel c, DateTime startLocal, int minutes)
+    {
+        if (Xtream == null || c?.Url != null || !c.HasArchive) return null;
+        return Xtream.CatchupUrl(c, startLocal, minutes, Catalog.Account?.ServerTimeZone);
+    }
+
     public async Task<MediaDetails> GetMovieDetailsAsync(Movie m, CancellationToken ct)
     {
         if (Xtream == null || m.Url != null) return new MediaDetails { Title = m.Name, Poster = m.Poster, Year = m.Year };

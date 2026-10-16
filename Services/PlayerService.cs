@@ -4,6 +4,9 @@ namespace Dingus.Services;
 
 public record TrackOption(int Id, string Name, bool Current);
 
+/// <summary>Where live TV is coming from: straight from the provider, the rewind buffer, or the provider's catch-up archive.</summary>
+public enum LiveSource { Direct, Buffer, Archive }
+
 /// <summary>Snapshot of how the current stream is doing (for the stream-health badge and stall detection).</summary>
 public record StreamHealth(
     uint Width, uint Height, float Fps, double Mbps,
@@ -73,18 +76,75 @@ public sealed class PlayerService
     DateTime _tsBaseUtc; // stream time at the point VLC was started from
     int _gen;            // bumps on every Play/Stop, so a slow start-up for an old channel is dropped
 
+    LiveSource _source = LiveSource.Direct;
+    public LiveSource Source { get { lock (_tsLock) return _source; } }
+
     /// <summary>The live channel is being buffered, so it can be paused and rewound.</summary>
     public bool CanTimeshift { get { lock (_tsLock) return _ts != null && !_ts.Closed; } }
 
-    /// <summary>How far behind live the picture is (zero when not buffering).</summary>
+    /// <summary>The oldest moment in the rewind buffer.</summary>
+    public DateTime BufferOldestUtc { get { lock (_tsLock) return _ts?.OldestUtc ?? DateTime.UtcNow; } }
+
+    /// <summary>The moment of the broadcast on screen right now (null when watching live directly).</summary>
+    public DateTime? PositionUtc
+    {
+        get
+        {
+            lock (_tsLock)
+            {
+                if (_source == LiveSource.Direct) return null;
+                var pos = _tsBaseUtc + _tsClock.Elapsed;
+                return pos > DateTime.UtcNow ? DateTime.UtcNow : pos;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Plays the provider's catch-up archive from <paramref name="startUtc"/> (minute precision) – used to go
+    /// further back than the rewind buffer. The buffer is dropped: one connection to the provider at a time.
+    /// </summary>
+    public void PlayArchive(string url, DateTime startUtc)
+    {
+        int gen = Interlocked.Increment(ref _gen);
+        var s = SettingsStore.Current;
+        var cache = Math.Clamp(s.NetworkCachingMs, 300, 10000);
+        var opts = new[] { $":network-caching={cache}", ":adaptive-maxbuffer=12000" }.Concat(SoundOptions()).ToArray();
+        Enqueue(() =>
+        {
+            if (gen != _gen) return;
+            long audio = Player.AudioDelay, spu = Player.SpuDelay;
+            EndTimeshift();
+            lock (_tsLock) { _source = LiveSource.Archive; _tsBaseUtc = startUtc; _tsClock.Reset(); }
+            GpuDecoding = null;
+            _playingSince = DateTime.MaxValue;
+            using var media = new Media(Vlc, new Uri(url), opts);
+            Player.Play(media);
+            Player.Volume = s.Volume;
+            ApplyPictureNow();
+            if (audio != 0) Player.SetAudioDelay(audio);
+            if (spu != 0) Player.SetSpuDelay(spu);
+        });
+    }
+
+    /// <summary>Jumps to a moment inside the rewind buffer.</summary>
+    public void SeekBuffer(DateTime utc)
+    {
+        TimeshiftSession ts;
+        lock (_tsLock) ts = _ts;
+        if (ts != null) PlayFromBuffer(ts, utc);
+    }
+
+    /// <summary>How far behind live the picture is (zero when watching live).</summary>
     public TimeSpan BehindLive
     {
         get
         {
             lock (_tsLock)
             {
-                if (_ts == null) return TimeSpan.Zero;
-                var behind = _ts.LatestUtc - (_tsBaseUtc + _tsClock.Elapsed);
+                var latest = _source == LiveSource.Buffer && _ts != null ? _ts.LatestUtc
+                           : _source == LiveSource.Archive ? DateTime.UtcNow : (DateTime?)null;
+                if (latest == null) return TimeSpan.Zero;
+                var behind = latest.Value - (_tsBaseUtc + _tsClock.Elapsed);
                 return behind < TimeSpan.Zero ? TimeSpan.Zero : behind;
             }
         }
@@ -131,6 +191,7 @@ public sealed class PlayerService
             lock (_tsLock)
             {
                 if (_ts != ts) return;
+                _source = LiveSource.Buffer;
                 _tsBaseUtc = utc;
                 _tsClock.Reset();
             }
@@ -198,7 +259,7 @@ public sealed class PlayerService
     void EndTimeshift()
     {
         TimeshiftSession old;
-        lock (_tsLock) { old = _ts; _ts = null; _tsClock.Reset(); }
+        lock (_tsLock) { old = _ts; _ts = null; _tsClock.Reset(); _source = LiveSource.Direct; }
         old?.Dispose();
     }
 
@@ -239,7 +300,7 @@ public sealed class PlayerService
                 if (gen != _gen) { ts?.Dispose(); return; }
                 if (ts != null)
                 {
-                    lock (_tsLock) { _ts = ts; _tsBaseUtc = ts.OldestUtc; _tsClock.Reset(); }
+                    lock (_tsLock) { _ts = ts; _tsBaseUtc = ts.OldestUtc; _tsClock.Reset(); _source = LiveSource.Buffer; }
                     uri = new Uri(LocalStreamServer.UrlFor(ts, 0));
                     opts = LiveOptions(local: true).ToList();
                 }

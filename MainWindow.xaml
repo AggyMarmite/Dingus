@@ -323,6 +323,11 @@
                                 </Border>
                                 <ProgressBar x:Name="LiveProgress" Grid.Column="1" Style="{StaticResource ThinProgress}" Maximum="1" Margin="14,0"
                                              VerticalAlignment="Center"/>
+                                <!-- Scrub bar: back through the rewind buffer / catch-up, forward up to live -->
+                                <Slider x:Name="LiveSeek" Grid.Column="1" Style="{StaticResource PlayerSlider}" Margin="12,0" Minimum="0" Maximum="1"
+                                        IsMoveToPointEnabled="True" Visibility="Collapsed" VerticalAlignment="Center"
+                                        PreviewMouseLeftButtonDown="LiveSeek_MouseDown" PreviewMouseLeftButtonUp="LiveSeek_MouseUp"
+                                        ValueChanged="LiveSeek_ValueChanged"/>
                                 <StackPanel Grid.Column="2" Orientation="Horizontal">
                                     <Button x:Name="GoLiveButton" Style="{StaticResource OverlayIconButton}" Width="Auto" Height="28" Padding="12,0"
                                             Margin="0,0,12,0" Visibility="Collapsed" ToolTip="Catch up to live (End)" Click="GoLive_Click">

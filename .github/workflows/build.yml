@@ -71,7 +71,8 @@ jobs:
           $r = Invoke-WebRequest -Method Head -Uri 'https://aka.ms/dotnet/8.0/windowsdesktop-runtime-win-x64.exe' -MaximumRedirection 5 -UseBasicParsing
           $rt = Get-ChildItem "$env:ProgramFiles\dotnet\shared\Microsoft.WindowsDesktop.App" -Directory | ForEach-Object Name
           $dir = Join-Path $env:RUNNER_TEMP 'installed'
-          $p = Start-Process $setup.FullName -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=`"$dir`"" -PassThru -Wait
+          $p = Start-Process $setup.FullName -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/NOLAUNCH',"/DIR=`"$dir`"" -PassThru
+          if (-not $p.WaitForExit(300000)) { $p.Kill(); Write-Host '::warning::installer did not finish' }
           $ok = Test-Path "$dir\Dingus.exe"
           $out = Join-Path $env:RUNNER_TEMP 'selftest-installed'
           $q = Start-Process "$dir\Dingus.exe" -ArgumentList '--self-test', "`"$out`"" -PassThru

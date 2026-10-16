@@ -71,7 +71,9 @@ git push origin v0.3.0
 | Space | Play / pause |
 | ↑ ↓ | Channel up / down (live) · volume (films) |
 | ← → | Back 10 s / forward 30 s (films) · back / forward 10 s (live TV) |
-| End | Live TV: catch up to live |
+| End | Live TV: back to live |
+| Home | Live TV: start of the programme (catch-up channels) |
+| Ctrl + ← → | Live TV: back / forward 5 minutes |
 | S | Sleep timer |
 | ? / F1 | Keyboard shortcut list |
 | Home | Start a film or episode from the beginning |
@@ -101,6 +103,10 @@ git push origin v0.3.0
 - **Picture-in-picture** (P): a floating, always-on-top window. Drag to move (snaps into corners), drag the corner grip
   or Ctrl + mouse wheel to resize, double-click for full screen.
 - **Taskbar controls**: previous / play-pause / next buttons on the taskbar thumbnail, and film progress on the icon.
+- **Catch-up on the live timeline** (Xtream providers with catch-up): drag the bar under the live picture, or press
+  ← / → (Ctrl for 5 minutes), Home for the start of the programme and End for live. Earlier than the rewind buffer,
+  Dingus switches to the provider's catch-up automatically and plays on up to live. "Start over" / "Watch catch-up"
+  in the guide land on the same timeline.
 - **Pause & rewind live TV**: Space pauses, ← goes back 10 s, End catches up. The channel is buffered to disk
   (30 min – 2 h, never more than a quarter of your free space) through one connection, so memory use stays flat.
   HLS streams play directly without it.

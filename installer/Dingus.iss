@@ -54,7 +54,7 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 [Run]
 Filename: "{app}\Dingus.exe"; Description: "Open Dingus"; Flags: nowait postinstall skipifsilent
 ; After a silent in-app update, open the app again.
-Filename: "{app}\Dingus.exe"; Flags: nowait; Check: WizardSilent
+Filename: "{app}\Dingus.exe"; Flags: nowait; Check: ReopenAfterSilentInstall
 
 [Code]
 // Dingus needs the .NET 8 Desktop Runtime. Most PCs already have it; if not, it's downloaded from
@@ -82,6 +82,12 @@ begin
       FindClose(Rec);
     end;
   end;
+end;
+
+// After a silent in-app update, open Dingus again (/NOLAUNCH turns that off, for automated tests).
+function ReopenAfterSilentInstall: Boolean;
+begin
+  Result := WizardSilent and (Pos('/NOLAUNCH', UpperCase(GetCmdTail)) = 0);
 end;
 
 procedure InitializeWizard;

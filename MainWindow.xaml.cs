@@ -679,19 +679,14 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Plays a past (or current, from the start) programme using the provider's catch-up.</summary>
+    /// <summary>
+    /// Plays a past (or current, from the start) programme with the provider's catch-up – on the channel's
+    /// live timeline, so you can scrub through it and carry on (or jump) up to live.
+    /// </summary>
     public void PlayCatchup(Channel ch, Programme p)
     {
-        var url = DataService.Instance.CatchupUrl(ch, p);
-        if (url == null) { ShowToast("Catch-up isn't available for this programme."); return; }
-        var row = _guide.RowFor(ch.Id);
-        PlayVod(new VodItem
-        {
-            Kind = "catchup",
-            Title = ch.Name,
-            Subtitle = $"{p.Title}  ·  {p.Start:ddd d MMM, HH:mm}",
-            Url = url,
-            Image = row?.Logo,
-        }, resume: false);
+        if (!DataService.Instance.CanCatchup(ch, p)) { ShowToast("Catch-up isn't available for this programme."); return; }
+        PlayFromArchive(ch, p.Start);
     }
 
     // Merged channels: every version of the channel being watched, in the order to try them.
@@ -738,6 +733,14 @@ public partial class MainWindow : Window
         if (_variantIdx < 0 || _variantIdx >= _variants.Count) return false;
         var url = DataService.Instance.StreamUrl(_variants[_variantIdx]);
         if (url == null) return false;
+        if (_startArchiveAtUtc != null && _guide.RowFor(_variants[_variantIdx].Id)?.CatchupChannel is { } archive &&
+            TryStartPendingArchive(archive))
+        {
+            _currentUrl = url;
+            ResetHealth();
+            return true;
+        }
+        _startArchiveAtUtc = null;
         try { _svc.Play(url, true); }
         catch (Exception ex) { ShowToast(ex.Message); return false; }
         _currentUrl = url;
@@ -916,7 +919,7 @@ public partial class MainWindow : Window
         ChUpButton.Visibility = ChDownButton.Visibility = live ? Visibility.Visible : Visibility.Collapsed;
         MultiViewButton.Visibility = live ? Visibility.Visible : Visibility.Collapsed;
         LastChButton.Visibility = live && _prevChannelId != null ? Visibility.Visible : Visibility.Collapsed;
-        BackSeekButton.Visibility = FwdSeekButton.Visibility = !live || _svc?.CanTimeshift == true ? Visibility.Visible : Visibility.Collapsed;
+        BackSeekButton.Visibility = FwdSeekButton.Visibility = !live || LiveSeekable ? Visibility.Visible : Visibility.Collapsed;
         BackSeekButton.ToolTip = "Back 10 seconds (←)";
         FwdSeekButton.ToolTip = live ? "Forward 10 seconds (→)" : "Forward 30 seconds (→)";
         NextEpisodeButton.Visibility = !live && _vod?.Next != null ? Visibility.Visible : Visibility.Collapsed;
@@ -1163,7 +1166,9 @@ public partial class MainWindow : Window
 
     void UpdateLiveInfo(Channel ch)
     {
-        var p = _guide.NowOn(ch);
+        var at = DateTime.Now - (_svc?.BehindLive ?? TimeSpan.Zero); // where you are, if paused/rewound/catch-up
+        var row = ch == null ? null : _guide.RowFor(ch.Id);
+        var p = row != null ? DataService.Instance.Epg.At(_guide.EpgIdOf(row), at) : _guide.NowOn(ch);
         if (p == null)
         {
             ChromeSubtitle.Text = "No guide information";
@@ -1172,9 +1177,9 @@ public partial class MainWindow : Window
             LiveTimes.Text = "";
             return;
         }
-        var now = DateTime.Now - (_svc?.BehindLive ?? TimeSpan.Zero); // where you are, if paused/rewound
+        var now = at;
         ChromeSubtitle.Text = p.Title;
-        var next = _guide.NextOn(ch);
+        var next = row != null ? DataService.Instance.Epg.StartingFrom(_guide.EpgIdOf(row), p.End) : _guide.NextOn(ch);
         ChromeNext.Text = next != null ? $"Next   {next.Start:HH:mm}   {next.Title}" : "";
         LiveProgress.Value = (now - p.Start).TotalSeconds / Math.Max(1, (p.End - p.Start).TotalSeconds);
         LiveTimes.Text = $"{p.Start:HH:mm} – {p.End:HH:mm}";
@@ -1287,6 +1292,7 @@ public partial class MainWindow : Window
         {
             SetBuffering(null);
             if (_currentUrl == null) return;
+            if (_nowLive && _svc.Source == LiveSource.Archive) { GoLiveNow(); return; } // caught up with live
             if (_nowLive) Reconnect(); // live streams shouldn't "end" – it's a dropped connection
             else OnVodEnded();
         });
@@ -1627,6 +1633,7 @@ public partial class MainWindow : Window
         if (_currentUrl != url) return; // you changed channel meanwhile
 
         long resumeAt = _nowLive ? 0 : Math.Max(0, _lastVodTime - 2000);
+        if (_nowLive && _svc.Source == LiveSource.Archive) { SeekLiveTo(LivePositionUtc); _lastProgressUtc = DateTime.UtcNow; return; }
         try { _svc.Play(url, _nowLive, resumeAt); }
         catch (Exception ex) { Log.Error(ex); }
         _lastProgressUtc = DateTime.UtcNow;
@@ -1799,6 +1806,7 @@ public partial class MainWindow : Window
                 break;
             case Key.Home:
                 if (!_nowLive) { _svc?.SeekTo(0); return true; }
+                if (LiveSeekable) { StartOfProgramme(); return true; }
                 break;
             case Key.Space:
             case Key.MediaPlayPause:
@@ -1822,14 +1830,14 @@ public partial class MainWindow : Window
                 break;
             case Key.Left:
                 if (!_nowLive) { _svc?.SeekBy(-10_000); return true; }
-                if (_svc?.CanTimeshift == true) { _svc.JumpLive(-10); ShowToast("Back 10 seconds"); return true; }
+                if (LiveSeekable) { SeekLiveBy(Keyboard.Modifiers.HasFlag(ModifierKeys.Control) ? -300 : -10); return true; }
                 break;
             case Key.Right:
                 if (!_nowLive) { _svc?.SeekBy(30_000); return true; }
-                if (_svc?.CanTimeshift == true && _svc.BehindLive > TimeSpan.FromSeconds(4)) { _svc.JumpLive(10); return true; }
+                if (LiveSeekable && _svc.BehindLive > TimeSpan.FromSeconds(4)) { SeekLiveBy(Keyboard.Modifiers.HasFlag(ModifierKeys.Control) ? 300 : 10); return true; }
                 break;
             case Key.End:
-                if (_nowLive && _svc?.CanTimeshift == true) { _svc.GoLive(); ShowToast("Back to live"); return true; }
+                if (LiveSeekable) { GoLiveNow(); ShowToast("Back to live"); return true; }
                 break;
         }
         return false;
@@ -1977,8 +1985,8 @@ public partial class MainWindow : Window
 
     void Back_Click(object sender, RoutedEventArgs e) => ExitPlayer();
     void PlayPause_Click(object sender, RoutedEventArgs e) => _svc?.TogglePause();
-    void SeekBack_Click(object sender, RoutedEventArgs e) { if (_nowLive) _svc?.JumpLive(-10); else _svc?.SeekBy(-10_000); }
-    void SeekFwd_Click(object sender, RoutedEventArgs e) { if (_nowLive) _svc?.JumpLive(10); else _svc?.SeekBy(30_000); }
+    void SeekBack_Click(object sender, RoutedEventArgs e) { if (_nowLive) SeekLiveBy(-10); else _svc?.SeekBy(-10_000); }
+    void SeekFwd_Click(object sender, RoutedEventArgs e) { if (_nowLive) { if (_svc.BehindLive > TimeSpan.FromSeconds(4)) SeekLiveBy(10); } else _svc?.SeekBy(30_000); }
     void ChUp_Click(object sender, RoutedEventArgs e) => Zap(-1);
     void ChDown_Click(object sender, RoutedEventArgs e) => Zap(1);
     void LastCh_Click(object sender, RoutedEventArgs e) => GoToPreviousChannel();
