@@ -58,6 +58,17 @@
     <Resource Include="Assets\Dingus.ico" />
   </ItemGroup>
 
+
+  <!-- Smaller download: 64-bit VLC only, without the parts of VLC that Dingus never uses.
+       Every codec, HTTPS, HLS/DASH, subtitles (incl. teletext), deinterlacing and GPU decoding stay. -->
+  <PropertyGroup>
+    <VlcWindowsX86Enabled>false</VlcWindowsX86Enabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <VlcWindowsX64ExcludeFiles Include="plugins\access_output\%2A;plugins\stream_out\%2A;plugins\mux\%2A;plugins\visualization\%2A;plugins\video_splitter\%2A;plugins\lua\%2A;plugins\services_discovery\%2A;plugins\meta_engine\%2A;plugins\stream_extractor\%2A;plugins\access\libdcp_plugin.dll;plugins\access\liblibbluray_plugin.dll;plugins\access\libdtv_plugin.dll;plugins\access\libdvdnav_plugin.dll;plugins\access\libdvdread_plugin.dll;plugins\access\libvcd_plugin.dll;plugins\access\libcdda_plugin.dll;plugins\access\libscreen_plugin.dll;plugins\access\libdshow_plugin.dll;plugins\access\libaccess_srt_plugin.dll;plugins\access\libsmb_plugin.dll;plugins\access\libvnc_plugin.dll;plugins\access\librdp_plugin.dll;plugins\access\libsftp_plugin.dll;plugins\access\libnfs_plugin.dll;plugins\access\libaccess_mms_plugin.dll;plugins\access\libsatip_plugin.dll;plugins\access\libdvb_plugin.dll;plugins\codec\libvpx_plugin.dll;plugins\codec\libaom_plugin.dll;plugins\demux\libgme_plugin.dll;plugins\video_output\libcaca_plugin.dll;plugins\audio_filter\libspatialaudio_plugin.dll;plugins\spu\libremoteosd_plugin.dll;plugins\spu\librss_plugin.dll;plugins\spu\libmosaic_plugin.dll" />
+    <VlcWindowsX86IncludeFiles Remove="@(VlcWindowsX86IncludeFiles)" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="LibVLCSharp.WPF" Version="3.8.5" />
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.21" />

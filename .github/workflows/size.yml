@@ -21,6 +21,7 @@ jobs:
         run: |
           function MB($p) { [math]::Round(((Get-ChildItem $p -Recurse -File | Measure-Object Length -Sum).Sum / 1MB), 1) }
           $lines = @("self-contained total: $(MB 'pub-sc') MB", "framework-dependent total: $(MB 'pub-fd') MB")
+          foreach ($d in Get-ChildItem pub-fd -Recurse -Directory -Depth 1) { $lines += "  dir $($d.FullName.Replace((Get-Location).Path,'')): $(MB $d.FullName) MB" }
           $vlc = Get-ChildItem pub-fd -Recurse -Directory -Filter plugins | Select-Object -First 1
           $lines += "libvlc folder: $(MB $vlc.Parent.FullName) MB  ($($vlc.Parent.FullName.Replace((Get-Location).Path,'')))"
           foreach ($f in Get-ChildItem $vlc.Parent.FullName -File) { if ($f.Length -gt 1MB) { $lines += "  $($f.Name): $([math]::Round($f.Length/1MB,1)) MB" } }
