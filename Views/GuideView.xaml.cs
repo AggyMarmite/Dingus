@@ -313,7 +313,7 @@ public partial class GuideView : UserControl, IPage
             res.Add(new ProgBlock
             {
                 Title = list == null ? r.Name : "No information",
-                TimeText = list == null ? "No guide data for this channel" : "",
+                TimeText = list == null ? "No guide data – right-click → Match TV guide" : "",
                 Left = 0,
                 Width = Math.Max(10, tw - 3),
                 Row = r,
@@ -557,6 +557,16 @@ public partial class GuideView : UserControl, IPage
 
     // ------------------------------------------------------------------ used by the player
 
+    /// <summary>The channel <paramref name="delta"/> places from <paramref name="from"/> in the list on screen (no change of selection).</summary>
+    public GuideRow Peek(GuideRow from, int delta)
+    {
+        if (_shown.Count == 0) return null;
+        int idx = from != null ? _shown.IndexOf(from) : -1;
+        if (idx < 0 && ChannelList.SelectedItem is GuideRow sel) idx = _shown.IndexOf(sel);
+        idx = idx < 0 ? 0 : ((idx + delta) % _shown.Count + _shown.Count) % _shown.Count;
+        return _shown[idx];
+    }
+
     /// <summary>Channel up/down: moves the selection (the preview follows via the debounce).</summary>
     public GuideRow Step(int delta)
     {
@@ -656,6 +666,21 @@ public partial class GuideView : UserControl, IPage
         ChannelEditorWindow.SetName(r, name);
         SettingsStore.Save();
         Rebuild();
+    }
+
+    async void MatchGuide_Click(object sender, RoutedEventArgs e)
+    {
+        var r = _ctxRow ?? ChannelList.SelectedItem as GuideRow;
+        var p = DataService.Instance.Active;
+        if (r == null || p == null) return;
+        var w = new GuideMatchWindow(r) { Owner = Window.GetWindow(this) };
+        if (w.ShowDialog() != true) return;
+        foreach (var v in r.Variants) p.EpgOverrides.Remove(v.Id);
+        if (w.Result != null) foreach (var v in r.Variants) p.EpgOverrides[v.Id] = w.Result;
+        SettingsStore.Save();
+        MainWindow.Instance?.ShowToast(w.Result == null ? $"{r.DisplayName}: matching automatically again…"
+            : w.Result.Length == 0 ? $"{r.DisplayName}: no guide" : $"{r.DisplayName}: guide updated…");
+        await DataService.Instance.ReloadEpgAsync();
     }
 
     void Hide_Click(object sender, RoutedEventArgs e)
@@ -769,6 +794,8 @@ public partial class GuideView : UserControl, IPage
     public GuideRow RowFor(string channelId) => channelId != null && _byId.TryGetValue(channelId, out var r) ? r : null;
 
     /// <summary>Self-test: switch the guide's view (grid | now | tonight | find).</summary>
+    internal GuideRow SelfTestFirstRow => _all.FirstOrDefault();
+
     internal void SelfTestMode(string mode)
     {
         foreach (var rb in ((Panel)ModeGrid.Parent).Children.OfType<RadioButton>())

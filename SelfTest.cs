@@ -56,6 +56,16 @@ public static class SelfTest
             Snap((FrameworkElement)editor.Content, "11-channel-editor");
             editor.Close();
 
+            var first = main.SelfTestGuide.SelfTestFirstRow;
+            if (first != null)
+            {
+                var match = new GuideMatchWindow(first) { Owner = main };
+                match.Show();
+                await Idle(1000);
+                Snap((FrameworkElement)match.Content, "13-guide-match");
+                match.Close();
+            }
+
             var card = ReminderService.SelfTestCard();
             await Idle(800);
             if (card != null) { Snap((FrameworkElement)card.Content, "12-reminder"); card.Close(); }

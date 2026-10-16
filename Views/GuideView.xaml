@@ -164,6 +164,7 @@
                         <MenuItem Header="Watch in picture-in-picture" Click="Mini_Click"/>
                         <MenuItem Header="Add / remove favourite" Click="Fav_Click"/>
                         <Separator/>
+                        <MenuItem Header="Match TV guide…" Click="MatchGuide_Click"/>
                         <MenuItem Header="Rename channel…" Click="Rename_Click"/>
                         <MenuItem Header="Hide channel" Click="Hide_Click"/>
                         <MenuItem Header="Edit channels (order, names, hidden)…" Click="EditChannels_Click"/>

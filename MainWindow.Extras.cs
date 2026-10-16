@@ -20,7 +20,8 @@ public partial class MainWindow
     {
         ("0 – 9", "Type a channel number"),
         ("0 / Backspace", "Last channel you watched"),
-        ("↑  ↓", "Channel up / down (films: volume)"),
+        ("↑  ↓", "Live TV: what's on other channels (Enter to watch) · films: volume"),
+        ("PgUp / PgDn", "Channel up / down"),
         ("←  →", "Back / forward (live TV 10 s, films 10 s / 30 s)"),
         ("End  /  Home", "Live TV: back to live / start of the programme"),
         ("Ctrl + ← →", "Live TV: back / forward 5 minutes"),
@@ -69,13 +70,13 @@ public partial class MainWindow
                 });
                 grid.Children.Add(row);
             }
-        sheet.Visibility = Visibility.Visible;
+        Motion.FadeIn(sheet, fromY: 12, ms: 200);
     }
 
     void CloseShortcutSheet()
     {
-        ShortcutSheet.Visibility = Visibility.Collapsed;
-        OverlaySheet.Visibility = Visibility.Collapsed;
+        Motion.FadeOut(ShortcutSheet, toY: 8);
+        Motion.FadeOut(OverlaySheet, toY: 8);
     }
 
     void Sheet_MouseDown(object sender, MouseButtonEventArgs e) { CloseShortcutSheet(); e.Handled = true; }
@@ -437,6 +438,7 @@ public partial class MainWindow
         var night = new MenuItem { Header = "Night mode – even out loud and quiet sounds", IsCheckable = true, IsChecked = s.NightMode };
         night.Click += (_, _) => SetNightMode(!s.NightMode);
         menu.Items.Add(night);
+        AddPictureFixMenu(menu);
 
         _hideTimer.Stop();
         menu.Closed += (_, _) => { _menuOpen = false; if (_playerMode) _hideTimer.Start(); };
@@ -503,4 +505,147 @@ public partial class MainWindow
     internal Views.GuideView SelfTestGuide => _guide;
     internal void SelfTestShortcuts(bool open) { if (open != SheetOpen) ToggleShortcutSheet(); }
     internal void SelfTestSearch(string text) => SearchBox.Text = text;
+}
+
+// Per-channel picture fixes (picture & sound menu → "Picture fix for this channel").
+public partial class MainWindow
+{
+    /// <summary>The key a channel's picture fix is saved under: the guide row, so every version shares it.</summary>
+    string PictureKey(Channel c) => c == null ? null : (_guide.RowFor(c.Id)?.Channel.Id ?? c.Id);
+
+    ChannelPicture PictureFor(Channel c)
+    {
+        var p = DataService.Instance.Active;
+        var key = PictureKey(c);
+        if (p == null || key == null || !p.PictureFixes.TryGetValue(key, out var v)) return null;
+        var parts = v.Split('|');
+        var dec = parts.Length > 0 && parts[0].Length > 0 ? parts[0] : null;
+        bool deint = parts.Length > 1 && parts[1] == "1";
+        return new ChannelPicture(dec, deint);
+    }
+
+    void SetPictureFor(Channel c, ChannelPicture pic, string toast)
+    {
+        var p = DataService.Instance.Active;
+        var key = PictureKey(c);
+        if (p == null || key == null) return;
+        if (pic == null || pic.IsDefault) p.PictureFixes.Remove(key);
+        else p.PictureFixes[key] = $"{pic.Decoder}|{(pic.Deinterlace ? "1" : "0")}";
+        SettingsStore.Save();
+        ShowToast(toast);
+        if (_nowLive) PlayVariant(); // reopen the channel so the change takes effect
+    }
+
+    void AddPictureFixMenu(ContextMenu menu)
+    {
+        if (!_nowLive || _nowChannel == null) return;
+        var ch = _nowChannel;
+        var cur = PictureFor(ch) ?? new ChannelPicture(null, false);
+        var fix = new MenuItem { Header = "Picture glitches on this channel?" };
+
+        var deint = new MenuItem
+        {
+            Header = "Always remove interlacing lines (for comb-like lines on movement)",
+            IsCheckable = true, IsChecked = cur.Deinterlace,
+        };
+        deint.Click += (_, _) => SetPictureFor(ch, cur with { Deinterlace = !cur.Deinterlace },
+            !cur.Deinterlace ? "Interlacing lines removed on this channel" : "Interlacing back to automatic on this channel");
+        fix.Items.Add(deint);
+        fix.Items.Add(new Separator());
+
+        void Dec(string label, string value, string toast)
+        {
+            var mi = new MenuItem { Header = label, IsChecked = cur.Decoder == value };
+            mi.Click += (_, _) => SetPictureFor(ch, cur with { Decoder = value }, toast);
+            fix.Items.Add(mi);
+        }
+        Dec("Graphics card – normal", null, "Normal decoding on this channel");
+        Dec("Graphics card – alternative decoder (for blocky or green glitches)", "dxva2", "Trying the alternative graphics decoder on this channel");
+        Dec("Software decoding (most compatible, uses more CPU)", "software", "Software decoding on this channel");
+        fix.Items.Add(new Separator());
+        fix.Items.Add(new MenuItem { Header = "Dingus remembers this for the channel.", IsEnabled = false });
+        menu.Items.Add(new Separator());
+        menu.Items.Add(fix);
+    }
+}
+
+// Info bar: ↑ ↓ browse what's on other channels while you keep watching; Enter switches.
+public partial class MainWindow
+{
+    Views.GuideRow _browseRow;
+    DispatcherTimer _browseTimer;
+    bool Browsing => _browseRow != null;
+
+    void Browse(int delta)
+    {
+        var current = _nowChannel == null ? null : _guide.RowFor(_nowChannel.Id);
+        var row = _guide.Peek(_browseRow ?? current, delta);
+        if (row == null) return;
+        _browseRow = row;
+        HideChrome();
+        ShowInfoBar(row, row == current);
+        if (_browseTimer == null)
+        {
+            _browseTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
+            _browseTimer.Tick += (_, _) => CloseBrowse();
+        }
+        _browseTimer.Stop();
+        _browseTimer.Start();
+    }
+
+    void ShowInfoBar(Views.GuideRow row, bool watching)
+    {
+        var epg = DataService.Instance.Epg;
+        var id = _guide.EpgIdOf(row);
+        var now = DateTime.Now;
+        var p = epg.At(id, now);
+        var n = p != null ? epg.StartingFrom(id, p.End) : epg.StartingFrom(id, now);
+        InfoNumber.Text = row.Number;
+        InfoName.Text = row.DisplayName;
+        InfoInitials.Text = row.Initials;
+        ImageLoader.SetUrl(InfoLogo, row.Logo);
+        InfoWatching.Visibility = watching ? Visibility.Visible : Visibility.Collapsed;
+        InfoNow.Text = p?.Title ?? "No guide information";
+        InfoNowTime.Text = p != null ? $"{p.Start:HH:mm} – {p.End:HH:mm}  ·  {Math.Max(1, (int)Math.Ceiling((p.End - now).TotalMinutes))} min left" : "";
+        InfoProgress.Value = p != null ? (now - p.Start).TotalSeconds / Math.Max(1, (p.End - p.Start).TotalSeconds) : 0;
+        InfoProgress.Visibility = p != null ? Visibility.Visible : Visibility.Hidden;
+        InfoNext.Text = n?.Title ?? "";
+        InfoNextTime.Text = n != null ? $"{n.Start:HH:mm}" : "";
+        Motion.FadeIn(InfoBar, fromY: 16, ms: 200);
+    }
+
+    void CloseBrowse()
+    {
+        _browseTimer?.Stop();
+        _browseRow = null;
+        Motion.FadeOut(InfoBar, toY: 12, ms: 160);
+    }
+
+    void TuneBrowse()
+    {
+        var row = _browseRow;
+        CloseBrowse();
+        if (row == null) return;
+        if (_nowChannel != null && _guide.RowFor(_nowChannel.Id) == row) return; // already watching it
+        _guide.SelectChannel(row.Channel.Id); // channel up/down then carries on from here
+        PlayLive(row.Channel, false);
+        UpdateChromeText(row.Channel);
+    }
+
+    void InfoBar_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) { TuneBrowse(); e.Handled = true; }
+
+    /// <summary>Keys while the info bar is open. Returns true if the key was used.</summary>
+    bool HandleBrowseKey(Key key)
+    {
+        switch (key)
+        {
+            case Key.Up: Browse(-1); return true;
+            case Key.Down: Browse(1); return true;
+            case Key.Enter: TuneBrowse(); return true;
+            case Key.Escape:
+            case Key.Back: CloseBrowse(); return true;
+        }
+        CloseBrowse(); // anything else closes it and does its usual job
+        return false;
+    }
 }

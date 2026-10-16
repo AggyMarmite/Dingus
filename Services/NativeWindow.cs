@@ -11,6 +11,7 @@ public static class NativeWindow
     [DllImport("user32.dll")] static extern bool ReleaseCapture();
     [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
+    const int DWMWA_TRANSITIONS_FORCEDISABLED = 3;
     const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
     const int DWMWA_BORDER_COLOR = 34;
     const int DWMWA_CAPTION_COLOR = 35;
@@ -34,6 +35,22 @@ public static class NativeWindow
             DwmSetWindowAttribute(hwnd, DWMWA_TEXT_COLOR, ref text, sizeof(int));
             int border = 0x003B2B23;  // #232B3B
             DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, ref border, sizeof(int));
+        }
+        catch { }
+    }
+
+    /// <summary>
+    /// Turns off Windows' minimise/maximise/restore animations for this window, so switching full screen
+    /// on and off is a single clean jump instead of an animation of each intermediate step.
+    /// </summary>
+    public static void DisableAnimations(Window w)
+    {
+        try
+        {
+            var hwnd = new WindowInteropHelper(w).Handle;
+            if (hwnd == IntPtr.Zero) return;
+            int on = 1;
+            DwmSetWindowAttribute(hwnd, DWMWA_TRANSITIONS_FORCEDISABLED, ref on, sizeof(int));
         }
         catch { }
     }

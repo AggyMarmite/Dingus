@@ -25,6 +25,10 @@ public class PlaylistConfig
     public Dictionary<string, string> ChannelNames { get; set; } = new();
     /// <summary>Parental controls: locked categories ("live:12", "vod:7" …).</summary>
     public List<string> LockedCategories { get; set; } = new();
+    /// <summary>Per-channel picture fixes: channel id → "decoder|deinterlace" (e.g. "dxva2|1", "software|0").</summary>
+    public Dictionary<string, string> PictureFixes { get; set; } = new();
+    /// <summary>Guide matches you've made by hand (channel id → guide channel id; "" = no guide).</summary>
+    public Dictionary<string, string> EpgOverrides { get; set; } = new();
     /// <summary>Channel editor: channels you've hidden (every version's id).</summary>
     public List<string> HiddenChannels { get; set; } = new();
     /// <summary>Channel editor: your own order per category (category id → channel ids, top first).</summary>

@@ -163,7 +163,8 @@ public sealed class DataService
         if (!File.Exists(file)) return;
         var channels = GuideChannels();
         var shift = S.EpgShiftMinutes;
-        var epg = await Task.Run(() => EpgService.Parse(file, channels, shift));
+        var overrides = new Dictionary<string, string>(p.EpgOverrides);
+            var epg = await Task.Run(() => EpgService.Parse(file, channels, shift, overrides));
         if (gen != _gen) return;
         SetEpg(epg);
         EpgChanged?.Invoke();
@@ -293,7 +294,8 @@ public sealed class DataService
             var channels = GuideChannels();
             var shift = S.EpgShiftMinutes;
             var file = EpgFile(p);
-            var epg = await Task.Run(() => EpgService.Parse(file, channels, shift));
+            var overrides = new Dictionary<string, string>(p.EpgOverrides);
+            var epg = await Task.Run(() => EpgService.Parse(file, channels, shift, overrides));
             if (gen != _gen) return;
             SetEpg(epg);
             Memory.CompactSoon();

@@ -115,7 +115,7 @@ public partial class MainWindow : Window
         _hideTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _hideTimer.Tick += (_, _) => HideChrome();
         _toastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3.5) };
-        _toastTimer.Tick += (_, _) => { _toastTimer.Stop(); Toast.Visibility = Visibility.Collapsed; OverlayToast.Visibility = Visibility.Collapsed; };
+        _toastTimer.Tick += (_, _) => { _toastTimer.Stop(); Motion.FadeOut(Toast, toY: 8); Motion.FadeOut(OverlayToast, toY: -8); };
         _searchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _searchTimer.Tick += (_, _) => { _searchTimer.Stop(); _page?.ApplySearch(SearchBox.Text.Trim()); };
         _healthTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(1) };
@@ -131,7 +131,7 @@ public partial class MainWindow : Window
         ds.Message += ShowToast;
         ds.CatalogChanged += () => { if (_nowLive && _nowChannel != null && !ds.Catalog.Channels.Any(c => c.Id == _nowChannel.Id)) StopPlayback(); };
 
-        SourceInitialized += (_, _) => NativeWindow.ApplyDarkTitleBar(this);
+        SourceInitialized += (_, _) => { NativeWindow.ApplyDarkTitleBar(this); NativeWindow.DisableAnimations(this); };
         PowerService.Changed += OnPowerChanged;
         // Full screen stays above the taskbar only while Dingus is in front, so Alt-Tab works normally.
         Activated += (_, _) => { if (_osFullscreen || _mini) Topmost = true; };
@@ -455,6 +455,9 @@ public partial class MainWindow : Window
         _page?.OnHidden();
         _page = page;
         PageHost.Content = page;
+        // A gentle fade as the new page appears (no slide – keeps big pages cheap to draw).
+        PageHost.BeginAnimation(OpacityProperty, new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(150))
+            { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
         PageTitle.Text = page.Title;
         SearchHost.Visibility = page.SupportsSearch ? Visibility.Visible : Visibility.Collapsed;
         SearchBox.Tag = page.SearchHint;
@@ -652,12 +655,12 @@ public partial class MainWindow : Window
         if (_playerMode)
         {
             OverlayToastText.Text = message;
-            OverlayToast.Visibility = Visibility.Visible;
+            Motion.FadeIn(OverlayToast, fromY: -10);
         }
         else
         {
             ToastText.Text = message;
-            Toast.Visibility = Visibility.Visible;
+            Motion.FadeIn(Toast, fromY: 10);
         }
         _toastTimer.Stop();
         _toastTimer.Start();
@@ -752,7 +755,7 @@ public partial class MainWindow : Window
             return true;
         }
         _startArchiveAtUtc = null;
-        try { _svc.Play(url, true); }
+        try { _svc.Play(url, true, 0, PictureFor(_variants[_variantIdx])); }
         catch (Exception ex) { ShowToast(ex.Message); return false; }
         _currentUrl = url;
         ResetHealth();
@@ -965,8 +968,10 @@ public partial class MainWindow : Window
         _uiTimer.Stop();
         _hideTimer.Stop();
         Overlay.Cursor = null;
-        OverlayToast.Visibility = Visibility.Collapsed;
-        PlayerChrome.Visibility = Visibility.Collapsed;
+        Motion.HideNow(OverlayToast);
+        Motion.HideNow(PlayerChrome);
+        Motion.HideNow(InfoBar);
+        _browseRow = null;
         MiniChrome.Visibility = Visibility.Collapsed;
         HealthBadge.Visibility = Visibility.Collapsed;
         HideUpNext();
@@ -983,12 +988,15 @@ public partial class MainWindow : Window
             _prevState = WindowState;
             _prevStyle = WindowStyle;
             _prevResize = ResizeMode;
-            WindowState = WindowState.Normal;
-            WindowStyle = WindowStyle.None;
-            ResizeMode = ResizeMode.NoResize;
             // Cover the whole monitor exactly (not "maximise", which can stop at the taskbar), and sit
             // above the taskbar while the player is in front.
             var m = MonitorBoundsDip();
+            // While maximised, these set where the window will restore to – so un-maximising goes straight to
+            // full screen in one step, instead of flashing the window's normal size on the way.
+            Left = m.Left; Top = m.Top; Width = m.Width; Height = m.Height;
+            WindowStyle = WindowStyle.None;
+            ResizeMode = ResizeMode.NoResize;
+            WindowState = WindowState.Normal;
             Left = m.Left; Top = m.Top; Width = m.Width; Height = m.Height;
             Topmost = true;
             _streamingFullscreen = true;
@@ -996,23 +1004,25 @@ public partial class MainWindow : Window
         else
         {
             if (!_mini) Topmost = false;
-            if (_streamingFullscreen)
+            _streamingFullscreen = false;
+            bool toMaximized = restoreMaximized && _prevState == WindowState.Maximized && !_mini;
+            WindowStyle = _prevStyle == WindowStyle.None ? WindowStyle.SingleBorderWindow : _prevStyle;
+            ResizeMode = _prevResize == ResizeMode.NoResize ? ResizeMode.CanResize : _prevResize;
+            if (toMaximized)
             {
-                _streamingFullscreen = false;
+                // Straight back to maximised (one step), then quietly set the size it restores to later.
+                WindowState = WindowState.Maximized;
                 if (!_normalBounds.IsEmpty)
                 {
                     Left = _normalBounds.Left; Top = _normalBounds.Top;
                     Width = _normalBounds.Width; Height = _normalBounds.Height;
                 }
             }
-            // Drop out of the borderless-maximised state first. Restoring the border while still
-            // maximised leaves the window stretched over the taskbar, so it still looks full screen.
-            WindowState = WindowState.Normal;
-            WindowStyle = _prevStyle == WindowStyle.None ? WindowStyle.SingleBorderWindow : _prevStyle;
-            ResizeMode = _prevResize == ResizeMode.NoResize ? ResizeMode.CanResize : _prevResize;
-            if (restoreMaximized && _prevState == WindowState.Maximized)
-                Dispatcher.InvokeAsync(() => { if (!_mini && !_osFullscreen) WindowState = WindowState.Maximized; },
-                    DispatcherPriority.Render);
+            else if (!_normalBounds.IsEmpty)
+            {
+                Left = _normalBounds.Left; Top = _normalBounds.Top;
+                Width = _normalBounds.Width; Height = _normalBounds.Height;
+            }
             NativeWindow.ApplyDarkTitleBar(this);
         }
         _osFullscreen = on;
@@ -1207,7 +1217,7 @@ public partial class MainWindow : Window
             _hideTimer.Start();
             return;
         }
-        PlayerChrome.Visibility = Visibility.Visible;
+        Motion.FadeIn(PlayerChrome, ms: 160);
         Overlay.Cursor = null;
         _hideTimer.Stop();
         _hideTimer.Start();
@@ -1221,7 +1231,7 @@ public partial class MainWindow : Window
         if (!_playerMode || _menuOpen || SeekSlider.IsMouseCaptureWithin || VolumeSlider.IsMouseCaptureWithin) return;
         if (_mini) { if (!Overlay.IsMouseOver) MiniChrome.Visibility = Visibility.Collapsed; return; }
         if (UpNextCard.Visibility == Visibility.Visible) return;
-        PlayerChrome.Visibility = Visibility.Hidden;
+        Motion.FadeOut(PlayerChrome, Visibility.Hidden, ms: 260);
         Overlay.Cursor = Cursors.None;
         UpdateHealthVisibility();
     }
@@ -1456,9 +1466,9 @@ public partial class MainWindow : Window
         _panelCatIdx = Math.Max(0, _panelCats.FindIndex(c => c.Id == _guide.CurrentCategoryId));
         _panelOpen = true;
         _hideTimer.Stop();
-        PlayerChrome.Visibility = Visibility.Hidden;
+        Motion.HideNow(PlayerChrome, Visibility.Hidden);
         Overlay.Cursor = null;
-        ChannelPanel.Visibility = Visibility.Visible;
+        Motion.FadeIn(ChannelPanel, fromX: -40, ms: 200);
         FillPanel();
         BumpPanelTimer();
     }
@@ -1494,7 +1504,7 @@ public partial class MainWindow : Window
         if (!_panelOpen) return;
         _panelOpen = false;
         _panelTimer.Stop();
-        ChannelPanel.Visibility = Visibility.Collapsed;
+        Motion.FadeOut(ChannelPanel, toX: -30, ms: 150);
         PanelList.ItemsSource = null;
         if (_playerMode && !_mini) ShowChrome();
     }
@@ -1645,7 +1655,7 @@ public partial class MainWindow : Window
 
         long resumeAt = _nowLive ? 0 : Math.Max(0, _lastVodTime - 2000);
         if (_nowLive && _svc.Source == LiveSource.Archive) { SeekLiveTo(LivePositionUtc); _lastProgressUtc = DateTime.UtcNow; return; }
-        try { _svc.Play(url, _nowLive, resumeAt); }
+        try { _svc.Play(url, _nowLive, resumeAt, _nowLive ? PictureFor(_variants.Count > _variantIdx ? _variants[_variantIdx] : _nowChannel) : null); }
         catch (Exception ex) { Log.Error(ex); }
         _lastProgressUtc = DateTime.UtcNow;
     }
@@ -1682,7 +1692,7 @@ public partial class MainWindow : Window
         _upNextSeconds = 10;
         UpNextTitle.Text = next.Subtitle;
         UpNextCountdown.Text = $"Up next in {_upNextSeconds}s";
-        UpNextCard.Visibility = _mini ? Visibility.Collapsed : Visibility.Visible;
+        if (_mini) UpNextCard.Visibility = Visibility.Collapsed; else Motion.FadeIn(UpNextCard, fromX: 30, ms: 220);
         if (!_mini) ShowChrome();
         _upNextTimer.Start();
     }
@@ -1773,7 +1783,9 @@ public partial class MainWindow : Window
         if (!_playerMode) return false;
         if (IsSheetKey(key)) { ToggleShortcutSheet(); return true; }
         if (SheetOpen) { CloseShortcutSheet(); if (key == Key.Escape) return true; }
+        if (Browsing && HandleBrowseKey(key)) return true;
         if (_panelOpen && HandlePanelKey(key)) return true;
+        if (_nowLive && !_mini && (key == Key.Up || key == Key.Down)) { Browse(key == Key.Up ? -1 : 1); return true; }
         ShowChrome();
 
         if (_nowLive && DigitOf(key) is int d) { TypeDigit(d); return true; }

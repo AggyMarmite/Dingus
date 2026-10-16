@@ -69,7 +69,8 @@ git push origin v0.3.0
 | V | Multi-view (4 / 6 / 8 channels at once) |
 | I | Pin stream info (resolution, frame rate, bitrate, dropped frames) |
 | Space | Play / pause |
-| ↑ ↓ | Channel up / down (live) · volume (films) |
+| ↑ ↓ | Live TV: info bar – see what's on other channels without changing, Enter to watch · films: volume |
+| PgUp / PgDn | Channel up / down |
 | ← → | Back 10 s / forward 30 s (films) · back / forward 10 s (live TV) |
 | End | Live TV: back to live |
 | Home | Live TV: start of the programme (catch-up channels) |
@@ -114,6 +115,11 @@ git push origin v0.3.0
 - **Reminders**: right-click a future programme (guide, lists, Home) or use "Remind me" – a pop-up with a Watch button
   appears a minute before it starts. Your reminders are on Home.
 - **Find a programme**: in the guide, "Find a programme" searches every channel's listings by title.
+- **Fix the guide yourself**: right-click a channel → "Match TV guide…" to pick the right guide channel (with what's on
+  now, to tell them apart), or "No guide". Kept across refreshes.
+- **Info bar** (↑ / ↓ while watching): what's on other channels now and next, without leaving the one you're on.
+- **Picture glitches?** The player's picture & sound menu has a per-channel fix: always deinterlace, the alternative
+  graphics decoder, or software decoding.
 - **Channel editor**: rename, hide and reorder channels (right-click a channel, or Settings → TV Guide). Kept across refreshes.
 - **Picture & sound** (player button): aspect ratio, zoom / crop black bars, audio sync, subtitle timing, night mode.
   Preferred audio and subtitle languages in Settings → Playback.

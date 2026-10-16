@@ -73,6 +73,12 @@ public class EpgData : IDisposable
     public Dictionary<string, List<Programme>> ByChannel { get; } = new();
     public Dictionary<string, string> Icons { get; } = new();
     public int MatchedChannels => ByChannel.Count;
+    /// <summary>Every channel in the guide file (id, first name) – for matching a channel by hand.</summary>
+    public List<(string Id, string Name)> Sources { get; } = new();
+    /// <summary>What's on now on every guide channel (matched or not) – helps pick the right one by hand.</summary>
+    public Dictionary<string, string> NowTitles { get; } = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Which guide channel each playlist channel was matched to.</summary>
+    public Dictionary<string, string> MatchedTo { get; } = new();
 
     public List<Programme> Get(string channelId) =>
         channelId != null && ByChannel.TryGetValue(channelId, out var l) ? l : null;
@@ -150,7 +156,8 @@ public static class EpgService
         File.Move(tmp, dest, true);
     }
 
-    public static EpgData Parse(string path, IReadOnlyList<Channel> channels, int shiftMinutes)
+    /// <param name="overrides">Your own matches (playlist channel id → guide channel id; "" = no guide).</param>
+    public static EpgData Parse(string path, IReadOnlyList<Channel> channels, int shiftMinutes, IReadOnlyDictionary<string, string> overrides = null)
     {
         var data = new EpgData();
         if (!File.Exists(path) || channels.Count == 0) return data;
@@ -208,9 +215,26 @@ public static class EpgService
                     }
                     if (reader.LocalName == "programme")
                     {
-                        map ??= BuildMap(xmlNames, channels);
+                        map ??= BuildMap(xmlNames, channels, overrides);
                         var cid = reader.GetAttribute("channel");
-                        if (cid == null || !map.TryGetValue(cid, out var targets)) { reader.Skip(); continue; }
+                        if (cid == null) { reader.Skip(); continue; }
+                        if (!map.TryGetValue(cid, out var targets))
+                        {
+                            // Not used by any channel: just note what's on now (for matching by hand).
+                            if (!data.NowTitles.ContainsKey(cid))
+                            {
+                                var a = ParseTime(reader.GetAttribute("start"), shiftMinutes);
+                                var b = ParseTime(reader.GetAttribute("stop"), shiftMinutes);
+                                if (a <= now && b > now)
+                                {
+                                    var pe = (XElement)XNode.ReadFrom(reader);
+                                    data.NowTitles[cid] = Pool(pool, pe.Element("title")?.Value.Trim() ?? "");
+                                    continue;
+                                }
+                            }
+                            reader.Skip();
+                            continue;
+                        }
                         var start = ParseTime(reader.GetAttribute("start"), shiftMinutes);
                         var stop = ParseTime(reader.GetAttribute("stop"), shiftMinutes);
                         if (start == null || stop == null || stop <= start || start >= maxT) { reader.Skip(); continue; }
@@ -237,6 +261,7 @@ public static class EpgService
                             if (!data.ByChannel.TryGetValue(ch.Id, out var list)) data.ByChannel[ch.Id] = list = new List<Programme>();
                             list.Add(p);
                         }
+                        if (p.Start <= now && p.End > now) data.NowTitles.TryAdd(cid, p.Title);
                         continue;
                     }
                 }
@@ -246,7 +271,7 @@ public static class EpgService
         catch (XmlException ex) { Log.Error(ex); } // truncated/odd file – keep what was read
         catch (InvalidDataException ex) { Log.Error(ex); } // broken gzip
 
-        map ??= BuildMap(xmlNames, channels);
+        map ??= BuildMap(xmlNames, channels, overrides);
 
         foreach (var list in data.ByChannel.Values)
         {
@@ -257,8 +282,14 @@ public static class EpgService
         }
 
         foreach (var (xmlId, targets) in map)
+        {
+            foreach (var ch in targets) data.MatchedTo[ch.Id] = xmlId;
             if (xmlIcons.TryGetValue(xmlId, out var icon))
                 foreach (var ch in targets) data.Icons[ch.Id] = icon;
+        }
+        foreach (var (id, names) in xmlNames)
+            data.Sources.Add((id, names.Count > 0 ? names[0] : id));
+        data.Sources.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.CurrentCultureIgnoreCase));
 
         foreach (var list in data.ByChannel.Values) list.TrimExcess();
         store.Seal();
@@ -289,7 +320,8 @@ public static class EpgService
         return false;
     }
 
-    static Dictionary<string, List<Channel>> BuildMap(Dictionary<string, List<string>> xmlNames, IReadOnlyList<Channel> channels)
+    static Dictionary<string, List<Channel>> BuildMap(Dictionary<string, List<string>> xmlNames, IReadOnlyList<Channel> channels,
+                                                      IReadOnlyDictionary<string, string> overrides)
     {
         var byName = new Dictionary<string, string>();
         var byLoose = new Dictionary<string, string>();
@@ -307,7 +339,12 @@ public static class EpgService
         foreach (var ch in channels)
         {
             string x = null;
-            if (!string.IsNullOrWhiteSpace(ch.EpgId))
+            if (overrides != null && overrides.TryGetValue(ch.Id, out var forced))
+            {
+                if (forced.Length == 0) continue;                 // you said "no guide for this channel"
+                if (xmlNames.ContainsKey(forced)) x = forced;     // your match (if the guide still has it)
+            }
+            if (x == null && !string.IsNullOrWhiteSpace(ch.EpgId))
             {
                 if (xmlNames.ContainsKey(ch.EpgId)) x = ch.EpgId;
                 else x = Find(byName, Norm(IdSuffixRx.Replace(ch.EpgId, "")));

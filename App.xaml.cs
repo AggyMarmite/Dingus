@@ -54,9 +54,10 @@ public partial class App : Application
         AppDomain.CurrentDomain.UnhandledException += (_, a) => Log.Error(a.ExceptionObject as Exception);
         TaskScheduler.UnobservedTaskException += (_, a) => { Log.Error(a.Exception); a.SetObserved(); };
 
-        // Cap UI animation frame rate – saves GPU/CPU, nothing here needs 60fps.
+        // Smooth 60fps animations. They only run while something is moving (a fade or slide lasts ~0.2 s),
+        // so this costs nothing when the app is still.
         Timeline.DesiredFrameRateProperty.OverrideMetadata(typeof(Timeline),
-            new FrameworkPropertyMetadata { DefaultValue = 30 });
+            new FrameworkPropertyMetadata { DefaultValue = 60 });
 
         LibVLCSharp.Shared.Core.Initialize();
         SettingsStore.Load();

@@ -7,6 +7,16 @@ public record TrackOption(int Id, string Name, bool Current);
 /// <summary>Where live TV is coming from: straight from the provider, the rewind buffer, or the provider's catch-up archive.</summary>
 public enum LiveSource { Direct, Buffer, Archive }
 
+/// <summary>
+/// Per-channel picture fixes. Decoder: null = graphics card (normal), "dxva2" = the graphics card's older decoder
+/// (fixes blocky/green glitches some AMD/Intel drivers show on certain channels), "software" = no graphics card.
+/// Deinterlace: always remove interlacing lines (for channels that don't say they're interlaced).
+/// </summary>
+public record ChannelPicture(string Decoder, bool Deinterlace)
+{
+    public bool IsDefault => Decoder == null && !Deinterlace;
+}
+
 /// <summary>Snapshot of how the current stream is doing (for the stream-health badge and stall detection).</summary>
 public record StreamHealth(
     uint Width, uint Height, float Fps, double Mbps,
@@ -108,12 +118,13 @@ public sealed class PlayerService
         int gen = Interlocked.Increment(ref _gen);
         var s = SettingsStore.Current;
         var cache = Math.Clamp(s.NetworkCachingMs, 300, 10000);
-        var opts = new[] { $":network-caching={cache}", ":adaptive-maxbuffer=12000" }.Concat(SoundOptions()).ToArray();
+        var opts = new[] { $":network-caching={cache}", ":adaptive-maxbuffer=12000" }.Concat(SoundOptions()).Concat(PictureOptions(_pic)).ToArray();
         Enqueue(() =>
         {
             if (gen != _gen) return;
             long audio = Player.AudioDelay, spu = Player.SpuDelay;
             EndTimeshift();
+            Player.EnableHardwareDecoding = HardwareFor(_pic);
             lock (_tsLock) { _source = LiveSource.Archive; _tsBaseUtc = startUtc; _tsClock.Reset(); }
             GpuDecoding = null;
             _playingSince = DateTime.MaxValue;
@@ -196,6 +207,7 @@ public sealed class PlayerService
                 _tsClock.Reset();
             }
             long audio = Player.AudioDelay, spu = Player.SpuDelay; // keep your sync settings across jumps
+            Player.EnableHardwareDecoding = HardwareFor(_pic);
             using var media = new Media(Vlc, new Uri(LocalStreamServer.UrlFor(ts, offset)), opts);
             Player.Play(media);
             Player.Volume = SettingsStore.Current.Volume;
@@ -210,8 +222,25 @@ public sealed class PlayerService
         var s = SettingsStore.Current;
         // From the local buffer there's nothing to wait for, so a short cache is enough (and uses less memory).
         var cache = local ? 800 : Math.Clamp(s.NetworkCachingMs, 300, 10000);
-        return new[] { $":network-caching={cache}", $":live-caching={cache}", ":adaptive-maxbuffer=12000" }.Concat(SoundOptions()).ToArray();
+        return new[] { $":network-caching={cache}", $":live-caching={cache}", ":adaptive-maxbuffer=12000" }
+            .Concat(SoundOptions()).Concat(PictureOptions(_pic)).ToArray();
     }
+
+    // The picture fixes for the channel being played (null for films and episodes).
+    ChannelPicture _pic;
+
+    static IEnumerable<string> PictureOptions(ChannelPicture pic)
+    {
+        if (pic == null) yield break;
+        if (pic.Decoder == "dxva2") yield return ":avcodec-hw=dxva2";
+        if (pic.Deinterlace)
+        {
+            yield return ":deinterlace=1";
+            yield return ":deinterlace-mode=yadif";
+        }
+    }
+
+    bool HardwareFor(ChannelPicture pic) => SettingsStore.Current.HardwareDecoding && pic?.Decoder != "software";
 
     // ------------------------------------------------------------------ picture & sound
 
@@ -275,9 +304,11 @@ public sealed class PlayerService
     }
 
     /// <param name="startMs">Start position for films/episodes (resume); 0 = from the beginning.</param>
-    public void Play(string url, bool live, long startMs = 0)
+    /// <param name="picture">Picture fixes for this channel (live only).</param>
+    public void Play(string url, bool live, long startMs = 0, ChannelPicture picture = null)
     {
         var s = SettingsStore.Current;
+        _pic = live ? picture : null;
         var cache = Math.Clamp(s.NetworkCachingMs, 300, 10000);
         var opts = new List<string> { $":network-caching={cache}" };
         if (live) opts.Add($":live-caching={cache}");
@@ -285,6 +316,7 @@ public sealed class PlayerService
         opts.Add(":adaptive-maxbuffer=12000");
         if (startMs > 0) opts.Add($":start-time={startMs / 1000.0:0.0}".Replace(',', '.'));
         opts.AddRange(SoundOptions());
+        opts.AddRange(PictureOptions(_pic));
 
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) throw new ArgumentException("Invalid stream address.");
         int gen = Interlocked.Increment(ref _gen);
@@ -307,7 +339,7 @@ public sealed class PlayerService
             }
             GpuDecoding = null;
             _playingSince = DateTime.MaxValue;
-            Player.EnableHardwareDecoding = s.HardwareDecoding;
+            Player.EnableHardwareDecoding = HardwareFor(_pic);
             using var media = new Media(Vlc, uri, opts.ToArray());
             Player.Play(media);
             Player.Volume = s.Volume;
