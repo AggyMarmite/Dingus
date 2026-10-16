@@ -1,4 +1,9 @@
-## What's new in Dingus 0.6.0
+## What's new in Dingus 0.6.1
+
+* **New picture-in-picture icon** – a screen with a small picture in the corner, in the player and on the previews.
+* **Full-screen button on the Guide and Home preview** – next to pause and picture-in-picture (double-click still works too).
+
+## Dingus 0.6.0
 
 * **Search everything** – a new **Search** page (left rail, or **Ctrl+F** from anywhere) finds channels, programmes
   in the TV guide, films and TV shows at once. Click a programme that's on to watch it, or right-click a future one
@@ -47,4 +52,4 @@
   the video engine have been left out. If your PC doesn't have Microsoft's .NET 8 Desktop Runtime yet, the installer
   fetches it once (most PCs already have it).
 
-**Install:** download `Dingus-Setup-0.6.0.exe` below – or, if you already have Dingus, it will offer this update itself.
+**Install:** download `Dingus-Setup-0.6.1.exe` below – or, if you already have Dingus, it will offer this update itself.

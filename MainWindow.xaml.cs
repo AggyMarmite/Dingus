@@ -1140,6 +1140,14 @@ public partial class MainWindow : Window
     void Mini_Click(object sender, RoutedEventArgs e) => EnterMini();
     void PreviewPip_Click(object sender, RoutedEventArgs e) => EnterMini();
 
+    /// <summary>Full-screen button on the Guide / Home preview.</summary>
+    void PreviewFull_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (_currentUrl == null || _playerMode || !_nowLive) return;
+        EnterPlayer(true); // same as double-clicking the preview
+    }
+
     /// <summary>Picture-in-picture: drag the corner grip to resize (always 16:9).</summary>
     void PipGrip_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
     {

@@ -29,6 +29,17 @@
     <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
     <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
 
+    <!-- Picture-in-picture icon: a screen with a small picture in its corner (sized from the button's font size) -->
+    <DataTemplate x:Key="PipGlyph">
+        <Viewbox Height="{Binding FontSize, RelativeSource={RelativeSource AncestorType=Button}}" Stretch="Uniform">
+            <Grid Width="20" Height="16">
+                <Border BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" BorderThickness="1.6" CornerRadius="2.5"/>
+                <Border Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" CornerRadius="1.2"
+                        Width="9" Height="6.2" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,3,3"/>
+            </Grid>
+        </Viewbox>
+    </DataTemplate>
+
     <!-- ============ Buttons ============ -->
     <Style x:Key="BaseButton" TargetType="Button">
         <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>

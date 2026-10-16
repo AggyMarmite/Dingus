@@ -191,7 +191,9 @@
                         <Button x:Name="PreviewPlayPause" Style="{StaticResource OverlayIconButton}" Width="32" Height="32" FontSize="13" Margin="0"
                                 Content="&#xE769;" ToolTip="Pause" Click="PlayPause_Click"/>
                         <Button Style="{StaticResource OverlayIconButton}" Width="32" Height="32" FontSize="13" Margin="0"
-                                Content="&#xE8A7;" ToolTip="Picture-in-picture (P)" Click="PreviewPip_Click"/>
+                                Content="" ContentTemplate="{StaticResource PipGlyph}" ToolTip="Picture-in-picture (P)" Click="PreviewPip_Click"/>
+                        <Button Style="{StaticResource OverlayIconButton}" Width="32" Height="32" FontSize="13" Margin="0"
+                                Content="&#xE740;" ToolTip="Full screen (F11 or double-click)" Click="PreviewFull_Click"/>
                     </StackPanel>
                 </Border>
 
@@ -395,7 +397,7 @@
                                             ToolTip="Mute (M)" Click="Mute_Click"/>
                                     <Slider x:Name="VolumeSlider" Style="{StaticResource PlayerSlider}" Width="110" Minimum="0" Maximum="100"
                                             VerticalAlignment="Center" Margin="4,0,12,0" IsMoveToPointEnabled="True" ValueChanged="Volume_Changed"/>
-                                    <Button x:Name="MiniButton" Style="{StaticResource OverlayIconButton}" Content="&#xE8A7;"
+                                    <Button x:Name="MiniButton" Style="{StaticResource OverlayIconButton}" Content="" ContentTemplate="{StaticResource PipGlyph}"
                                             ToolTip="Picture-in-picture (P)" Click="Mini_Click"/>
                                     <Button x:Name="FullscreenButton" Style="{StaticResource OverlayIconButton}" Content="&#xE73F;"
                                             ToolTip="Exit full screen – back to the guide (Esc)" Click="Fullscreen_Click"/>
