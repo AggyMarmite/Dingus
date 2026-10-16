@@ -140,7 +140,7 @@ public static class ReminderService
         var head = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 8) };
         head.Children.Add(new TextBlock
         {
-            Text = "\uE7ED", FontSize = 12, Margin = new Thickness(0, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center,
+            Text = "\uEA8F", FontSize = 12, Margin = new Thickness(0, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center,
             Foreground = (Brush)res["AccentBrush"], FontFamily = (FontFamily)res["IconFont"],
         });
         head.Children.Add(new TextBlock

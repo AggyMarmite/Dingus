@@ -109,7 +109,7 @@
                         <Button x:Name="RemindButton" Style="{StaticResource BaseButton}" Margin="8,0,0,0" Click="Remind_Click"
                                 Visibility="Collapsed" ToolTip="Get a pop-up a minute before it starts">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE7ED;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="&#xEA8F;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                 <TextBlock x:Name="RemindText" Text="Remind me"/>
                             </StackPanel>
                         </Button>
@@ -225,7 +225,7 @@
                                                     <TextBlock x:Name="CU" DockPanel.Dock="Left" Text="&#xE81C;" FontFamily="{StaticResource IconFont}"
                                                                FontSize="11" Margin="0,2,6,0" Foreground="#FBBF24" Visibility="Collapsed"
                                                                ToolTip="Catch-up available"/>
-                                                    <TextBlock x:Name="RB" DockPanel.Dock="Left" Text="&#xE7ED;" FontFamily="{StaticResource IconFont}"
+                                                    <TextBlock x:Name="RB" DockPanel.Dock="Left" Text="&#xEA8F;" FontFamily="{StaticResource IconFont}"
                                                                FontSize="11" Margin="0,2,6,0" Foreground="{StaticResource AccentBrush}" Visibility="Collapsed"
                                                                ToolTip="Reminder set"/>
                                                     <TextBlock x:Name="T" Text="{Binding Title}" FontSize="13" TextTrimming="CharacterEllipsis"/>
@@ -321,7 +321,7 @@
                                         <DockPanel>
                                             <TextBlock x:Name="CU" DockPanel.Dock="Left" Text="&#xE81C;" FontFamily="{StaticResource IconFont}"
                                                        FontSize="11" Margin="0,2,6,0" Foreground="#FBBF24" Visibility="Collapsed" ToolTip="Catch-up available"/>
-                                            <TextBlock x:Name="RB" DockPanel.Dock="Left" Text="&#xE7ED;" FontFamily="{StaticResource IconFont}"
+                                            <TextBlock x:Name="RB" DockPanel.Dock="Left" Text="&#xEA8F;" FontFamily="{StaticResource IconFont}"
                                                        FontSize="11" Margin="0,2,6,0" Foreground="{StaticResource AccentBrush}" Visibility="Collapsed" ToolTip="Reminder set"/>
                                             <TextBlock Text="{Binding Title}" FontSize="14" TextTrimming="CharacterEllipsis"/>
                                         </DockPanel>
