@@ -138,6 +138,7 @@ public static class EpgService
     public static async Task DownloadAsync(string url, string dest, CancellationToken ct)
     {
         var tmp = dest + ".part";
+        if (File.Exists(url)) { File.Copy(url, dest, true); return; } // a guide file on this PC
         using (var resp = await Http.Client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct))
         {
             resp.EnsureSuccessStatusCode();

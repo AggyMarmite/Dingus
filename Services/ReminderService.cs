@@ -104,7 +104,13 @@ public static class ReminderService
 
     static readonly List<Window> Cards = new();
 
-    static void ShowCard(Reminder r)
+    /// <summary>Self-test: shows a sample card.</summary>
+    internal static Window SelfTestCard() => ShowCard(new Reminder
+    {
+        ChannelId = "x", ChannelName = "BBC One HD", Title = "Match of the Day", Start = DateTime.Now.AddMinutes(1), End = DateTime.Now.AddMinutes(80),
+    });
+
+    static Window ShowCard(Reminder r)
     {
         var res = Application.Current.Resources;
         var w = new Window
@@ -167,5 +173,6 @@ public static class ReminderService
         w.Show();
         close.Start();
         System.Media.SystemSounds.Asterisk.Play();
+        return w;
     }
 }

@@ -768,6 +768,13 @@ public partial class GuideView : UserControl, IPage
     /// <summary>The guide row for any version of a channel.</summary>
     public GuideRow RowFor(string channelId) => channelId != null && _byId.TryGetValue(channelId, out var r) ? r : null;
 
+    /// <summary>Self-test: switch the guide's view (grid | now | tonight | find).</summary>
+    internal void SelfTestMode(string mode)
+    {
+        foreach (var rb in ((Panel)ModeGrid.Parent).Children.OfType<RadioButton>())
+            if ((rb.Tag as string) == mode) rb.IsChecked = true;
+    }
+
     // ------------------------------------------------------------------ "On now" / "Tonight"
 
     void Mode_Checked(object sender, RoutedEventArgs e)

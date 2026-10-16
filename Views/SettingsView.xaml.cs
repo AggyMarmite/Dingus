@@ -63,6 +63,7 @@ public partial class SettingsView : UserControl, IPage
             NightToggle.IsChecked = S.NightMode;
             PopulateParental();
             PopulatePlex();
+            AutoUpdateToggle.IsChecked = S.AutoUpdate;
             CheckChip(TimeshiftChips, S.TimeshiftMinutes.ToString());
             S.StartWithWindows = ThemeService.IsStartWithWindows(); // the installer can switch it on too
             StartWinToggle.IsChecked = S.StartWithWindows;
@@ -105,6 +106,22 @@ public partial class SettingsView : UserControl, IPage
     {
         if (_loading) return;
         S.NightMode = NightToggle.IsChecked == true;
+        SettingsStore.Save();
+    }
+
+    // ------------------------------------------------------------------ updates
+
+    async void CheckUpdates_Click(object sender, RoutedEventArgs e) => await Updater.CheckAsync(Window.GetWindow(this), manual: true);
+
+    void ReleaseNotes_Click(object sender, RoutedEventArgs e)
+    {
+        try { Process.Start(new ProcessStartInfo(Updater.ReleasesPage) { UseShellExecute = true }); } catch { }
+    }
+
+    void AutoUpdate_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        S.AutoUpdate = AutoUpdateToggle.IsChecked == true;
         SettingsStore.Save();
     }
 

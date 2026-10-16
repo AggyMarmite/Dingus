@@ -15,6 +15,9 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        int st = Array.IndexOf(e.Args, "--self-test");
+        if (st >= 0 && st + 1 < e.Args.Length) SelfTest.Dir = e.Args[st + 1];
+
         _single = new Mutex(true, MutexName, out bool first);
         if (!first)
         {
@@ -36,6 +39,7 @@ public partial class App : Application
         DispatcherUnhandledException += (_, a) =>
         {
             Log.Error(a.Exception);
+            if (SelfTest.Dir != null) { SelfTest.Error(a.Exception); a.Handled = true; return; }
             MessageBox.Show("Something went wrong:\n\n" + a.Exception.Message, "Dingus",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             a.Handled = true;
@@ -55,9 +59,19 @@ public partial class App : Application
             System.Windows.Media.RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
         base.OnStartup(e);
 
-        var main = new Dingus.MainWindow();
+        Dingus.MainWindow main;
+        try { main = new Dingus.MainWindow(); }
+        catch (Exception ex) when (SelfTest.Dir != null)
+        {
+            SelfTest.Error(ex);
+            Directory.CreateDirectory(SelfTest.Dir);
+            File.WriteAllText(Path.Combine(SelfTest.Dir, "result.txt"), "FAILED – the main window didn't open:\n\n" + ex);
+            Shutdown(1);
+            return;
+        }
         MainWindow = main;
         main.Show();
+        if (SelfTest.Dir != null) main.Loaded += async (_, _) => await SelfTest.RunAsync(main);
     }
 
     /// <summary>Restarts the app (e.g. after changing the theme).</summary>

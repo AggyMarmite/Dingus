@@ -97,6 +97,15 @@ public partial class MainWindow : Window
         ReminderService.Start();
         Parental.Changed += UpdateLockButton;
         Loaded += (_, _) => UpdateLockButton();
+        // Look for an update a little after start-up – never in the middle of full-screen viewing.
+        var updateTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+        updateTimer.Tick += async (_, _) =>
+        {
+            if (_playerMode || OwnedWindows.Count > 0) { updateTimer.Interval = TimeSpan.FromMinutes(10); return; }
+            updateTimer.Stop();
+            await Updater.CheckAsync(this, manual: false);
+        };
+        updateTimer.Start();
         Video.SizeChanged += (_, _) =>
         {
             UpdateFillRatio();

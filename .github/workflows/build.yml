@@ -18,3 +18,26 @@ jobs:
         run: dotnet build Dingus.csproj -c Release
       - name: Test live TV buffer
         run: dotnet run --project tests/TimeshiftTest/TimeshiftTest.csproj -c Release
+
+      # Opens the app with a sample playlist, visits every page and saves screenshots.
+      - name: Self-test
+        shell: pwsh
+        run: |
+          $sample = Join-Path $env:RUNNER_TEMP 'sample'
+          ./tests/selftest/make-sample.ps1 -Dir $sample
+          $out = Join-Path $env:RUNNER_TEMP 'selftest'
+          $exe = Get-ChildItem -Recurse -Filter Dingus.exe bin\Release | Select-Object -First 1
+          $p = Start-Process $exe.FullName -ArgumentList '--self-test', "`"$out`"" -PassThru
+          if (-not $p.WaitForExit(240000)) { $p.Kill(); Write-Host 'Self-test did not finish in time'; }
+          Write-Host '----- result -----'
+          if (Test-Path "$out\result.txt") { Get-Content "$out\result.txt" } else { Write-Host 'no result file' }
+          $log = "$env:LOCALAPPDATA\Dingus\log.txt"
+          if (Test-Path $log) { Write-Host '----- log.txt -----'; Get-Content $log; Copy-Item $log $out }
+          if (-not (Test-Path "$out\result.txt") -or -not (Select-String -Path "$out\result.txt" -Pattern 'PASSED' -Quiet)) { exit 1 }
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selftest
+          path: ${{ runner.temp }}/selftest
+          retention-days: 7

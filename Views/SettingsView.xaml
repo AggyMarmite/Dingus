@@ -386,6 +386,20 @@
                         </StackPanel>
                     </DockPanel>
                     <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Style="{StaticResource BaseButton}" Content="Check for updates" Click="CheckUpdates_Click"/>
+                            <Button Style="{StaticResource GhostButton}" Content="Release notes" Margin="8,0,0,0" Click="ReleaseNotes_Click"/>
+                        </StackPanel>
+                        <CheckBox x:Name="AutoUpdateToggle" Style="{StaticResource Toggle}" Checked="AutoUpdate_Changed" Unchecked="AutoUpdate_Changed">
+                            <StackPanel>
+                                <TextBlock Text="Check for updates automatically" FontWeight="SemiBold"/>
+                                <TextBlock Text="Once a day, from the Dingus releases page on GitHub. You're always asked before anything is installed."
+                                           Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </CheckBox>
+                    </DockPanel>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
                     <TextBlock x:Name="VersionText" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
                 </StackPanel>
             </Border>

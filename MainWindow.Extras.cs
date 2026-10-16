@@ -323,3 +323,13 @@ public partial class MainWindow
         else if (Services.Parental.TryUnlock(this)) ShowToast("Unlocked until you close Dingus.");
     }
 }
+
+// Hooks for the self-test (Dingus.exe --self-test <folder>).
+public partial class MainWindow
+{
+    internal FrameworkElement SelfTestRoot => Root;
+    internal object SelfTestPage => _page;
+    internal Views.GuideView SelfTestGuide => _guide;
+    internal void SelfTestShortcuts(bool open) { if (open != SheetOpen) ToggleShortcutSheet(); }
+    internal void SelfTestSearch(string text) => SearchBox.Text = text;
+}
