@@ -1,10 +1,13 @@
 name: Release
 
-# Push a tag such as v0.3.0 to build the installer and publish it as a GitHub release.
-# The app's updater checks the latest release and offers the Dingus-Setup-x.y.z.exe attached to it.
+# When the <Version> in Dingus.csproj changes on main (or on demand), build the installer and publish
+# it as release vX.Y.Z – unless that release already exists. The app's updater offers the
+# Dingus-Setup-x.y.z.exe attached to the latest release.
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+    paths: ['Dingus.csproj']
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -21,15 +24,23 @@ jobs:
       - name: Work out the version
         id: ver
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          $v = "${{ github.ref_name }}".TrimStart('v')
+          $v = ([xml](Get-Content Dingus.csproj)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
           "version=$v" >> $env:GITHUB_OUTPUT
+          gh release view "v$v" --repo ${{ github.repository }} *> $null
+          if ($LASTEXITCODE -eq 0) { Write-Host "Release v$v already exists – nothing to do."; "skip=true" >> $env:GITHUB_OUTPUT }
+          else { "skip=false" >> $env:GITHUB_OUTPUT }
+          exit 0
 
       # Self-contained, so people installing it don't need the .NET runtime first.
       - name: Publish
+        if: steps.ver.outputs.skip == 'false'
         run: dotnet publish Dingus.csproj -c Release -r win-x64 --self-contained true -p:Version=${{ steps.ver.outputs.version }} -o publish
 
       - name: Build installer
+        if: steps.ver.outputs.skip == 'false'
         shell: pwsh
         run: |
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
@@ -38,9 +49,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Publish release
+        if: steps.ver.outputs.skip == 'false'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ github.ref_name }}" "installer\Output\Dingus-Setup-${{ steps.ver.outputs.version }}.exe" `
-            --title "Dingus ${{ steps.ver.outputs.version }}" --generate-notes
+          $v = "${{ steps.ver.outputs.version }}"
+          gh release create "v$v" "installer\Output\Dingus-Setup-$v.exe" --repo ${{ github.repository }} `
+            --target ${{ github.sha }} --title "Dingus $v" --notes-file installer\release-notes.md
