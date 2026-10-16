@@ -223,7 +223,41 @@
                         <RadioButton Style="{StaticResource Chip}" Content="3 s" Tag="3000" Checked="Buffer_Checked"/>
                         <RadioButton Style="{StaticResource Chip}" Content="5 s" Tag="5000" Checked="Buffer_Checked"/>
                     </StackPanel>
-                    <TextBlock Text="Changes apply to the next stream you open." Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,14,0,0"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Preferred audio language"/>
+                    <WrapPanel x:Name="AudioLangChips">
+                        <RadioButton Style="{StaticResource Chip}" Content="Stream default" Tag="" Checked="AudioLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="English" Tag="eng" Checked="AudioLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="French" Tag="fra" Checked="AudioLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="German" Tag="deu" Checked="AudioLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="Spanish" Tag="spa" Checked="AudioLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="Italian" Tag="ita" Checked="AudioLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="Polish" Tag="pol" Checked="AudioLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="Portuguese" Tag="por" Checked="AudioLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="Turkish" Tag="tur" Checked="AudioLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="Arabic" Tag="ara" Checked="AudioLang_Checked" Margin="0,0,8,8"/>
+                    </WrapPanel>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Subtitles"/>
+                    <WrapPanel x:Name="SubLangChips">
+                        <RadioButton Style="{StaticResource Chip}" Content="Off" Tag="" Checked="SubLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="English" Tag="eng" Checked="SubLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="French" Tag="fra" Checked="SubLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="German" Tag="deu" Checked="SubLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="Spanish" Tag="spa" Checked="SubLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="Italian" Tag="ita" Checked="SubLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="Polish" Tag="pol" Checked="SubLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="Portuguese" Tag="por" Checked="SubLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="Turkish" Tag="tur" Checked="SubLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="Arabic" Tag="ara" Checked="SubLang_Checked" Margin="0,0,8,8"/>
+                    </WrapPanel>
+                    <CheckBox x:Name="NightToggle" Style="{StaticResource Toggle}" Checked="Night_Changed" Unchecked="Night_Changed" Margin="0,12,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Night mode" FontWeight="SemiBold"/>
+                            <TextBlock Text="Evens out loud and quiet sounds, so you can hear dialogue without explosions waking the house. Also in the player's picture &amp; sound menu."
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <TextBlock Text="Changes apply to the next stream you open. Aspect ratio, crop, audio sync and subtitle timing are in the player's picture &amp; sound menu."
+                               Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,14,0,0" TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
 
@@ -253,6 +287,71 @@
                             <TextBlock Text="Opens Dingus when you sign in to Windows."
                                        Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
+                    </CheckBox>
+                </StackPanel>
+            </Border>
+
+            <!-- Parental controls -->
+            <TextBlock Style="{StaticResource SectionHeader}" Text="PARENTAL CONTROLS"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="PinButton" Style="{StaticResource BaseButton}" Content="Set a PIN" Click="Pin_Click"/>
+                            <Button x:Name="RemovePinButton" Style="{StaticResource GhostButton}" Content="Remove PIN" Margin="8,0,0,0" Click="RemovePin_Click"/>
+                            <Button x:Name="LockNowButton" Style="{StaticResource GhostButton}" Content="Lock now" Margin="8,0,0,0" Click="LockNow_Click"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Parental PIN" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="PinStatus" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <StackPanel x:Name="LockPanel">
+                        <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                        <CheckBox x:Name="AutoLockToggle" Style="{StaticResource Toggle}" Checked="AutoLock_Changed" Unchecked="AutoLock_Changed" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="Lock adult categories automatically" FontWeight="SemiBold"/>
+                                <TextBlock Text="Any category called “Adult”, “XXX”, “18+” and similar is locked, including new ones."
+                                           Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </CheckBox>
+                        <DockPanel Margin="0,4,0,10">
+                            <StackPanel x:Name="LockKindChips" Orientation="Horizontal" VerticalAlignment="Center">
+                                <RadioButton Style="{StaticResource Chip}" Content="Live TV" Tag="live" Checked="LockKind_Checked" GroupName="LockKind"/>
+                                <RadioButton Style="{StaticResource Chip}" Content="Films" Tag="vod" Checked="LockKind_Checked" GroupName="LockKind"/>
+                                <RadioButton Style="{StaticResource Chip}" Content="TV Shows" Tag="series" Checked="LockKind_Checked" GroupName="LockKind"/>
+                            </StackPanel>
+                        </DockPanel>
+                        <TextBlock Text="Tick the categories to lock. Locked categories disappear everywhere until the PIN is entered (lock button at the top of the app)."
+                                   Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,0,0,12" TextWrapping="Wrap"/>
+                        <ItemsControl x:Name="LockChecks">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Columns="3"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Backup -->
+            <TextBlock Style="{StaticResource SectionHeader}" Text="BACKUP &amp; RESTORE"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Style="{StaticResource BaseButton}" Content="Back up…" Click="Backup_Click"/>
+                            <Button Style="{StaticResource GhostButton}" Content="Restore…" Margin="8,0,0,0" Click="Restore_Click"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Save everything to one file" FontWeight="SemiBold"/>
+                            <TextBlock Text="Playlists, favourites, channel edits, settings, watch history and reminders – to move to a new PC or keep safe."
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <CheckBox x:Name="BackupPasswordsToggle" Style="{StaticResource Tick}" Margin="0,14,0,0">
+                        <TextBlock TextWrapping="Wrap" Text="Include playlist passwords (saved in plain text in the backup file – keep it private)"/>
                     </CheckBox>
                 </StackPanel>
             </Border>

@@ -61,12 +61,16 @@ public partial class App : Application
     }
 
     /// <summary>Restarts the app (e.g. after changing the theme).</summary>
-    public static void Restart()
+    /// <param name="saveState">False after restoring a backup, so the files just restored aren't overwritten.</param>
+    public static void Restart(bool saveState = true)
     {
         try
         {
-            SettingsStore.Save();
-            HistoryStore.SaveNow();
+            if (saveState)
+            {
+                SettingsStore.Save();
+                HistoryStore.SaveNow();
+            }
             ReleaseSingleInstance();
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Environment.ProcessPath) { UseShellExecute = true });
         }

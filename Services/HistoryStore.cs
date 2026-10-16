@@ -95,6 +95,13 @@ public static class HistoryStore
         ChangedTimer.Stop(); ChangedTimer.Start();
     }
 
+    /// <summary>Stops saving (a backup has just been restored over the files on disk).</summary>
+    public static void Detach()
+    {
+        SaveTimer.Stop();
+        _file = null;
+    }
+
     public static void SaveNow()
     {
         SaveTimer.Stop();

@@ -92,6 +92,13 @@ public partial class MainWindow : Window
             PlayLive(row.Channel, true);
         };
         ReminderService.Start();
+        Parental.Changed += UpdateLockButton;
+        Loaded += (_, _) => UpdateLockButton();
+        Video.SizeChanged += (_, _) =>
+        {
+            UpdateFillRatio();
+            if (SettingsStore.Current.Crop == "fill") _svc?.ApplyPicture();
+        };
         _healthPinned = SettingsStore.Current.ShowStreamInfo;
 
         _uiTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(500) };

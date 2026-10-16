@@ -74,6 +74,8 @@
                                                Foreground="{StaticResource MutedBrush}"/>
                                 </StackPanel>
                             </Button>
+                            <Button x:Name="LockButton" Style="{StaticResource IconButton}" Content="&#xE72E;" Margin="4,0,0,0"
+                                    Visibility="Collapsed" Click="Lock_Click"/>
                             <Button x:Name="RefreshButton" Style="{StaticResource IconButton}" Content="&#xE72C;" Margin="4,0,0,0"
                                     ToolTip="Refresh playlist and TV guide" Click="Refresh_Click"/>
                         </StackPanel>
@@ -367,6 +369,8 @@
                                             ToolTip="Stream info (I)" Click="Info_Click"/>
                                     <Button x:Name="QualityButton" Style="{StaticResource OverlayIconButton}" Content="&#xE7F4;"
                                             ToolTip="Version / quality" Click="Quality_Click" Visibility="Collapsed"/>
+                                    <Button x:Name="PictureButton" Style="{StaticResource OverlayIconButton}" Content="&#xE790;"
+                                            ToolTip="Picture &amp; sound – aspect ratio, crop, audio sync, night mode" Click="Picture_Click"/>
                                     <Button x:Name="AudioButton" Style="{StaticResource OverlayIconButton}" Content="&#xE8D6;"
                                             ToolTip="Audio track" Click="Audio_Click"/>
                                     <Button x:Name="SubsButton" Style="{StaticResource OverlayIconButton}" Content="&#xE7F0;"

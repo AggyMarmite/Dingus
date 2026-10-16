@@ -343,8 +343,21 @@ public sealed class DataService
     }
 
     /// <summary>Rebuilds a playable film/episode from its "Continue watching" entry (null if it's gone from the playlist).</summary>
+    /// <summary>The film or show is in a hidden or locked category.</summary>
+    public bool IsHiddenEntry(ResumeEntry e)
+    {
+        if (e.Kind == "movie")
+        {
+            var m = Catalog.Movies.FirstOrDefault(x => x.Id == e.ItemId);
+            return m != null && HiddenSet("vod").Contains(m.CategoryId);
+        }
+        var s = Catalog.Series.FirstOrDefault(x => x.Id == e.SeriesId);
+        return s != null && HiddenSet("series").Contains(s.CategoryId);
+    }
+
     public VodItem ResumeItem(ResumeEntry e)
     {
+        if (IsHiddenEntry(e)) return null;
         string url = null;
         if (e.Kind == "movie")
         {
@@ -410,7 +423,8 @@ public sealed class DataService
 
     // ---------------------------------------------------------------- categories & favourites
 
-    public HashSet<string> HiddenSet(string kind)
+    /// <summary>Categories not to show: ones you've hidden, plus locked ones while the parental PIN hasn't been entered.</summary>
+    public HashSet<string> HiddenSet(string kind, bool includeLocked = true)
     {
         var prefix = kind + ":";
         var set = new HashSet<string>();
@@ -418,6 +432,7 @@ public sealed class DataService
         if (p == null) return set;
         foreach (var h in p.HiddenCategories)
             if (h.StartsWith(prefix, StringComparison.Ordinal)) set.Add(h.Substring(prefix.Length));
+        if (includeLocked && Parental.Active) set.UnionWith(Parental.LockedSet(kind));
         return set;
     }
 

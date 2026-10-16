@@ -23,6 +23,8 @@ public class PlaylistConfig
     public List<string> Favourites { get; set; } = new();
     /// <summary>Channel editor: your own names (channel id → name), kept across refreshes.</summary>
     public Dictionary<string, string> ChannelNames { get; set; } = new();
+    /// <summary>Parental controls: locked categories ("live:12", "vod:7" …).</summary>
+    public List<string> LockedCategories { get; set; } = new();
     /// <summary>Channel editor: channels you've hidden (every version's id).</summary>
     public List<string> HiddenChannels { get; set; } = new();
     /// <summary>Channel editor: your own order per category (category id → channel ids, top first).</summary>
@@ -96,6 +98,23 @@ public class AppSettings
     public double? MiniLeft { get; set; }
     public double? MiniTop { get; set; }
     public double? MiniWidth { get; set; }
+    // Parental controls (only a salted hash of the PIN is kept).
+    public string ParentalPinHash { get; set; }
+    public string ParentalPinSalt { get; set; }
+    /// <summary>Lock categories whose names look adult ("Adult", "XXX", "18+") automatically.</summary>
+    public bool AutoLockAdult { get; set; } = true;
+
+    // Picture & sound
+    /// <summary>Aspect ratio: null = as broadcast, or "16:9", "4:3", "21:9".</summary>
+    public string AspectRatio { get; set; }
+    /// <summary>Crop: null = off, "fill" = fill the screen, or a ratio such as "16:9" / "2.35:1".</summary>
+    public string Crop { get; set; }
+    /// <summary>Evens out loud and quiet sounds (late-night viewing).</summary>
+    public bool NightMode { get; set; }
+    /// <summary>Preferred audio / subtitle language (ISO code such as "eng"); null = the stream's default / off.</summary>
+    public string AudioLanguage { get; set; }
+    public string SubtitleLanguage { get; set; }
+
     /// <summary>Pause &amp; rewind live TV (buffers the channel you're watching to disk).</summary>
     public bool Timeshift { get; set; } = true;
     /// <summary>How far back you can rewind live TV.</summary>

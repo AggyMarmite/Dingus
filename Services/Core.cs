@@ -56,6 +56,13 @@ public static class SettingsStore
         catch (Exception ex) { Log.Error(ex); Current = new(); }
     }
 
+    /// <summary>Swaps in different settings (backup restore) and saves them.</summary>
+    public static void Replace(AppSettings s)
+    {
+        Current = s ?? new();
+        Save();
+    }
+
     public static void Save()
     {
         try

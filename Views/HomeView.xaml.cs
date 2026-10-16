@@ -181,7 +181,7 @@ public partial class HomeView : UserControl, IPage
 
         // Continue watching: films and episodes you stopped part-way through.
         var resume = HistoryStore.Recent("movie").Concat(HistoryStore.Recent("episode"))
-            .Where(e => e.CanResume)
+            .Where(e => e.CanResume && !DataService.Instance.IsHiddenEntry(e))
             .OrderByDescending(e => e.UpdatedUtc)
             .Take(20)
             .Select(e => new HomeResumeCard

@@ -216,3 +216,110 @@ public partial class MainWindow
 
     void GoLive_Click(object sender, RoutedEventArgs e) => _svc?.GoLive();
 }
+
+// Picture & sound menu in the player.
+public partial class MainWindow
+{
+    void Picture_Click(object sender, RoutedEventArgs e) => ShowPictureMenu();
+
+    void ShowPictureMenu()
+    {
+        if (_svc == null) return;
+        var s = Services.SettingsStore.Current;
+        var menu = new ContextMenu { PlacementTarget = PictureButton, Placement = PlacementMode.Top };
+
+        MenuItem Sub(string header) { var m = new MenuItem { Header = header }; menu.Items.Add(m); return m; }
+        void Opt(MenuItem parent, string text, bool isChecked, Action click)
+        {
+            var mi = new MenuItem { Header = text, IsChecked = isChecked };
+            mi.Click += (_, _) => click();
+            parent.Items.Add(mi);
+        }
+
+        var aspect = Sub("Aspect ratio");
+        foreach (var (label, value) in new[] { ("As broadcast", (string)null), ("16:9", "16:9"), ("4:3", "4:3"), ("21:9 (ultrawide)", "21:9") })
+            Opt(aspect, label, s.AspectRatio == value, () => { s.AspectRatio = value; SavePicture(label == "As broadcast" ? "Aspect ratio: as broadcast" : $"Aspect ratio: {label}"); });
+
+        var crop = Sub("Zoom & crop");
+        foreach (var (label, value) in new[]
+                 {
+                     ("Off", (string)null), ("Fill the screen (crops the edges)", "fill"),
+                     ("Remove black bars – 16:9", "16:9"), ("Remove black bars – cinema (2.35:1)", "235:100"),
+                 })
+            Opt(crop, label, s.Crop == value, () => { s.Crop = value; SavePicture(value == null ? "Crop off" : label); });
+
+        menu.Items.Add(new Separator());
+
+        long ad = _svc.AudioDelayMs;
+        var audio = Sub($"Audio sync ({Ms(ad)})");
+        foreach (var ms in new long[] { -500, -300, -200, -100, 0, 100, 200, 300, 500 })
+            Opt(audio, ms == 0 ? "In sync (0 ms)" : ms < 0 ? $"Sound earlier by {-ms} ms" : $"Sound later by {ms} ms", ad == ms,
+                () => { _svc.SetAudioDelay(ms); ShowToast($"Audio sync: {Ms(ms)}"); });
+
+        long sd = _svc.SubtitleDelayMs;
+        var subs = Sub($"Subtitle timing ({Ms(sd)})");
+        foreach (var ms in new long[] { -2000, -1000, -500, 0, 500, 1000, 2000 })
+            Opt(subs, ms == 0 ? "No change" : ms < 0 ? $"Show {-ms / 1000.0:0.#} s earlier" : $"Show {ms / 1000.0:0.#} s later", sd == ms,
+                () => { _svc.SetSubtitleDelay(ms); ShowToast($"Subtitle timing: {Ms(ms)}"); });
+
+        menu.Items.Add(new Separator());
+        var night = new MenuItem { Header = "Night mode – even out loud and quiet sounds", IsCheckable = true, IsChecked = s.NightMode };
+        night.Click += (_, _) => SetNightMode(!s.NightMode);
+        menu.Items.Add(night);
+
+        _hideTimer.Stop();
+        menu.Closed += (_, _) => { _menuOpen = false; if (_playerMode) _hideTimer.Start(); };
+        _menuOpen = true;
+        menu.IsOpen = true;
+    }
+
+    static string Ms(long ms) => ms == 0 ? "0 ms" : (ms > 0 ? "+" : "−") + Math.Abs(ms) + " ms";
+
+    void SavePicture(string toast)
+    {
+        UpdateFillRatio();
+        Services.SettingsStore.Save();
+        _svc?.ApplyPicture();
+        ShowToast(toast);
+    }
+
+    /// <summary>"Fill the screen" crops the video to the shape of the player.</summary>
+    void UpdateFillRatio()
+    {
+        if (_svc == null) return;
+        double w = Video.ActualWidth, h = Video.ActualHeight;
+        if (w < 50 || h < 50) return;
+        _svc.FillRatio = $"{Math.Round(w)}:{Math.Round(h)}";
+    }
+
+    void SetNightMode(bool on)
+    {
+        var s = Services.SettingsStore.Current;
+        s.NightMode = on;
+        Services.SettingsStore.Save();
+        ShowToast(on ? "Night mode on – loud and quiet sounds evened out" : "Night mode off");
+        // The sound filter is set when a stream opens, so re-open what's playing.
+        if (_nowLive) PlayVariant();
+        else if (_vod != null) { var v = _vod; PlayVod(v, resume: true); }
+    }
+}
+
+// Parental lock button in the top bar.
+public partial class MainWindow
+{
+    void UpdateLockButton()
+    {
+        bool pin = Services.Parental.HasPin;
+        LockButton.Visibility = pin ? Visibility.Visible : Visibility.Collapsed;
+        LockButton.Content = Services.Parental.Unlocked ? "\uE785" : "\uE72E";
+        LockButton.ToolTip = Services.Parental.Unlocked
+            ? "Locked categories are showing – click to lock them again"
+            : "Locked categories are hidden – click and enter your PIN to show them";
+    }
+
+    void Lock_Click(object sender, RoutedEventArgs e)
+    {
+        if (Services.Parental.Unlocked) { Services.Parental.Lock(); ShowToast("Locked."); }
+        else if (Services.Parental.TryUnlock(this)) ShowToast("Unlocked until you close Dingus.");
+    }
+}

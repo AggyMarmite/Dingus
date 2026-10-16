@@ -58,6 +58,10 @@ public partial class SettingsView : UserControl, IPage
             BatteryToggle.IsChecked = S.BatteryAware;
             LowMemToggle.IsChecked = S.LowMemoryInterface;
             TimeshiftToggle.IsChecked = S.Timeshift;
+            CheckChip(AudioLangChips, S.AudioLanguage ?? "");
+            CheckChip(SubLangChips, S.SubtitleLanguage ?? "");
+            NightToggle.IsChecked = S.NightMode;
+            PopulateParental();
             CheckChip(TimeshiftChips, S.TimeshiftMinutes.ToString());
             S.StartWithWindows = ThemeService.IsStartWithWindows(); // the installer can switch it on too
             StartWinToggle.IsChecked = S.StartWithWindows;
@@ -78,6 +82,171 @@ public partial class SettingsView : UserControl, IPage
             VersionText.Text = $"Dingus {v?.ToString(3)}  ·  Video engine: VLC  ·  Using {Memory.WorkingSetMB():N0} MB of memory";
         }
         finally { _loading = false; }
+    }
+
+    // ------------------------------------------------------------------ languages & night mode
+
+    void AudioLang_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_loading || sender is not RadioButton { Tag: string t }) return;
+        S.AudioLanguage = t.Length == 0 ? null : t;
+        SettingsStore.Save();
+    }
+
+    void SubLang_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_loading || sender is not RadioButton { Tag: string t }) return;
+        S.SubtitleLanguage = t.Length == 0 ? null : t;
+        SettingsStore.Save();
+    }
+
+    void Night_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        S.NightMode = NightToggle.IsChecked == true;
+        SettingsStore.Save();
+    }
+
+    // ------------------------------------------------------------------ parental controls
+
+    string _lockKind = "live";
+
+    void PopulateParental()
+    {
+        bool pin = Parental.HasPin;
+        PinButton.Content = pin ? "Change PIN" : "Set a PIN";
+        RemovePinButton.Visibility = pin ? Visibility.Visible : Visibility.Collapsed;
+        LockNowButton.Visibility = pin && Parental.Unlocked ? Visibility.Visible : Visibility.Collapsed;
+        PinStatus.Text = !pin ? "Set a 4–8 digit PIN to lock categories (e.g. adult channels and films)."
+            : Parental.Unlocked ? "Unlocked until Dingus closes – locked categories are showing."
+            : "On – locked categories are hidden until the PIN is entered.";
+        LockPanel.Visibility = pin ? Visibility.Visible : Visibility.Collapsed;
+        AutoLockToggle.IsChecked = S.AutoLockAdult;
+        CheckChip(LockKindChips, _lockKind);
+        if (pin) PopulateLocks();
+    }
+
+    void PopulateLocks()
+    {
+        var data = DataService.Instance.Catalog;
+        var cats = _lockKind switch { "vod" => data.VodCategories, "series" => data.SeriesCategories, _ => data.LiveCategories };
+        var p = DataService.Instance.Active;
+        var manual = new HashSet<string>(p?.LockedCategories ?? new List<string>());
+        var boxes = new List<CheckBox>(cats.Count);
+        foreach (var c in cats)
+        {
+            bool auto = S.AutoLockAdult && Parental.IsAdultName(c.Name);
+            var cb = new CheckBox
+            {
+                Content = new TextBlock { Text = c.Name, TextTrimming = TextTrimming.CharacterEllipsis },
+                IsChecked = auto || manual.Contains(_lockKind + ":" + c.Id),
+                IsEnabled = !auto,
+                Style = (Style)FindResource("Tick"),
+                Tag = c.Id,
+                ToolTip = auto ? c.Name + " (locked automatically)" : c.Name,
+            };
+            cb.Checked += Lock_Toggled;
+            cb.Unchecked += Lock_Toggled;
+            boxes.Add(cb);
+        }
+        LockChecks.ItemsSource = boxes;
+    }
+
+    void Lock_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_loading || sender is not CheckBox { Tag: string id } cb) return;
+        var p = DataService.Instance.Active;
+        if (p == null) return;
+        var key = _lockKind + ":" + id;
+        p.LockedCategories.Remove(key);
+        if (cb.IsChecked == true) p.LockedCategories.Add(key);
+        SettingsStore.Save();
+        if (Parental.Active) DataService.Instance.NotifyCatalogChanged();
+    }
+
+    void LockKind_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_loading || sender is not RadioButton { Tag: string t }) return;
+        _lockKind = t;
+        PopulateLocks();
+    }
+
+    void AutoLock_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        S.AutoLockAdult = AutoLockToggle.IsChecked == true;
+        SettingsStore.Save();
+        if (Parental.Active) DataService.Instance.NotifyCatalogChanged();
+        PopulateLocks();
+    }
+
+    void Pin_Click(object sender, RoutedEventArgs e)
+    {
+        var owner = Window.GetWindow(this);
+        if (Parental.HasPin && !Parental.Unlocked && !Parental.TryUnlock(owner)) return; // prove you know the old one
+        var pin = Parental.AskPin(owner, Parental.HasPin ? "New PIN" : "Set a PIN", "4 to 8 digits. You'll need it to see locked categories.");
+        if (pin == null) return;
+        var again = Parental.AskPin(owner, "Confirm PIN", "Type the same PIN again.");
+        if (again == null) return;
+        if (again != pin) { MainWindow.Instance?.ShowToast("The PINs didn't match – nothing changed."); return; }
+        Parental.SetPin(pin);
+        MainWindow.Instance?.ShowToast("PIN set. Locked categories are now hidden.");
+        Populate();
+    }
+
+    void RemovePin_Click(object sender, RoutedEventArgs e)
+    {
+        if (!Parental.TryUnlock(Window.GetWindow(this))) return;
+        Parental.SetPin(null);
+        MainWindow.Instance?.ShowToast("PIN removed – nothing is locked.");
+        Populate();
+    }
+
+    void LockNow_Click(object sender, RoutedEventArgs e)
+    {
+        Parental.Lock();
+        Populate();
+    }
+
+    // ------------------------------------------------------------------ backup & restore
+
+    void Backup_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = "Back up Dingus",
+            FileName = $"Dingus backup {DateTime.Now:yyyy-MM-dd}.zip",
+            Filter = "Dingus backup (*.zip)|*.zip",
+            DefaultExt = ".zip",
+        };
+        if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
+        try
+        {
+            Backup.Create(dlg.FileName, BackupPasswordsToggle.IsChecked == true);
+            MainWindow.Instance?.ShowToast("Backup saved.");
+        }
+        catch (Exception ex) { Log.Error(ex); MainWindow.Instance?.ShowToast("Couldn't save the backup: " + ex.Message); }
+    }
+
+    void Restore_Click(object sender, RoutedEventArgs e)
+    {
+        var owner = Window.GetWindow(this);
+        var dlg = new Microsoft.Win32.OpenFileDialog { Title = "Restore a Dingus backup", Filter = "Dingus backup (*.zip)|*.zip" };
+        if (dlg.ShowDialog(owner) != true) return;
+        string what;
+        try { what = Backup.Describe(dlg.FileName); }
+        catch (Exception ex) { MainWindow.Instance?.ShowToast(ex.Message); return; }
+        var ok = MessageBox.Show(owner,
+            $"Restore this backup?
+
+{what}
+
+Your current settings, playlists, favourites, history and reminders will be replaced, and Dingus will restart.",
+            "Restore backup", MessageBoxButton.OKCancel, MessageBoxImage.Question);
+        if (ok != MessageBoxResult.OK) return;
+        try { Backup.Restore(dlg.FileName); }
+        catch (Exception ex) { Log.Error(ex); MainWindow.Instance?.ShowToast("Couldn't restore: " + ex.Message); return; }
+        App.Restart(saveState: false);
     }
 
     void EditChannels_Click(object sender, RoutedEventArgs e) => MainWindow.Instance?.OpenChannelEditor();
@@ -261,7 +430,7 @@ public partial class SettingsView : UserControl, IPage
             "series" => data.SeriesCategories,
             _ => data.LiveCategories,
         };
-        var hidden = DataService.Instance.HiddenSet(_kind);
+        var hidden = DataService.Instance.HiddenSet(_kind, includeLocked: false);
         var boxes = new List<CheckBox>(cats.Count);
         foreach (var c in cats)
         {

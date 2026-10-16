@@ -134,9 +134,13 @@ public sealed class PlayerService
                 _tsBaseUtc = utc;
                 _tsClock.Reset();
             }
+            long audio = Player.AudioDelay, spu = Player.SpuDelay; // keep your sync settings across jumps
             using var media = new Media(Vlc, new Uri(LocalStreamServer.UrlFor(ts, offset)), opts);
             Player.Play(media);
             Player.Volume = SettingsStore.Current.Volume;
+            ApplyPictureNow();
+            if (audio != 0) Player.SetAudioDelay(audio);
+            if (spu != 0) Player.SetSpuDelay(spu);
         });
     }
 
@@ -145,8 +149,51 @@ public sealed class PlayerService
         var s = SettingsStore.Current;
         // From the local buffer there's nothing to wait for, so a short cache is enough (and uses less memory).
         var cache = local ? 800 : Math.Clamp(s.NetworkCachingMs, 300, 10000);
-        return new[] { $":network-caching={cache}", $":live-caching={cache}", ":adaptive-maxbuffer=12000" };
+        return new[] { $":network-caching={cache}", $":live-caching={cache}", ":adaptive-maxbuffer=12000" }.Concat(SoundOptions()).ToArray();
     }
+
+    // ------------------------------------------------------------------ picture & sound
+
+    /// <summary>The screen's shape for "Fill screen" cropping, e.g. "16:9" (set by the main window).</summary>
+    public string FillRatio { get; set; } = "16:9";
+
+    static IEnumerable<string> SoundOptions()
+    {
+        var s = SettingsStore.Current;
+        if (s.NightMode)
+        {
+            // Dynamic range compression: quiet dialogue up, explosions down.
+            yield return ":audio-filter=compressor";
+            yield return ":compressor-rms-peak=0.2";
+            yield return ":compressor-attack=25";
+            yield return ":compressor-release=100";
+            yield return ":compressor-threshold=-20";
+            yield return ":compressor-ratio=8";
+            yield return ":compressor-knee=4.5";
+            yield return ":compressor-makeup-gain=10";
+        }
+        if (!string.IsNullOrEmpty(s.AudioLanguage)) yield return $":audio-language={s.AudioLanguage}";
+        if (!string.IsNullOrEmpty(s.SubtitleLanguage)) yield return $":sub-language={s.SubtitleLanguage}";
+    }
+
+    void ApplyPictureNow()
+    {
+        var s = SettingsStore.Current;
+        try
+        {
+            Player.AspectRatio = string.IsNullOrEmpty(s.AspectRatio) ? null : s.AspectRatio;
+            Player.CropGeometry = s.Crop == "fill" ? FillRatio : string.IsNullOrEmpty(s.Crop) ? null : s.Crop;
+        }
+        catch (Exception ex) { Log.Error(ex); }
+    }
+
+    /// <summary>Re-applies the aspect ratio and crop settings to what's playing.</summary>
+    public void ApplyPicture() => Enqueue(ApplyPictureNow);
+
+    public long AudioDelayMs => Player.AudioDelay / 1000;
+    public long SubtitleDelayMs => Player.SpuDelay / 1000;
+    public void SetAudioDelay(long ms) => Enqueue(() => Player.SetAudioDelay(ms * 1000));
+    public void SetSubtitleDelay(long ms) => Enqueue(() => Player.SetSpuDelay(ms * 1000));
 
     void EndTimeshift()
     {
@@ -176,6 +223,7 @@ public sealed class PlayerService
         // HLS/DASH streams read up to 30 s ahead by default – at 4K that's ~100 MB. 12 s is plenty.
         opts.Add(":adaptive-maxbuffer=12000");
         if (startMs > 0) opts.Add($":start-time={startMs / 1000.0:0.0}".Replace(',', '.'));
+        opts.AddRange(SoundOptions());
 
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) throw new ArgumentException("Invalid stream address.");
         int gen = Interlocked.Increment(ref _gen);
@@ -202,6 +250,7 @@ public sealed class PlayerService
             using var media = new Media(Vlc, uri, opts.ToArray());
             Player.Play(media);
             Player.Volume = s.Volume;
+            ApplyPictureNow();
         });
     }
 
