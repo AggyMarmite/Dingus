@@ -64,11 +64,12 @@ jobs:
           dotnet publish Dingus.csproj -c Release -r win-x64 --self-contained false -o publish
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
-          & $iscc /Q /DAppVersion=0.0.0 /DSourceDir=..\publish installer\Dingus.iss
-          if ($LASTEXITCODE -ne 0) { exit 1 }
+          $log = & $iscc /DAppVersion=0.0.0 /DSourceDir=..\publish installer\Dingus.iss 2>&1 | Out-String
+          if ($LASTEXITCODE -ne 0) { $t = ($log -split "`n" | Select-Object -Last 15) -join '%0A'; Write-Host "::error title=iscc::$t"; exit 1 }
           $setup = Get-Item installer\Output\Dingus-Setup-0.0.0.exe
           $size = [math]::Round($setup.Length / 1MB, 1)
-          $r = Invoke-WebRequest -Method Head -Uri 'https://aka.ms/dotnet/8.0/windowsdesktop-runtime-win-x64.exe' -MaximumRedirection 5 -UseBasicParsing
+          try { $r = Invoke-WebRequest -Method Head -Uri 'https://aka.ms/dotnet/8.0/windowsdesktop-runtime-win-x64.exe' -MaximumRedirection 5 -UseBasicParsing }
+          catch { Write-Host "::error title=dotnet link::$($_.Exception.Message)"; exit 1 }
           $rt = Get-ChildItem "$env:ProgramFiles\dotnet\shared\Microsoft.WindowsDesktop.App" -Directory | ForEach-Object Name
           $dir = Join-Path $env:RUNNER_TEMP 'installed'
           $p = Start-Process $setup.FullName -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/NOLAUNCH',"/DIR=`"$dir`"" -PassThru
