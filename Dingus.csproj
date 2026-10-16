@@ -48,6 +48,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Test projects live under tests/ and build separately. -->
+    <Compile Remove="tests/**" />
+    <None Remove="tests/**" />
+    <Page Remove="tests/**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Resource Include="Assets\Dingus.ico" />
   </ItemGroup>
 

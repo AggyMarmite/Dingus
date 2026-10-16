@@ -16,3 +16,5 @@ jobs:
           dotnet-version: 8.0.x
       - name: Build
         run: dotnet build Dingus.csproj -c Release
+      - name: Test live TV buffer
+        run: dotnet run --project tests/TimeshiftTest/TimeshiftTest.csproj -c Release
