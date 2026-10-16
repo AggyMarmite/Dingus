@@ -1,0 +1,36 @@
+name: Size report
+
+# What takes up space in the published app (run by hand).
+on:
+  workflow_dispatch:
+
+jobs:
+  size:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Publish both ways
+        run: |
+          dotnet publish Dingus.csproj -c Release -r win-x64 --self-contained true -o pub-sc
+          dotnet publish Dingus.csproj -c Release -r win-x64 --self-contained false -o pub-fd
+      - name: Report
+        shell: pwsh
+        run: |
+          function MB($p) { [math]::Round(((Get-ChildItem $p -Recurse -File | Measure-Object Length -Sum).Sum / 1MB), 1) }
+          $lines = @("self-contained total: $(MB 'pub-sc') MB", "framework-dependent total: $(MB 'pub-fd') MB")
+          $vlc = Get-ChildItem pub-fd -Recurse -Directory -Filter plugins | Select-Object -First 1
+          $lines += "libvlc folder: $(MB $vlc.Parent.FullName) MB  ($($vlc.Parent.FullName.Replace((Get-Location).Path,'')))"
+          foreach ($f in Get-ChildItem $vlc.Parent.FullName -File) { if ($f.Length -gt 1MB) { $lines += "  $($f.Name): $([math]::Round($f.Length/1MB,1)) MB" } }
+          foreach ($d in Get-ChildItem $vlc.FullName -Directory | Sort-Object { -(MB $_.FullName) }) {
+            $files = Get-ChildItem $d.FullName -File | Sort-Object Length -Descending
+            $top = ($files | Select-Object -First 4 | ForEach-Object { "$($_.Name -replace '_plugin.dll','') $([math]::Round($_.Length/1MB,1))" }) -join ', '
+            $lines += "plugins/$($d.Name): $(MB $d.FullName) MB, $($files.Count) files – $top"
+          }
+          $big = Get-ChildItem pub-sc -File | Sort-Object Length -Descending | Select-Object -First 12
+          $lines += "largest files (self-contained root):"
+          foreach ($f in $big) { $lines += "  $($f.Name): $([math]::Round($f.Length/1MB,1)) MB" }
+          $t = ($lines -join "%0A")
+          Write-Host "::notice title=size::$t"
