@@ -187,6 +187,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             Log.Error(ex);
+            if (SelfTest.Dir != null) { SelfTest.Error(ex); return; }
             MessageBox.Show(this, "The video engine failed to start:\n\n" + ex.Message, "Dingus", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 

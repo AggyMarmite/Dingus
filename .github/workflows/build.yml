@@ -28,11 +28,24 @@ jobs:
           $out = Join-Path $env:RUNNER_TEMP 'selftest'
           $exe = Get-ChildItem -Recurse -Filter Dingus.exe bin\Release | Select-Object -First 1
           $p = Start-Process $exe.FullName -ArgumentList '--self-test', "`"$out`"" -PassThru
-          if (-not $p.WaitForExit(240000)) { $p.Kill(); Write-Host 'Self-test did not finish in time'; }
-          Write-Host '----- result -----'
-          if (Test-Path "$out\result.txt") { Get-Content "$out\result.txt" } else { Write-Host 'no result file' }
+          New-Item -ItemType Directory -Force $out | Out-Null
+          if (-not $p.WaitForExit(240000)) {
+            Write-Host '::warning::Self-test did not finish in time'
+            Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+            $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+            [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+            $bmp.Save("$out\desktop-at-timeout.png")
+            $p.Kill()
+          }
+          # Report through annotations as well (readable without downloading the log).
+          foreach ($f in 'result.txt','crash.txt') {
+            if (Test-Path "$out\$f") { $t = (Get-Content "$out\$f" -Raw) -replace "`r",'' -replace "`n",'%0A'; Write-Host "::notice title=$f::$t" }
+          }
+          if (-not (Test-Path "$out\started.txt")) { Write-Host '::warning::The app never started the self-test' }
+          Write-Host "::notice title=exit::exit code $($p.ExitCode)"
           $log = "$env:LOCALAPPDATA\Dingus\log.txt"
-          if (Test-Path $log) { Write-Host '----- log.txt -----'; Get-Content $log; Copy-Item $log $out }
+          if (Test-Path $log) { $t = (Get-Content $log -Raw) -replace "`r",'' -replace "`n",'%0A'; Write-Host "::notice title=log.txt::$t"; Copy-Item $log $out }
           if (-not (Test-Path "$out\result.txt") -or -not (Select-String -Path "$out\result.txt" -Pattern 'PASSED' -Quiet)) { exit 1 }
       - name: Upload screenshots
         if: always()

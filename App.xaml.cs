@@ -16,7 +16,14 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         int st = Array.IndexOf(e.Args, "--self-test");
-        if (st >= 0 && st + 1 < e.Args.Length) SelfTest.Dir = e.Args[st + 1];
+        if (st >= 0 && st + 1 < e.Args.Length)
+        {
+            SelfTest.Dir = e.Args[st + 1];
+            Directory.CreateDirectory(SelfTest.Dir);
+            File.WriteAllText(Path.Combine(SelfTest.Dir, "started.txt"), DateTime.Now.ToString("O"));
+            AppDomain.CurrentDomain.UnhandledException += (_, a) =>
+                File.AppendAllText(Path.Combine(SelfTest.Dir, "crash.txt"), a.ExceptionObject + "\n\n");
+        }
 
         _single = new Mutex(true, MutexName, out bool first);
         if (!first)
@@ -70,8 +77,8 @@ public partial class App : Application
             return;
         }
         MainWindow = main;
-        main.Show();
         if (SelfTest.Dir != null) main.Loaded += async (_, _) => await SelfTest.RunAsync(main);
+        main.Show();
     }
 
     /// <summary>Restarts the app (e.g. after changing the theme).</summary>
