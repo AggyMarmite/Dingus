@@ -70,7 +70,10 @@ git push origin v0.3.0
 | I | Pin stream info (resolution, frame rate, bitrate, dropped frames) |
 | Space | Play / pause |
 | ↑ ↓ | Channel up / down (live) · volume (films) |
-| ← → | Back 10 s / forward 30 s (films) |
+| ← → | Back 10 s / forward 30 s (films) · back / forward 10 s (live TV) |
+| End | Live TV: catch up to live |
+| S | Sleep timer |
+| ? / F1 | Keyboard shortcut list |
 | Home | Start a film or episode from the beginning |
 | N | Next episode |
 | M | Mute · mouse wheel = volume |
@@ -98,6 +101,24 @@ git push origin v0.3.0
 - **Picture-in-picture** (P): a floating, always-on-top window. Drag to move (snaps into corners), drag the corner grip
   or Ctrl + mouse wheel to resize, double-click for full screen.
 - **Taskbar controls**: previous / play-pause / next buttons on the taskbar thumbnail, and film progress on the icon.
+- **Pause & rewind live TV**: Space pauses, ← goes back 10 s, End catches up. The channel is buffered to disk
+  (30 min – 2 h, never more than a quarter of your free space) through one connection, so memory use stays flat.
+  HLS streams play directly without it.
+- **Sleep timer** (S, or the moon in the player): 15 / 30 / 60 / 90 minutes or the end of the programme / film.
+- **Reminders**: right-click a future programme (guide, lists, Home) or use "Remind me" – a pop-up with a Watch button
+  appears a minute before it starts. Your reminders are on Home.
+- **Find a programme**: in the guide, "Find a programme" searches every channel's listings by title.
+- **Channel editor**: rename, hide and reorder channels (right-click a channel, or Settings → TV Guide). Kept across refreshes.
+- **Picture & sound** (player button): aspect ratio, zoom / crop black bars, audio sync, subtitle timing, night mode.
+  Preferred audio and subtitle languages in Settings → Playback.
+- **Parental PIN**: lock categories (adult categories automatically). Locked categories are hidden everywhere until
+  the PIN is entered with the lock button at the top.
+- **Plex**: sign in with a code at plex.tv/link, browse your server's films and shows, and pick up where you left off –
+  progress is kept in step with Plex. "Continue watching on Plex" is on Home.
+- **Backup & restore** (Settings): everything in one .zip – passwords only if you choose to include them.
+- **Themes**: Midnight, Slate (lighter grey) or Black, and six accent colours including teal.
+- **Updates**: Dingus checks the GitHub releases once a day and offers new versions (always asks first).
+- **One copy at a time**: opening Dingus again brings the running window to the front.
 
 ## Why it's light
 
@@ -109,5 +130,6 @@ git push origin v0.3.0
 
 ## Data location
 
-`%LocalAppData%\Dingus` – settings, cached playlists and guides, images and `log.txt`.
+`%LocalAppData%\Dingus` – settings, cached playlists and guides, images, reminders, the live TV buffer and `log.txt`.
+(Settings from the old "Nimbus TV" name are moved here automatically.)
 Passwords are encrypted with Windows DPAPI for your user account.

@@ -27,7 +27,7 @@ public class GuideRow : Observable
     {
         Channel = c;
         Number = c.Num > 0 ? c.Num.ToString() : index.ToString();
-        Initials = MakeInitials(c.Name);
+        Initials = MakeInitials(CleanName(c.Name)); // "UK| BBC One" → "BO", not "UB"
     }
 
     /// <summary>The channel as listed (first version found). Its id identifies the row for favourites/history.</summary>

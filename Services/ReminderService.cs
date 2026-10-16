@@ -137,11 +137,17 @@ public static class ReminderService
         var buttons = new StackPanel { Orientation = Orientation.Horizontal };
         buttons.Children.Add(watch);
         buttons.Children.Add(dismiss);
-        var head = new TextBlock
+        var head = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 8) };
+        head.Children.Add(new TextBlock
         {
-            Text = "  REMINDER", FontSize = 11, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 8),
-            Foreground = (Brush)res["AccentBrush"], FontFamily = new FontFamily("Segoe MDL2 Assets, Segoe UI"),
-        };
+            Text = "\uE7ED", FontSize = 12, Margin = new Thickness(0, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center,
+            Foreground = (Brush)res["AccentBrush"], FontFamily = (FontFamily)res["IconFont"],
+        });
+        head.Children.Add(new TextBlock
+        {
+            Text = "REMINDER", FontSize = 11, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center,
+            Foreground = (Brush)res["AccentBrush"],
+        });
         var stack = new StackPanel();
         stack.Children.Add(head);
         stack.Children.Add(title);

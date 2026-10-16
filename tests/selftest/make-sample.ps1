@@ -60,7 +60,7 @@ foreach ($c in $channels) {
 Set-Content -Path "$Dir\sample.xml" -Value $x.ToString() -Encoding UTF8
 
 $settings = @{
-  Playlists = @(@{ Id='selftest'; Name='Sample'; Type=1; M3uUrl="$Dir\sample.m3u"; EpgUrl="$Dir\sample.xml"; Favourites=@('http://127.0.0.1:9/live/8','http://127.0.0.1:9/live/1') })
+  Playlists = @(@{ Id='selftest'; Name='Sample'; Type=1; M3uUrl="$Dir\sample.m3u"; EpgUrl="$Dir\sample.xml"; Favourites=@('http://127.0.0.1:9/live/8.ts','http://127.0.0.1:9/live/1.ts') })
   ActivePlaylistId = 'selftest'
   AutoUpdate = $false
   Timeshift = $false
