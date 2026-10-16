@@ -1,0 +1,160 @@
+using LibVLCSharp.Shared;
+
+namespace Dingus.Services;
+
+public record TrackOption(int Id, string Name, bool Current);
+
+/// <summary>Snapshot of how the current stream is doing (for the stream-health badge and stall detection).</summary>
+public record StreamHealth(
+    uint Width, uint Height, float Fps, double Mbps,
+    int DisplayedPictures, int LostPictures, long TimeMs, long LengthMs, VLCState State,
+    bool? GpuDecoding);
+
+/// <summary>
+/// One VLC engine + one player for the whole app (the Guide preview, the full-screen player and the
+/// mini player share it, so switching between them is instant and never opens a second stream).
+/// All blocking libVLC calls run on a single background queue so the UI never stalls when zapping.
+/// </summary>
+public sealed class PlayerService
+{
+    public LibVLC Vlc { get; }
+    public MediaPlayer Player { get; }
+
+    Task _queue = Task.CompletedTask;
+    readonly object _qLock = new();
+
+    /// <summary>
+    /// True once VLC reports the graphics card is decoding the current stream; false if it's playing
+    /// without that (CPU decoding); null while we don't know yet.
+    /// </summary>
+    public bool? GpuDecoding { get; private set; }
+    DateTime _playingSince;
+
+    public PlayerService()
+    {
+        // Software decoding keeps a set of frames per decoder thread – at 4K that's ~25 MB per frame,
+        // so "one thread per CPU core" can cost well over a gigabyte. A few threads decode 4K fine.
+        int threads = Math.Clamp(Environment.ProcessorCount / 2, 2, 6);
+        Vlc = new LibVLC(false,
+            "--no-video-title-show",
+            "--no-snapshot-preview",
+            "--no-sub-autodetect-file",
+            "--no-lua",
+            "--http-reconnect",
+            $"--avcodec-threads={threads}");
+
+        // VLC announces "Using D3D11VA (…) for hardware decoding" when the graphics card takes over.
+        Vlc.Log += (_, e) =>
+        {
+            var msg = e.Message;
+            if (msg != null && msg.Contains("for hardware decoding", StringComparison.OrdinalIgnoreCase))
+                GpuDecoding = true;
+        };
+
+        Player = new MediaPlayer(Vlc)
+        {
+            EnableKeyInput = false,
+            EnableMouseInput = false,
+            EnableHardwareDecoding = SettingsStore.Current.HardwareDecoding,
+        };
+    }
+
+    void Enqueue(Action a)
+    {
+        lock (_qLock)
+        {
+            _queue = _queue.ContinueWith(_ =>
+            {
+                try { a(); } catch (Exception ex) { Log.Error(ex); }
+            }, TaskScheduler.Default);
+        }
+    }
+
+    /// <param name="startMs">Start position for films/episodes (resume); 0 = from the beginning.</param>
+    public void Play(string url, bool live, long startMs = 0)
+    {
+        var s = SettingsStore.Current;
+        var cache = Math.Clamp(s.NetworkCachingMs, 300, 10000);
+        var opts = new List<string> { $":network-caching={cache}" };
+        if (live) opts.Add($":live-caching={cache}");
+        // HLS/DASH streams read up to 30 s ahead by default – at 4K that's ~100 MB. 12 s is plenty.
+        opts.Add(":adaptive-maxbuffer=12000");
+        if (startMs > 0) opts.Add($":start-time={startMs / 1000.0:0.0}".Replace(',', '.'));
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) throw new ArgumentException("Invalid stream address.");
+
+        Enqueue(() =>
+        {
+            GpuDecoding = null;
+            _playingSince = DateTime.MaxValue;
+            Player.EnableHardwareDecoding = s.HardwareDecoding;
+            using var media = new Media(Vlc, uri, opts.ToArray());
+            Player.Play(media);
+            Player.Volume = s.Volume;
+        });
+    }
+
+    public void Stop() => Enqueue(() => Player.Stop());
+    public void TogglePause() => Enqueue(() => Player.Pause());
+
+    public void SeekBy(long ms) => Enqueue(() =>
+    {
+        if (!Player.IsSeekable) return;
+        var len = Player.Length;
+        var t = Math.Max(0, Player.Time + ms);
+        if (len > 0) t = Math.Min(t, len - 1000);
+        Player.Time = t;
+    });
+
+    public void SeekTo(long ms) => Enqueue(() => { if (Player.IsSeekable) Player.Time = Math.Max(0, ms); });
+
+    public void SetVolume(int v) => Enqueue(() => Player.Volume = Math.Clamp(v, 0, 100));
+    public void SetMute(bool m) => Enqueue(() => Player.Mute = m);
+
+    /// <summary>Reads stream statistics off the UI thread.</summary>
+    public Task<StreamHealth> GetHealthAsync() => Task.Run(() =>
+    {
+        uint w = 0, h = 0;
+        try { Player.Size(0, ref w, ref h); } catch { }
+        int shown = 0, lost = 0;
+        double mbps = 0;
+        try
+        {
+            using var m = Player.Media;
+            if (m != null)
+            {
+                var st = m.Statistics;
+                shown = st.DisplayedPictures;
+                lost = st.LostPictures;
+                // libVLC reports bitrate in kilobytes per millisecond-ish units: ×8 gives Mbit/s.
+                mbps = Math.Max(st.InputBitrate, st.DemuxBitrate) * 8.0;
+            }
+        }
+        catch { }
+        var state = Player.State;
+        if (state == VLCState.Playing && _playingSince == DateTime.MaxValue) _playingSince = DateTime.UtcNow;
+        // No "hardware decoding" announcement a few seconds into playback = the CPU is decoding.
+        if (GpuDecoding == null && shown > 0 && DateTime.UtcNow - _playingSince > TimeSpan.FromSeconds(3)) GpuDecoding = false;
+        return new StreamHealth(w, h, Player.Fps, mbps, shown, lost, Player.Time, Player.Length, state, GpuDecoding);
+    });
+
+    public List<TrackOption> AudioTracks()
+    {
+        var cur = Player.AudioTrack;
+        return Player.AudioTrackDescription
+            .Where(t => t.Id >= 0)
+            .Select(t => new TrackOption(t.Id, t.Name ?? ("Track " + t.Id), t.Id == cur))
+            .ToList();
+    }
+
+    public List<TrackOption> SubtitleTracks()
+    {
+        var cur = Player.Spu;
+        return Player.SpuDescription
+            .Select(t => new TrackOption(t.Id, t.Id < 0 ? "Off" : (t.Name ?? ("Subtitle " + t.Id)), t.Id == cur))
+            .ToList();
+    }
+
+    public void SetAudioTrack(int id) => Enqueue(() => Player.SetAudioTrack(id));
+    public void SetSubtitle(int id) => Enqueue(() => Player.SetSpu(id));
+}

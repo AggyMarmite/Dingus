@@ -1,0 +1,225 @@
+<UserControl x:Class="Dingus.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="36,8,36,48" MaxWidth="900">
+
+            <!-- Playlists -->
+            <TextBlock Style="{StaticResource SectionHeader}" Text="PLAYLISTS"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <StackPanel x:Name="PlaylistPanel"/>
+                    <Button Style="{StaticResource BaseButton}" HorizontalAlignment="Left" Margin="0,8,0,0" Click="AddPlaylist_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="Add playlist"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <!-- Account -->
+            <StackPanel x:Name="AccountSection">
+                <TextBlock Style="{StaticResource SectionHeader}" Text="ACCOUNT"/>
+                <Border Style="{StaticResource Card}">
+                    <UniformGrid Columns="3">
+                        <StackPanel>
+                            <TextBlock Text="Status" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
+                            <TextBlock x:Name="AccStatus" FontSize="18" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Expires" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
+                            <TextBlock x:Name="AccExpiry" FontSize="18" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Connections" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
+                            <TextBlock x:Name="AccConnections" FontSize="18" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </UniformGrid>
+                </Border>
+            </StackPanel>
+
+            <!-- Refresh -->
+            <TextBlock Style="{StaticResource SectionHeader}" Text="REFRESH"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource BaseButton}" Content="Refresh playlist" Click="RefreshPlaylist_Click"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Channels, films and shows" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="PlaylistUpdated" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource BaseButton}" Content="Refresh TV guide" Click="RefreshEpg_Click"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="TV guide" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="EpgUpdated" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                    <CheckBox x:Name="AutoRefreshToggle" Style="{StaticResource Toggle}" Checked="AutoRefresh_Changed" Unchecked="AutoRefresh_Changed">
+                        <StackPanel>
+                            <TextBlock Text="Refresh automatically" FontWeight="SemiBold"/>
+                            <TextBlock Text="Downloads a fresh playlist every time the app opens, and again on the schedule below while it's running." TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Refresh the playlist every"/>
+                    <StackPanel x:Name="IntervalChips" Orientation="Horizontal">
+                        <RadioButton Style="{StaticResource Chip}" Content="6 hours" Tag="6" Checked="Interval_Checked"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="12 hours" Tag="12" Checked="Interval_Checked"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="1 day" Tag="24" Checked="Interval_Checked"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="3 days" Tag="72" Checked="Interval_Checked"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- TV guide -->
+            <TextBlock Style="{StaticResource SectionHeader}" Text="TV GUIDE"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Guide (EPG) address" FontWeight="SemiBold"/>
+                    <TextBlock Text="Leave empty to use your provider's guide. Channels are matched automatically by id and name."
+                               Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,10" TextWrapping="Wrap"/>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource BaseButton}" Content="Save" Margin="8,0,0,0" Click="SaveEpgUrl_Click"/>
+                        <TextBox x:Name="EpgUrlBox" Tag="https://example.com/epg.xml.gz"/>
+                    </DockPanel>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Time shift (if programmes look early or late)"/>
+                    <StackPanel x:Name="ShiftChips" Orientation="Horizontal">
+                        <RadioButton Style="{StaticResource Chip}" Content="−2 h" Tag="-120" Checked="Shift_Checked"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="−1 h" Tag="-60" Checked="Shift_Checked"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="None" Tag="0" Checked="Shift_Checked"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="+1 h" Tag="60" Checked="Shift_Checked"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="+2 h" Tag="120" Checked="Shift_Checked"/>
+                    </StackPanel>
+                    <TextBlock x:Name="EpgMatchText" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,14,0,0"/>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                    <CheckBox x:Name="StartGuideToggle" Style="{StaticResource Toggle}" Checked="StartGuide_Changed" Unchecked="StartGuide_Changed"
+                              Margin="0,0,0,16">
+                        <StackPanel>
+                            <TextBlock Text="Open on the TV Guide" FontWeight="SemiBold"/>
+                            <TextBlock Text="Start on the guide (playing your last channel) instead of the Home page."
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <CheckBox x:Name="MergeToggle" Style="{StaticResource Toggle}" Checked="Merge_Changed" Unchecked="Merge_Changed">
+                        <StackPanel>
+                            <TextBlock Text="Merge duplicate channels" FontWeight="SemiBold"/>
+                            <TextBlock Text="Shows “BBC One”, “BBC One HD”, “BBC One FHD” and backups as one channel. If a version stops working, the next one is tried automatically."
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Preferred quality for merged channels"/>
+                    <StackPanel x:Name="QualityChips" Orientation="Horizontal">
+                        <RadioButton Style="{StaticResource Chip}" Content="Best available" Tag="best" Checked="Quality_Checked"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="Up to 1080p" Tag="1080" Checked="Quality_Checked"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="Up to 720p" Tag="720" Checked="Quality_Checked"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Categories -->
+            <TextBlock Style="{StaticResource SectionHeader}" Text="CATEGORIES"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Style="{StaticResource GhostButton}" Content="Show all" Click="ShowAll_Click"/>
+                            <Button Style="{StaticResource GhostButton}" Content="Hide all" Click="HideAll_Click"/>
+                        </StackPanel>
+                        <StackPanel x:Name="CatKindChips" Orientation="Horizontal" VerticalAlignment="Center">
+                            <RadioButton x:Name="KindLive" Style="{StaticResource Chip}" Content="Live TV" Tag="live" Checked="Kind_Checked"/>
+                            <RadioButton Style="{StaticResource Chip}" Content="Films" Tag="vod" Checked="Kind_Checked"/>
+                            <RadioButton Style="{StaticResource Chip}" Content="TV Shows" Tag="series" Checked="Kind_Checked"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <TextBlock Text="Untick a category to hide it everywhere in the app." Foreground="{StaticResource MutedBrush}"
+                               FontSize="12" Margin="0,12,0,12"/>
+                    <ItemsControl x:Name="CategoryChecks">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="3"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                    <TextBlock x:Name="NoCategories" Text="No categories yet – refresh your playlist first." Foreground="{StaticResource MutedBrush}"
+                               Visibility="Collapsed"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Playback -->
+            <TextBlock Style="{StaticResource SectionHeader}" Text="PLAYBACK"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <CheckBox x:Name="HwToggle" Style="{StaticResource Toggle}" Checked="Hw_Changed" Unchecked="Hw_Changed">
+                        <StackPanel>
+                            <TextBlock Text="Hardware decoding" FontWeight="SemiBold"/>
+                            <TextBlock Text="Uses your graphics card to decode video – much lower CPU use. Turn off only if you see glitches."
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                    <CheckBox x:Name="AfrToggle" Style="{StaticResource Toggle}" Checked="Afr_Changed" Unchecked="Afr_Changed">
+                        <StackPanel>
+                            <TextBlock Text="Adaptive frame rate" FontWeight="SemiBold"/>
+                            <TextBlock Text="In full screen, switches your display's refresh rate to match the video (e.g. 50 Hz for UK TV) for smooth motion without judder. The screen may go black for a moment when it switches."
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                    <CheckBox x:Name="BatteryToggle" Style="{StaticResource Toggle}" Checked="Battery_Changed" Unchecked="Battery_Changed">
+                        <StackPanel>
+                            <TextBlock Text="Battery-aware mode" FontWeight="SemiBold"/>
+                            <TextBlock Text="Uses your dedicated graphics card when plugged in and built-in graphics on battery. On battery it also plays merged 4K channels in 1080p and pauses background refreshes."
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                            <TextBlock x:Name="BatteryStatus" Foreground="{StaticResource AccentBrush}" FontSize="12" Margin="0,5,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                    <CheckBox x:Name="LowMemToggle" Style="{StaticResource Toggle}" Checked="LowMem_Changed" Unchecked="LowMem_Changed">
+                        <StackPanel>
+                            <TextBlock Text="Low-memory interface" FontWeight="SemiBold"/>
+                            <TextBlock Text="Draws the app's menus and guide without the graphics card, which saves around 50–100 MB. Video still uses the graphics card. Scrolling may be slightly less smooth. Takes effect next time the app opens."
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Live stream format"/>
+                    <StackPanel x:Name="FormatChips" Orientation="Horizontal">
+                        <RadioButton Style="{StaticResource Chip}" Content="MPEG-TS (recommended)" Tag="ts" Checked="Format_Checked"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="HLS" Tag="hls" Checked="Format_Checked"/>
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Network buffer (raise if streams stutter)"/>
+                    <StackPanel x:Name="BufferChips" Orientation="Horizontal">
+                        <RadioButton Style="{StaticResource Chip}" Content="0.5 s" Tag="500" Checked="Buffer_Checked"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="1 s" Tag="1000" Checked="Buffer_Checked"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="1.5 s" Tag="1500" Checked="Buffer_Checked"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="3 s" Tag="3000" Checked="Buffer_Checked"/>
+                        <RadioButton Style="{StaticResource Chip}" Content="5 s" Tag="5000" Checked="Buffer_Checked"/>
+                    </StackPanel>
+                    <TextBlock Text="Changes apply to the next stream you open." Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,14,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Storage -->
+            <TextBlock Style="{StaticResource SectionHeader}" Text="STORAGE &amp; ABOUT"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Style="{StaticResource BaseButton}" Content="Clear image cache" Click="ClearImages_Click"/>
+                            <Button Style="{StaticResource GhostButton}" Content="Open data folder" Margin="8,0,0,0" Click="OpenData_Click"/>
+                        </StackPanel>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Cached logos &amp; posters" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="CacheText" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                    <TextBlock x:Name="VersionText" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

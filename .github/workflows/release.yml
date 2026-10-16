@@ -1,0 +1,46 @@
+name: Release
+
+# Push a tag such as v0.3.0 to build the installer and publish it as a GitHub release.
+# The app's updater checks the latest release and offers the Dingus-Setup-x.y.z.exe attached to it.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Work out the version
+        id: ver
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart('v')
+          "version=$v" >> $env:GITHUB_OUTPUT
+
+      # Self-contained, so people installing it don't need the .NET runtime first.
+      - name: Publish
+        run: dotnet publish Dingus.csproj -c Release -r win-x64 --self-contained true -p:Version=${{ steps.ver.outputs.version }} -o publish
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; }
+          & $iscc /DAppVersion=${{ steps.ver.outputs.version }} /DSourceDir=..\publish installer\Dingus.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" "installer\Output\Dingus-Setup-${{ steps.ver.outputs.version }}.exe" `
+            --title "Dingus ${{ steps.ver.outputs.version }}" --generate-notes

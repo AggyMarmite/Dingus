@@ -1,0 +1,249 @@
+<UserControl x:Class="Dingus.Views.LibraryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svc="clr-namespace:Dingus.Services">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="232"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ===== Categories ===== -->
+        <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,1,0">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="CATEGORIES" Margin="20,18,0,8" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{StaticResource MutedBrush}"/>
+                <ListBox x:Name="CategoryList" Style="{StaticResource CleanList}" ItemContainerStyle="{StaticResource CategoryItem}"
+                         VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                         SelectionChanged="CategoryList_SelectionChanged" Padding="0,0,0,12">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding Count}" FontSize="11" Margin="8,0,0,0"
+                                           Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis"/>
+                            </DockPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- ===== Poster grid ===== -->
+        <Grid x:Name="BrowsePane" Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <DockPanel Margin="28,18,28,10">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <RadioButton x:Name="SortAdded" Style="{StaticResource Chip}" Content="Recently added" Tag="added" Checked="Sort_Checked"/>
+                    <RadioButton x:Name="SortName" Style="{StaticResource Chip}" Content="A–Z" Tag="name" Checked="Sort_Checked"/>
+                    <RadioButton x:Name="SortRating" Style="{StaticResource Chip}" Content="Top rated" Tag="rating" Checked="Sort_Checked"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="HeaderText" FontSize="20" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="CountText" FontSize="13" Foreground="{StaticResource MutedBrush}" Margin="12,0,0,0"
+                               VerticalAlignment="Bottom" Padding="0,0,0,3"/>
+                </StackPanel>
+            </DockPanel>
+
+            <ListBox x:Name="PosterList" Grid.Row="1" Style="{StaticResource CleanList}" ItemContainerStyle="{StaticResource PlainItem}"
+                     VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                     VirtualizingPanel.ScrollUnit="Pixel" Padding="20,4,8,24" Focusable="False">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <ItemsControl ItemsSource="{Binding Items}" Focusable="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource PosterCard}" Width="156" Margin="8,8,8,14" Click="Poster_Click"
+                                            ToolTip="{Binding Title}">
+                                        <StackPanel>
+                                            <Grid Width="156" Height="234">
+                                                <Grid.Clip>
+                                                    <RectangleGeometry Rect="0,0,156,234" RadiusX="8" RadiusY="8"/>
+                                                </Grid.Clip>
+                                                <Border Background="{StaticResource Surface2Brush}">
+                                                    <TextBlock Text="{Binding Title}" TextWrapping="Wrap" TextAlignment="Center" Margin="12"
+                                                               VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
+                                                </Border>
+                                                <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="240"
+                                                       svc:ImageLoader.Url="{Binding Image}"/>
+                                                <Border x:Name="ProgBg" VerticalAlignment="Bottom" Height="5" Background="#99000000" Visibility="Collapsed">
+                                                    <ProgressBar Style="{StaticResource ThinProgress}" Maximum="1" Value="{Binding Progress, Mode=OneWay}"
+                                                                 Margin="8,0" VerticalAlignment="Center" Height="3"/>
+                                                </Border>
+                                            </Grid>
+                                            <TextBlock Text="{Binding Title}" FontSize="13" Margin="2,9,2,0" TextWrapping="Wrap"
+                                                       TextTrimming="CharacterEllipsis" MaxHeight="36" LineHeight="18"
+                                                       LineStackingStrategy="BlockLineHeight"/>
+                                            <TextBlock Text="{Binding Subtitle}" FontSize="11" Margin="2,3,2,0"
+                                                       Foreground="{StaticResource MutedBrush}" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding HasProgress}" Value="True">
+                                            <Setter TargetName="ProgBg" Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel x:Name="EmptyState" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed">
+                <TextBlock x:Name="EmptyTitle" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                <TextBlock x:Name="EmptyBody" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- ===== Details (film or show) ===== -->
+        <Grid x:Name="DetailPane" Grid.Column="1" Background="{StaticResource BgBrush}" Visibility="Collapsed" ClipToBounds="True">
+            <Image x:Name="DetailBackdrop" Stretch="UniformToFill" VerticalAlignment="Top" Height="460" Opacity="0.32"
+                   svc:ImageLoader.DecodeWidth="960"/>
+            <Rectangle Height="460" VerticalAlignment="Top">
+                <Rectangle.Fill>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#400A0D13" Offset="0"/>
+                        <GradientStop Color="#FF0A0D13" Offset="1"/>
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+            <Rectangle>
+                <Rectangle.Fill>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#E00A0D13" Offset="0"/>
+                        <GradientStop Color="#000A0D13" Offset="0.8"/>
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+
+            <ScrollViewer x:Name="DetailScroll" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="40,20,40,40">
+                    <Button Style="{StaticResource GhostButton}" HorizontalAlignment="Left" Click="Back_Click" Margin="-12,0,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE72B;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock x:Name="BackText" Text="Back"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Grid Margin="0,18,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid Width="220" Height="330" VerticalAlignment="Top">
+                            <Grid.Clip>
+                                <RectangleGeometry Rect="0,0,220,330" RadiusX="10" RadiusY="10"/>
+                            </Grid.Clip>
+                            <Border Background="{StaticResource Surface2Brush}"/>
+                            <Image x:Name="DetailPoster" Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="330"/>
+                        </Grid>
+                        <StackPanel Grid.Column="1" Margin="34,6,0,0">
+                            <TextBlock x:Name="DetailTitle" FontSize="34" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                            <TextBlock x:Name="DetailMeta" FontSize="14" Foreground="{StaticResource MutedBrush}" Margin="0,10,0,0"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock x:Name="DetailPlot" FontSize="14" TextWrapping="Wrap" MaxWidth="780" HorizontalAlignment="Left"
+                                       Margin="0,18,0,0" LineHeight="22"/>
+                            <TextBlock x:Name="DetailCredits" FontSize="13" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap"
+                                       MaxWidth="780" HorizontalAlignment="Left" Margin="0,14,0,0"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,24,0,0">
+                                <Button x:Name="PlayButton" Style="{StaticResource PrimaryButton}" Padding="22,11" Click="PlayMovie_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE768;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBlock x:Name="PlayText" Text="Play"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="StartOverButton" Style="{StaticResource BaseButton}" Padding="18,11" Margin="8,0,0,0"
+                                        Click="StartOver_Click" Visibility="Collapsed">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE72C;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBlock Text="Play from start"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                            <ProgressBar x:Name="DetailProgress" Style="{StaticResource ThinProgress}" Maximum="1" Width="300"
+                                         HorizontalAlignment="Left" Margin="0,14,0,0" Visibility="Collapsed"/>
+                            <TextBlock x:Name="DetailStatus" Foreground="{StaticResource MutedBrush}" Margin="0,16,0,0" FontSize="12"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel x:Name="SeriesPart" Margin="0,34,0,0" Visibility="Collapsed">
+                        <ListBox x:Name="SeasonList" Style="{StaticResource CleanList}" ItemContainerStyle="{StaticResource ChipItem}"
+                                 SelectionChanged="SeasonList_SelectionChanged" ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel/>
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Label}" FontSize="13"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <ItemsControl x:Name="EpisodeList" Margin="-10,10,0,0" MaxWidth="1040" HorizontalAlignment="Left">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource RowButton}" Click="Episode_Click" Margin="0,0,0,4">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="194"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid Width="178" Height="100" HorizontalAlignment="Left">
+                                                <Grid.Clip>
+                                                    <RectangleGeometry Rect="0,0,178,100" RadiusX="8" RadiusY="8"/>
+                                                </Grid.Clip>
+                                                <Border Background="{StaticResource Surface2Brush}">
+                                                    <TextBlock Text="&#xE768;" FontFamily="{StaticResource IconFont}" FontSize="22"
+                                                               Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="260" svc:ImageLoader.Url="{Binding Image}"/>
+                                                <Border x:Name="EpProg" VerticalAlignment="Bottom" Height="5" Background="#99000000" Visibility="Collapsed">
+                                                    <ProgressBar Style="{StaticResource ThinProgress}" Maximum="1" Value="{Binding Progress, Mode=OneWay}"
+                                                                 Margin="6,0" VerticalAlignment="Center" Height="3"/>
+                                                </Border>
+                                                <Border x:Name="EpWatched" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6" Padding="6,2"
+                                                        CornerRadius="4" Background="#CC111622" Visibility="Collapsed">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="10" Foreground="#4ADE80"
+                                                                   VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                        <TextBlock Text="Watched" FontSize="10" Foreground="White"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </Grid>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Header}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding Meta}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/>
+                                                <TextBlock Text="{Binding Plot}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0"
+                                                           TextWrapping="Wrap" TextTrimming="WordEllipsis" MaxHeight="36"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Button>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding HasProgress}" Value="True">
+                                            <Setter TargetName="EpProg" Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Watched}" Value="True">
+                                            <Setter TargetName="EpWatched" Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>
