@@ -39,6 +39,12 @@ RestartApplications=no
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Shortcuts:"
 Name: "startup"; Description: "Start Dingus when Windows starts"; GroupDescription: "Other:"; Flags: unchecked
 
+[InstallDelete]
+; Start from a clean program folder on every install/update, so files from an older version (for example the
+; bundled .NET that 0.3.x shipped) can't be picked up by mistake. Settings and data are elsewhere
+; (%LocalAppData%\Dingus) and aren't touched.
+Type: filesandordirs; Name: "{app}\*"
+
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
