@@ -131,7 +131,7 @@
                                     <TextBlock Text="Watch full screen"/>
                                 </StackPanel>
                             </Button>
-                            <Button Style="{StaticResource BaseButton}" Content="Open in guide" Margin="8,0,0,0" Click="BannerGuide_Click"/>
+                            <Button Style="{StaticResource BaseButton}" Content="Open in Live TV" Margin="8,0,0,0" Click="BannerGuide_Click"/>
                         </StackPanel>
                     </StackPanel>
                 </Grid>

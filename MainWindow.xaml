@@ -8,88 +8,106 @@
         Background="{StaticResource BgBrush}" Foreground="{StaticResource TextBrush}"
         FontFamily="{StaticResource UiFont}" FontSize="13"
         UseLayoutRounding="True" TextOptions.TextFormattingMode="Display">
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="46" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
     <Grid x:Name="Root">
 
         <!-- ================= App shell ================= -->
         <Grid x:Name="Shell">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="80"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- Navigation rail -->
-            <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,1,0">
-                <DockPanel LastChildFill="False">
-                    <Border DockPanel.Dock="Top" Width="42" Height="42" Margin="0,16,0,18" CornerRadius="12">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#60A5FA" Offset="0"/>
-                                <GradientStop Color="#7C3AED" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
-                        <TextBlock Text="&#xE7F4;" FontFamily="{StaticResource IconFont}" FontSize="18" Foreground="White"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <RadioButton x:Name="NavHome" DockPanel.Dock="Top" Style="{StaticResource NavButton}" Tag="&#xE80F;" Content="Home" Checked="Nav_Checked"/>
-                    <RadioButton x:Name="NavGuide" DockPanel.Dock="Top" Style="{StaticResource NavButton}" Tag="&#xE8FD;" Content="Guide" Checked="Nav_Checked"/>
-                    <!-- The Search page opens from the search bar at the top (no button of its own) -->
-                    <RadioButton x:Name="NavSearch" DockPanel.Dock="Top" Style="{StaticResource NavButton}" Tag="&#xE721;" Content="Search" Checked="Nav_Checked"
-                                 Visibility="Collapsed"/>
-                    <RadioButton x:Name="NavFilms" DockPanel.Dock="Top" Style="{StaticResource NavButton}" Tag="&#xE8B2;" Content="Films" Checked="Nav_Checked"/>
-                    <RadioButton x:Name="NavShows" DockPanel.Dock="Top" Style="{StaticResource NavButton}" Tag="&#xE8F1;" Content="TV Shows" Checked="Nav_Checked"/>
-                    <RadioButton x:Name="NavSettings" DockPanel.Dock="Bottom" Style="{StaticResource NavButton}" Tag="&#xE713;" Content="Settings"
-                                 Checked="Nav_Checked" Margin="0,0,0,12"/>
-                </DockPanel>
-            </Border>
-
-            <Grid Grid.Column="1">
+            <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="60"/>
+                    <RowDefinition Height="46"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <!-- Top bar -->
-                <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1">
-                    <DockPanel Margin="24,0,14,0">
-                        <TextBlock x:Name="PageTitle" DockPanel.Dock="Left" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <!-- ===== Title bar: Dingus's own (the window's caption area) – sections, search, settings, window buttons ===== -->
+                <Border x:Name="TitleBar" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
 
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Border x:Name="BusyPanel" VerticalAlignment="Center" Margin="0,0,12,0" Padding="12,6,14,6" CornerRadius="16"
-                                    Background="{StaticResource AccentSoftBrush}" Visibility="Collapsed">
+                        <!-- Logo + sections -->
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                            <Border Width="26" Height="26" CornerRadius="7" VerticalAlignment="Center">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#60A5FA" Offset="0"/>
+                                        <GradientStop Color="#7C3AED" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <TextBlock Text="&#xE7F4;" FontFamily="{StaticResource IconFont}" FontSize="12" Foreground="White"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Dingus" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" Margin="9,0,14,0"/>
+                            <Border Background="{StaticResource BgBrush}" CornerRadius="10" Padding="3" VerticalAlignment="Center"
+                                    BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE72C;" FontFamily="{StaticResource IconFont}" Foreground="#93C5FD"
-                                               RenderTransformOrigin="0.5,0.5" VerticalAlignment="Center">
-                                        <TextBlock.RenderTransform>
-                                            <RotateTransform x:Name="BusyRotate"/>
-                                        </TextBlock.RenderTransform>
-                                    </TextBlock>
-                                    <TextBlock x:Name="BusyTitle" Text="Refreshing playlist" Margin="9,0,0,0" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="BusyText" Margin="8,0,0,0" Foreground="#AFC4E8" VerticalAlignment="Center"/>
+                                    <RadioButton x:Name="NavHome" Style="{StaticResource TabButton}" Tag="&#xE80F;" Content="Home" Checked="Nav_Checked"/>
+                                    <RadioButton x:Name="NavGuide" Style="{StaticResource TabButton}" Tag="&#xE7F4;" Content="Live TV" Checked="Nav_Checked"/>
+                                    <RadioButton x:Name="NavFilms" Style="{StaticResource TabButton}" Tag="&#xE8B2;" Content="Films" Checked="Nav_Checked"/>
+                                    <RadioButton x:Name="NavShows" Style="{StaticResource TabButton}" Tag="&#xE8F1;" Content="TV Shows" Checked="Nav_Checked"/>
+                                    <!-- The Search page opens from the search bar (no tab of its own) -->
+                                    <RadioButton x:Name="NavSearch" Style="{StaticResource TabButton}" Tag="&#xE721;" Content="Search" Checked="Nav_Checked"
+                                                 Visibility="Collapsed"/>
                                 </StackPanel>
                             </Border>
-                            <Button x:Name="PlaylistButton" Style="{StaticResource GhostButton}" Click="PlaylistButton_Click" ToolTip="Switch playlist">
+                        </StackPanel>
+
+                        <!-- Search everything -->
+                        <Grid x:Name="SearchHost" Grid.Column="1" MaxWidth="420" MinWidth="150" Margin="16,0" VerticalAlignment="Center"
+                              WindowChrome.IsHitTestVisibleInChrome="True">
+                            <TextBox x:Name="SearchBox" Tag="Search" Padding="32,6,12,6" TextChanged="SearchBox_TextChanged"
+                                     KeyDown="SearchBox_KeyDown"/>
+                            <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="12" Margin="12,0,0,0"
+                                       Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" IsHitTestVisible="False"/>
+                        </Grid>
+
+                        <!-- Playlist, lock, refresh, settings, window buttons -->
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Stretch">
+                            <TextBlock x:Name="PageTitle" Visibility="Collapsed"/>
+                            <Button x:Name="PlaylistButton" Style="{StaticResource GhostButton}" Click="PlaylistButton_Click" ToolTip="Switch playlist"
+                                    VerticalAlignment="Center" Padding="10,6" WindowChrome.IsHitTestVisibleInChrome="True">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE8FD;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center"
                                                Foreground="{StaticResource MutedBrush}"/>
-                                    <TextBlock x:Name="PlaylistName" Margin="8,0,8,0" VerticalAlignment="Center" MaxWidth="180"
+                                    <TextBlock x:Name="PlaylistName" Margin="8,0,8,0" VerticalAlignment="Center" MaxWidth="130"
                                                TextTrimming="CharacterEllipsis"/>
                                     <TextBlock Text="&#xE70D;" FontFamily="{StaticResource IconFont}" FontSize="10" VerticalAlignment="Center"
                                                Foreground="{StaticResource MutedBrush}"/>
                                 </StackPanel>
                             </Button>
-                            <Button x:Name="LockButton" Style="{StaticResource IconButton}" Content="&#xE72E;" Margin="4,0,0,0"
-                                    Visibility="Collapsed" Click="Lock_Click"/>
-                            <Button x:Name="RefreshButton" Style="{StaticResource IconButton}" Content="&#xE72C;" Margin="4,0,0,0"
-                                    ToolTip="Refresh playlist and TV guide" Click="Refresh_Click"/>
+                            <Button x:Name="LockButton" Style="{StaticResource IconButton}" Content="&#xE72E;" Width="34" Height="34" FontSize="14"
+                                    VerticalAlignment="Center" Visibility="Collapsed" Click="Lock_Click" WindowChrome.IsHitTestVisibleInChrome="True"/>
+                            <Button x:Name="RefreshButton" Style="{StaticResource IconButton}" Content="&#xE72C;" Width="34" Height="34" FontSize="14"
+                                    VerticalAlignment="Center" ToolTip="Refresh playlist and TV guide" Click="Refresh_Click"
+                                    WindowChrome.IsHitTestVisibleInChrome="True"/>
+                            <RadioButton x:Name="NavSettings" Style="{StaticResource TabIconButton}" Tag="&#xE713;" ToolTip="Settings"
+                                         Checked="Nav_Checked" Margin="2,0,8,0"/>
+                            <Button Style="{StaticResource CaptionButton}" Content="&#xE921;" ToolTip="Minimise" Click="Minimise_Click"/>
+                            <Button x:Name="MaxButton" Style="{StaticResource CaptionButton}" Content="&#xE922;" ToolTip="Maximise" Click="Maximise_Click"/>
+                            <Button Style="{StaticResource CaptionCloseButton}" Content="&#xE8BB;" ToolTip="Close" Click="Close_Click"/>
                         </StackPanel>
+                    </Grid>
+                </Border>
 
-                        <Grid x:Name="SearchHost" Width="340" HorizontalAlignment="Right" Margin="0,0,14,0" VerticalAlignment="Center">
-                            <TextBox x:Name="SearchBox" Tag="Search" Padding="34,8,12,8" TextChanged="SearchBox_TextChanged"
-                                     KeyDown="SearchBox_KeyDown"/>
-                            <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="13" Margin="13,0,0,0"
-                                       Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" IsHitTestVisible="False"/>
-                        </Grid>
-                    </DockPanel>
+                <!-- Refresh / guide progress, floating at the top-right of the page -->
+                <Border x:Name="BusyPanel" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,10,16,0" Padding="12,6,14,6"
+                        CornerRadius="16" Background="{StaticResource AccentSoftBrush}" Visibility="Collapsed" IsHitTestVisible="False"
+                        Panel.ZIndex="5">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE72C;" FontFamily="{StaticResource IconFont}" Foreground="#93C5FD"
+                                   RenderTransformOrigin="0.5,0.5" VerticalAlignment="Center">
+                            <TextBlock.RenderTransform>
+                                <RotateTransform x:Name="BusyRotate"/>
+                            </TextBlock.RenderTransform>
+                        </TextBlock>
+                        <TextBlock x:Name="BusyTitle" Text="Refreshing playlist" Margin="9,0,0,0" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="BusyText" Margin="8,0,0,0" Foreground="#AFC4E8" VerticalAlignment="Center"/>
+                    </StackPanel>
                 </Border>
 
                 <ContentControl x:Name="PageHost" Grid.Row="1" Focusable="False"/>
@@ -401,7 +419,7 @@
                                     <Button x:Name="MiniButton" Style="{StaticResource OverlayIconButton}" Content="" ContentTemplate="{StaticResource PipGlyph}"
                                             ToolTip="Picture-in-picture (P)" Click="Mini_Click"/>
                                     <Button x:Name="FullscreenButton" Style="{StaticResource OverlayIconButton}" Content="&#xE73F;"
-                                            ToolTip="Exit full screen – back to the guide (Esc)" Click="Fullscreen_Click"/>
+                                            ToolTip="Exit full screen – back to Live TV (Esc)" Click="Fullscreen_Click"/>
                                 </StackPanel>
                             </DockPanel>
                         </StackPanel>

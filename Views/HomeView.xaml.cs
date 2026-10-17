@@ -320,7 +320,7 @@ public partial class HomeView : UserControl, IPage
             bool on = ReminderService.Toggle(c.Row.Channel.Id, c.Row.DisplayName, c.Upcoming);
             MainWindow.Instance?.ShowToast(on ? $"Reminder set for {c.Upcoming.Title}" : "Reminder removed");
         };
-        var guide = new MenuItem { Header = "Show in the guide" };
+        var guide = new MenuItem { Header = "Show in Live TV" };
         guide.Click += (_, _) => MainWindow.Instance?.ShowInGuide(c.Row, c.Upcoming);
         menu.Items.Add(item);
         menu.Items.Add(guide);

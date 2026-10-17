@@ -75,7 +75,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <CheckBox Style="{StaticResource Tick}" IsChecked="{Binding Visible}" VerticalAlignment="Center" Margin="0"
-                                          ToolTip="Show this channel in the guide"/>
+                                          ToolTip="Show this channel in Live TV"/>
                                 <Border Grid.Column="2" Width="50" Height="36" CornerRadius="6" Background="{StaticResource Surface2Brush}">
                                     <Grid>
                                         <TextBlock Text="{Binding Row.Initials}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}"

@@ -13,7 +13,7 @@ public partial class GuideView : UserControl, IPage
     const double ChannelCol = 300;
     public const string AllId = "__all", FavId = "__fav", RecentId = "__recent";
 
-    public string Title => "TV Guide";
+    public string Title => "Live TV";
     public bool SupportsSearch => true;
     public string SearchHint => _mode == "find" ? "Find a programme on any channel…" : "Search all channels";
 
@@ -231,7 +231,7 @@ public partial class GuideView : UserControl, IPage
         if (empty)
         {
             if (DataService.Instance.Catalog.Channels.Count == 0)
-            { EmptyTitle.Text = "No channels yet"; EmptyBody.Text = "Add or refresh a playlist to see the guide."; }
+            { EmptyTitle.Text = "No channels yet"; EmptyBody.Text = "Add or refresh a playlist to see your channels."; }
             else if (_search.Length > 0)
             { EmptyTitle.Text = "No matches"; EmptyBody.Text = $"Nothing called “{_search}”."; }
             else if (_cat == FavId)

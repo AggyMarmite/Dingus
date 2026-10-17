@@ -133,7 +133,13 @@ public partial class MainWindow : Window
         ds.Message += ShowToast;
         ds.CatalogChanged += () => { if (_nowLive && _nowChannel != null && !ds.Catalog.Channels.Any(c => c.Id == _nowChannel.Id)) StopPlayback(); };
 
-        SourceInitialized += (_, _) => { NativeWindow.ApplyDarkTitleBar(this); NativeWindow.DisableAnimations(this); };
+        SourceInitialized += (_, _) =>
+        {
+            NativeWindow.ApplyDarkTitleBar(this);
+            NativeWindow.DisableAnimations(this);
+            NativeWindow.RoundCorners(this, true);
+        };
+        StateChanged += (_, _) => UpdateWindowFrame();
         PowerService.Changed += OnPowerChanged;
         // Full screen stays above the taskbar only while Dingus is in front, so Alt-Tab works normally.
         Activated += (_, _) => { if (_osFullscreen || _mini) Topmost = true; };
@@ -1071,6 +1077,8 @@ public partial class MainWindow : Window
             NativeWindow.ApplyDarkTitleBar(this);
         }
         _osFullscreen = on;
+        NativeWindow.RoundCorners(this, !on);
+        UpdateWindowFrame();
         FullscreenButton.Content = "\uE73F"; // "exit full screen" – the player is always full screen
     }
 

@@ -201,7 +201,7 @@ public partial class SearchView : UserControl, IPage
             bool on = ReminderService.Toggle(it.Row.Channel.Id, it.Row.DisplayName, p);
             MainWindow.Instance?.ShowToast(on ? $"Reminder set for {p.Title}" : "Reminder removed");
         };
-        var guide = new MenuItem { Header = "Show in the TV Guide" };
+        var guide = new MenuItem { Header = "Show in Live TV" };
         guide.Click += (_, _) => MainWindow.Instance?.ShowInGuide(it.Row, p);
         menu.Items.Add(remind);
         menu.Items.Add(guide);

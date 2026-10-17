@@ -101,15 +101,15 @@
                                 VerticalAlignment="Center"/>
                         <StackPanel>
                             <TextBlock Text="Channel editor" FontWeight="SemiBold"/>
-                            <TextBlock Text="Rename, hide and reorder channels (also on the guide's right-click menu)."
+                            <TextBlock Text="Rename, hide and reorder channels (also on the right-click menu in Live TV)."
                                        Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
                     </DockPanel>
                     <CheckBox x:Name="StartGuideToggle" Style="{StaticResource Toggle}" Checked="StartGuide_Changed" Unchecked="StartGuide_Changed"
                               Margin="0,0,0,16">
                         <StackPanel>
-                            <TextBlock Text="Open on the TV Guide" FontWeight="SemiBold"/>
-                            <TextBlock Text="Start on the guide (playing your last channel) instead of the Home page."
+                            <TextBlock Text="Open on Live TV" FontWeight="SemiBold"/>
+                            <TextBlock Text="Start on Live TV (with your last channel) instead of the Home page."
                                        Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
                     </CheckBox>

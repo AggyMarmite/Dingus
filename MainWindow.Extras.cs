@@ -29,7 +29,7 @@ public partial class MainWindow
         ("Space", "Play / pause"),
         ("M", "Mute  ·  mouse wheel = volume"),
         ("F / F11", "Full screen on / off"),
-        ("Esc", "Back to the guide"),
+        ("Esc", "Back to Live TV"),
         ("P", "Picture-in-picture"),
         ("V", "Multi-view (4 / 6 / 8 channels)"),
         ("I", "Stream info"),
@@ -648,5 +648,27 @@ public partial class MainWindow
         }
         CloseBrowse(); // anything else closes it and does its usual job
         return false;
+    }
+}
+
+// Dingus's own title bar: window buttons and the maximised-edge fix.
+public partial class MainWindow
+{
+    void Minimise_Click(object sender, RoutedEventArgs e) => SystemCommands.MinimizeWindow(this);
+
+    void Maximise_Click(object sender, RoutedEventArgs e)
+    {
+        if (WindowState == WindowState.Maximized) SystemCommands.RestoreWindow(this);
+        else SystemCommands.MaximizeWindow(this);
+    }
+
+    void Close_Click(object sender, RoutedEventArgs e) => Close();
+
+    void UpdateWindowFrame()
+    {
+        bool max = WindowState == WindowState.Maximized && !_osFullscreen;
+        Root.Margin = max ? NativeWindow.MaximisedOverhang(this) : new Thickness(0);
+        MaxButton.Content = max ? "\uE923" : "\uE922";
+        MaxButton.ToolTip = max ? "Restore down" : "Maximise";
     }
 }

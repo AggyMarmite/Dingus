@@ -12,6 +12,8 @@ public static class NativeWindow
     [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
     const int DWMWA_TRANSITIONS_FORCEDISABLED = 3;
+    const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+    [DllImport("user32.dll")] static extern int GetSystemMetrics(int index);
     const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
     const int DWMWA_BORDER_COLOR = 34;
     const int DWMWA_CAPTION_COLOR = 35;
@@ -53,6 +55,36 @@ public static class NativeWindow
             DwmSetWindowAttribute(hwnd, DWMWA_TRANSITIONS_FORCEDISABLED, ref on, sizeof(int));
         }
         catch { }
+    }
+
+    /// <summary>Windows 11 rounded corners (off in full screen, so the picture reaches the corners).</summary>
+    public static void RoundCorners(Window w, bool round)
+    {
+        try
+        {
+            var hwnd = new WindowInteropHelper(w).Handle;
+            if (hwnd == IntPtr.Zero) return;
+            int pref = round ? 2 : 1; // DWMWCP_ROUND / DWMWCP_DONOTROUND
+            DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref pref, sizeof(int));
+        }
+        catch { }
+    }
+
+    /// <summary>
+    /// How far a maximised window with its own title bar hangs off the screen edges (Windows sizes it to include
+    /// the resize frame). The content is pulled in by this much so nothing is cut off.
+    /// </summary>
+    public static Thickness MaximisedOverhang(Window w)
+    {
+        try
+        {
+            const int SM_CXSIZEFRAME = 32, SM_CYSIZEFRAME = 33, SM_CXPADDEDBORDER = 92;
+            var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(w);
+            double x = (GetSystemMetrics(SM_CXSIZEFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER)) / dpi.DpiScaleX;
+            double y = (GetSystemMetrics(SM_CYSIZEFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER)) / dpi.DpiScaleY;
+            return new Thickness(x, y, x, y);
+        }
+        catch { return new Thickness(7); }
     }
 
     /// <summary>Starts a native window drag (used by the borderless mini player).</summary>
