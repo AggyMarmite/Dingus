@@ -29,6 +29,7 @@ public static class SelfTest
         Directory.CreateDirectory(Dir);
         try
         {
+            main.WindowState = WindowState.Maximized; // screenshots at the full screen size
             // Wait for the sample playlist and guide to load.
             for (int i = 0; i < 60 && (DataService.Instance.IsBusy || DataService.Instance.Catalog.Channels.Count == 0); i++) await Task.Delay(500);
             Note($"channels: {DataService.Instance.Catalog.Channels.Count}, guide-matched: {DataService.Instance.Epg.MatchedChannels}");
