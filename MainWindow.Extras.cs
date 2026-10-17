@@ -699,3 +699,27 @@ public partial class MainWindow
         RecordButton.ToolTip = on ? "Recording this programme – click to stop (R)" : "Record this programme (R)";
     }
 }
+
+// Title bar on narrow windows: drop the word mark, then the tab labels, so search always has room.
+public partial class MainWindow
+{
+    int _barLevel = -1;
+    readonly Dictionary<RadioButton, object> _tabLabels = new();
+
+    void TitleBar_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        double w = e.NewSize.Width;
+        int level = w >= 1280 ? 0 : w >= 1120 ? 1 : 2; // 0 = full, 1 = no word mark, 2 = icons only
+        if (level == _barLevel) return;
+        _barLevel = level;
+        WordMark.Visibility = level == 0 ? Visibility.Visible : Visibility.Collapsed;
+        PlaylistName.MaxWidth = level == 0 ? 130 : 80;
+        foreach (var tab in new[] { NavHome, NavGuide, NavFilms, NavShows, NavRecordings })
+        {
+            if (!_tabLabels.ContainsKey(tab)) _tabLabels[tab] = tab.Content;
+            bool iconOnly = level == 2;
+            tab.Content = iconOnly ? null : _tabLabels[tab];
+            tab.ToolTip = iconOnly ? _tabLabels[tab] : (tab == NavRecordings ? "Recordings & reminders" : null);
+        }
+    }
+}

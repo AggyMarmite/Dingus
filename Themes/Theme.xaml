@@ -230,10 +230,13 @@
                         <StackPanel Orientation="Horizontal" Margin="12,6,14,6">
                             <TextBlock x:Name="Icon" Text="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"
                                        FontFamily="{StaticResource IconFont}" FontSize="13" VerticalAlignment="Center"/>
-                            <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Center"/>
+                            <ContentPresenter x:Name="Label" Margin="8,0,0,0" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Grid>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="Content" Value="{x:Null}">
+                            <Setter TargetName="Label" Property="Margin" Value="0"/>
+                        </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Trigger.EnterActions>
                                 <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.120"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation></Storyboard></BeginStoryboard>

@@ -22,7 +22,7 @@
                 </Grid.RowDefinitions>
 
                 <!-- ===== Title bar: Dingus's own (the window's caption area) – sections, search, settings, window buttons ===== -->
-                <Border x:Name="TitleBar" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1">
+                <Border x:Name="TitleBar" SizeChanged="TitleBar_SizeChanged" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -42,7 +42,7 @@
                                 <TextBlock Text="&#xE7F4;" FontFamily="{StaticResource IconFont}" FontSize="12" Foreground="White"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
-                            <TextBlock Text="Dingus" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" Margin="9,0,14,0"/>
+                            <TextBlock x:Name="WordMark" Text="Dingus" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" Margin="9,0,14,0"/>
                             <Border Background="{StaticResource BgBrush}" CornerRadius="10" Padding="3" VerticalAlignment="Center"
                                     BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
                                 <StackPanel Orientation="Horizontal">
