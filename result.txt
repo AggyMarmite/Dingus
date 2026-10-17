@@ -1,0 +1,21 @@
+channels: 14, guide-matched: 14
+01-home: 1920×1032
+01-home-full: 1903×2440
+02-guide: 1920×1032
+03-guide-on-now: 1920×1032
+04-guide-tonight: 1920×1032
+06-films: 1920×1032
+07-shows: 1920×1032
+09-settings: 1920×1032
+09-settings-full: 900×3093
+16-recordings: 1920×1032
+16-recordings-full: 1000×922
+14-search: 1920×1032
+15-search-films: 1920×1032
+10-shortcuts: 1920×1032
+11-channel-editor: 964×664
+13-guide-match: 576×564
+12-reminder: 300×149
+memory: 191 MB
+
+PASSED
