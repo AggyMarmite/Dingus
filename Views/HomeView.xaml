@@ -19,8 +19,8 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Grid RenderTransformOrigin="0.5,0.5">
-                            <Grid.RenderTransform><ScaleTransform x:Name="S"/></Grid.RenderTransform>
+                        <Grid x:Name="G" RenderTransformOrigin="0.5,0.5">
+                            <Grid.RenderTransform><ScaleTransform/></Grid.RenderTransform>
                             <Border CornerRadius="25" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"/>
                             <Border x:Name="Hi" CornerRadius="25" Background="White" Opacity="0"/>
@@ -31,21 +31,31 @@
                                 <Trigger.EnterActions>
                                     <BeginStoryboard><Storyboard>
                                         <DoubleAnimation Storyboard.TargetName="Hi" Storyboard.TargetProperty="Opacity" To="0.16" Duration="0:0:0.15"/>
-                                        <DoubleAnimation Storyboard.TargetName="S" Storyboard.TargetProperty="ScaleX" To="1.03" Duration="0:0:0.15"/>
-                                        <DoubleAnimation Storyboard.TargetName="S" Storyboard.TargetProperty="ScaleY" To="1.03" Duration="0:0:0.15"/>
+                                        <DoubleAnimation Storyboard.TargetName="G" Storyboard.TargetProperty="RenderTransform.ScaleX" To="1.03" Duration="0:0:0.15"/>
+                                        <DoubleAnimation Storyboard.TargetName="G" Storyboard.TargetProperty="RenderTransform.ScaleY" To="1.03" Duration="0:0:0.15"/>
                                     </Storyboard></BeginStoryboard>
                                 </Trigger.EnterActions>
                                 <Trigger.ExitActions>
                                     <BeginStoryboard><Storyboard>
                                         <DoubleAnimation Storyboard.TargetName="Hi" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2"/>
-                                        <DoubleAnimation Storyboard.TargetName="S" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.2"/>
-                                        <DoubleAnimation Storyboard.TargetName="S" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.2"/>
+                                        <DoubleAnimation Storyboard.TargetName="G" Storyboard.TargetProperty="RenderTransform.ScaleX" To="1" Duration="0:0:0.2"/>
+                                        <DoubleAnimation Storyboard.TargetName="G" Storyboard.TargetProperty="RenderTransform.ScaleY" To="1" Duration="0:0:0.2"/>
                                     </Storyboard></BeginStoryboard>
                                 </Trigger.ExitActions>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="S" Property="ScaleX" Value="0.97"/>
-                                <Setter TargetName="S" Property="ScaleY" Value="0.97"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard><Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="G" Storyboard.TargetProperty="RenderTransform.ScaleX" To="0.97" Duration="0:0:0.08"/>
+                                        <DoubleAnimation Storyboard.TargetName="G" Storyboard.TargetProperty="RenderTransform.ScaleY" To="0.97" Duration="0:0:0.08"/>
+                                    </Storyboard></BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard><Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="G" Storyboard.TargetProperty="RenderTransform.ScaleX" To="1.03" Duration="0:0:0.12"/>
+                                        <DoubleAnimation Storyboard.TargetName="G" Storyboard.TargetProperty="RenderTransform.ScaleY" To="1.03" Duration="0:0:0.12"/>
+                                    </Storyboard></BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

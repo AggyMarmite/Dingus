@@ -209,7 +209,7 @@ public partial class HomeView : UserControl, IPage
 
     sealed class Slide
     {
-        public string Key, Label, Title, Meta, Desc, Logo, Poster, Art;
+        public string Key, Label, Title, Meta, Desc, Logo, Poster;
         public double Progress = -1;
         public string PrimaryText, PrimaryIcon, SecondaryText, SecondaryIcon;
         public Action Primary, Secondary;
@@ -470,7 +470,7 @@ public partial class HomeView : UserControl, IPage
     async Task ApplyArt(Slide s, int token, bool fade)
     {
         _extras.TryGetValue(s.Key, out var x);
-        var url = !string.IsNullOrEmpty(x?.Art) ? x.Art : !string.IsNullOrEmpty(s.Art) ? s.Art : s.Poster;
+        var url = !string.IsNullOrEmpty(x?.Art) ? x.Art : s.Poster;
         await ShowPicture(url, s.Logo, token);
         if (token != _showToken) return;
         Fade(HeroArt, 1, fade ? 500 : 250);
