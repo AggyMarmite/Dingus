@@ -506,6 +506,7 @@ public partial class MainWindow
     internal Views.GuideView SelfTestGuide => _guide;
     internal void SelfTestShortcuts(bool open) { if (open != SheetOpen) ToggleShortcutSheet(); }
     internal void SelfTestSearch(string text) => SearchBox.Text = text;
+    internal void SelfTestSearchFilter(string f) => _search.SelfTestFilter(f);
 }
 
 // Per-channel picture fixes (picture & sound menu → "Picture fix for this channel").

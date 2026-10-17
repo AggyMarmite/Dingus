@@ -28,10 +28,21 @@
     <Grid>
         <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="28,10,28,40">
+                <WrapPanel x:Name="Filters" Margin="8,14,0,4">
+                    <RadioButton x:Name="FAll" Style="{StaticResource Chip}" GroupName="SearchFilter" Tag="all" IsChecked="True" Checked="Filter_Checked" Margin="0,0,8,8"/>
+                    <RadioButton x:Name="FChannels" Style="{StaticResource Chip}" GroupName="SearchFilter" Tag="channels" Checked="Filter_Checked" Margin="0,0,8,8"/>
+                    <RadioButton x:Name="FGuide" Style="{StaticResource Chip}" GroupName="SearchFilter" Tag="guide" Checked="Filter_Checked" Margin="0,0,8,8"/>
+                    <RadioButton x:Name="FFilms" Style="{StaticResource Chip}" GroupName="SearchFilter" Tag="films" Checked="Filter_Checked" Margin="0,0,8,8"/>
+                    <RadioButton x:Name="FShows" Style="{StaticResource Chip}" GroupName="SearchFilter" Tag="shows" Checked="Filter_Checked" Margin="0,0,8,8"/>
+                </WrapPanel>
 
                 <!-- Channels -->
                 <StackPanel x:Name="ChannelSection" Visibility="Collapsed">
-                    <TextBlock x:Name="ChannelHeader" Style="{StaticResource SectionHeader}" Margin="8,14,0,8"/>
+                    <DockPanel Margin="8,14,0,8">
+                        <Button x:Name="ChannelMore" DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Padding="10,4" Tag="channels"
+                                Click="SeeAll_Click" Visibility="Collapsed" Content="See all"/>
+                        <TextBlock x:Name="ChannelHeader" Style="{StaticResource SectionHeader}" Margin="0" VerticalAlignment="Center"/>
+                    </DockPanel>
                     <ItemsControl x:Name="ChannelResults" ItemsPanel="{StaticResource Row}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -61,7 +72,11 @@
 
                 <!-- Programmes -->
                 <StackPanel x:Name="ProgSection" Visibility="Collapsed">
-                    <TextBlock x:Name="ProgHeader" Style="{StaticResource SectionHeader}" Margin="8,22,0,8"/>
+                    <DockPanel Margin="8,22,0,8">
+                        <Button x:Name="ProgMore" DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Padding="10,4" Tag="guide"
+                                Click="SeeAll_Click" Visibility="Collapsed" Content="See all"/>
+                        <TextBlock x:Name="ProgHeader" Style="{StaticResource SectionHeader}" Margin="0" VerticalAlignment="Center"/>
+                    </DockPanel>
                     <ItemsControl x:Name="ProgResults" MaxWidth="1100" HorizontalAlignment="Left">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -95,17 +110,23 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <Button x:Name="MoreProgs" Style="{StaticResource GhostButton}" HorizontalAlignment="Left" Margin="0,6,0,0"
-                            Content="Show all in the TV Guide" Click="MoreProgs_Click"/>
                 </StackPanel>
 
                 <!-- Films & shows -->
                 <StackPanel x:Name="FilmSection" Visibility="Collapsed">
-                    <TextBlock x:Name="FilmHeader" Style="{StaticResource SectionHeader}" Margin="8,22,0,8"/>
+                    <DockPanel Margin="8,22,0,8">
+                        <Button x:Name="FilmMore" DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Padding="10,4" Tag="films"
+                                Click="SeeAll_Click" Visibility="Collapsed" Content="See all"/>
+                        <TextBlock x:Name="FilmHeader" Style="{StaticResource SectionHeader}" Margin="0" VerticalAlignment="Center"/>
+                    </DockPanel>
                     <ItemsControl x:Name="FilmResults" ItemsPanel="{StaticResource Row}" ItemTemplate="{StaticResource SearchPoster}"/>
                 </StackPanel>
                 <StackPanel x:Name="ShowSection" Visibility="Collapsed">
-                    <TextBlock x:Name="ShowHeader" Style="{StaticResource SectionHeader}" Margin="8,22,0,8"/>
+                    <DockPanel Margin="8,22,0,8">
+                        <Button x:Name="ShowMore" DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Padding="10,4" Tag="shows"
+                                Click="SeeAll_Click" Visibility="Collapsed" Content="See all"/>
+                        <TextBlock x:Name="ShowHeader" Style="{StaticResource SectionHeader}" Margin="0" VerticalAlignment="Center"/>
+                    </DockPanel>
                     <ItemsControl x:Name="ShowResults" ItemsPanel="{StaticResource Row}" ItemTemplate="{StaticResource SearchPoster}"/>
                 </StackPanel>
             </StackPanel>
@@ -115,7 +136,7 @@
             <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="34" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center"/>
             <TextBlock x:Name="EmptyTitle" Text="Search everything" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,14,0,0"/>
             <TextBlock x:Name="EmptyBody" TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0"
-                       Text="Channels, programmes in the TV guide, films and TV shows – all at once. Type in the search box above (Ctrl+F from anywhere)."/>
+                       Text="Channels, programmes in the TV guide, films and TV shows – all at once. Type in the search bar at the top (Ctrl+F from anywhere)."/>
         </StackPanel>
     </Grid>
 </UserControl>

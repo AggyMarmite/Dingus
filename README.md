@@ -81,7 +81,7 @@ run **Actions → Release → Run workflow**. Pushing to main on its own only bu
 
 ### Watching
 
-- **Home**: carry on watching (live preview of your last channel), account status, coming up next on your favourites,
+- **Home**: carry on watching (your last channel, with a Play button – nothing starts until you press it), account status, coming up next on your favourites,
   live sport now, tonight's picks (films and sport), continue watching, recently watched, favourites, new films and new shows.
   (Settings → TV Guide → "Open on the TV Guide" to start on the guide instead.)
 - Opens on the channel you last watched; **Recently watched** is in the guide's categories.
@@ -112,8 +112,9 @@ run **Actions → Release → Run workflow**. Pushing to main on its own only bu
 - **Reminders**: right-click a future programme (guide, lists, Home) or use "Remind me" – a pop-up with a Watch button
   appears a minute before it starts. Your reminders are on Home.
 - **Find a programme**: in the guide, "Find a programme" searches every channel's listings by title.
-- **Search everything** (Search in the left rail, or Ctrl+F): channels, programmes in the TV guide, films and TV shows
-  in one go. Right-click a future programme for a reminder.
+- **Search everything**: the search bar at the top works on every page (Ctrl+F) and finds channels, programmes in the
+  TV guide, films and TV shows in one go. Filter the results to Channels, TV guide, Films or TV shows; Esc goes back to
+  where you were. Right-click a future programme for a reminder.
 - **Rearrange categories**: right-click a category in the Guide, Films or TV Shows to move it up, down, to the top or
   bottom (or back to the provider's order).
 - **Fix the guide yourself**: right-click a channel → "Match TV guide…" to pick the right guide channel (with what's on

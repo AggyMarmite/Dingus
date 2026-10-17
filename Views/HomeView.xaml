@@ -93,12 +93,22 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Border x:Name="BannerSlot" Width="384" Height="216" CornerRadius="8" Background="#000000">
-                        <StackPanel x:Name="BannerPlaceholder" VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <TextBlock Text="&#xE768;" FontFamily="{StaticResource IconFont}" FontSize="28"
-                                       Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Starting preview…" Foreground="{StaticResource MutedBrush}" Margin="0,10,0,0" HorizontalAlignment="Center"/>
-                        </StackPanel>
+                    <Border x:Name="BannerSlot" Width="384" Height="216" CornerRadius="8" Background="{StaticResource Surface2Brush}">
+                        <!-- Nothing plays until you ask: the channel's logo with a Play button (opens instantly, no buffering) -->
+                        <Button x:Name="BannerPlaceholder" Style="{StaticResource PosterCard}" Click="BannerPlay_Click"
+                                ToolTip="Play here (double-click the picture for full screen)">
+                            <Grid Width="384" Height="216" Background="Transparent">
+                                <TextBlock x:Name="BannerBigInitials" FontSize="40" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Image x:Name="BannerBigLogo" Width="200" Height="110" Stretch="Uniform" Margin="0,0,0,30"
+                                       svc:ImageLoader.DecodeWidth="400" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                <Border Width="56" Height="56" CornerRadius="28" Background="{StaticResource AccentBrush}"
+                                        HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18">
+                                    <TextBlock Text="&#xE768;" FontFamily="{StaticResource IconFont}" FontSize="22" Foreground="White"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" Margin="3,0,0,0"/>
+                                </Border>
+                            </Grid>
+                        </Button>
                     </Border>
                     <StackPanel Grid.Column="1" Margin="24,4,8,0" MinWidth="280" MaxWidth="520">
                         <TextBlock Text="CARRY ON WATCHING" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}"/>

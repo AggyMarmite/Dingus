@@ -38,15 +38,16 @@ public static class SelfTest
             await Page(main, main.NavGuide, "02-guide");
             await GuideMode(main, "now", "03-guide-on-now");
             await GuideMode(main, "tonight", "04-guide-tonight");
-            await GuideMode(main, "find", "05-guide-find", "news");
             await GuideMode(main, "grid", null);
             await Page(main, main.NavFilms, "06-films");
             await Page(main, main.NavShows, "07-shows");
             await Page(main, main.NavSettings, "09-settings", fullScroll: true);
-            main.NavSearch.IsChecked = true;
-            main.SelfTestSearch("news");
+            main.SelfTestSearch("news"); // typing anywhere opens Search
             await Idle(1500);
             Snap(main.SelfTestRoot, "14-search");
+            main.SelfTestSearchFilter("films");
+            await Idle(800);
+            Snap(main.SelfTestRoot, "15-search-films");
             main.SelfTestSearch("");
             await Page(main, main.NavGuide, null);
 

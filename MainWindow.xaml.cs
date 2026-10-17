@@ -119,7 +119,7 @@ public partial class MainWindow : Window
         _toastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3.5) };
         _toastTimer.Tick += (_, _) => { _toastTimer.Stop(); Motion.FadeOut(Toast, toY: 8); Motion.FadeOut(OverlayToast, toY: -8); };
         _searchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
-        _searchTimer.Tick += (_, _) => { _searchTimer.Stop(); _page?.ApplySearch(SearchBox.Text.Trim()); };
+        _searchTimer.Tick += (_, _) => { _searchTimer.Stop(); RunGlobalSearch(); };
         _healthTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(1) };
         _healthTimer.Tick += async (_, _) => await HealthTick();
         _numberTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1600) };
@@ -466,12 +466,13 @@ public partial class MainWindow : Window
         PageHost.BeginAnimation(OpacityProperty, new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(150))
             { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
         PageTitle.Text = page.Title;
-        SearchHost.Visibility = page.SupportsSearch ? Visibility.Visible : Visibility.Collapsed;
-        SearchBox.Tag = page.SearchHint;
+        // One search bar for the whole app: whatever page you're on, typing searches everything.
+        SearchHost.Visibility = Visibility.Visible;
+        SearchBox.Tag = GlobalSearchHint;
         _searchTimer.Stop();
-        if (SearchBox.Text.Length > 0) SearchBox.Text = "";
+        if (page != _search && SearchBox.Text.Length > 0) SearchBox.Text = ""; // leaving Search clears it
         _searchTimer.Stop();
-        page.ApplySearch("");
+        page.ApplySearch(page == _search ? SearchBox.Text.Trim() : "");
         page.OnShown();
         UpdateWelcome();
         // The loading screen covers every page except Settings – re-check it for the page you've just opened.
@@ -492,21 +493,41 @@ public partial class MainWindow : Window
 
     public void SetSearchHint(string hint) => SearchBox.Tag = hint;
 
-    /// <summary>Ctrl+F: search this page, or everything if this page has no search of its own.</summary>
-    void SearchShortcut()
+    const string GlobalSearchHint = "Search channels, programmes, films and shows";
+    IPage _beforeSearch;
+
+    /// <summary>Ctrl+F: the search bar.</summary>
+    void SearchShortcut() => FocusSearch();
+
+    /// <summary>Typing in the search bar on any page opens the Search page with the results.</summary>
+    void RunGlobalSearch()
     {
-        if (_page?.SupportsSearch != true || _page == _home) NavSearch.IsChecked = true;
-        FocusSearch();
+        var q = SearchBox.Text.Trim();
+        if (q.Length > 0 && _page != _search)
+        {
+            _beforeSearch = _page;
+            NavSearch.IsChecked = true; // Navigate keeps the text for the Search page
+            FocusSearchCaretEnd();
+            return;
+        }
+        if (_page == _search) _search.ApplySearch(q);
     }
 
-    /// <summary>"Show all in the TV Guide" from Search: the guide's programme finder with the same words.</summary>
-    public void FindProgrammeInGuide(string query)
+    void FocusSearchCaretEnd()
     {
-        NavGuide.IsChecked = true;
-        _guide.SelfTestMode("find");
-        SearchBox.Text = query;
-        FocusSearch();
+        SearchBox.Focus();
+        SearchBox.CaretIndex = SearchBox.Text.Length;
     }
+
+    /// <summary>Esc in the search bar: clear it, and go back to where you were.</summary>
+    void LeaveSearch()
+    {
+        ClearSearchBoxOnly();
+        if (_page != _search) return;
+        var back = _beforeSearch ?? _home;
+        (back == _guide ? NavGuide : back == _films ? NavFilms : back == _shows ? NavShows : back == _settings ? NavSettings : NavHome).IsChecked = true;
+    }
+
 
     public void OpenChannelEditor()
     {
@@ -537,8 +558,8 @@ public partial class MainWindow : Window
 
     void SearchBox_KeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Escape) { ClearSearch(); e.Handled = true; }
-        else if (e.Key == Key.Enter) { _searchTimer.Stop(); _page?.ApplySearch(SearchBox.Text.Trim()); e.Handled = true; }
+        if (e.Key == Key.Escape) { LeaveSearch(); e.Handled = true; }
+        else if (e.Key == Key.Enter) { _searchTimer.Stop(); RunGlobalSearch(); e.Handled = true; }
     }
 
     /// <summary>Called whenever the active playlist (or the list of playlists) changes.</summary>

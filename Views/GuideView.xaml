@@ -18,13 +18,6 @@
                                  Checked="Mode_Checked" ToolTip="What's on right now"/>
                     <RadioButton Style="{StaticResource Chip}" GroupName="GuideMode" Content="Tonight" Tag="tonight"
                                  Checked="Mode_Checked" ToolTip="What's on this evening"/>
-                    <RadioButton Style="{StaticResource Chip}" GroupName="GuideMode" Tag="find" Margin="0,8,0,0"
-                                 Checked="Mode_Checked" ToolTip="Find a programme by name, on any channel">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="Find a programme"/>
-                        </StackPanel>
-                    </RadioButton>
                 </WrapPanel>
                 <TextBlock DockPanel.Dock="Top" Text="CATEGORIES" Margin="20,12,0,8" FontSize="11" FontWeight="SemiBold"
                            Foreground="{StaticResource MutedBrush}"/>

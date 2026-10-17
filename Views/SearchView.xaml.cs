@@ -36,15 +36,32 @@ public partial class SearchView : UserControl, IPage
         ChannelResults.ItemsSource = ProgResults.ItemsSource = FilmResults.ItemsSource = ShowResults.ItemsSource = null;
     }
 
+    string _filter = "all";
+
+    void Filter_Checked(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is not string f || !IsLoaded) return;
+        _filter = f;
+        Run();
+    }
+
+    internal void SelfTestFilter(string f) => SeeAll_Click(new Button { Tag = f }, null);
+
+    void SeeAll_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is not string f) return;
+        foreach (var rb in Filters.Children.OfType<RadioButton>()) if ((rb.Tag as string) == f) rb.IsChecked = true;
+    }
+
     void Run()
     {
         var q = _query;
-        bool any = false;
         if (q.Length < 2 || Guide == null)
         {
             foreach (var s in new[] { ChannelSection, ProgSection, FilmSection, ShowSection }) s.Visibility = Visibility.Collapsed;
+            Filters.Visibility = Visibility.Collapsed;
             EmptyTitle.Text = "Search everything";
-            EmptyBody.Text = "Channels, programmes in the TV guide, films and TV shows – all at once. Type at least two letters in the search box above (Ctrl+F from anywhere).";
+            EmptyBody.Text = "Channels, programmes in the TV guide, films and TV shows – all at once. Type at least two letters in the search bar at the top (Ctrl+F from anywhere).";
             EmptyState.Visibility = Visibility.Visible;
             return;
         }
@@ -53,21 +70,15 @@ public partial class SearchView : UserControl, IPage
         var epg = ds.Epg;
         var now = DateTime.Now;
         var rows = Guide.RowsIn(GuideView.AllId);
+        bool all = _filter == "all";
 
-        // Channels whose name matches (best matches first).
-        var channels = rows
+        // Everything that matches (counted for the filter chips), best matches first.
+        var channelRows = rows
             .Where(r => r.DisplayName.Contains(q, StringComparison.OrdinalIgnoreCase))
             .OrderBy(r => r.DisplayName.StartsWith(q, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-            .Take(24)
-            .Select(r => new HomeChannelCard
-            {
-                Row = r,
-                ListId = GuideView.AllId,
-                Title = epg.At(Guide.EpgIdOf(r), now) is { } p ? "Now: " + p.Title : "",
-            }).ToList();
-        any |= Show(ChannelSection, ChannelHeader, ChannelResults, channels, "CHANNELS");
+            .ToList();
 
-        // Programmes from now on, in every channel's guide.
+        const int ProgCap = 1000;
         var progs = new List<NowItem>();
         foreach (var r in rows)
         {
@@ -86,41 +97,66 @@ public partial class SearchView : UserControl, IPage
                     HasReminder = !live && ReminderService.Has(r.Channel.Id, p.Start),
                 });
             }
-            if (progs.Count > 600) break;
+            if (progs.Count >= ProgCap) break;
         }
-        int totalProgs = progs.Count;
-        var shownProgs = progs.OrderBy(x => x.IsLive ? DateTime.MinValue : x.Programme.Start).Take(40).ToList();
-        any |= Show(ProgSection, ProgHeader, ProgResults, shownProgs, "IN THE TV GUIDE", totalProgs);
-        MoreProgs.Visibility = totalProgs > shownProgs.Count ? Visibility.Visible : Visibility.Collapsed;
+        progs = progs.OrderBy(x => x.IsLive ? DateTime.MinValue : x.Programme.Start).ToList();
 
-        // Films and shows (not in hidden or locked categories).
         var hidV = ds.HiddenSet("vod");
         var films = ds.Catalog.Movies.Where(m => !hidV.Contains(m.CategoryId) && m.Name.Contains(q, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(m => m.Name.StartsWith(q, StringComparison.OrdinalIgnoreCase) ? 0 : 1).ThenByDescending(m => m.Added)
-            .Take(30).Select(m => new HomePosterCard { Id = m.Id, IsMovie = true, Title = m.Name, Image = m.Poster, Subtitle = m.Year }).ToList();
-        any |= Show(FilmSection, FilmHeader, FilmResults, films, "FILMS");
-
+            .OrderBy(m => m.Name.StartsWith(q, StringComparison.OrdinalIgnoreCase) ? 0 : 1).ThenByDescending(m => m.Added).ToList();
         var hidS = ds.HiddenSet("series");
         var shows = ds.Catalog.Series.Where(s => !hidS.Contains(s.CategoryId) && s.Name.Contains(q, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(s => s.Name.StartsWith(q, StringComparison.OrdinalIgnoreCase) ? 0 : 1).ThenByDescending(s => s.Added)
-            .Take(30).Select(s => new HomePosterCard { Id = s.Id, IsMovie = false, Title = s.Name, Image = s.Cover, Subtitle = s.Year ?? "TV show" }).ToList();
-        any |= Show(ShowSection, ShowHeader, ShowResults, shows, "TV SHOWS");
+            .OrderBy(s => s.Name.StartsWith(q, StringComparison.OrdinalIgnoreCase) ? 0 : 1).ThenByDescending(s => s.Added).ToList();
+
+        // Filter chips with how many of each.
+        Filters.Visibility = Visibility.Visible;
+        int total = channelRows.Count + progs.Count + films.Count + shows.Count;
+        FAll.Content = $"All  {Count(total, total >= ProgCap)}";
+        FChannels.Content = $"Channels  {Count(channelRows.Count)}";
+        FGuide.Content = $"TV guide  {Count(progs.Count, progs.Count >= ProgCap)}";
+        FFilms.Content = $"Films  {Count(films.Count)}";
+        FShows.Content = $"TV shows  {Count(shows.Count)}";
+
+        // "All" shows the top few of each; a filter shows (lots) more of one kind.
+        bool any = false;
+        var channels = channelRows.Take(all ? 8 : _filter == "channels" ? 200 : 0).Select(r => new HomeChannelCard
+        {
+            Row = r,
+            ListId = GuideView.AllId,
+            Title = epg.At(Guide.EpgIdOf(r), now) is { } p ? "Now: " + p.Title : "",
+        }).ToList();
+        any |= Show(ChannelSection, ChannelHeader, ChannelMore, ChannelResults, channels, "CHANNELS", channelRows.Count, all);
+
+        var shownProgs = progs.Take(all ? 12 : _filter == "guide" ? 300 : 0).ToList();
+        any |= Show(ProgSection, ProgHeader, ProgMore, ProgResults, shownProgs, "IN THE TV GUIDE", progs.Count, all, progs.Count >= ProgCap);
+
+        var filmCards = films.Take(all ? 14 : _filter == "films" ? 150 : 0)
+            .Select(m => new HomePosterCard { Id = m.Id, IsMovie = true, Title = m.Name, Image = m.Poster, Subtitle = m.Year }).ToList();
+        any |= Show(FilmSection, FilmHeader, FilmMore, FilmResults, filmCards, "FILMS", films.Count, all);
+
+        var showCards = shows.Take(all ? 14 : _filter == "shows" ? 150 : 0)
+            .Select(s => new HomePosterCard { Id = s.Id, IsMovie = false, Title = s.Name, Image = s.Cover, Subtitle = s.Year ?? "TV show" }).ToList();
+        any |= Show(ShowSection, ShowHeader, ShowMore, ShowResults, showCards, "TV SHOWS", shows.Count, all);
 
         EmptyState.Visibility = any ? Visibility.Collapsed : Visibility.Visible;
         if (!any)
         {
             EmptyTitle.Text = "Nothing found";
-            EmptyBody.Text = $"No channels, programmes, films or shows called “{q}”.";
+            EmptyBody.Text = all ? $"No channels, programmes, films or shows called “{q}”." : $"Nothing called “{q}” here – try another filter.";
         }
         Scroller.ScrollToTop();
     }
 
-    static bool Show<T>(FrameworkElement section, TextBlock header, ItemsControl list, List<T> items, string title, int total = -1)
+    static string Count(int n, bool capped = false) => capped ? $"{n:N0}+" : n.ToString("N0");
+
+    static bool Show<T>(FrameworkElement section, TextBlock header, Button more, ItemsControl list, List<T> items, string title,
+                        int total, bool allMode, bool capped = false)
     {
         list.ItemsSource = items;
         section.Visibility = items.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        int n = total >= 0 ? total : items.Count;
-        header.Text = $"{title}  ·  {(n >= 600 ? "600+" : n.ToString("N0"))}";
+        header.Text = $"{title}  ·  {Count(total, capped)}";
+        more.Visibility = allMode && total > items.Count ? Visibility.Visible : Visibility.Collapsed;
+        more.Content = $"See all {Count(total, capped)}";
         return items.Count > 0;
     }
 
@@ -171,8 +207,6 @@ public partial class SearchView : UserControl, IPage
         menu.Items.Add(guide);
         menu.IsOpen = true;
     }
-
-    void MoreProgs_Click(object sender, RoutedEventArgs e) => MainWindow.Instance?.FindProgrammeInGuide(_query);
 
     void Poster_Click(object sender, RoutedEventArgs e)
     {

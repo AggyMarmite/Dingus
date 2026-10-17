@@ -32,8 +32,9 @@
                     </Border>
                     <RadioButton x:Name="NavHome" DockPanel.Dock="Top" Style="{StaticResource NavButton}" Tag="&#xE80F;" Content="Home" Checked="Nav_Checked"/>
                     <RadioButton x:Name="NavGuide" DockPanel.Dock="Top" Style="{StaticResource NavButton}" Tag="&#xE8FD;" Content="Guide" Checked="Nav_Checked"/>
+                    <!-- The Search page opens from the search bar at the top (no button of its own) -->
                     <RadioButton x:Name="NavSearch" DockPanel.Dock="Top" Style="{StaticResource NavButton}" Tag="&#xE721;" Content="Search" Checked="Nav_Checked"
-                                 ToolTip="Search everything (Ctrl+F)"/>
+                                 Visibility="Collapsed"/>
                     <RadioButton x:Name="NavFilms" DockPanel.Dock="Top" Style="{StaticResource NavButton}" Tag="&#xE8B2;" Content="Films" Checked="Nav_Checked"/>
                     <RadioButton x:Name="NavShows" DockPanel.Dock="Top" Style="{StaticResource NavButton}" Tag="&#xE8F1;" Content="TV Shows" Checked="Nav_Checked"/>
                     <RadioButton x:Name="NavSettings" DockPanel.Dock="Bottom" Style="{StaticResource NavButton}" Tag="&#xE713;" Content="Settings"

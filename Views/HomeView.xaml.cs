@@ -45,6 +45,7 @@ public partial class HomeView : UserControl, IPage
     {
         _shown = true;
         _previewStarted = false;
+        _playRequested = false; // each visit starts with the logo and a Play button
         Build();
         _refresh.Start();
         RefreshAccount();
@@ -64,7 +65,8 @@ public partial class HomeView : UserControl, IPage
     /// <summary>Starts the live preview of your last channel in the banner (once per visit).</summary>
     public void TryStartPreview()
     {
-        if (!_shown || _previewStarted || _bannerRow == null || !CanPreview()) return;
+        // Only when you press Play – starting a stream as Home opens made the page stutter.
+        if (!_playRequested || !_shown || _previewStarted || _bannerRow == null || !CanPreview()) return;
         _previewStarted = true;
         MainWindow.Instance?.PlayLive(_bannerRow.Channel, false);
     }
@@ -220,6 +222,8 @@ public partial class HomeView : UserControl, IPage
         Banner.Visibility = Visibility.Visible;
         BannerChannel.Text = _bannerRow.DisplayName;
         ImageLoader.SetUrl(BannerLogo, _bannerRow.Logo);
+        ImageLoader.SetUrl(BannerBigLogo, _bannerRow.Logo);
+        BannerBigInitials.Text = _bannerRow.Logo == null ? _bannerRow.Initials : "";
         var id = Guide.EpgIdOf(_bannerRow);
         var p = epg.At(id, now);
         if (p == null)
@@ -334,6 +338,16 @@ public partial class HomeView : UserControl, IPage
     void Poster_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is HomePosterCard c) MainWindow.Instance?.OpenLibraryItem(c.IsMovie, c.Id);
+    }
+
+    bool _playRequested;
+
+    /// <summary>Play button on the banner: starts the channel in the banner's picture.</summary>
+    void BannerPlay_Click(object sender, RoutedEventArgs e)
+    {
+        _playRequested = true;
+        _previewStarted = false;
+        TryStartPreview();
     }
 
     void BannerWatch_Click(object sender, RoutedEventArgs e)
