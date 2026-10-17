@@ -1,0 +1,114 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svc="clr-namespace:Dingus.Services"
+             xmlns:local="clr-namespace:Dingus"
+             x:Class="Dingus.Views.RecordingsView">
+    <UserControl.Resources>
+        <!-- One line in "Recording now" / "Coming up" / "Recorded" -->
+        <DataTemplate x:Key="ItemRow">
+            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="10" Padding="16,12" Margin="0,0,0,6"
+                    BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Classes="primary" Content="Play" Margin="8,0,0,0" Click="Play_Click"
+                                IsVisible="{Binding CanPlay}"/>
+                        <Button Content="Show in folder" Margin="8,0,0,0" Click="ShowFile_Click"
+                                IsVisible="{Binding CanPlay}"/>
+                        <Button Content="{Binding ActionText}" Margin="8,0,0,0" Click="Action_Click"/>
+                    </StackPanel>
+                    <Border DockPanel.Dock="Left" Width="38" Height="38" CornerRadius="19" Background="{Binding BadgeBrush}" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Glyph}" Classes="icon" FontSize="17" Foreground="White"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <StackPanel Margin="14,0,12,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding Line2}" Classes="muted" FontSize="12" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding Line3}" Foreground="{Binding Line3Brush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"
+                                   IsVisible="{Binding HasLine3}"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="36,16,36,48" MaxWidth="1000">
+
+            <DockPanel Margin="0,0,0,6">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Classes="primary" Click="RecordSlot_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{x:Static local:Icons.Record}" Classes="icon" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="Record a time slot…"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+                <StackPanel>
+                    <TextBlock Text="Recordings &amp; reminders" FontSize="24" FontWeight="SemiBold"/>
+                    <TextBlock Classes="muted" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="Right-click any programme in Live TV, Search or Home to record it or set a reminder."/>
+                </StackPanel>
+            </DockPanel>
+
+            <!-- Connection limit -->
+            <Border x:Name="LimitCard" CornerRadius="10" Padding="16,12" Margin="0,14,0,0" Background="{StaticResource AccentSoftBrush}">
+                <DockPanel>
+                    <TextBlock x:Name="LimitGlyph" DockPanel.Dock="Left" Text="{x:Static local:Icons.Info}" Classes="icon" FontSize="18"
+                               VerticalAlignment="Top" Margin="0,1,12,0"/>
+                    <StackPanel>
+                        <TextBlock x:Name="LimitTitle" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="LimitBody" Margin="0,4,0,0" TextWrapping="Wrap" Foreground="#D9FFFFFF"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <TextBlock x:Name="NowHeader" Classes="section" Text="RECORDING NOW"/>
+            <ItemsControl x:Name="NowList" ItemTemplate="{StaticResource ItemRow}"/>
+
+            <TextBlock Classes="section" Text="COMING UP"/>
+            <ItemsControl x:Name="UpcomingList" ItemTemplate="{StaticResource ItemRow}"/>
+            <TextBlock x:Name="UpcomingEmpty" Classes="muted" Margin="2,0,0,0" TextWrapping="Wrap"
+                       Text="Nothing scheduled. Right-click a programme that hasn't started in Live TV → Record or Remind me."/>
+
+            <TextBlock Classes="section" Text="RECORDED"/>
+            <ItemsControl x:Name="DoneList" ItemTemplate="{StaticResource ItemRow}"/>
+            <TextBlock x:Name="DoneEmpty" Classes="muted" Margin="2,0,0,0" Text="No recordings yet."/>
+
+            <!-- Where and how -->
+            <TextBlock Classes="section" Text="RECORDING SETTINGS"/>
+            <Border Classes="card">
+                <StackPanel>
+                    <TextBlock Text="Save recordings to" FontWeight="SemiBold"/>
+                    <TextBlock Classes="muted" FontSize="12" Margin="0,3,0,10" TextWrapping="Wrap"
+                               Text="A folder on this computer, another drive, or a mounted network share on a NAS or server (for example /mnt/nas/recordings)."/>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Content="Browse…" Margin="8,0,0,0" Click="Browse_Click"/>
+                            <Button Classes="ghost" Content="Open" Margin="4,0,0,0" Click="OpenFolder_Click"/>
+                        </StackPanel>
+                        <TextBox x:Name="FolderBox" Watermark="Folder or network path" LostFocus="FolderBox_LostFocus" KeyDown="FolderBox_KeyDown"/>
+                    </DockPanel>
+                    <TextBlock x:Name="FolderStatus" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"/>
+
+                    <TextBlock Classes="field" Margin="0,16,0,8" Text="Start recording early by"/>
+                    <StackPanel x:Name="PadBeforeChips" Orientation="Horizontal">
+                        <RadioButton Classes="chip" GroupName="PadB" Content="None" Tag="0" IsCheckedChanged="PadBefore_Checked"/>
+                        <RadioButton Classes="chip" GroupName="PadB" Content="2 min" Tag="2" IsCheckedChanged="PadBefore_Checked"/>
+                        <RadioButton Classes="chip" GroupName="PadB" Content="5 min" Tag="5" IsCheckedChanged="PadBefore_Checked"/>
+                        <RadioButton Classes="chip" GroupName="PadB" Content="10 min" Tag="10" IsCheckedChanged="PadBefore_Checked"/>
+                    </StackPanel>
+                    <TextBlock Classes="field" Margin="0,16,0,8" Text="Keep recording afterwards for (in case it overruns)"/>
+                    <StackPanel x:Name="PadAfterChips" Orientation="Horizontal">
+                        <RadioButton Classes="chip" GroupName="PadA" Content="None" Tag="0" IsCheckedChanged="PadAfter_Checked"/>
+                        <RadioButton Classes="chip" GroupName="PadA" Content="5 min" Tag="5" IsCheckedChanged="PadAfter_Checked"/>
+                        <RadioButton Classes="chip" GroupName="PadA" Content="10 min" Tag="10" IsCheckedChanged="PadAfter_Checked"/>
+                        <RadioButton Classes="chip" GroupName="PadA" Content="15 min" Tag="15" IsCheckedChanged="PadAfter_Checked"/>
+                        <RadioButton Classes="chip" GroupName="PadA" Content="30 min" Tag="30" IsCheckedChanged="PadAfter_Checked"/>
+                    </StackPanel>
+                    <TextBlock Classes="muted" FontSize="12" Margin="0,14,0,0" TextWrapping="Wrap"
+                               Text="Dingus needs to be open for recordings to happen – minimised is fine, and it keeps your computer awake while one is running. Recordings are saved as .ts files, which play in Dingus, VLC and most players."/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -137,3 +137,63 @@ jobs:
           git add -A
           git commit -q -m "Self-test for ${{ github.sha }}"
           git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" selftest
+
+  # The Linux version: builds the AppImage, then runs it on a virtual screen (with a real test video) and saves screenshots.
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Install VLC and a virtual screen
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends vlc-bin vlc-plugin-base vlc-plugin-video-output libvlc-dev libvlccore-dev \
+            xvfb openbox xcompmgr ffmpeg imagemagick libfuse2 fonts-dejavu-core > /dev/null
+      - name: Build the AppImage
+        run: |
+          V=$(grep -oPm1 '(?<=<Version>)[^<]+' Dingus.csproj)
+          linux/package/build-appimage.sh "$V" out
+          f=$(ls out/*.AppImage)
+          echo "::notice title=AppImage::$(basename $f) · $(du -m $f | cut -f1) MB"
+      - name: Self-test (the AppImage itself)
+        run: |
+          python3 tests/selftest/make-sample.py $RUNNER_TEMP/sample
+          ffmpeg -loglevel error -f lavfi -i testsrc2=size=1280x720:rate=25 -f lavfi -i sine=frequency=440 -t 30 \
+            -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest $RUNNER_TEMP/sample/test.mp4
+          Xvfb :99 -screen 0 1920x1080x24 &
+          sleep 2
+          export DISPLAY=:99
+          openbox &
+          xcompmgr &
+          sleep 1
+          out=$RUNNER_TEMP/selftest-linux
+          mkdir -p $out
+          app=$(ls $PWD/out/*.AppImage)
+          DINGUS_TEST_VIDEO=$RUNNER_TEMP/sample/test.mp4 APPIMAGE_EXTRACT_AND_RUN=1 timeout 300 "$app" --self-test $out > $out/stdout.txt 2>&1 &
+          pid=$!
+          for i in $(seq 1 280); do
+            if [ -f $out/player-ready.txt ]; then sleep 1; import -window root $out/19-screen-player.png; break; fi
+            kill -0 $pid 2>/dev/null || break
+            sleep 1
+          done
+          wait $pid || true
+          for f in result.txt crash.txt; do
+            if [ -f $out/$f ]; then echo "::notice title=linux $f::$(head -c 4000 $out/$f | sed ':a;N;$!ba;s/\n/%0A/g')"; fi
+          done
+          if [ -f ~/.local/share/Dingus/log.txt ]; then cp ~/.local/share/Dingus/log.txt $out/; echo "::notice title=linux log.txt::$(head -c 3000 ~/.local/share/Dingus/log.txt | sed ':a;N;$!ba;s/\n/%0A/g')"; fi
+          tail -c 2000 $out/stdout.txt | sed ':a;N;$!ba;s/\n/%0A/g' | xargs -0 -I{} echo "::notice title=linux stdout::{}"
+          grep -q PASSED $out/result.txt
+      - name: Publish screenshots to the selftest-linux branch
+        if: always() && github.event_name == 'push'
+        run: |
+          out=$RUNNER_TEMP/selftest-linux
+          [ -d $out ] || exit 0
+          cd $out
+          git init -q -b selftest-linux
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git add -A
+          git commit -q -m "Linux self-test for ${{ github.sha }}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" selftest-linux

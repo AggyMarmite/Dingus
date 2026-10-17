@@ -1,0 +1,363 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:Dingus"
+             x:Class="Dingus.Views.SettingsView">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="36,8,36,48" MaxWidth="900">
+
+            <!-- Playlists -->
+            <TextBlock Classes="section" Text="PLAYLISTS"/>
+            <Border Classes="card">
+                <StackPanel>
+                    <StackPanel x:Name="PlaylistPanel"/>
+                    <Button HorizontalAlignment="Left" Margin="0,8,0,0" Click="AddPlaylist_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Classes="icon" Text="{x:Static local:Icons.Plus}" Margin="0,0,8,0"/>
+                            <TextBlock Text="Add playlist"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <!-- Account -->
+            <StackPanel x:Name="AccountSection">
+                <TextBlock Classes="section" Text="ACCOUNT"/>
+                <Border Classes="card">
+                    <UniformGrid Columns="3">
+                        <StackPanel>
+                            <TextBlock Text="Status" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
+                            <TextBlock x:Name="AccStatus" FontSize="18" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Expires" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
+                            <TextBlock x:Name="AccExpiry" FontSize="18" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Connections" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
+                            <TextBlock x:Name="AccConnections" FontSize="18" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </UniformGrid>
+                </Border>
+            </StackPanel>
+
+            <!-- Refresh -->
+            <TextBlock Classes="section" Text="REFRESH"/>
+            <Border Classes="card">
+                <StackPanel>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Refresh playlist" Click="RefreshPlaylist_Click"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Channels, films and shows" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="PlaylistUpdated" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Refresh TV guide" Click="RefreshEpg_Click"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="TV guide" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="EpgUpdated" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                    <CheckBox x:Name="AutoRefreshToggle" Classes="toggle" IsCheckedChanged="AutoRefresh_Changed">
+                        <StackPanel>
+                            <TextBlock Text="Refresh automatically" FontWeight="SemiBold"/>
+                            <TextBlock Text="Downloads a fresh playlist every time the app opens, and again on the schedule below while it's running." TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <TextBlock Classes="field" Margin="0,16,0,8" Text="Refresh the playlist every"/>
+                    <StackPanel x:Name="IntervalChips" Orientation="Horizontal">
+                        <RadioButton Classes="chip" Content="6 hours" Tag="6" IsCheckedChanged="Interval_Checked"/>
+                        <RadioButton Classes="chip" Content="12 hours" Tag="12" IsCheckedChanged="Interval_Checked"/>
+                        <RadioButton Classes="chip" Content="1 day" Tag="24" IsCheckedChanged="Interval_Checked"/>
+                        <RadioButton Classes="chip" Content="3 days" Tag="72" IsCheckedChanged="Interval_Checked"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- TV guide -->
+            <TextBlock Classes="section" Text="TV GUIDE"/>
+            <Border Classes="card">
+                <StackPanel>
+                    <TextBlock Text="Guide (EPG) address" FontWeight="SemiBold"/>
+                    <TextBlock Text="Leave empty to use your provider's guide. Channels are matched automatically by id and name."
+                               Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,10" TextWrapping="Wrap"/>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Save" Margin="8,0,0,0" Click="SaveEpgUrl_Click"/>
+                        <TextBox x:Name="EpgUrlBox" Watermark="https://example.com/epg.xml.gz"/>
+                    </DockPanel>
+                    <TextBlock Classes="field" Margin="0,16,0,8" Text="Time shift (if programmes look early or late)"/>
+                    <StackPanel x:Name="ShiftChips" Orientation="Horizontal">
+                        <RadioButton Classes="chip" Content="−2 h" Tag="-120" IsCheckedChanged="Shift_Checked"/>
+                        <RadioButton Classes="chip" Content="−1 h" Tag="-60" IsCheckedChanged="Shift_Checked"/>
+                        <RadioButton Classes="chip" Content="None" Tag="0" IsCheckedChanged="Shift_Checked"/>
+                        <RadioButton Classes="chip" Content="+1 h" Tag="60" IsCheckedChanged="Shift_Checked"/>
+                        <RadioButton Classes="chip" Content="+2 h" Tag="120" IsCheckedChanged="Shift_Checked"/>
+                    </StackPanel>
+                    <TextBlock x:Name="EpgMatchText" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,14,0,0"/>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                    <DockPanel Margin="0,0,0,16">
+                        <Button DockPanel.Dock="Right" Content="Edit channels…" Click="EditChannels_Click"
+                                VerticalAlignment="Center"/>
+                        <StackPanel>
+                            <TextBlock Text="Channel editor" FontWeight="SemiBold"/>
+                            <TextBlock Text="Rename, hide and reorder channels (also on the right-click menu in Live TV)."
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <CheckBox x:Name="StartGuideToggle" Classes="toggle" IsCheckedChanged="StartGuide_Changed"
+                              Margin="0,0,0,16">
+                        <StackPanel>
+                            <TextBlock Text="Open on Live TV" FontWeight="SemiBold"/>
+                            <TextBlock Text="Start on Live TV (with your last channel) instead of the Home page."
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <CheckBox x:Name="MergeToggle" Classes="toggle" IsCheckedChanged="Merge_Changed">
+                        <StackPanel>
+                            <TextBlock Text="Merge duplicate channels" FontWeight="SemiBold"/>
+                            <TextBlock Text="Shows “Channel One”, “Channel One HD”, “Channel One FHD” and backups as one channel. If a version stops working, the next one is tried automatically."
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <TextBlock Classes="field" Margin="0,16,0,8" Text="Preferred quality for merged channels"/>
+                    <StackPanel x:Name="QualityChips" Orientation="Horizontal">
+                        <RadioButton Classes="chip" Content="Best available" Tag="best" IsCheckedChanged="Quality_Checked"/>
+                        <RadioButton Classes="chip" Content="Up to 1080p" Tag="1080" IsCheckedChanged="Quality_Checked"/>
+                        <RadioButton Classes="chip" Content="Up to 720p" Tag="720" IsCheckedChanged="Quality_Checked"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Categories -->
+            <TextBlock Classes="section" Text="CATEGORIES"/>
+            <Border Classes="card">
+                <StackPanel>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Classes="ghost" Content="Show all" Click="ShowAll_Click"/>
+                            <Button Classes="ghost" Content="Hide all" Click="HideAll_Click"/>
+                        </StackPanel>
+                        <StackPanel x:Name="CatKindChips" Orientation="Horizontal" VerticalAlignment="Center">
+                            <RadioButton x:Name="KindLive" Classes="chip" Content="Live TV" Tag="live" IsCheckedChanged="Kind_Checked"/>
+                            <RadioButton Classes="chip" Content="Films" Tag="vod" IsCheckedChanged="Kind_Checked"/>
+                            <RadioButton Classes="chip" Content="TV Shows" Tag="series" IsCheckedChanged="Kind_Checked"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <TextBlock Text="Untick a category to hide it everywhere in the app." Foreground="{StaticResource MutedBrush}"
+                               FontSize="12" Margin="0,12,0,12"/>
+                    <ItemsControl x:Name="CategoryChecks">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="3"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                    <TextBlock x:Name="NoCategories" Text="No categories yet – refresh your playlist first." Foreground="{StaticResource MutedBrush}"
+                               IsVisible="False"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Playback -->
+            <TextBlock Classes="section" Text="PLAYBACK"/>
+            <Border Classes="card">
+                <StackPanel>
+                    <CheckBox x:Name="HwToggle" Classes="toggle" IsCheckedChanged="Hw_Changed">
+                        <StackPanel>
+                            <TextBlock Text="Hardware decoding" FontWeight="SemiBold"/>
+                            <TextBlock Text="Uses your graphics card to decode video – much lower CPU use. Turn off only if you see glitches."
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                    
+                    
+                    
+                    <CheckBox x:Name="TimeshiftToggle" Classes="toggle" IsCheckedChanged="Timeshift_Changed">
+                        <StackPanel>
+                            <TextBlock Text="Pause &amp; rewind live TV" FontWeight="SemiBold"/>
+                            <TextBlock Text="Keeps the channel you're watching in a buffer on disk, so you can pause (Space), go back (←) and catch up (End). Uses one connection, like normal viewing. Not available for HLS streams."
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <TextBlock Classes="field" Margin="0,16,0,8" Text="Rewind up to"/>
+                    <StackPanel x:Name="TimeshiftChips" Orientation="Horizontal">
+                        <RadioButton Classes="chip" Content="30 minutes" Tag="30" IsCheckedChanged="TimeshiftLen_Checked"/>
+                        <RadioButton Classes="chip" Content="1 hour" Tag="60" IsCheckedChanged="TimeshiftLen_Checked"/>
+                        <RadioButton Classes="chip" Content="2 hours" Tag="120" IsCheckedChanged="TimeshiftLen_Checked"/>
+                    </StackPanel>
+                    <TextBlock Text="An HD channel uses about 2–4 GB an hour (4K: up to 10 GB). It's never more than a quarter of your free space, and it's deleted when you change channel."
+                               Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                    <TextBlock Classes="field" Margin="0,16,0,8" Text="Live stream format"/>
+                    <StackPanel x:Name="FormatChips" Orientation="Horizontal">
+                        <RadioButton Classes="chip" Content="MPEG-TS (recommended)" Tag="ts" IsCheckedChanged="Format_Checked"/>
+                        <RadioButton Classes="chip" Content="HLS" Tag="hls" IsCheckedChanged="Format_Checked"/>
+                    </StackPanel>
+                    <TextBlock Classes="field" Margin="0,16,0,8" Text="Network buffer (raise if streams stutter)"/>
+                    <StackPanel x:Name="BufferChips" Orientation="Horizontal">
+                        <RadioButton Classes="chip" Content="0.5 s" Tag="500" IsCheckedChanged="Buffer_Checked"/>
+                        <RadioButton Classes="chip" Content="1 s" Tag="1000" IsCheckedChanged="Buffer_Checked"/>
+                        <RadioButton Classes="chip" Content="1.5 s" Tag="1500" IsCheckedChanged="Buffer_Checked"/>
+                        <RadioButton Classes="chip" Content="3 s" Tag="3000" IsCheckedChanged="Buffer_Checked"/>
+                        <RadioButton Classes="chip" Content="5 s" Tag="5000" IsCheckedChanged="Buffer_Checked"/>
+                    </StackPanel>
+                    <TextBlock Classes="field" Margin="0,16,0,8" Text="Preferred audio language"/>
+                    <WrapPanel x:Name="AudioLangChips">
+                        <RadioButton Classes="chip" Content="Stream default" Tag="" IsCheckedChanged="AudioLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Classes="chip" Content="English" Tag="eng" IsCheckedChanged="AudioLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Classes="chip" Content="French" Tag="fra" IsCheckedChanged="AudioLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Classes="chip" Content="German" Tag="deu" IsCheckedChanged="AudioLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Classes="chip" Content="Spanish" Tag="spa" IsCheckedChanged="AudioLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Classes="chip" Content="Italian" Tag="ita" IsCheckedChanged="AudioLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Classes="chip" Content="Polish" Tag="pol" IsCheckedChanged="AudioLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Classes="chip" Content="Portuguese" Tag="por" IsCheckedChanged="AudioLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Classes="chip" Content="Turkish" Tag="tur" IsCheckedChanged="AudioLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Classes="chip" Content="Arabic" Tag="ara" IsCheckedChanged="AudioLang_Checked" Margin="0,0,8,8"/>
+                    </WrapPanel>
+                    <TextBlock Classes="field" Margin="0,16,0,8" Text="Subtitles"/>
+                    <WrapPanel x:Name="SubLangChips">
+                        <RadioButton Classes="chip" Content="Off" Tag="" IsCheckedChanged="SubLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Classes="chip" Content="English" Tag="eng" IsCheckedChanged="SubLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Classes="chip" Content="French" Tag="fra" IsCheckedChanged="SubLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Classes="chip" Content="German" Tag="deu" IsCheckedChanged="SubLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Classes="chip" Content="Spanish" Tag="spa" IsCheckedChanged="SubLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Classes="chip" Content="Italian" Tag="ita" IsCheckedChanged="SubLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Classes="chip" Content="Polish" Tag="pol" IsCheckedChanged="SubLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Classes="chip" Content="Portuguese" Tag="por" IsCheckedChanged="SubLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Classes="chip" Content="Turkish" Tag="tur" IsCheckedChanged="SubLang_Checked" Margin="0,0,8,8"/>
+                        <RadioButton Classes="chip" Content="Arabic" Tag="ara" IsCheckedChanged="SubLang_Checked" Margin="0,0,8,8"/>
+                    </WrapPanel>
+                    <CheckBox x:Name="NightToggle" Classes="toggle" IsCheckedChanged="Night_Changed" Margin="0,12,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Night mode" FontWeight="SemiBold"/>
+                            <TextBlock Text="Evens out loud and quiet sounds, so you can hear dialogue without explosions waking the house. Also in the player's picture &amp; sound menu."
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <TextBlock Text="Changes apply to the next stream you open. Aspect ratio, crop, audio sync and subtitle timing are in the player's picture &amp; sound menu."
+                               Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,14,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Appearance & start-up -->
+            <TextBlock Classes="section" Text="APPEARANCE &amp; START-UP"/>
+            <Border Classes="card">
+                <StackPanel>
+                    <CheckBox x:Name="ArtToggle" Classes="toggle" IsCheckedChanged="Art_Changed" Margin="0,0,0,16">
+                        <StackPanel>
+                            <TextBlock Text="Programme artwork" FontWeight="SemiBold"/>
+                            <TextBlock Text="Shows a picture of the programme itself on Home, from your TV guide, your Films and TV Shows, or TVmaze (a free TV database – only the programme's name is sent)."
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <CheckBox x:Name="StartWinToggle" Classes="toggle" IsCheckedChanged="StartWin_Changed">
+                        <StackPanel>
+                            <TextBlock Text="Start when I log in" FontWeight="SemiBold"/>
+                            <TextBlock Text="Opens Dingus when you log in to your desktop."
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </CheckBox>
+                </StackPanel>
+            </Border>
+
+            <!-- Parental controls -->
+            <TextBlock Classes="section" Text="PARENTAL CONTROLS"/>
+            <Border Classes="card">
+                <StackPanel>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="PinButton" Content="Set a PIN" Click="Pin_Click"/>
+                            <Button x:Name="RemovePinButton" Classes="ghost" Content="Remove PIN" Margin="8,0,0,0" Click="RemovePin_Click"/>
+                            <Button x:Name="LockNowButton" Classes="ghost" Content="Lock now" Margin="8,0,0,0" Click="LockNow_Click"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Parental PIN" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="PinStatus" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <StackPanel x:Name="LockPanel">
+                        <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                        <CheckBox x:Name="AutoLockToggle" Classes="toggle" IsCheckedChanged="AutoLock_Changed" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="Lock adult categories automatically" FontWeight="SemiBold"/>
+                                <TextBlock Text="Any category called “Adult”, “XXX”, “18+” and similar is locked, including new ones."
+                                           Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </CheckBox>
+                        <DockPanel Margin="0,4,0,10">
+                            <StackPanel x:Name="LockKindChips" Orientation="Horizontal" VerticalAlignment="Center">
+                                <RadioButton Classes="chip" Content="Live TV" Tag="live" IsCheckedChanged="LockKind_Checked" GroupName="LockKind"/>
+                                <RadioButton Classes="chip" Content="Films" Tag="vod" IsCheckedChanged="LockKind_Checked" GroupName="LockKind"/>
+                                <RadioButton Classes="chip" Content="TV Shows" Tag="series" IsCheckedChanged="LockKind_Checked" GroupName="LockKind"/>
+                            </StackPanel>
+                        </DockPanel>
+                        <TextBlock Text="Tick the categories to lock. Locked categories disappear everywhere until the PIN is entered (lock button at the top of the app)."
+                                   Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,0,0,12" TextWrapping="Wrap"/>
+                        <ItemsControl x:Name="LockChecks">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Columns="3"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Backup -->
+            <TextBlock Classes="section" Text="BACKUP &amp; RESTORE"/>
+            <Border Classes="card">
+                <StackPanel>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="Back up…" Click="Backup_Click"/>
+                            <Button Classes="ghost" Content="Restore…" Margin="8,0,0,0" Click="Restore_Click"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Save everything to one file" FontWeight="SemiBold"/>
+                            <TextBlock Text="Playlists, favourites, channel edits, settings, watch history and reminders – to move to a new computer or keep safe."
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <CheckBox x:Name="BackupPasswordsToggle" Margin="0,14,0,0">
+                        <TextBlock TextWrapping="Wrap" Text="Include playlist passwords (saved in plain text in the backup file – keep it private)"/>
+                    </CheckBox>
+                </StackPanel>
+            </Border>
+
+            <!-- Storage -->
+            <TextBlock Classes="section" Text="STORAGE &amp; ABOUT"/>
+            <Border Classes="card">
+                <StackPanel>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Content="Clear image cache" Click="ClearImages_Click"/>
+                            <Button Classes="ghost" Content="Open data folder" Margin="8,0,0,0" Click="OpenData_Click"/>
+                        </StackPanel>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Cached logos &amp; posters" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="CacheText" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="Check for updates" Click="CheckUpdates_Click"/>
+                            <Button Classes="ghost" Content="Release notes" Margin="8,0,0,0" Click="ReleaseNotes_Click"/>
+                        </StackPanel>
+                        <CheckBox x:Name="AutoUpdateToggle" Classes="toggle" IsCheckedChanged="AutoUpdate_Changed">
+                            <StackPanel>
+                                <TextBlock Text="Check for updates automatically" FontWeight="SemiBold"/>
+                                <TextBlock Text="Once a day, from the Dingus releases page on GitHub. You're always asked before anything is installed."
+                                           Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </CheckBox>
+                    </DockPanel>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                    <TextBlock x:Name="VersionText" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

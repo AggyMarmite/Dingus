@@ -1,0 +1,266 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svc="clr-namespace:Dingus.Services"
+             xmlns:local="clr-namespace:Dingus"
+             x:Class="Dingus.Views.GuideView">
+    <UserControl.Styles>
+        <Style Selector="Border.block">
+            <Setter Property="Background" Value="{StaticResource Surface2Brush}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Border.block:pointerover">
+            <Setter Property="Background" Value="{StaticResource Surface3Brush}"/>
+        </Style>
+        <Style Selector="Border.block.now">
+            <Setter Property="Background" Value="{StaticResource AccentSoftBrush}"/>
+        </Style>
+        <Style Selector="Border.block.now TextBlock.title">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Border.block.past">
+            <Setter Property="Opacity" Value="0.55"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid ColumnDefinitions="232,*">
+
+        <!-- ===== Categories ===== -->
+        <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,1,0">
+            <DockPanel>
+                <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="14,16,0,6">
+                    <RadioButton x:Name="ModeGrid" Classes="chip" GroupName="GuideMode" Content="Guide" Tag="grid"
+                                 IsChecked="True" IsCheckedChanged="Mode_Checked" ToolTip.Tip="The full TV guide grid"/>
+                    <RadioButton x:Name="ModeNow" Classes="chip" GroupName="GuideMode" Content="On now" Tag="now"
+                                 IsCheckedChanged="Mode_Checked" ToolTip.Tip="What's on right now"/>
+                    <RadioButton x:Name="ModeTonight" Classes="chip" GroupName="GuideMode" Content="Tonight" Tag="tonight"
+                                 IsCheckedChanged="Mode_Checked" ToolTip.Tip="What's on this evening"/>
+                </WrapPanel>
+                <TextBlock DockPanel.Dock="Top" Text="CATEGORIES" Margin="20,12,0,8" FontSize="11" FontWeight="SemiBold" Classes="muted"/>
+                <ListBox x:Name="CategoryList" Classes="clean categories" SelectionChanged="CategoryList_SelectionChanged" Padding="0,0,0,12">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- ===== Guide ===== -->
+        <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*">
+
+            <!-- Hero: live mini player + programme details -->
+            <Grid Margin="22,18,22,16" ColumnDefinitions="Auto,*">
+                <Border x:Name="PreviewSlot" Width="416" Height="234" CornerRadius="8" Background="#000000">
+                    <StackPanel x:Name="PreviewPlaceholder" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock Classes="icon muted" Text="{x:Static local:Icons.LiveTv}" FontSize="34" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Pick a channel to preview" Classes="muted" Margin="0,10,0,0" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <StackPanel x:Name="HeroPanel" Grid.Column="1" Margin="26,2,0,0" Opacity="0">
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="52" Height="34" CornerRadius="6" Background="{StaticResource Surface2Brush}">
+                            <Image x:Name="HeroLogo" Margin="4" svc:ImageLoader.DecodeWidth="104"/>
+                        </Border>
+                        <TextBlock x:Name="HeroChannel" FontSize="13" Classes="muted" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                    </StackPanel>
+                    <TextBlock x:Name="HeroTitle" FontSize="24" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,10,0,0"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Border x:Name="HeroLive" Background="{StaticResource LiveBrush}" CornerRadius="4" Padding="7,1" Margin="0,0,10,0" VerticalAlignment="Center">
+                            <TextBlock Text="LIVE" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                        </Border>
+                        <TextBlock x:Name="HeroTime" FontSize="13" Classes="muted" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <ProgressBar x:Name="HeroProgress" Classes="thin" Width="300" HorizontalAlignment="Left" Margin="0,10,0,0"/>
+                    <TextBlock x:Name="HeroDesc" FontSize="13" Classes="muted" TextWrapping="Wrap" TextTrimming="WordEllipsis"
+                               MaxHeight="38" Margin="0,10,0,0" MaxWidth="760" HorizontalAlignment="Left"/>
+                    <TextBlock x:Name="HeroNext" FontSize="12" Margin="0,8,0,0" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="HeroVersions" FontSize="11" Margin="0,4,0,0" Classes="muted" TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="Merged channel – if one version stops working, the next one is tried automatically"/>
+                    <WrapPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button Classes="primary" Click="WatchFull_Click" Margin="0,0,8,8">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Classes="icon" Text="{x:Static local:Icons.Fullscreen}"/>
+                                <TextBlock Text="Watch full screen" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="CatchupButton" Margin="0,0,8,8" Click="Catchup_Click" IsVisible="False"
+                                ToolTip.Tip="Play this programme from the beginning (catch-up)">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Classes="icon" Text="{x:Static local:Icons.Catchup}"/>
+                                <TextBlock x:Name="CatchupText" Text="Start over" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="RecordHeroButton" Margin="0,0,8,8" Click="RecordHero_Click" IsVisible="False" ToolTip.Tip="Record this programme">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Classes="icon" Text="{x:Static local:Icons.Record}" Foreground="{StaticResource LiveBrush}"/>
+                                <TextBlock x:Name="RecordHeroText" Text="Record" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="RemindButton" Margin="0,0,8,8" Click="Remind_Click" IsVisible="False" ToolTip.Tip="Get a pop-up a minute before it starts">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Classes="icon" Text="{x:Static local:Icons.Bell}"/>
+                                <TextBlock x:Name="RemindText" Text="Remind me" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="FavButton" Margin="0,0,8,8" Click="Fav_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock x:Name="FavGlyph" Classes="icon" Text="{x:Static local:Icons.StarOutline}"/>
+                                <TextBlock x:Name="FavText" Text="Favourite" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </WrapPanel>
+                </StackPanel>
+            </Grid>
+
+            <!-- Timeline header -->
+            <Grid x:Name="TimelineHeader" Grid.Row="1" Height="40" Background="{StaticResource SurfaceBrush}" ColumnDefinitions="300,*">
+                <StackPanel Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center">
+                    <Button Classes="icon" Content="{x:Static local:Icons.ChevronLeft}" Width="30" Height="30" ToolTip.Tip="Earlier" Click="Earlier_Click"/>
+                    <Button Classes="ghost" Content="Now" Padding="10,5" Click="Now_Click"/>
+                    <Button Classes="icon" Content="{x:Static local:Icons.ChevronRight}" Width="30" Height="30" ToolTip.Tip="Later" Click="Later_Click"/>
+                    <TextBlock x:Name="DayText" Margin="10,0,0,0" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                </StackPanel>
+                <Canvas x:Name="TimeHeader" Grid.Column="1" ClipToBounds="True"/>
+            </Grid>
+
+            <!-- Channel rows -->
+            <ListBox x:Name="ChannelList" Grid.Row="2" Classes="clean" SelectionChanged="ChannelList_SelectionChanged"
+                     DoubleTapped="ChannelList_DoubleTapped" KeyDown="ChannelList_KeyDown">
+                <ListBox.ContextMenu>
+                    <ContextMenu x:Name="ChannelMenu" Opening="Ctx_Opening">
+                        <MenuItem x:Name="CtxRecord" Header="Record" Click="CtxRecord_Click"/>
+                        <MenuItem x:Name="CtxRemind" Header="Remind me" Click="CtxRemind_Click"/>
+                        <Separator x:Name="CtxRemindSep"/>
+                        <MenuItem Header="Watch full screen" Click="WatchFull_Click"/>
+                        <MenuItem Header="Add / remove favourite" Click="Fav_Click"/>
+                        <Separator/>
+                        <MenuItem Header="Match TV guide…" Click="MatchGuide_Click"/>
+                        <MenuItem Header="Rename channel…" Click="Rename_Click"/>
+                        <MenuItem Header="Hide channel" Click="Hide_Click"/>
+                        <MenuItem Header="Edit channels (order, names, hidden)…" Click="EditChannels_Click"/>
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Height="68" ColumnDefinitions="300,*">
+                            <Grid Margin="14,0,10,0" ColumnDefinitions="18,60,*">
+                                <TextBlock Classes="icon" Text="{x:Static local:Icons.Star}" FontSize="12" Foreground="#FBBF24"
+                                           IsVisible="{Binding IsFavourite}" ToolTip.Tip="Favourite"/>
+                                <Border Grid.Column="1" Width="56" Height="40" CornerRadius="6" Background="{StaticResource Surface2Brush}">
+                                    <Panel>
+                                        <TextBlock Text="{Binding Initials}" FontSize="12" FontWeight="SemiBold" Classes="muted"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <Image Margin="4" svc:ImageLoader.DecodeWidth="112" svc:ImageLoader.Url="{Binding Logo}"/>
+                                    </Panel>
+                                </Border>
+                                <TextBlock Grid.Column="2" Text="{Binding DisplayName}" ToolTip.Tip="{Binding Name}" Margin="10,0,4,0"
+                                           VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"
+                                           TextTrimming="CharacterEllipsis" MaxHeight="36" LineHeight="17"/>
+                            </Grid>
+                            <ItemsControl Grid.Column="1" ItemsSource="{Binding Blocks}" Margin="0,6" Focusable="False">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><Panel ClipToBounds="True"/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Classes="block" Classes.now="{Binding IsNow}" Classes.past="{Binding IsPast}"
+                                                HorizontalAlignment="Left" Margin="{Binding LeftMargin}" Width="{Binding Width}" Height="56" CornerRadius="6" Padding="10,7"
+                                                BorderThickness="3,0,0,0" BorderBrush="{Binding GenreBrush}"
+                                                PointerReleased="Block_PointerReleased">
+                                            <StackPanel>
+                                                <DockPanel>
+                                                    <TextBlock DockPanel.Dock="Left" Classes="icon" Text="{x:Static local:Icons.Catchup}" FontSize="12"
+                                                               Margin="0,1,6,0" Foreground="#FBBF24" IsVisible="{Binding CanCatchup}" ToolTip.Tip="Catch-up available"/>
+                                                    <TextBlock DockPanel.Dock="Left" Classes="icon" Text="{x:Static local:Icons.BellRing}" FontSize="12"
+                                                               Margin="0,1,6,0" Foreground="{StaticResource AccentBrush}" IsVisible="{Binding HasReminder}" ToolTip.Tip="Reminder set"/>
+                                                    <Ellipse DockPanel.Dock="Left" Width="8" Height="8" Margin="0,4,7,0" VerticalAlignment="Top"
+                                                             Fill="{StaticResource LiveBrush}" IsVisible="{Binding HasRecording}" ToolTip.Tip="Set to record"/>
+                                                    <TextBlock Classes="title" Text="{Binding Title}" FontSize="13" TextTrimming="CharacterEllipsis"/>
+                                                </DockPanel>
+                                                <TextBlock Text="{Binding TimeText}" FontSize="11" Margin="0,3,0,0" Classes="muted" TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Now marker -->
+            <Canvas x:Name="NowLayer" Grid.Row="1" Grid.RowSpan="2" IsHitTestVisible="False" ClipToBounds="True">
+                <Rectangle x:Name="NowLine" Width="2" Fill="{StaticResource LiveBrush}" IsVisible="False"/>
+            </Canvas>
+
+            <!-- "On now" and "Tonight" lists (replace the grid while selected) -->
+            <Panel x:Name="ListMode" Grid.Row="1" Grid.RowSpan="2" Background="{StaticResource BgBrush}" IsVisible="False">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Height="40" Background="{StaticResource SurfaceBrush}">
+                        <StackPanel Orientation="Horizontal" Margin="20,0">
+                            <TextBlock x:Name="ListTitle" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="ListSub" Classes="muted" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                    <ListBox x:Name="NowList" Classes="clean" SelectionChanged="NowList_SelectionChanged"
+                             DoubleTapped="NowList_DoubleTapped" KeyDown="NowList_KeyDown">
+                        <ListBox.ContextMenu>
+                            <ContextMenu x:Name="NowMenu" Opening="Ctx_Opening">
+                                <MenuItem x:Name="CtxRecord2" Header="Record" Click="CtxRecord_Click"/>
+                                <MenuItem x:Name="CtxRemind2" Header="Remind me" Click="CtxRemind_Click"/>
+                                <Separator x:Name="CtxRemindSep2"/>
+                                <MenuItem Header="Watch full screen" Click="WatchFull_Click"/>
+                                <MenuItem Header="Add / remove favourite" Click="Fav_Click"/>
+                            </ContextMenu>
+                        </ListBox.ContextMenu>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Height="66" ColumnDefinitions="4,96,66,210,*">
+                                    <Border Background="{Binding GenreBrush}" Margin="0,10" CornerRadius="2"/>
+                                    <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding TimeText}" FontSize="14" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding SubTime}" FontSize="11" Classes="muted" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <Border Grid.Column="2" Width="56" Height="40" CornerRadius="6" Background="{StaticResource Surface2Brush}">
+                                        <Panel>
+                                            <TextBlock Text="{Binding Row.Initials}" FontSize="12" FontWeight="SemiBold" Classes="muted"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <Image Margin="4" svc:ImageLoader.DecodeWidth="112" svc:ImageLoader.Url="{Binding Row.Logo}"/>
+                                        </Panel>
+                                    </Border>
+                                    <TextBlock Grid.Column="3" Margin="12,0,10,0" VerticalAlignment="Center" Text="{Binding Row.DisplayName}"
+                                               ToolTip.Tip="{Binding Row.Name}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"
+                                               TextTrimming="CharacterEllipsis" MaxHeight="36" LineHeight="17"/>
+                                    <StackPanel Grid.Column="4" Margin="0,0,20,0" VerticalAlignment="Center">
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Left" Classes="icon" Text="{x:Static local:Icons.Catchup}" FontSize="12"
+                                                       Margin="0,1,6,0" Foreground="#FBBF24" IsVisible="{Binding CanCatchup}" ToolTip.Tip="Catch-up available"/>
+                                            <TextBlock DockPanel.Dock="Left" Classes="icon" Text="{x:Static local:Icons.BellRing}" FontSize="12"
+                                                       Margin="0,1,6,0" Foreground="{StaticResource AccentBrush}" IsVisible="{Binding HasReminder}" ToolTip.Tip="Reminder set"/>
+                                            <TextBlock Text="{Binding Title}" FontSize="14" TextTrimming="CharacterEllipsis"/>
+                                        </DockPanel>
+                                        <TextBlock Text="{Binding Genre}" FontSize="11" Classes="muted" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                                        <ProgressBar Classes="thin" Value="{Binding Progress, Mode=OneTime}" Height="3" Margin="0,6,0,0" MaxWidth="420"
+                                                     HorizontalAlignment="Stretch" IsVisible="{Binding IsLive}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+                <StackPanel x:Name="ListEmpty" VerticalAlignment="Center" HorizontalAlignment="Center" IsVisible="False">
+                    <TextBlock x:Name="ListEmptyTitle" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="ListEmptyBody" Classes="muted" Margin="0,6,0,0" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Panel>
+
+            <!-- Empty state -->
+            <StackPanel x:Name="EmptyState" Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center" IsVisible="False">
+                <TextBlock x:Name="EmptyTitle" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                <TextBlock x:Name="EmptyBody" Classes="muted" Margin="0,6,0,0" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -342,7 +342,34 @@
         <Setter Property="AllowAutoHide" Value="True"/>
     </Style>
 
-    <!-- ============ Toggle switches (settings) ============ -->
+    <!-- ============ Toggle switches (settings): text on the left, switch on the right ============ -->
+    <Style Selector="CheckBox.toggle">
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <DockPanel Background="Transparent">
+                    <Border Name="Track" DockPanel.Dock="Right" Width="42" Height="24" CornerRadius="12" Background="#2E384B"
+                            VerticalAlignment="Top" Margin="20,2,0,0">
+                        <Border.Transitions><Transitions><BrushTransition Property="Background" Duration="0:0:0.15"/></Transitions></Border.Transitions>
+                        <Border Name="Knob" Width="18" Height="18" CornerRadius="9" Background="#C9D0DC" HorizontalAlignment="Left" Margin="3,0">
+                            <Border.Transitions><Transitions><ThicknessTransition Property="Margin" Duration="0:0:0.15"/></Transitions></Border.Transitions>
+                        </Border>
+                    </Border>
+                    <ContentPresenter Content="{TemplateBinding Content}" VerticalAlignment="Center"/>
+                </DockPanel>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    <Style Selector="CheckBox.toggle:checked /template/ Border#Track">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+    </Style>
+    <Style Selector="CheckBox.toggle:checked /template/ Border#Knob">
+        <Setter Property="Margin" Value="21,0,3,0"/>
+        <Setter Property="Background" Value="White"/>
+    </Style>
+
+    <!-- ============ Toggle switches (Fluent) ============ -->
     <Style Selector="ToggleSwitch">
         <Setter Property="OnContent" Value=""/>
         <Setter Property="OffContent" Value=""/>

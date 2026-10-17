@@ -1,0 +1,59 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Dingus"
+        x:Class="Dingus.Views.PlaylistDialog"
+        Title="Playlist" Width="520" SizeToContent="Height" CanResize="False"
+        SystemDecorations="BorderOnly" WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{StaticResource SurfaceBrush}">
+    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
+        <StackPanel Margin="28,22,28,24">
+            <DockPanel x:Name="Header" Background="Transparent" PointerPressed="Header_PointerPressed" Margin="0,0,0,8">
+                <Button DockPanel.Dock="Right" Classes="icon" Content="{x:Static local:Icons.Close}" FontSize="15" Click="Cancel_Click"
+                        Margin="0,-6,-12,0" VerticalAlignment="Top"/>
+                <TextBlock x:Name="HeaderText" Text="Add playlist" FontSize="20" FontWeight="SemiBold"/>
+            </DockPanel>
+
+            <TextBlock Classes="field" Text="Playlist name" Margin="0,14,0,6"/>
+            <TextBox x:Name="NameBox" Watermark="e.g. Home, Sport, Backup"/>
+
+            <TextBlock Classes="field" Text="Type" Margin="0,14,0,6"/>
+            <StackPanel Orientation="Horizontal">
+                <RadioButton x:Name="TypeXtream" Classes="chip" GroupName="PlType" Content="Xtream Codes login" IsCheckedChanged="Type_Checked"/>
+                <RadioButton x:Name="TypeM3u" Classes="chip" GroupName="PlType" Content="M3U link or file" IsCheckedChanged="Type_Checked"/>
+            </StackPanel>
+
+            <StackPanel x:Name="XtreamPanel">
+                <TextBlock Classes="field" Text="Server address" Margin="0,14,0,6"/>
+                <TextBox x:Name="ServerBox" Watermark="http://provider.example:8080"/>
+                <Grid ColumnDefinitions="*,12,*">
+                    <StackPanel>
+                        <TextBlock Classes="field" Text="Username" Margin="0,14,0,6"/>
+                        <TextBox x:Name="UserBox"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Classes="field" Text="Password" Margin="0,14,0,6"/>
+                        <TextBox x:Name="PassBox" PasswordChar="•" RevealPassword="False"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+
+            <StackPanel x:Name="M3uPanel" IsVisible="False">
+                <TextBlock Classes="field" Text="M3U address (or a file on this computer)" Margin="0,14,0,6"/>
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="Browse…" Margin="8,0,0,0" Click="Browse_Click"/>
+                    <TextBox x:Name="M3uBox" Watermark="http://provider.example/get.php?username=…&amp;type=m3u_plus"/>
+                </DockPanel>
+            </StackPanel>
+
+            <TextBlock Classes="field" Text="TV guide address (optional)" Margin="0,14,0,6"/>
+            <TextBox x:Name="EpgBox" Watermark="Leave empty to use the provider's guide"/>
+
+            <TextBlock x:Name="ErrorText" Foreground="#FCA5A5" TextWrapping="Wrap" Margin="0,14,0,0" IsVisible="False"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0" Spacing="8">
+                <Button Classes="ghost" Content="Cancel" Click="Cancel_Click" IsCancel="True"/>
+                <Button x:Name="SaveButton" Classes="primary" Content="Save" MinWidth="110" Click="Save_Click" IsDefault="True"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

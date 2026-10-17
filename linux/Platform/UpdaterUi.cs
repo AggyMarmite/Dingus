@@ -1,0 +1,107 @@
+using System.Diagnostics;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Layout;
+using Avalonia.Media;
+
+namespace Dingus.Services;
+
+/// <summary>
+/// Updates on Linux: the AppImage downloads the new AppImage from the releases page, swaps itself for it
+/// and starts again.
+/// </summary>
+public static partial class Updater
+{
+    static IBrush Res(string key) =>
+        Application.Current!.TryGetResource(key, null, out var v) && v is IBrush b ? b : Brushes.Gray;
+
+    /// <summary>The AppImage file we're running from, if any.</summary>
+    static string AppImagePath => Environment.GetEnvironmentVariable("APPIMAGE");
+
+    public static async Task CheckAsync(Window owner, bool manual)
+    {
+        var s = SettingsStore.Current;
+        if (!manual && (!s.AutoUpdate || DateTime.UtcNow - s.LastUpdateCheckUtc < TimeSpan.FromHours(20))) return;
+        Release r;
+        try
+        {
+            r = await LatestAsync();
+            s.LastUpdateCheckUtc = DateTime.UtcNow;
+            SettingsStore.Save();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex);
+            if (manual) MainWindow.Instance?.ShowToast("Couldn't check for updates: " + Http.Friendly(ex));
+            return;
+        }
+        if (r == null || !IsNewer(r.Version))
+        {
+            if (manual) MainWindow.Instance?.ShowToast($"You're up to date (Dingus {Current.ToString(3)}).");
+            return;
+        }
+        if (!manual && s.SkippedVersion == r.Tag) return;
+        await Offer(owner, r);
+    }
+
+    static async Task Offer(Window owner, Release r)
+    {
+        bool canSwap = AppImagePath != null && File.Exists(AppImagePath);
+        var update = new Button { Content = canSwap ? "Update now" : "Open the download page", Classes = { "primary" }, IsDefault = true };
+        var later = new Button { Content = "Later", IsCancel = true };
+        var skip = new Button { Content = "Skip this version", Classes = { "ghost" } };
+        var status = new TextBlock { Foreground = Res("MutedBrush"), Margin = new Thickness(0, 12, 0, 0), FontSize = 12, TextWrapping = TextWrapping.Wrap };
+        var notes = new TextBox
+        {
+            Text = Tidy(r.Notes), IsReadOnly = true, TextWrapping = TextWrapping.Wrap, MaxHeight = 220, FontSize = 12,
+            Margin = new Thickness(0, 12, 0, 18),
+        };
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        buttons.Children.Add(update); buttons.Children.Add(later); buttons.Children.Add(skip);
+        var stack = new StackPanel();
+        stack.Children.Add(new TextBlock { Text = $"Dingus {r.Version.ToString(3)} is available", FontSize = 19, FontWeight = FontWeight.SemiBold });
+        stack.Children.Add(new TextBlock
+        {
+            Text = canSwap
+                ? $"You have {Current.ToString(3)}. The update downloads ({r.Size / 1024.0 / 1024.0:0} MB), then Dingus closes, updates and opens again."
+                : $"You have {Current.ToString(3)}. Download the new AppImage from the releases page.",
+            Foreground = Res("MutedBrush"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0),
+        });
+        if (notes.Text.Length > 0) stack.Children.Add(notes); else stack.Children.Add(new Border { Height = 18 });
+        stack.Children.Add(buttons);
+        stack.Children.Add(status);
+        var w = Dialogs.Frame("Update available", stack, 520);
+        later.Click += (_, _) => w.Close();
+        skip.Click += (_, _) => { SettingsStore.Current.SkippedVersion = r.Tag; SettingsStore.Save(); w.Close(); };
+        update.Click += async (_, _) =>
+        {
+            if (!canSwap) { OpenUrl(r.PageUrl ?? ReleasesPage); w.Close(); return; }
+            update.IsEnabled = later.IsEnabled = skip.IsEnabled = false;
+            try
+            {
+                var path = await DownloadAsync(r, p => status.Text = $"Downloading… {p:0}%");
+                status.Text = "Installing…";
+                var target = AppImagePath;
+                var staged = target + ".new";
+                File.Copy(path, staged, true);
+                File.SetUnixFileMode(staged, File.GetUnixFileMode(target) | UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute);
+                File.Move(staged, target, true); // the running copy keeps working until it closes
+                App.Restart();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex);
+                status.Text = "The update didn't work: " + Http.Friendly(ex) + ". You can get it from the releases page instead.";
+                update.IsEnabled = later.IsEnabled = skip.IsEnabled = true;
+                update.Content = "Try again";
+            }
+        };
+        await Dialogs.Show(w, owner);
+    }
+
+    public static void OpenUrl(string url)
+    {
+        try { Process.Start(new ProcessStartInfo("xdg-open", url) { UseShellExecute = false }); }
+        catch (Exception ex) { Log.Error(ex); }
+    }
+}

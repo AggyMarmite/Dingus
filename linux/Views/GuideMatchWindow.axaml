@@ -1,0 +1,47 @@
+<Window xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svc="clr-namespace:Dingus.Services"
+             xmlns:local="clr-namespace:Dingus"
+             x:Class="Dingus.Views.GuideMatchWindow"
+        Title="Match TV guide" Width="640" Height="620" MinWidth="520" MinHeight="420"
+        SystemDecorations="BorderOnly" WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{StaticResource SurfaceBrush}">
+    <DockPanel Margin="24,20,24,20" Background="{StaticResource SurfaceBrush}">
+        <DockPanel DockPanel.Dock="Top" Background="Transparent" PointerPressed="Header_PointerPressed">
+            <Button DockPanel.Dock="Right" Classes="icon" Content="{x:Static local:Icons.Close}" FontSize="11" Click="Cancel_Click"
+                    VerticalAlignment="Top" Margin="0,-6,-10,0"/>
+            <StackPanel>
+                <TextBlock Text="Match TV guide" FontSize="20" FontWeight="SemiBold"/>
+                <TextBlock x:Name="ForText" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                <TextBlock x:Name="CurrentText" Classes="muted" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
+            </StackPanel>
+        </DockPanel>
+
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Classes="ghost" Content="No guide for this channel" Click="NoGuide_Click" Margin="0,0,8,0"
+                    ToolTip.Tip="Stop showing guide data for this channel"/>
+            <Button Classes="ghost" Content="Match automatically" Click="Auto_Click" Margin="0,0,8,0"
+                    ToolTip.Tip="Forget your choice and let Dingus match it"/>
+            <Button x:Name="UseButton" Classes="primary" Content="Use this guide" Click="Use_Click" IsEnabled="False"/>
+        </StackPanel>
+
+        <TextBox DockPanel.Dock="Top" x:Name="SearchBox" Tag="Search the guide's channels" Margin="0,16,0,10" TextChanged="Search_TextChanged"/>
+        <TextBlock DockPanel.Dock="Top" x:Name="CountText" Classes="muted" FontSize="12" Margin="2,0,0,8"/>
+
+        <ListBox x:Name="SourceList" Classes="clean" SelectionChanged="SourceList_SelectionChanged" DoubleTapped="SourceList_DoubleTapped">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Margin="14,9">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding Id}" Classes="muted" FontSize="11"
+                                       Margin="12,0,0,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                        </DockPanel>
+                        <TextBlock Text="{Binding Now}" Classes="muted" FontSize="12" Margin="0,3,0,0"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</Window>

@@ -176,6 +176,10 @@ public class ZapItem
 
 public class ProgBlock
 {
+#if LINUX
+    /// <summary>Where the block sits along the row (Linux lays blocks out with a left margin).</summary>
+    public Avalonia.Thickness LeftMargin => new(Left, 0, 0, 0);
+#endif
     public string Title { get; set; }
     public string TimeText { get; set; }
     public double Left { get; set; }

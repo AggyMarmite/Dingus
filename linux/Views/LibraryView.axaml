@@ -1,0 +1,193 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svc="clr-namespace:Dingus.Services"
+             xmlns:local="clr-namespace:Dingus"
+             x:Class="Dingus.Views.LibraryView">
+    <Grid ColumnDefinitions="232,*">
+
+        <!-- ===== Categories ===== -->
+        <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,1,0">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="CATEGORIES" Margin="20,18,0,8" FontSize="11" FontWeight="SemiBold" Classes="muted"/>
+                <ListBox x:Name="CategoryList" Classes="clean categories" SelectionChanged="CategoryList_SelectionChanged" Padding="0,0,0,12">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- ===== Poster grid ===== -->
+        <Grid x:Name="BrowsePane" Grid.Column="1" RowDefinitions="Auto,*">
+            <DockPanel Margin="28,18,28,10">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <RadioButton x:Name="SortAdded" Classes="chip" GroupName="Sort" Content="Recently added" Tag="added" IsCheckedChanged="Sort_Checked"/>
+                    <RadioButton x:Name="SortName" Classes="chip" GroupName="Sort" Content="A–Z" Tag="name" IsCheckedChanged="Sort_Checked"/>
+                    <RadioButton x:Name="SortRating" Classes="chip" GroupName="Sort" Content="Top rated" Tag="rating" IsCheckedChanged="Sort_Checked"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="HeaderText" FontSize="20" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="CountText" FontSize="13" Classes="muted" Margin="12,0,0,0" VerticalAlignment="Bottom" Padding="0,0,0,3"/>
+                </StackPanel>
+            </DockPanel>
+
+            <ListBox x:Name="PosterList" Grid.Row="1" Classes="clean plain" Padding="20,4,8,24" Focusable="False">
+                <ListBox.Styles>
+                    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                        <Setter Property="Background" Value="Transparent"/>
+                    </Style>
+                    <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+                        <Setter Property="Background" Value="Transparent"/>
+                    </Style>
+                </ListBox.Styles>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <ItemsControl ItemsSource="{Binding Items}" Focusable="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Classes="card" Width="156" Margin="8,8,8,14" Click="Poster_Click" ToolTip.Tip="{Binding Title}">
+                                        <StackPanel>
+                                            <Border Width="156" Height="234" CornerRadius="8" ClipToBounds="True" Background="{StaticResource Surface2Brush}">
+                                                <Panel>
+                                                    <TextBlock Text="{Binding Title}" TextWrapping="Wrap" TextAlignment="Center" Margin="12"
+                                                               VerticalAlignment="Center" Classes="muted" FontSize="12"/>
+                                                    <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="240" svc:ImageLoader.Url="{Binding Image}"/>
+                                                    <Border VerticalAlignment="Bottom" Height="5" Background="#99000000" IsVisible="{Binding HasProgress}">
+                                                        <ProgressBar Classes="thin" Value="{Binding Progress, Mode=OneWay}" Margin="8,0" VerticalAlignment="Center" Height="3"/>
+                                                    </Border>
+                                                </Panel>
+                                            </Border>
+                                            <TextBlock Text="{Binding Title}" FontSize="13" Margin="2,9,2,0" TextWrapping="Wrap"
+                                                       TextTrimming="CharacterEllipsis" MaxHeight="36" LineHeight="18"/>
+                                            <TextBlock Text="{Binding Subtitle}" FontSize="11" Margin="2,3,2,0" Classes="muted" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel x:Name="EmptyState" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" IsVisible="False">
+                <TextBlock x:Name="EmptyTitle" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                <TextBlock x:Name="EmptyBody" Classes="muted" Margin="0,6,0,0" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- ===== Details (film or show) ===== -->
+        <Panel x:Name="DetailPane" Grid.Column="1" Background="{StaticResource BgBrush}" IsVisible="False" ClipToBounds="True">
+            <Image x:Name="DetailBackdrop" Stretch="UniformToFill" VerticalAlignment="Top" Height="460" Opacity="0.32" svc:ImageLoader.DecodeWidth="960"/>
+            <Rectangle Height="460" VerticalAlignment="Top">
+                <Rectangle.Fill>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#400A0D13" Offset="0"/>
+                        <GradientStop Color="#FF0A0D13" Offset="1"/>
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+            <Rectangle>
+                <Rectangle.Fill>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                        <GradientStop Color="#E00A0D13" Offset="0"/>
+                        <GradientStop Color="#000A0D13" Offset="0.8"/>
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+
+            <ScrollViewer x:Name="DetailScroll" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="40,20,40,40">
+                    <Button Classes="ghost" HorizontalAlignment="Left" Click="Back_Click" Margin="-12,0,0,0">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Classes="icon" Text="{x:Static local:Icons.Back}"/>
+                            <TextBlock x:Name="BackText" Text="Back" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Grid Margin="0,18,0,0" ColumnDefinitions="Auto,*">
+                        <Border Width="220" Height="330" VerticalAlignment="Top" CornerRadius="10" ClipToBounds="True" Background="{StaticResource Surface2Brush}">
+                            <Image x:Name="DetailPoster" Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="330"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="34,6,0,0">
+                            <TextBlock x:Name="DetailTitle" FontSize="34" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                            <TextBlock x:Name="DetailMeta" FontSize="14" Classes="muted" Margin="0,10,0,0" TextWrapping="Wrap"/>
+                            <TextBlock x:Name="DetailPlot" FontSize="14" TextWrapping="Wrap" MaxWidth="780" HorizontalAlignment="Left"
+                                       Margin="0,18,0,0" LineHeight="22"/>
+                            <TextBlock x:Name="DetailCredits" FontSize="13" Classes="muted" TextWrapping="Wrap" MaxWidth="780"
+                                       HorizontalAlignment="Left" Margin="0,14,0,0"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,24,0,0" Spacing="8">
+                                <Button x:Name="PlayButton" Classes="primary" Padding="22,11" Click="PlayMovie_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <TextBlock Classes="icon" Text="{x:Static local:Icons.Play}" FontSize="18"/>
+                                        <TextBlock x:Name="PlayText" Text="Play" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="StartOverButton" Padding="18,11" Click="StartOver_Click" IsVisible="False">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <TextBlock Classes="icon" Text="{x:Static local:Icons.Refresh}"/>
+                                        <TextBlock Text="Play from start" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                            <ProgressBar x:Name="DetailProgress" Classes="thin" Width="300" HorizontalAlignment="Left" Margin="0,14,0,0" IsVisible="False"/>
+                            <TextBlock x:Name="DetailStatus" Classes="muted" Margin="0,16,0,0" FontSize="12"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel x:Name="SeriesPart" Margin="0,34,0,0" IsVisible="False">
+                        <ItemsControl x:Name="SeasonList">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <RadioButton Classes="chip" GroupName="Season" Content="{Binding Label}" IsCheckedChanged="Season_Checked"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <ItemsControl x:Name="EpisodeList" Margin="-10,10,0,0" MaxWidth="1040" HorizontalAlignment="Left">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Classes="ghost" Click="Episode_Click" Margin="0,0,0,4" Padding="10" HorizontalContentAlignment="Stretch"
+                                            HorizontalAlignment="Stretch">
+                                        <Grid ColumnDefinitions="194,*">
+                                            <Border Width="178" Height="100" HorizontalAlignment="Left" CornerRadius="8" ClipToBounds="True"
+                                                    Background="{StaticResource Surface2Brush}">
+                                                <Panel>
+                                                    <TextBlock Classes="icon muted" Text="{x:Static local:Icons.Play}" FontSize="26" HorizontalAlignment="Center"/>
+                                                    <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="260" svc:ImageLoader.Url="{Binding Image}"/>
+                                                    <Border VerticalAlignment="Bottom" Height="5" Background="#99000000" IsVisible="{Binding HasProgress}">
+                                                        <ProgressBar Classes="thin" Value="{Binding Progress, Mode=OneWay}" Margin="6,0" VerticalAlignment="Center" Height="3"/>
+                                                    </Border>
+                                                    <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6" Padding="6,2" CornerRadius="4"
+                                                            Background="#CC111622" IsVisible="{Binding Watched}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <TextBlock Classes="icon" Text="{x:Static local:Icons.Check}" FontSize="11" Foreground="#4ADE80"/>
+                                                            <TextBlock Text="Watched" FontSize="10" Foreground="White" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </Panel>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                                <TextBlock Text="{Binding Header}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding Meta}" FontSize="12" Classes="muted" Margin="0,4,0,0"/>
+                                                <TextBlock Text="{Binding Plot}" FontSize="12" Classes="muted" Margin="0,6,0,0"
+                                                           TextWrapping="Wrap" TextTrimming="WordEllipsis" MaxHeight="36"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Panel>
+    </Grid>
+</UserControl>

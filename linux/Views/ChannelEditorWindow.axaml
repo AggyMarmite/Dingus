@@ -1,0 +1,89 @@
+<Window xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svc="clr-namespace:Dingus.Services"
+             xmlns:local="clr-namespace:Dingus"
+             x:Class="Dingus.Views.ChannelEditorWindow"
+        Title="Edit channels" Width="980" Height="680" MinWidth="760" MinHeight="460"
+        SystemDecorations="BorderOnly" WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{StaticResource BgBrush}">
+    <DockPanel Background="{StaticResource BgBrush}">
+        <!-- Header -->
+        <Border DockPanel.Dock="Top" Background="{StaticResource SurfaceBrush}" Padding="24,16,16,14"
+                PointerPressed="Header_PointerPressed">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Classes="icon" Content="{x:Static local:Icons.Close}" FontSize="11" Click="Close_Click"
+                        VerticalAlignment="Top" ToolTip.Tip="Close"/>
+                <StackPanel>
+                    <TextBlock Text="Edit channels" FontSize="20" FontWeight="SemiBold"/>
+                    <TextBlock Text="Rename, hide and reorder channels. Changes save as you go and are kept when the playlist refreshes."
+                               Classes="muted" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Footer -->
+        <Border DockPanel.Dock="Bottom" Background="{StaticResource SurfaceBrush}" Padding="24,12">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Classes="primary" Content="Done" Click="Close_Click" Padding="22,9"/>
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Reset order of this category" Click="ResetOrder_Click"/>
+                    <Button Classes="ghost" Content="Show all hidden channels" Margin="8,0,0,0" Click="ShowAll_Click"/>
+                    <TextBlock x:Name="StatusText" Classes="muted" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Grid ColumnDefinitions="250,*">
+
+            <!-- Categories -->
+            <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,1,0">
+                <ListBox x:Name="CategoryList" Classes="clean categories" Margin="0,8,0,0" SelectionChanged="Category_SelectionChanged">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+
+            <DockPanel Grid.Column="1">
+                <Border DockPanel.Dock="Top" Padding="20,14,20,10" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Right" x:Name="CountText" Classes="muted" VerticalAlignment="Center" Margin="14,0,0,0"/>
+                        <TextBox x:Name="FilterBox" Watermark="Filter channels by name" TextChanged="Filter_TextChanged"/>
+                    </DockPanel>
+                </Border>
+                <ListBox x:Name="RowList" Classes="clean">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Height="56" Margin="20,0,16,0" ColumnDefinitions="36,6,58,*,Auto">
+                                <CheckBox IsChecked="{Binding Visible}" VerticalAlignment="Center" Margin="0"
+                                          ToolTip.Tip="Show this channel in Live TV"/>
+                                <Border Grid.Column="2" Width="50" Height="36" CornerRadius="6" Background="{StaticResource Surface2Brush}">
+                                    <Grid>
+                                        <TextBlock Text="{Binding Row.Initials}" FontSize="11" FontWeight="SemiBold" Classes="muted"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <Image Margin="4" svc:ImageLoader.DecodeWidth="100" svc:ImageLoader.Url="{Binding Row.Logo}"/>
+                                    </Grid>
+                                </Border>
+                                <TextBox Grid.Column="3" Margin="10,0" Padding="10,6" Watermark="{Binding Row.OriginalName}"
+                                         Text="{Binding Name, UpdateSourceTrigger=LostFocus}" VerticalAlignment="Center"
+                                         ToolTip.Tip="{Binding Row.Channel.Name}" Opacity="{Binding NameOpacity}"/>
+                                <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button Classes="icon" Content="{x:Static local:Icons.Refresh}" FontSize="14" Width="30" Height="30"
+                                            ToolTip.Tip="Use the provider's name" Click="ResetName_Click" IsVisible="{Binding HasCustomName}"/>
+                                    <Button Classes="icon" Content="{x:Static local:Icons.ArrowUp}" FontSize="15" Width="30" Height="30"
+                                            ToolTip.Tip="Move to the top" Click="Top_Click"/>
+                                    <Button Classes="icon" Content="{x:Static local:Icons.ChevronUp}" FontSize="15" Width="30" Height="30"
+                                            ToolTip.Tip="Move up" Click="Up_Click"/>
+                                    <Button Classes="icon" Content="{x:Static local:Icons.ChevronDown}" FontSize="15" Width="30" Height="30"
+                                            ToolTip.Tip="Move down" Click="Down_Click"/>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Grid>
+    </DockPanel>
+</Window>

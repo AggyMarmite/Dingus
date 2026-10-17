@@ -6,6 +6,12 @@ namespace Dingus.Services;
 /// </summary>
 public static class VlcPaths
 {
+    /// <summary>Why VLC couldn't be loaded, if it couldn't.</summary>
+    public static Exception StartError { get; set; }
+
+    /// <summary>Development only: run the interface without the video engine.</summary>
+    public static bool Disabled => Environment.GetEnvironmentVariable("DINGUS_NO_VLC") == "1";
+
     public static string LibDir
     {
         get

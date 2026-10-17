@@ -15,7 +15,8 @@
     <DefineConstants>$(DefineConstants);LINUX</DefineConstants>
     <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
-    <InvariantGlobalization>false</InvariantGlobalization>
+    <!-- English everywhere; no need for the system's ICU library. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
     <ServerGarbageCollection>false</ServerGarbageCollection>
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
     <TieredPGO>true</TieredPGO>
@@ -34,7 +35,7 @@
   <ItemGroup>
     <Compile Include="../Models/*.cs" LinkBase="Shared/Models" />
     <Compile Include="../Views/ViewModels.cs" LinkBase="Shared/Views" />
-    <Compile Include="../Services/ArtworkService.cs;../Services/Backup.cs;../Services/ChannelMerger.cs;../Services/EpgService.cs;../Services/JsonExt.cs;../Services/M3uParser.cs;../Services/PlayerService.cs;../Services/Timeshift.cs;../Services/XtreamClient.cs;../Services/Core.cs;../Services/DataService.cs;../Services/HistoryStore.cs;../Services/RecordingService.cs;../Services/ReminderService.cs;../Services/Genres.cs;../Services/Parental.cs;../Services/CategoryOrder.cs;../Services/LogoTint.cs;../Services/Updater.cs"
+    <Compile Include="../Services/ArtworkService.cs;../Services/Backup.cs;../Services/ChannelMerger.cs;../Services/EpgService.cs;../Services/JsonExt.cs;../Services/M3uParser.cs;../Services/PlayerService.cs;../Services/Timeshift.cs;../Services/XtreamClient.cs;../Services/Core.cs;../Services/DataService.cs;../Services/HistoryStore.cs;../Services/RecordingService.cs;../Services/ReminderService.cs;../Services/Genres.cs;../Services/Parental.cs;../Services/CategoryOrder.cs;../Services/Updater.cs"
              LinkBase="Shared/Services" />
   </ItemGroup>
 

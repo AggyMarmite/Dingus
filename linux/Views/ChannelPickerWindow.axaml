@@ -1,0 +1,47 @@
+<Window xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svc="clr-namespace:Dingus.Services"
+             xmlns:local="clr-namespace:Dingus"
+             x:Class="Dingus.Views.ChannelPickerWindow"
+        Title="Choose a channel" Width="760" Height="620" SystemDecorations="BorderOnly" CanResize="False"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{StaticResource SurfaceBrush}">
+    <DockPanel Margin="18">
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+            <Button DockPanel.Dock="Right" Classes="icon" Content="{x:Static local:Icons.Close}" FontSize="11" Click="Cancel_Click"/>
+            <TextBlock x:Name="Heading" Text="Choose a channel" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        </DockPanel>
+        <TextBox x:Name="SearchBox" DockPanel.Dock="Top" Tag="Search all channels" Margin="0,0,0,12" TextChanged="Search_Changed"
+                 KeyDown="SearchBox_KeyDown"/>
+        <Grid ColumnDefinitions="200,*">
+            <ListBox x:Name="CategoryList" Classes="clean categories" SelectionChanged="Category_Changed">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <ListBox x:Name="ChannelList" Grid.Column="1" Classes="clean" KeyDown="ChannelList_KeyDown" Tapped="Channel_Click">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Height="46" ColumnDefinitions="0,58,*" Margin="10,0,0,0">
+                            <Border Grid.Column="1" Width="50" Height="34" CornerRadius="5" Background="{StaticResource Surface2Brush}">
+                                <Grid>
+                                    <TextBlock Text="{Binding Initials}" Classes="muted" FontSize="11" FontWeight="SemiBold"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <Image Margin="3" svc:ImageLoader.DecodeWidth="100" svc:ImageLoader.Url="{Binding Logo}"/>
+                                </Grid>
+                            </Border>
+                            <StackPanel Grid.Column="2" Margin="10,0,4,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding Now}" Classes="muted" FontSize="12" Margin="0,2,0,0"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+    </DockPanel>
+</Window>

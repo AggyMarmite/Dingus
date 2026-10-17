@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
+using Avalonia.Controls;
 using Dingus.Services;
 
 namespace Dingus;
@@ -22,7 +23,8 @@ public partial class App : Application
                 MainWindow.Instance?.ShowToast("Something went wrong: " + a.Exception.Message);
             };
 
-            LibVLCSharp.Shared.Core.Initialize(VlcPaths.LibDir);
+            try { LibVLCSharp.Shared.Core.Initialize(VlcPaths.LibDir); }
+            catch (Exception ex) { VlcPaths.StartError = ex; Log.Error(ex); } // the window still opens and explains
             SettingsStore.Load();
             TimeshiftSession.CleanUp(); // live TV buffers from last time
 

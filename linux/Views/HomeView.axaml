@@ -1,0 +1,258 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svc="clr-namespace:Dingus.Services"
+             xmlns:local="clr-namespace:Dingus"
+             x:Class="Dingus.Views.HomeView">
+    <UserControl.Styles>
+        <!-- Big white pill (Watch / More info), see-through pill, round arrow -->
+        <Style Selector="Button.heroPill">
+            <Setter Property="Foreground" Value="#0B0E14"/>
+            <Setter Property="Background" Value="#F4F6FA"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Height" Value="50"/>
+            <Setter Property="Padding" Value="30,0"/>
+            <Setter Property="CornerRadius" Value="25"/>
+        </Style>
+        <Style Selector="Button.heroPill:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.03)"/>
+        </Style>
+        <Style Selector="Button.heroPill:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.97)"/>
+        </Style>
+        <Style Selector="Button.heroGlass">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#2EFFFFFF"/>
+            <Setter Property="BorderBrush" Value="#38FFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="24,0"/>
+        </Style>
+        <Style Selector="Button.heroRound">
+            <Setter Property="Width" Value="50"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
+            <Setter Property="FontSize" Value="22"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+        </Style>
+        <Style Selector="Button.link">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Opacity" Value="0.85"/>
+        </Style>
+        <Style Selector="Button.link:pointerover">
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+        <Style Selector="TextBlock.rowHeader">
+            <Setter Property="FontSize" Value="19"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#C9D0DC"/>
+        </Style>
+        <Style Selector="Border.dot">
+            <Setter Property="Width" Value="6"/>
+            <Setter Property="Height" Value="6"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="Background" Value="#80FFFFFF"/>
+        </Style>
+        <Style Selector="Border.dot.on">
+            <Setter Property="Width" Value="18"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+    </UserControl.Styles>
+
+    <UserControl.Resources>
+        <!-- Channel card: the logo on a tile in the logo's own colour, what's on, the channel -->
+        <DataTemplate x:Key="ChannelCard">
+            <Button Classes="card" Width="220" Margin="8,6,8,10" Click="Channel_Click" ToolTip.Tip="{Binding Row.Name}"
+                    PointerReleased="Card_PointerReleased">
+                <Border CornerRadius="12" Background="{StaticResource SurfaceBrush}" ClipToBounds="True">
+                    <StackPanel>
+                        <Panel Height="124">
+                            <Border Background="{StaticResource Surface3Brush}"/>
+                            <Border x:Name="Tint"/>
+                            <TextBlock Text="{Binding Initials}" FontSize="24" FontWeight="SemiBold" Classes="muted"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Image Margin="40,24" svc:ImageLoader.DecodeWidth="200" svc:ImageLoader.TintTarget="{Binding #Tint}"
+                                   svc:ImageLoader.Url="{Binding Logo}"/>
+                            <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10" Padding="8,2"
+                                    CornerRadius="10" Background="{StaticResource AccentBrush}" IsVisible="{Binding Soon}">
+                                <TextBlock Text="{Binding When}" FontSize="11" FontWeight="SemiBold" Foreground="White"/>
+                            </Border>
+                            <ProgressBar Classes="thin" Value="{Binding Progress, Mode=OneTime}" Foreground="White" Height="3" CornerRadius="0"
+                                         VerticalAlignment="Bottom" IsVisible="{Binding HasProgress}"/>
+                        </Panel>
+                        <StackPanel Margin="12,10,12,12">
+                            <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock FontSize="12" Classes="muted" Margin="0,3,0,0" TextTrimming="CharacterEllipsis">
+                                <Run Text="{Binding Name, Mode=OneWay}"/><Run Text="{Binding WhenSuffix, Mode=OneWay}"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Button>
+        </DataTemplate>
+
+        <DataTemplate x:Key="PosterCard">
+            <Button Classes="card" Width="156" Margin="8,6,8,10" Click="Poster_Click" ToolTip.Tip="{Binding Title}">
+                <StackPanel>
+                    <Border Width="156" Height="234" CornerRadius="8" ClipToBounds="True" Background="{StaticResource Surface2Brush}">
+                        <Panel>
+                            <TextBlock Text="{Binding Title}" TextWrapping="Wrap" TextAlignment="Center" Margin="12"
+                                       VerticalAlignment="Center" Classes="muted" FontSize="12"/>
+                            <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="240" svc:ImageLoader.Url="{Binding Image}"/>
+                            <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" Padding="7,2" CornerRadius="4" Background="{StaticResource AccentBrush}">
+                                <TextBlock Text="NEW" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                            </Border>
+                        </Panel>
+                    </Border>
+                    <TextBlock Text="{Binding Title}" FontSize="13" Margin="2,9,2,0" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding Subtitle}" FontSize="11" Margin="2,3,2,0" Classes="muted" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+            </Button>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ResumeCard">
+            <Button Classes="card" Width="156" Margin="8,6,8,10" Click="Resume_Click" ToolTip.Tip="{Binding Title}">
+                <StackPanel>
+                    <Border Width="156" Height="234" CornerRadius="8" ClipToBounds="True" Background="{StaticResource Surface2Brush}">
+                        <Panel>
+                            <TextBlock Text="{Binding Title}" TextWrapping="Wrap" TextAlignment="Center" Margin="12"
+                                       VerticalAlignment="Center" Classes="muted" FontSize="12"/>
+                            <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="240" svc:ImageLoader.Url="{Binding Image}"/>
+                            <Border VerticalAlignment="Bottom" Height="5" Background="#99000000">
+                                <ProgressBar Classes="thin" Value="{Binding Progress, Mode=OneTime}" Margin="8,0" VerticalAlignment="Center" Height="3"/>
+                            </Border>
+                            <Border HorizontalAlignment="Center" VerticalAlignment="Center" Width="46" Height="46" CornerRadius="23" Background="#99000000">
+                                <TextBlock Classes="icon" Text="{x:Static local:Icons.Play}" FontSize="24" Foreground="White"
+                                           HorizontalAlignment="Center" Margin="2,0,0,0"/>
+                            </Border>
+                        </Panel>
+                    </Border>
+                    <TextBlock Text="{Binding Title}" FontSize="13" Margin="2,9,2,0" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding Subtitle}" FontSize="11" Margin="2,3,2,0" Classes="muted" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+            </Button>
+        </DataTemplate>
+
+        <ItemsPanelTemplate x:Key="RowPanel">
+            <StackPanel Orientation="Horizontal"/>
+        </ItemsPanelTemplate>
+    </UserControl.Resources>
+
+    <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel>
+            <!-- ================= Featured: a big picture with the title over it ================= -->
+            <Panel x:Name="Hero" Height="560" ClipToBounds="True" PointerEntered="Hero_PointerEntered" PointerExited="Hero_PointerExited">
+                <Border Background="{StaticResource BgBrush}"/>
+                <Panel x:Name="HeroArt">
+                    <Panel.Transitions>
+                        <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.35"/></Transitions>
+                    </Panel.Transitions>
+                    <Border x:Name="HeroWash" IsVisible="False">
+                        <Border.Background>
+                            <RadialGradientBrush Center="75%,35%" GradientOrigin="75%,35%" RadiusX="70%" RadiusY="90%">
+                                <GradientStop Color="#2A3F6E" Offset="0"/>
+                                <GradientStop Color="#141B2B" Offset="0.6"/>
+                                <GradientStop Color="#0A0D13" Offset="1"/>
+                            </RadialGradientBrush>
+                        </Border.Background>
+                    </Border>
+                    <Image x:Name="HeroLogo" Width="360" Height="200" Stretch="Uniform" HorizontalAlignment="Right" VerticalAlignment="Center"
+                           Margin="0,0,120,40" svc:ImageLoader.DecodeWidth="720" IsVisible="False"/>
+                    <Image x:Name="HeroBlur" Stretch="UniformToFill" Opacity="0.6" IsVisible="False">
+                        <Image.Effect><BlurEffect Radius="48"/></Image.Effect>
+                    </Image>
+                    <Border x:Name="HeroPosterFrame" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,110,50" CornerRadius="12"
+                            ClipToBounds="True" IsVisible="False" BoxShadow="0 10 40 0 #8C000000">
+                        <Image x:Name="HeroPoster" Stretch="UniformToFill"/>
+                    </Border>
+                    <Image x:Name="HeroBackdrop" Stretch="UniformToFill" VerticalAlignment="Top" IsVisible="False"/>
+                </Panel>
+                <!-- Shading so the text reads, fading into the page at the bottom -->
+                <Border IsHitTestVisible="False">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                            <GradientStop Color="#E60A0D13" Offset="0"/>
+                            <GradientStop Color="#990A0D13" Offset="0.35"/>
+                            <GradientStop Color="#000A0D13" Offset="0.7"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                </Border>
+                <Border IsHitTestVisible="False">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                            <GradientStop Color="#660A0D13" Offset="0"/>
+                            <GradientStop Color="#000A0D13" Offset="0.18"/>
+                            <GradientStop Color="#000A0D13" Offset="0.5"/>
+                            <GradientStop Color="#B30A0D13" Offset="0.82"/>
+                            <GradientStop Color="#FF0A0D13" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                </Border>
+
+                <StackPanel x:Name="HeroText" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="56,0,40,118" MaxWidth="720">
+                    <StackPanel.Transitions>
+                        <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.3"/></Transitions>
+                    </StackPanel.Transitions>
+                    <Border x:Name="HeroChip" HorizontalAlignment="Left" Padding="10,4" CornerRadius="6" Background="#99151A24"
+                            BorderBrush="#26FFFFFF" BorderThickness="1">
+                        <TextBlock x:Name="HeroLabel" FontSize="12" FontWeight="SemiBold" Foreground="White"/>
+                    </Border>
+                    <TextBlock x:Name="HeroTitle" FontSize="52" FontWeight="Bold" Foreground="White"
+                               TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="136" LineHeight="62" Margin="0,12,0,0"/>
+                    <TextBlock x:Name="HeroMeta" FontSize="15" FontWeight="SemiBold" Foreground="#E6EAF2" Margin="0,6,0,0" TextTrimming="CharacterEllipsis"/>
+                    <ProgressBar x:Name="HeroProgress" Classes="thin" Width="280" Height="4" Foreground="White"
+                                 HorizontalAlignment="Left" Margin="0,12,0,0" IsVisible="False"/>
+                    <TextBlock x:Name="HeroDesc" FontSize="14" Foreground="#D5DAE3" TextWrapping="Wrap" TextTrimming="WordEllipsis"
+                               MaxWidth="620" HorizontalAlignment="Left" MaxHeight="62" LineHeight="20.5" Margin="0,12,0,0"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,20,0,0" Spacing="12">
+                        <Button x:Name="HeroPrimary" Classes="heroPill" Click="HeroPrimary_Click" MinWidth="170">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <TextBlock x:Name="HeroPrimaryIcon" Classes="icon" FontSize="20"/>
+                                <TextBlock x:Name="HeroPrimaryText" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="HeroSecondary" Classes="heroPill heroGlass" Click="HeroSecondary_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="9">
+                                <TextBlock x:Name="HeroSecondaryIcon" Classes="icon" FontSize="18"/>
+                                <TextBlock x:Name="HeroSecondaryText" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="HeroNext" Classes="heroPill heroGlass heroRound" Content="{x:Static local:Icons.ChevronRight}"
+                                Click="HeroNext_Click" ToolTip.Tip="Next"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Which slide you're on -->
+                <Border x:Name="HeroDotsBox" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,80" Padding="8,6" CornerRadius="10"
+                        Background="#661A1F2B">
+                    <ItemsControl x:Name="HeroDots">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="Transparent" Padding="3,2" Cursor="Hand" ToolTip.Tip="{Binding Title}" PointerPressed="HeroDot_PointerPressed">
+                                    <Border Classes="dot" Classes.on="{Binding On}"/>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+
+                <!-- Account status -->
+                <Border x:Name="AccountStrip" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,18,28,0" Padding="12,7" CornerRadius="16"
+                        Background="#99151A24" BorderBrush="#26FFFFFF" BorderThickness="1" IsVisible="False">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse x:Name="AccountDot" Width="8" Height="8" Fill="#4ADE80" VerticalAlignment="Center" Margin="0,0,9,0"/>
+                        <TextBlock x:Name="AccountText" FontSize="12" Foreground="#E6EAF2" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </Panel>
+
+            <!-- ================= Rows (they sit up into the bottom of the picture) ================= -->
+            <StackPanel x:Name="Rows" Margin="40,-74,40,40"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

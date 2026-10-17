@@ -1,0 +1,129 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svc="clr-namespace:Dingus.Services"
+             xmlns:local="clr-namespace:Dingus"
+             x:Class="Dingus.Views.SearchView">
+    <UserControl.Resources>
+        <ItemsPanelTemplate x:Key="Row">
+            <WrapPanel/>
+        </ItemsPanelTemplate>
+        <DataTemplate x:Key="SearchPoster">
+            <Button Classes="card" Width="140" Margin="8,6,8,12" Click="Poster_Click" ToolTip.Tip="{Binding Title}">
+                <StackPanel>
+                    <Border Width="140" Height="210" CornerRadius="8" ClipToBounds="True"><Grid>
+                        <Border Background="{StaticResource Surface2Brush}">
+                            <TextBlock Text="{Binding Title}" TextWrapping="Wrap" TextAlignment="Center" Margin="10"
+                                       VerticalAlignment="Center" Classes="muted" FontSize="12"/>
+                        </Border>
+                        <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="220" svc:ImageLoader.Url="{Binding Image}"/>
+                    </Grid></Border>
+                    <TextBlock Text="{Binding Title}" FontSize="13" Margin="2,8,2,0" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding Subtitle}" FontSize="11" Margin="2,2,2,0" Classes="muted" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+            </Button>
+        </DataTemplate>
+    </UserControl.Resources>
+    <Grid>
+        <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="28,10,28,40">
+                <WrapPanel x:Name="Filters" Margin="8,14,0,4">
+                    <RadioButton x:Name="FAll" Classes="chip" GroupName="SearchFilter" Tag="all" IsChecked="True" IsCheckedChanged="Filter_Checked" Margin="0,0,8,8"/>
+                    <RadioButton x:Name="FChannels" Classes="chip" GroupName="SearchFilter" Tag="channels" IsCheckedChanged="Filter_Checked" Margin="0,0,8,8"/>
+                    <RadioButton x:Name="FGuide" Classes="chip" GroupName="SearchFilter" Tag="guide" IsCheckedChanged="Filter_Checked" Margin="0,0,8,8"/>
+                    <RadioButton x:Name="FFilms" Classes="chip" GroupName="SearchFilter" Tag="films" IsCheckedChanged="Filter_Checked" Margin="0,0,8,8"/>
+                    <RadioButton x:Name="FShows" Classes="chip" GroupName="SearchFilter" Tag="shows" IsCheckedChanged="Filter_Checked" Margin="0,0,8,8"/>
+                </WrapPanel>
+
+                <!-- Channels -->
+                <StackPanel x:Name="ChannelSection" IsVisible="False">
+                    <DockPanel Margin="8,14,0,8">
+                        <Button x:Name="ChannelMore" DockPanel.Dock="Right" Classes="ghost" Padding="10,4" Tag="channels"
+                                Click="SeeAll_Click" IsVisible="False" Content="See all"/>
+                        <TextBlock x:Name="ChannelHeader" Classes="section" Margin="0" VerticalAlignment="Center"/>
+                    </DockPanel>
+                    <ItemsControl x:Name="ChannelResults" ItemsPanel="{StaticResource Row}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Classes="card" Width="236" Margin="8,6,8,10" Click="Channel_Click">
+                                    <Border CornerRadius="10" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}"
+                                            BorderThickness="1" Padding="12">
+                                        <DockPanel>
+                                            <Border DockPanel.Dock="Left" Width="64" Height="44" CornerRadius="6" Background="{StaticResource Surface2Brush}">
+                                                <Grid>
+                                                    <TextBlock Text="{Binding Row.Initials}" FontSize="12" FontWeight="SemiBold" Classes="muted"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    <Image Margin="4" svc:ImageLoader.DecodeWidth="128" svc:ImageLoader.Url="{Binding Row.Logo}"/>
+                                                </Grid>
+                                            </Border>
+                                            <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Row.DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding Title}" FontSize="12" Classes="muted" Margin="0,3,0,0"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </Border>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- Programmes -->
+                <StackPanel x:Name="ProgSection" IsVisible="False">
+                    <DockPanel Margin="8,22,0,8">
+                        <Button x:Name="ProgMore" DockPanel.Dock="Right" Classes="ghost" Padding="10,4" Tag="guide"
+                                Click="SeeAll_Click" IsVisible="False" Content="See all"/>
+                        <TextBlock x:Name="ProgHeader" Classes="section" Margin="0" VerticalAlignment="Center"/>
+                    </DockPanel>
+                    <ItemsControl x:Name="ProgResults" MaxWidth="1100" HorizontalAlignment="Left">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="10,8" Click="Prog_Click" PointerReleased="Prog_RightClick" Margin="0,0,0,2">
+                                    <Grid ColumnDefinitions="4,110,230,*">
+                                        <Border Background="{Binding GenreBrush}" CornerRadius="2" Margin="0,4"/>
+                                        <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding TimeText}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding SubTime}" FontSize="11" Classes="muted" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2" Text="{Binding Row.DisplayName}" VerticalAlignment="Center" Margin="0,0,12,0"
+                                                   Classes="muted" TextTrimming="CharacterEllipsis"/>
+                                        <DockPanel Grid.Column="3" VerticalAlignment="Center">
+                                            <TextBlock DockPanel.Dock="Left" IsVisible="{Binding HasReminder}" Text="{x:Static local:Icons.BellRing}" Classes="icon" FontSize="11"
+                                                       Margin="0,2,6,0" Foreground="{StaticResource AccentBrush}"/>
+                                            <TextBlock Text="{Binding Title}" FontSize="14" TextTrimming="CharacterEllipsis"/>
+                                        </DockPanel>
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- Films & shows -->
+                <StackPanel x:Name="FilmSection" IsVisible="False">
+                    <DockPanel Margin="8,22,0,8">
+                        <Button x:Name="FilmMore" DockPanel.Dock="Right" Classes="ghost" Padding="10,4" Tag="films"
+                                Click="SeeAll_Click" IsVisible="False" Content="See all"/>
+                        <TextBlock x:Name="FilmHeader" Classes="section" Margin="0" VerticalAlignment="Center"/>
+                    </DockPanel>
+                    <ItemsControl x:Name="FilmResults" ItemsPanel="{StaticResource Row}" ItemTemplate="{StaticResource SearchPoster}"/>
+                </StackPanel>
+                <StackPanel x:Name="ShowSection" IsVisible="False">
+                    <DockPanel Margin="8,22,0,8">
+                        <Button x:Name="ShowMore" DockPanel.Dock="Right" Classes="ghost" Padding="10,4" Tag="shows"
+                                Click="SeeAll_Click" IsVisible="False" Content="See all"/>
+                        <TextBlock x:Name="ShowHeader" Classes="section" Margin="0" VerticalAlignment="Center"/>
+                    </DockPanel>
+                    <ItemsControl x:Name="ShowResults" ItemsPanel="{StaticResource Row}" ItemTemplate="{StaticResource SearchPoster}"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel x:Name="EmptyState" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="480">
+            <TextBlock Classes="icon muted" Text="{x:Static local:Icons.Search}" FontSize="34" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="EmptyTitle" Text="Search everything" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,14,0,0"/>
+            <TextBlock x:Name="EmptyBody" TextWrapping="Wrap" TextAlignment="Center" Classes="muted" Margin="0,8,0,0"
+                       Text="Channels, programmes in the TV guide, films and TV shows – all at once. Type in the search bar at the top (Ctrl+F from anywhere)."/>
+        </StackPanel>
+    </Grid>
+</UserControl>

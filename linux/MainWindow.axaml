@@ -1,0 +1,455 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
+        xmlns:svc="clr-namespace:Dingus.Services"
+        xmlns:local="clr-namespace:Dingus"
+        x:Class="Dingus.MainWindow"
+        Title="Dingus" Icon="/Assets/Dingus-256.png"
+        Width="1280" Height="760" MinWidth="900" MinHeight="540"
+        SystemDecorations="None"
+        WindowStartupLocation="CenterScreen">
+    <Panel x:Name="Root" Background="{StaticResource BgBrush}">
+
+        <!-- ================= App shell ================= -->
+        <Grid x:Name="Shell" RowDefinitions="46,*">
+
+            <!-- ===== Title bar: sections, search, playlist, settings, window buttons ===== -->
+            <Border x:Name="TitleBar" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}"
+                    BorderThickness="0,0,0,1">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                        <Border Width="26" Height="26" CornerRadius="7">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                    <GradientStop Color="#60A5FA" Offset="0"/>
+                                    <GradientStop Color="#7C3AED" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <TextBlock Classes="icon" Text="{x:Static local:Icons.Tv}" FontSize="15" Foreground="White"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock x:Name="WordMark" Text="Dingus" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" Margin="9,0,14,0"/>
+                        <Border Background="{StaticResource BgBrush}" CornerRadius="10" Padding="1,3" VerticalAlignment="Center"
+                                BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton x:Name="NavHome" Classes="tab" Tag="{x:Static local:Icons.Home}" Content="Home" IsCheckedChanged="Nav_Checked"/>
+                                <RadioButton x:Name="NavGuide" Classes="tab" Tag="{x:Static local:Icons.LiveTv}" Content="Live TV" IsCheckedChanged="Nav_Checked"/>
+                                <RadioButton x:Name="NavFilms" Classes="tab" Tag="{x:Static local:Icons.Films}" Content="Films" IsCheckedChanged="Nav_Checked"/>
+                                <RadioButton x:Name="NavShows" Classes="tab" Tag="{x:Static local:Icons.Shows}" Content="TV Shows" IsCheckedChanged="Nav_Checked"/>
+                                <RadioButton x:Name="NavRecordings" Classes="tab" Tag="{x:Static local:Icons.Recordings}" Content="Recordings"
+                                             IsCheckedChanged="Nav_Checked" ToolTip.Tip="Recordings &amp; reminders"/>
+                                <RadioButton x:Name="NavSearch" Classes="tab" Tag="{x:Static local:Icons.Search}" Content="Search"
+                                             IsCheckedChanged="Nav_Checked" IsVisible="False"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Search everything -->
+                    <Panel x:Name="SearchHost" Grid.Column="1" MaxWidth="420" MinWidth="150" Margin="16,0" VerticalAlignment="Center">
+                        <TextBox x:Name="SearchBox" Watermark="Search channels, programmes, films and shows" Padding="34,6,12,6"
+                                 TextChanged="SearchBox_TextChanged" KeyDown="SearchBox_KeyDown"/>
+                        <TextBlock Classes="icon muted" Text="{x:Static local:Icons.Search}" FontSize="16" Margin="11,0,0,0"
+                                   HorizontalAlignment="Left" IsHitTestVisible="False"/>
+                    </Panel>
+                    <!-- Empty title bar space drags the window -->
+                    <Border x:Name="DragArea" Grid.Column="1" Background="Transparent" ZIndex="-1"/>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <Button x:Name="PlaylistButton" Classes="ghost" Click="PlaylistButton_Click" ToolTip.Tip="Switch playlist"
+                                VerticalAlignment="Center" Padding="10,6">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Classes="icon muted" Text="{x:Static local:Icons.Playlist}" FontSize="16"/>
+                                <TextBlock x:Name="PlaylistName" Margin="8,0,6,0" VerticalAlignment="Center" MaxWidth="130"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Classes="icon muted" Text="{x:Static local:Icons.ChevronDown}" FontSize="14"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="LockButton" Classes="icon" Content="{x:Static local:Icons.Lock}" Width="34" Height="34"
+                                VerticalAlignment="Center" IsVisible="False" Click="Lock_Click"/>
+                        <Button x:Name="RefreshButton" Classes="icon" Content="{x:Static local:Icons.Refresh}" Width="34" Height="34"
+                                VerticalAlignment="Center" ToolTip.Tip="Refresh playlist and TV guide" Click="Refresh_Click"/>
+                        <RadioButton x:Name="NavSettings" Classes="tab tabIcon" Tag="{x:Static local:Icons.Settings}" ToolTip.Tip="Settings"
+                                     IsCheckedChanged="Nav_Checked" Margin="2,0,8,0" VerticalAlignment="Center"/>
+                        <Button Classes="caption" Content="{x:Static local:Icons.Minimise}" ToolTip.Tip="Minimise" Click="Minimise_Click"/>
+                        <Button x:Name="MaxButton" Classes="caption" Content="{x:Static local:Icons.Maximise}" ToolTip.Tip="Maximise" Click="Maximise_Click"/>
+                        <Button Classes="caption captionClose" Content="{x:Static local:Icons.Close}" ToolTip.Tip="Close" Click="Close_Click"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <ContentControl x:Name="PageHost" Grid.Row="1" Focusable="False">
+                <ContentControl.Transitions>
+                    <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.15"/></Transitions>
+                </ContentControl.Transitions>
+            </ContentControl>
+
+            <!-- Refresh / guide progress, floating at the top-right of the page -->
+            <Border x:Name="BusyPanel" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,10,16,0" Padding="12,6,14,6"
+                    CornerRadius="16" Background="{StaticResource AccentSoftBrush}" IsVisible="False" IsHitTestVisible="False" ZIndex="5">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="BusyIcon" Classes="icon" Text="{x:Static local:Icons.Refresh}" Foreground="#93C5FD" FontSize="15"
+                               RenderTransformOrigin="50%,50%"/>
+                    <TextBlock x:Name="BusyTitle" Text="Refreshing playlist" Margin="9,0,0,0" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="BusyText" Margin="8,0,0,0" Foreground="#AFC4E8" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
+            <!-- First load: nothing saved yet, so a proper loading screen -->
+            <Panel x:Name="LoadingOverlay" Grid.Row="1" Background="{StaticResource BgBrush}" IsVisible="False">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="440">
+                    <Panel Width="60" Height="60" HorizontalAlignment="Center">
+                        <Ellipse Stroke="{StaticResource Surface3Brush}" StrokeThickness="5"/>
+                        <Arc x:Name="LoadingArc" Stroke="{StaticResource AccentBrush}" StrokeThickness="5" StartAngle="0" SweepAngle="90"
+                             StrokeLineCap="Round" RenderTransformOrigin="50%,50%"/>
+                    </Panel>
+                    <TextBlock Text="Loading playlist" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,24,0,0"/>
+                    <TextBlock x:Name="LoadingStep" FontSize="14" Classes="muted" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                    <TextBlock x:Name="LoadingHint" Text="Large playlists can take a minute the first time." FontSize="12" Classes="muted"
+                               TextWrapping="Wrap" TextAlignment="Center" Margin="0,18,0,0"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,22,0,0" Spacing="8">
+                        <Button x:Name="LoadingSkip" Content="Use saved channels" IsVisible="False" Click="LoadingSkip_Click"
+                                ToolTip.Tip="Start watching now – the playlist keeps refreshing in the background"/>
+                        <Button Classes="ghost" Click="LoadingSettings_Click"
+                                ToolTip.Tip="Settings work while the playlist loads – e.g. to fix a login or switch playlist">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Classes="icon" Text="{x:Static local:Icons.Settings}"/>
+                                <TextBlock Text="Open Settings" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Panel>
+
+            <Panel x:Name="Welcome" Grid.Row="1" Background="{StaticResource BgBrush}" IsVisible="False">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="470">
+                    <Border Width="64" Height="64" CornerRadius="18" HorizontalAlignment="Center">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                <GradientStop Color="#60A5FA" Offset="0"/>
+                                <GradientStop Color="#7C3AED" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <TextBlock Classes="icon" Text="{x:Static local:Icons.Tv}" FontSize="32" Foreground="White"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Text="Welcome to Dingus" FontSize="30" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,22,0,0"/>
+                    <TextBlock Text="Add your IPTV playlist to get started. Xtream Codes logins and M3U links are both supported."
+                               TextWrapping="Wrap" TextAlignment="Center" Classes="muted" FontSize="14" Margin="0,12,0,26"/>
+                    <Button Classes="primary" Content="Add playlist" HorizontalAlignment="Center" Padding="26,12" Click="AddPlaylist_Click"/>
+                </StackPanel>
+            </Panel>
+        </Grid>
+
+        <!-- Toast -->
+        <Border x:Name="Toast" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,28" Padding="18,11"
+                CornerRadius="10" Background="{StaticResource Surface3Brush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
+                IsVisible="False" IsHitTestVisible="False">
+            <TextBlock x:Name="ToastText" FontSize="13"/>
+        </Border>
+
+        <!-- Keyboard shortcuts (? or F1) -->
+        <Border x:Name="ShortcutSheet" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="28,22,28,24" CornerRadius="14"
+                Background="{StaticResource Surface2Brush}" BorderBrush="#22FFFFFF" BorderThickness="1" IsVisible="False" MaxWidth="900"
+                PointerPressed="Sheet_PointerPressed">
+            <StackPanel>
+                <DockPanel Margin="0,0,0,14">
+                    <TextBlock DockPanel.Dock="Right" Text="? or Esc to close" Foreground="#99FFFFFF" FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock Text="Keyboard shortcuts" FontSize="20" FontWeight="SemiBold" Foreground="White"/>
+                </DockPanel>
+                <UniformGrid x:Name="ShortcutSheetGrid" Columns="2"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Channel number being typed (Live TV) -->
+        <Border x:Name="NumberBox" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,76,28,0" Padding="20,8"
+                CornerRadius="10" Background="{StaticResource Surface3Brush}" BorderBrush="{StaticResource AccentBrush}"
+                BorderThickness="1" IsVisible="False" IsHitTestVisible="False">
+            <TextBlock x:Name="NumberText" FontSize="30" FontWeight="SemiBold"/>
+        </Border>
+
+        <!-- Resize from the edges (the window has no system frame) -->
+        <Panel x:Name="ResizeGrips">
+            <Border Tag="W" Width="6" HorizontalAlignment="Left" Background="Transparent" Cursor="LeftSide" PointerPressed="Grip_PointerPressed"/>
+            <Border Tag="E" Width="6" HorizontalAlignment="Right" Background="Transparent" Cursor="RightSide" PointerPressed="Grip_PointerPressed"/>
+            <Border Tag="N" Height="5" VerticalAlignment="Top" Background="Transparent" Cursor="TopSide" PointerPressed="Grip_PointerPressed"/>
+            <Border Tag="S" Height="6" VerticalAlignment="Bottom" Background="Transparent" Cursor="BottomSide" PointerPressed="Grip_PointerPressed"/>
+            <Border Tag="NW" Width="10" Height="10" HorizontalAlignment="Left" VerticalAlignment="Top" Background="Transparent" Cursor="TopLeftCorner" PointerPressed="Grip_PointerPressed"/>
+            <Border Tag="NE" Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Top" Background="Transparent" Cursor="TopRightCorner" PointerPressed="Grip_PointerPressed"/>
+            <Border Tag="SW" Width="12" Height="12" HorizontalAlignment="Left" VerticalAlignment="Bottom" Background="Transparent" Cursor="BottomLeftCorner" PointerPressed="Grip_PointerPressed"/>
+            <Border Tag="SE" Width="12" Height="12" HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="Transparent" Cursor="BottomRightCorner" PointerPressed="Grip_PointerPressed"/>
+        </Panel>
+
+        <!-- ================= Video (mini player in Live TV, or the whole window) ================= -->
+        <vlc:VideoView x:Name="Video" HorizontalAlignment="Left" VerticalAlignment="Top" Width="16" Height="9" IsVisible="False">
+            <vlc:VideoView.Content>
+                <Panel x:Name="Overlay" Background="#01000000" Focusable="True" TextElement.FontFamily="{StaticResource UiFont}"
+                       PointerMoved="Overlay_PointerMoved" PointerPressed="Overlay_PointerPressed"
+                       PointerWheelChanged="Overlay_PointerWheelChanged" KeyDown="Overlay_KeyDown">
+
+                    <TextBlock x:Name="BufferText" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="14"
+                               Foreground="White" IsVisible="False" TextAlignment="Center"/>
+
+                    <!-- Controls on the Live TV preview -->
+                    <Border x:Name="PreviewHint" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8" Padding="2"
+                            CornerRadius="8" Background="#99000000" IsVisible="False">
+                        <StackPanel Orientation="Horizontal">
+                            <Button x:Name="PreviewPlayPause" Classes="overlay" Width="32" Height="32" FontSize="17" Margin="0"
+                                    Content="{x:Static local:Icons.Pause}" ToolTip.Tip="Pause" Click="PlayPause_Click"/>
+                            <Button Classes="overlay" Width="32" Height="32" FontSize="18" Margin="0"
+                                    Content="{x:Static local:Icons.Fullscreen}" ToolTip.Tip="Full screen (F11 or double-click)" Click="PreviewFull_Click"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="OverlayToast" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,110,0,0" Padding="18,10"
+                            CornerRadius="10" Background="#CC111622" IsVisible="False" IsHitTestVisible="False">
+                        <TextBlock x:Name="OverlayToastText" Foreground="White" FontSize="13" TextWrapping="Wrap" MaxWidth="520"/>
+                    </Border>
+
+                    <Border x:Name="OverlayNumberBox" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,28,32,0" Padding="22,8"
+                            CornerRadius="10" Background="#CC111622" IsVisible="False" IsHitTestVisible="False">
+                        <TextBlock x:Name="OverlayNumberText" FontSize="40" FontWeight="SemiBold" Foreground="White"/>
+                    </Border>
+
+                    <!-- Stream health -->
+                    <Border x:Name="HealthBadge" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,24,28,0" Padding="12,7"
+                            CornerRadius="8" Background="#B0111622" IsVisible="False" IsHitTestVisible="False">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse x:Name="HealthDot" Width="9" Height="9" Fill="#4ADE80" VerticalAlignment="Center" Margin="0,0,9,0"/>
+                            <TextBlock x:Name="HealthText" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Up next (end of an episode) -->
+                    <Border x:Name="UpNextCard" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,32,150" Padding="20,16"
+                            CornerRadius="12" Background="#E6111622" BorderBrush="#33FFFFFF" BorderThickness="1" IsVisible="False" Width="360">
+                        <StackPanel>
+                            <TextBlock x:Name="UpNextCountdown" Text="Up next" Foreground="#AAB4C6" FontSize="12"/>
+                            <TextBlock x:Name="UpNextTitle" Foreground="White" FontSize="16" FontWeight="SemiBold" Margin="0,6,0,0"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,14,0,0" Spacing="8">
+                                <Button Classes="primary" Click="UpNextPlay_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Classes="icon" Text="{x:Static local:Icons.Play}"/>
+                                        <TextBlock Text="Play now" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Classes="ghost" Content="Cancel" Foreground="White" Click="UpNextCancel_Click"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Grid x:Name="PlayerChrome" RowDefinitions="Auto,*,Auto" IsVisible="False">
+                        <!-- Top bar -->
+                        <Border Padding="24,20,28,56">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                    <GradientStop Color="#D0000000" Offset="0"/>
+                                    <GradientStop Color="#00000000" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Left" Classes="overlay" Content="{x:Static local:Icons.Back}" VerticalAlignment="Top"
+                                        ToolTip.Tip="Back (Esc)" Click="Back_Click"/>
+                                <Border x:Name="ChromeLogoBox" DockPanel.Dock="Left" Width="64" Height="44" CornerRadius="6" Margin="10,0,0,0"
+                                        Background="#33FFFFFF" VerticalAlignment="Top">
+                                    <Image x:Name="ChromeLogo" Margin="5" svc:ImageLoader.DecodeWidth="128"/>
+                                </Border>
+                                <StackPanel Margin="14,0,240,0">
+                                    <TextBlock x:Name="ChromeTitle" FontSize="22" FontWeight="SemiBold" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock x:Name="ChromeSubtitle" FontSize="14" Foreground="#E6FFFFFF" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock x:Name="ChromeNext" FontSize="13" Foreground="#AAFFFFFF" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <!-- Bottom controls -->
+                        <Border Grid.Row="2" Padding="28,64,28,20">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                    <GradientStop Color="#00000000" Offset="0"/>
+                                    <GradientStop Color="#D8000000" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <StackPanel>
+                                <Grid x:Name="SeekRow" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,8">
+                                    <TextBlock x:Name="PosText" Text="0:00" Foreground="White" FontSize="13" VerticalAlignment="Center" MinWidth="48"/>
+                                    <Slider x:Name="SeekSlider" Grid.Column="1" Classes="player" Margin="12,0" Minimum="0" Maximum="1"
+                                            IsSnapToTickEnabled="False"/>
+                                    <TextBlock x:Name="LenText" Grid.Column="2" Text="0:00" Foreground="White" FontSize="13" VerticalAlignment="Center"
+                                               MinWidth="48" TextAlignment="Right"/>
+                                </Grid>
+
+                                <Grid x:Name="LiveRow" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,12">
+                                    <Border x:Name="LiveBadge" Background="{StaticResource LiveBrush}" CornerRadius="4" Padding="7,2" VerticalAlignment="Center"
+                                            ToolTip.Tip="Live">
+                                        <TextBlock x:Name="LiveBadgeText" Text="LIVE" FontSize="11" FontWeight="Bold" Foreground="White"/>
+                                    </Border>
+                                    <ProgressBar x:Name="LiveProgress" Grid.Column="1" Classes="thin" Margin="14,0" VerticalAlignment="Center"/>
+                                    <!-- Scrub bar: back through the rewind buffer / catch-up, forward up to live -->
+                                    <Slider x:Name="LiveSeek" Grid.Column="1" Classes="player" Margin="12,0" Minimum="0" Maximum="1"
+                                            IsVisible="False" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                        <Button x:Name="GoLiveButton" Classes="overlay" Width="NaN" Height="28" Padding="12,0" FontFamily="{StaticResource UiFont}"
+                                                Margin="0,0,12,0" IsVisible="False" ToolTip.Tip="Catch up to live (End)" Click="GoLive_Click">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Ellipse Width="8" Height="8" Fill="{StaticResource LiveBrush}" VerticalAlignment="Center"/>
+                                                <TextBlock Text="Go live" FontSize="12" Margin="7,0,0,0" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <TextBlock x:Name="LiveTimes" Foreground="White" FontSize="13" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <DockPanel LastChildFill="False">
+                                    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                                        <Button x:Name="PlayPauseButton" Classes="overlay" Content="{x:Static local:Icons.Pause}"
+                                                ToolTip.Tip="Play / pause (Space)" Click="PlayPause_Click"/>
+                                        <Button x:Name="BackSeekButton" Classes="overlay" Content="{x:Static local:Icons.Back10}"
+                                                ToolTip.Tip="Back 10 seconds (←)" Click="SeekBack_Click"/>
+                                        <Button x:Name="FwdSeekButton" Classes="overlay" Content="{x:Static local:Icons.Fwd30}"
+                                                ToolTip.Tip="Forward 30 seconds (→)" Click="SeekFwd_Click"/>
+                                        <Button x:Name="ChUpButton" Classes="overlay" Content="{x:Static local:Icons.ChevronUp}"
+                                                ToolTip.Tip="Previous channel in the list" Click="ChUp_Click"/>
+                                        <Button x:Name="ChDownButton" Classes="overlay" Content="{x:Static local:Icons.ChevronDown}"
+                                                ToolTip.Tip="Next channel in the list" Click="ChDown_Click"/>
+                                        <Button x:Name="ChannelsButton" Classes="overlay" Content="{x:Static local:Icons.ChannelList}"
+                                                ToolTip.Tip="Channel list – what's on now (Enter or L)" Click="Channels_Click"/>
+                                        <Button x:Name="LastChButton" Classes="overlay" Content="{x:Static local:Icons.LastChannel}"
+                                                ToolTip.Tip="Back to the last channel (0 or Backspace)" Click="LastCh_Click"/>
+                                        <Button x:Name="NextEpisodeButton" Classes="overlay" IsVisible="False" Width="NaN" Padding="12,0"
+                                                FontFamily="{StaticResource UiFont}" Click="NextEpisode_Click">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Classes="icon" Text="{x:Static local:Icons.Next}" FontSize="18"/>
+                                                <TextBlock Text="Next episode" FontSize="13" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                        <Button x:Name="RecordButton" Classes="overlay" Content="{x:Static local:Icons.Record}"
+                                                ToolTip.Tip="Record this programme (R)" Click="Record_Click"/>
+                                        <Button x:Name="SleepButton" Classes="overlay" Content="{x:Static local:Icons.Sleep}"
+                                                ToolTip.Tip="Sleep timer (S)" Click="Sleep_Click"/>
+                                        <Button x:Name="InfoButton" Classes="overlay" Content="{x:Static local:Icons.Info}"
+                                                ToolTip.Tip="Stream info (I)" Click="Info_Click"/>
+                                        <Button x:Name="QualityButton" Classes="overlay" Content="{x:Static local:Icons.Quality}"
+                                                ToolTip.Tip="Version / quality" Click="Quality_Click" IsVisible="False"/>
+                                        <Button x:Name="PictureButton" Classes="overlay" Content="{x:Static local:Icons.Picture}"
+                                                ToolTip.Tip="Picture &amp; sound – aspect ratio, crop, audio sync, night mode" Click="Picture_Click"/>
+                                        <Button x:Name="AudioButton" Classes="overlay" Content="{x:Static local:Icons.Audio}"
+                                                ToolTip.Tip="Audio track" Click="Audio_Click"/>
+                                        <Button x:Name="SubsButton" Classes="overlay" Content="{x:Static local:Icons.Subtitles}"
+                                                ToolTip.Tip="Subtitles" Click="Subs_Click"/>
+                                        <Button x:Name="MuteButton" Classes="overlay" Content="{x:Static local:Icons.Volume}"
+                                                ToolTip.Tip="Mute (M)" Click="Mute_Click"/>
+                                        <Slider x:Name="VolumeSlider" Classes="player" Width="110" Minimum="0" Maximum="100"
+                                                VerticalAlignment="Center" Margin="4,0,12,0"/>
+                                        <Button x:Name="FullscreenButton" Classes="overlay" Content="{x:Static local:Icons.FullscreenExit}"
+                                                ToolTip.Tip="Exit full screen – back to Live TV (Esc)" Click="Fullscreen_Click"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- In-player channel list -->
+                    <Border x:Name="ChannelPanel" HorizontalAlignment="Left" Width="460" IsVisible="False"
+                            Background="#F00C1018" BorderBrush="#22FFFFFF" BorderThickness="0,0,1,0">
+                        <DockPanel>
+                            <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="14,22,14,12">
+                                <Button Classes="overlay" Content="{x:Static local:Icons.ChevronLeft}" ToolTip.Tip="Previous category (←)"
+                                        Click="PanelPrevCat_Click"/>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock x:Name="PanelCategory" Foreground="White" FontSize="17" FontWeight="SemiBold"
+                                               HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock x:Name="PanelCount" Foreground="#8B94A7" FontSize="11" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <Button Grid.Column="2" Classes="overlay" Content="{x:Static local:Icons.ChevronRight}"
+                                        ToolTip.Tip="Next category (→)" Click="PanelNextCat_Click"/>
+                            </Grid>
+                            <TextBlock DockPanel.Dock="Bottom" Text="↑ ↓ choose  ·  Enter watch  ·  ← → category  ·  Esc close"
+                                       Foreground="#8B94A7" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,14"/>
+                            <ListBox x:Name="PanelList" Classes="clean" Focusable="False" Tapped="PanelList_Tapped">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Height="50" ColumnDefinitions="58,*" Margin="10,0,0,0">
+                                            <Border Width="50" Height="34" CornerRadius="5" Background="#1AFFFFFF">
+                                                <Panel>
+                                                    <TextBlock Text="{Binding Initials}" Foreground="#8B94A7" FontSize="11" FontWeight="SemiBold"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    <Image Margin="3" svc:ImageLoader.DecodeWidth="100" svc:ImageLoader.Url="{Binding Logo}"/>
+                                                </Panel>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Margin="10,0,8,0" VerticalAlignment="Center">
+                                                <DockPanel>
+                                                    <TextBlock DockPanel.Dock="Right" Classes="icon" Text="{x:Static local:Icons.Play}" FontSize="13"
+                                                               Foreground="#60A5FA" Margin="6,0,0,0" IsVisible="{Binding IsCurrent}"/>
+                                                    <TextBlock Text="{Binding Name}" Foreground="White" FontSize="13" FontWeight="SemiBold"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </DockPanel>
+                                                <TextBlock Text="{Binding Now}" Foreground="#AAB4C6" FontSize="12" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                                                <ProgressBar Classes="thin" Value="{Binding Progress, Mode=OneTime}" Height="2" Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- Info bar: browse what's on other channels (↑ ↓) without changing; Enter watches -->
+                    <Border x:Name="InfoBar" VerticalAlignment="Bottom" Margin="40,0,40,40" Padding="22,18" CornerRadius="14"
+                            Background="#F00C1018" BorderBrush="#22FFFFFF" BorderThickness="1" IsVisible="False" MaxWidth="1100"
+                            PointerReleased="InfoBar_PointerReleased">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Border Width="104" Height="70" CornerRadius="8" Background="#22FFFFFF" VerticalAlignment="Center">
+                                <Panel>
+                                    <TextBlock x:Name="InfoInitials" FontSize="20" FontWeight="SemiBold" Foreground="#99FFFFFF"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <Image x:Name="InfoLogo" Margin="8" svc:ImageLoader.DecodeWidth="200"/>
+                                </Panel>
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="22,0,16,0" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock x:Name="InfoName" FontSize="20" FontWeight="SemiBold" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                                    <Border x:Name="InfoWatching" Background="{StaticResource LiveBrush}" CornerRadius="4" Padding="7,2" Margin="12,0,0,0"
+                                            VerticalAlignment="Center" IsVisible="False">
+                                        <TextBlock Text="WATCHING" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                                    </Border>
+                                </StackPanel>
+                                <DockPanel Margin="0,10,0,0">
+                                    <TextBlock Text="NOW" Width="46" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="InfoNowTime" DockPanel.Dock="Right" Foreground="#AAFFFFFF" FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="InfoNow" Foreground="White" FontSize="15" TextTrimming="CharacterEllipsis"/>
+                                </DockPanel>
+                                <ProgressBar x:Name="InfoProgress" Classes="thin" Height="3" Margin="46,6,0,0"/>
+                                <DockPanel Margin="0,8,0,0">
+                                    <TextBlock Text="NEXT" Width="46" FontSize="11" FontWeight="Bold" Foreground="#88FFFFFF" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="InfoNextTime" DockPanel.Dock="Right" Foreground="#88FFFFFF" FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="InfoNext" Foreground="#CCFFFFFF" FontSize="13" TextTrimming="CharacterEllipsis"/>
+                                </DockPanel>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0">
+                                <TextBlock Text="↑ ↓  other channels" Foreground="#88FFFFFF" FontSize="12" HorizontalAlignment="Right"/>
+                                <TextBlock Text="Enter  watch" Foreground="#88FFFFFF" FontSize="12" HorizontalAlignment="Right" Margin="0,4,0,0"/>
+                                <TextBlock Text="Esc  close" Foreground="#88FFFFFF" FontSize="12" HorizontalAlignment="Right" Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Keyboard shortcuts over the video -->
+                    <Border x:Name="OverlaySheet" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="28,22,28,24" CornerRadius="14"
+                            Background="#F20C1018" BorderBrush="#22FFFFFF" BorderThickness="1" IsVisible="False" MaxWidth="900"
+                            PointerPressed="Sheet_PointerPressed">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,14">
+                                <TextBlock DockPanel.Dock="Right" Text="? or Esc to close" Foreground="#99FFFFFF" FontSize="12" VerticalAlignment="Center"/>
+                                <TextBlock Text="Keyboard shortcuts" FontSize="20" FontWeight="SemiBold" Foreground="White"/>
+                            </DockPanel>
+                            <UniformGrid x:Name="OverlaySheetGrid" Columns="2"/>
+                        </StackPanel>
+                    </Border>
+                </Panel>
+            </vlc:VideoView.Content>
+        </vlc:VideoView>
+    </Panel>
+</Window>

@@ -55,3 +55,27 @@ jobs:
           $v = "${{ steps.ver.outputs.version }}"
           gh release create "v$v" "installer\Output\Dingus-Setup-$v.exe" --repo ${{ github.repository }} `
             --target ${{ github.sha }} --title "Dingus $v" --notes-file installer\release-notes.md
+
+  # The Linux AppImage, attached to the same release.
+  linux:
+    needs: release
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Install VLC
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends vlc-bin vlc-plugin-base vlc-plugin-video-output libvlc-dev libvlccore-dev libfuse2 > /dev/null
+      - name: Build and attach the AppImage
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=$(grep -oPm1 '(?<=<Version>)[^<]+' Dingus.csproj)
+          if gh release view "v$V" --repo ${{ github.repository }} --json assets -q '.assets[].name' | grep -q "Dingus-$V-x86_64.AppImage"; then
+            echo "The AppImage is already on v$V – nothing to do."; exit 0
+          fi
+          linux/package/build-appimage.sh "$V" out
+          gh release upload "v$V" "out/Dingus-$V-x86_64.AppImage" --repo ${{ github.repository }} --clobber
