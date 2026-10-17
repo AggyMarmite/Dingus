@@ -9,23 +9,28 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
+      - name: Install a private .NET 8 SDK (just the one version)
+        run: |
+          curl -sSL https://dot.net/v1/dotnet-install.sh -o dotnet-install.sh
+          bash dotnet-install.sh --channel 8.0 --install-dir "$HOME/dn"
+          echo "$HOME/dn" >> $GITHUB_PATH
+          echo "DOTNET_ROOT=$HOME/dn" >> $GITHUB_ENV
       - name: Restore both apps
         run: |
+          export NUGET_PACKAGES="$HOME/nuget"
           dotnet restore linux/Dingus.Linux.csproj
           dotnet restore Dingus.csproj -p:EnableWindowsTargeting=true
       - name: Pack
         run: |
           set -e
           # The Windows VLC binaries aren't needed to compile – keep the package, drop the big files.
-          find ~/.nuget/packages/videolan.libvlc.windows -type f -size +200k -delete || true
-          DOTNET_DIR=$(dirname $(readlink -f $(which dotnet)))
+          find "$HOME/nuget/videolan.libvlc.windows" -type f -size +200k -delete || true
+          rm -rf "$HOME/dn/sdk/"*/FSharp || true
           mkdir -p out
-          tar -C "$DOTNET_DIR" -cJf out/sdk.tar.xz .
-          tar -C ~/.nuget -cJf out/nuget.tar.xz packages
-          cd out && split -b 45m sdk.tar.xz sdk.part. && split -b 45m nuget.tar.xz nuget.part. && rm sdk.tar.xz nuget.tar.xz
+          tar -C "$HOME/dn" -czf out/sdk.tar.gz .
+          tar -C "$HOME" -czf out/nuget.tar.gz nuget
+          ls -la out
+          cd out && split -b 45m sdk.tar.gz sdk.part. && split -b 45m nuget.tar.gz nuget.part. && rm sdk.tar.gz nuget.tar.gz
           ls -la
       - name: Push to the toolchain branch
         run: |

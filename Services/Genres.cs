@@ -1,4 +1,8 @@
+#if LINUX
+using Avalonia.Media;
+#else
 using System.Windows.Media;
+#endif
 using Dingus.Models;
 
 namespace Dingus.Services;
@@ -17,12 +21,18 @@ public static class Genres
     static SolidColorBrush Make(byte r, byte g, byte b)
     {
         var br = new SolidColorBrush(Color.FromRgb(r, g, b));
+#if !LINUX
         br.Freeze();
+#endif
         return br;
     }
 
     /// <summary>Colour for a genre, or null (no stripe) when it's unknown.</summary>
+#if LINUX
+    public static IBrush Brush(string genre)
+#else
     public static Brush Brush(string genre)
+#endif
     {
         if (string.IsNullOrWhiteSpace(genre)) return null;
         lock (Cache)

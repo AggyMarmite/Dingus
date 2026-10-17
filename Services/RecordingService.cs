@@ -2,7 +2,11 @@ using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+#if LINUX
+using Avalonia.Threading;
+#else
 using System.Windows.Threading;
+#endif
 using Dingus.Models;
 
 namespace Dingus.Services;
@@ -236,7 +240,11 @@ public static class RecordingService
         Save();
         Changed?.Invoke();
         MainWindow.Instance?.ShowToast($"Recording {r.Title} on {r.ChannelName}");
+#if LINUX
+        var dispatcher = Dispatcher.UIThread;
+#else
         var dispatcher = Dispatcher.CurrentDispatcher;
+#endif
         _ = Task.Run(async () =>
         {
             string error = null;

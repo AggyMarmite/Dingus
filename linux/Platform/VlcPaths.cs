@@ -1,0 +1,27 @@
+namespace Dingus.Services;
+
+/// <summary>
+/// Where the VLC video engine is. The AppImage carries its own copy (next to the app, in lib/vlc);
+/// otherwise the system's VLC is used (sudo apt install vlc).
+/// </summary>
+public static class VlcPaths
+{
+    public static string LibDir
+    {
+        get
+        {
+            var here = AppContext.BaseDirectory;
+            foreach (var dir in new[] { Path.Combine(here, "vlc"), Path.Combine(here, "..", "lib"), here })
+            {
+                if (File.Exists(Path.Combine(dir, "libvlc.so.5")))
+                {
+                    var plugins = Path.Combine(dir, "vlc", "plugins");
+                    if (Directory.Exists(plugins) && Environment.GetEnvironmentVariable("VLC_PLUGIN_PATH") == null)
+                        Environment.SetEnvironmentVariable("VLC_PLUGIN_PATH", plugins);
+                    return Path.GetFullPath(dir);
+                }
+            }
+            return null; // LibVLCSharp then looks in the usual system places
+        }
+    }
+}

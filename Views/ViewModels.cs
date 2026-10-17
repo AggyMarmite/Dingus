@@ -1,4 +1,9 @@
 using Dingus.Models;
+#if LINUX
+using GenreBrushType = Avalonia.Media.IBrush;
+#else
+using GenreBrushType = System.Windows.Media.Brush;
+#endif
 
 namespace Dingus.Views;
 
@@ -131,7 +136,7 @@ public class HomeChannelCard
     public bool Soon { get; init; }
     /// <summary>"  ·  In 10 min" after the channel name, for cards without a progress bar or badge.</summary>
     public string WhenSuffix => HasProgress || Soon || string.IsNullOrEmpty(When) ? "" : "  ·  " + When;
-    public System.Windows.Media.Brush GenreBrush { get; init; }
+    public GenreBrushType GenreBrush { get; init; }
     /// <summary>For future programmes (Tonight's picks): opens the guide on it instead of playing now.</summary>
     public Programme Upcoming { get; init; }
 }
@@ -183,7 +188,7 @@ public class ProgBlock
     public GuideRow Row { get; set; }
     public bool HasReminder { get; set; }
     public bool HasRecording { get; set; }
-    public System.Windows.Media.Brush GenreBrush => Services.Genres.Brush(Programme?.Genre);
+    public GenreBrushType GenreBrush => Services.Genres.Brush(Programme?.Genre);
 }
 
 /// <summary>A line in the "On now" / "Tonight" lists.</summary>
@@ -199,7 +204,7 @@ public class NowItem
     public bool IsLive { get; init; }
     public bool CanCatchup { get; init; }
     public bool HasReminder { get; init; }
-    public System.Windows.Media.Brush GenreBrush => Services.Genres.Brush(Programme?.Genre);
+    public GenreBrushType GenreBrush => Services.Genres.Brush(Programme?.Genre);
 }
 
 public class PosterItem : Observable

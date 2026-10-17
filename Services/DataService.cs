@@ -1,6 +1,10 @@
 using System.Net.Http;
 using System.Text.Json;
+#if LINUX
+using Avalonia.Threading;
+#else
 using System.Windows.Threading;
+#endif
 using Dingus.Models;
 
 namespace Dingus.Services;

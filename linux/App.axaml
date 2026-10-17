@@ -1,0 +1,64 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Dingus.App"
+             Name="Dingus"
+             RequestedThemeVariant="Dark">
+    <Application.Resources>
+        <!-- ============ Palette (same as the Windows app) ============ -->
+        <Color x:Key="BgColor">#0A0D13</Color>
+        <Color x:Key="SurfaceColor">#10151F</Color>
+        <Color x:Key="Surface2Color">#171D2A</Color>
+        <Color x:Key="Surface3Color">#212938</Color>
+        <Color x:Key="LineColor">#232B3B</Color>
+        <Color x:Key="TextColor">#EEF2F8</Color>
+        <Color x:Key="MutedColor">#8B94A7</Color>
+        <Color x:Key="AccentColor">#3B82F6</Color>
+        <Color x:Key="AccentSoftColor">#1C3561</Color>
+        <Color x:Key="LiveColor">#EF4444</Color>
+
+        <SolidColorBrush x:Key="BgBrush" Color="#0A0D13"/>
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#10151F"/>
+        <SolidColorBrush x:Key="Surface2Brush" Color="#171D2A"/>
+        <SolidColorBrush x:Key="Surface3Brush" Color="#212938"/>
+        <SolidColorBrush x:Key="LineBrush" Color="#232B3B"/>
+        <SolidColorBrush x:Key="TextBrush" Color="#EEF2F8"/>
+        <SolidColorBrush x:Key="MutedBrush" Color="#8B94A7"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="#3B82F6"/>
+        <SolidColorBrush x:Key="AccentSoftBrush" Color="#1C3561"/>
+        <SolidColorBrush x:Key="LiveBrush" Color="#EF4444"/>
+        <SolidColorBrush x:Key="HoverBrush" Color="#14FFFFFF"/>
+        <SolidColorBrush x:Key="PressBrush" Color="#22FFFFFF"/>
+
+        <FontFamily x:Key="IconFont">avares://dingus/Assets/Fonts#Material Design Icons</FontFamily>
+        <FontFamily x:Key="UiFont">fonts:Inter#Inter, $Default</FontFamily>
+
+        <!-- Fluent theme colours, matched to Dingus -->
+        <Color x:Key="SystemAccentColor">#3B82F6</Color>
+        <Color x:Key="SystemAccentColorDark1">#2F6BD0</Color>
+        <Color x:Key="SystemAccentColorDark2">#2557AB</Color>
+        <Color x:Key="SystemAccentColorDark3">#1C3561</Color>
+        <Color x:Key="SystemAccentColorLight1">#60A5FA</Color>
+        <Color x:Key="SystemAccentColorLight2">#93C5FD</Color>
+        <Color x:Key="SystemAccentColorLight3">#BFDBFE</Color>
+        <SolidColorBrush x:Key="TextControlBackground" Color="#171D2A"/>
+        <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#1C2333"/>
+        <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#10151F"/>
+        <SolidColorBrush x:Key="TextControlBorderBrush" Color="#232B3B"/>
+        <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#2E384B"/>
+        <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#3B82F6"/>
+        <SolidColorBrush x:Key="TextControlForeground" Color="#EEF2F8"/>
+        <SolidColorBrush x:Key="TextControlForegroundFocused" Color="#EEF2F8"/>
+        <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#8B94A7"/>
+        <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="#8B94A7"/>
+        <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="#8B94A7"/>
+        <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#171D2A"/>
+        <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="#232B3B"/>
+        <SolidColorBrush x:Key="ComboBoxBackground" Color="#171D2A"/>
+        <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="#232B3B"/>
+        <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#171D2A"/>
+    </Application.Resources>
+    <Application.Styles>
+        <FluentTheme/>
+        <StyleInclude Source="avares://dingus/Theme.axaml"/>
+    </Application.Styles>
+</Application>

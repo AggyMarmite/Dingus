@@ -1,5 +1,9 @@
+#if LINUX
+using Avalonia.Controls;
+#else
 using System.Windows;
 using System.Windows.Controls;
+#endif
 using Dingus.Models;
 
 namespace Dingus.Services;

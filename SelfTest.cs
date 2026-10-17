@@ -47,8 +47,8 @@ public static class SelfTest
             if (row0 != null)
             {
                 var t = DateTime.Today.AddDays(1).AddHours(21);
-                RecordingService.Schedule(row0.Channel.Id, row0.DisplayName, "Match of the Day", t, t.AddMinutes(80));
-                ReminderService.Toggle(row0.Channel.Id, row0.DisplayName, new Models.Programme { Title = "Strictly Come Dancing", Start = t.AddHours(-2), End = t.AddHours(-1) });
+                RecordingService.Schedule(row0.Channel.Id, row0.DisplayName, "Football Highlights", t, t.AddMinutes(80));
+                ReminderService.Toggle(row0.Channel.Id, row0.DisplayName, new Models.Programme { Title = "Dance Off", Start = t.AddHours(-2), End = t.AddHours(-1) });
             }
             await Page(main, main.NavRecordings, "16-recordings", fullScroll: true);
             main.SelfTestSearch("news"); // typing anywhere opens Search

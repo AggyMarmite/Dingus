@@ -1,6 +1,10 @@
 using System.Net;
 using System.Runtime;
+#if LINUX
+using Avalonia.Threading;
+#else
 using System.Windows.Threading;
+#endif
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
@@ -90,7 +94,11 @@ public static class Http
             MaxConnectionsPerServer = 8,
         };
         var c = new HttpClient(handler) { Timeout = TimeSpan.FromMinutes(15) };
+        #if LINUX
+        c.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (X11; Linux x86_64) Dingus/0.8");
+#else
         c.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Dingus/0.2");
+#endif
         return c;
     }
 
@@ -103,6 +111,58 @@ public static class Http
     };
 }
 
+#if LINUX
+/// <summary>
+/// Passwords are encrypted with a random key kept in a file only you can read (~/.local/share/Dingus/.key),
+/// the Linux equivalent of the Windows version's per-user protection.
+/// </summary>
+public static class Secret
+{
+    static byte[] _key;
+
+    static byte[] Key()
+    {
+        if (_key != null) return _key;
+        var path = Path.Combine(AppPaths.Root, ".key");
+        try
+        {
+            if (File.Exists(path)) { var k = File.ReadAllBytes(path); if (k.Length == 32) return _key = k; }
+            Directory.CreateDirectory(AppPaths.Root);
+            var key = RandomNumberGenerator.GetBytes(32);
+            File.WriteAllBytes(path, key);
+            File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            return _key = key;
+        }
+        catch (Exception ex) { Log.Error(ex); return _key = SHA256.HashData(Encoding.UTF8.GetBytes(Environment.UserName + Environment.MachineName)); }
+    }
+
+    public static string Protect(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return "";
+        using var aes = new AesGcm(Key(), 16);
+        var nonce = RandomNumberGenerator.GetBytes(12);
+        var plain = Encoding.UTF8.GetBytes(s);
+        var cipher = new byte[plain.Length];
+        var tag = new byte[16];
+        aes.Encrypt(nonce, plain, cipher, tag);
+        return "v1:" + Convert.ToBase64String(nonce.Concat(tag).Concat(cipher).ToArray());
+    }
+
+    public static string Unprotect(string s)
+    {
+        if (string.IsNullOrEmpty(s) || !s.StartsWith("v1:")) return "";
+        try
+        {
+            var all = Convert.FromBase64String(s[3..]);
+            using var aes = new AesGcm(Key(), 16);
+            var plain = new byte[all.Length - 28];
+            aes.Decrypt(all.AsSpan(0, 12), all.AsSpan(28), all.AsSpan(12, 16), plain);
+            return Encoding.UTF8.GetString(plain);
+        }
+        catch { return ""; }
+    }
+}
+#else
 public static class Secret
 {
     public static string Protect(string s)
@@ -123,6 +183,7 @@ public static class Secret
         catch { return ""; }
     }
 }
+#endif
 
 public static class Log
 {
@@ -158,7 +219,11 @@ public static class Memory
     {
         if (_timer == null)
         {
+#if LINUX
+            _timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(2) };
+#else
             _timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle) { Interval = TimeSpan.FromSeconds(2) };
+#endif
             _timer.Tick += (_, _) => { _timer.Stop(); CompactNow(); };
         }
         _timer.Stop();
@@ -173,6 +238,17 @@ public static class Memory
         TrimWorkingSet();
     }
 
+#if LINUX
+    [System.Runtime.InteropServices.DllImport("libc")]
+    static extern int malloc_trim(UIntPtr pad);
+
+    /// <summary>Hands freed memory back to the system.</summary>
+    public static void TrimWorkingSet()
+    {
+        try { malloc_trim(UIntPtr.Zero); }
+        catch { }
+    }
+#else
     [System.Runtime.InteropServices.DllImport("kernel32.dll")]
     static extern IntPtr GetCurrentProcess();
     [System.Runtime.InteropServices.DllImport("kernel32.dll")]
@@ -188,6 +264,7 @@ public static class Memory
         try { SetProcessWorkingSetSize(GetCurrentProcess(), (IntPtr)(-1), (IntPtr)(-1)); }
         catch { }
     }
+#endif
 
     public static long WorkingSetMB()
     {
