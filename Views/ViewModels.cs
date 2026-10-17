@@ -180,6 +180,7 @@ public class ProgBlock
     public Programme Programme { get; set; }
     public GuideRow Row { get; set; }
     public bool HasReminder { get; set; }
+    public bool HasRecording { get; set; }
     public System.Windows.Media.Brush GenreBrush => Services.Genres.Brush(Programme?.Genre);
 }
 

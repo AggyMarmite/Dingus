@@ -190,7 +190,7 @@ public partial class SearchView : UserControl, IPage
 
     void Prog_RightClick(object sender, MouseButtonEventArgs e)
     {
-        if ((sender as FrameworkElement)?.DataContext is not NowItem it || it.IsLive) return;
+        if ((sender as FrameworkElement)?.DataContext is not NowItem it) return;
         e.Handled = true;
         var p = it.Programme;
         bool set = ReminderService.Has(it.Row.Channel.Id, p.Start);
@@ -203,7 +203,10 @@ public partial class SearchView : UserControl, IPage
         };
         var guide = new MenuItem { Header = "Show in Live TV" };
         guide.Click += (_, _) => MainWindow.Instance?.ShowInGuide(it.Row, p);
-        menu.Items.Add(remind);
+        var recItem = new MenuItem { Header = RecordUi.IsRecording(it.Row, p) ? "Cancel recording" : "Record" };
+        recItem.Click += (_, _) => RecordUi.ToggleProgramme(it.Row, p);
+        menu.Items.Add(recItem);
+        if (!it.IsLive) menu.Items.Add(remind);
         menu.Items.Add(guide);
         menu.IsOpen = true;
     }

@@ -72,6 +72,7 @@ run **Actions → Release → Run workflow**. Pushing to main on its own only bu
 | Home | Live TV: start of the programme (catch-up channels) |
 | Ctrl + ← → | Live TV: back / forward 5 minutes |
 | S | Sleep timer |
+| R | Record this programme |
 | Ctrl + F | Search everything |
 | ? / F1 | Keyboard shortcut list |
 | Home | Start a film or episode from the beginning |
@@ -112,6 +113,10 @@ run **Actions → Release → Run workflow**. Pushing to main on its own only bu
 - **Reminders**: right-click a future programme (guide, lists, Home) or use "Remind me" – a pop-up with a Watch button
   appears a minute before it starts. Your reminders are on Home.
 - **Find a programme**: in the guide, "Find a programme" searches every channel's listings by title.
+- **Recordings & reminders** (Recordings tab): right-click a programme → Record (or R / the record button in the player)
+  and it's saved as a .ts file to a folder you choose – this PC, another drive or a NAS share. Starts a couple of minutes
+  early and runs on a few minutes, reconnects if the stream drops, and warns when your plan's stream limit would be
+  exceeded (each recording uses a stream, and so does watching). Dingus needs to be open (minimised is fine).
 - **Search everything**: the search bar at the top works on every page (Ctrl+F) and finds channels, programmes in the
   TV guide, films and TV shows in one go. Filter the results to Channels, TV guide, Films or TV shows; Esc goes back to
   where you were. Right-click a future programme for a reminder.

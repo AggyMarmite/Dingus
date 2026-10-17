@@ -27,6 +27,7 @@ public partial class MainWindow : Window
     readonly LibraryView _shows;
     readonly SettingsView _settings;
     readonly SearchView _search;
+    readonly RecordingsView _recordings;
     IPage _page;
 
     // ----- what's playing
@@ -82,6 +83,7 @@ public partial class MainWindow : Window
         _shows = new LibraryView(LibraryMode.Series);
         _settings = new SettingsView();
         _search = new SearchView { Guide = _guide };
+        _recordings = new RecordingsView { Guide = _guide };
         _guide.PreviewRequested += row => PlayLive(row.Channel, false);
         _mediaKeys = new MediaKeys(this, HandleMediaKey);
         ReminderService.Watch = id =>
@@ -94,6 +96,7 @@ public partial class MainWindow : Window
             PlayLive(row.Channel, true);
         };
         ReminderService.Start();
+        RecordingService.Start();
         Parental.Changed += UpdateLockButton;
         Loaded += (_, _) => UpdateLockButton();
         // Look for an update a little after start-up – never in the middle of full-screen viewing.
@@ -154,8 +157,13 @@ public partial class MainWindow : Window
             if (!ours) Topmost = false;
         }, DispatcherPriority.Background);
         Loaded += OnLoaded;
-        Closing += (_, _) =>
+        Closing += (_, e) =>
         {
+            if (RecordingService.ActiveCount > 0 && SelfTest.Dir == null &&
+                MessageBox.Show(this, "A recording is in progress. If you close Dingus it stops (what's recorded so far is kept).\n\nClose anyway?",
+                    "Dingus", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            { e.Cancel = true; return; }
+            RecordingService.StopAll();
             SaveVodProgress();
             SavePlacement();
             SettingsStore.Save();
@@ -455,6 +463,7 @@ public partial class MainWindow : Window
         else if (sender == NavShows) page = _shows;
         else if (sender == NavSettings) page = _settings;
         else if (sender == NavSearch) page = _search;
+        else if (sender == NavRecordings) page = _recordings;
         Navigate(page);
     }
 
@@ -531,7 +540,8 @@ public partial class MainWindow : Window
         ClearSearchBoxOnly();
         if (_page != _search) return;
         var back = _beforeSearch ?? _home;
-        (back == _guide ? NavGuide : back == _films ? NavFilms : back == _shows ? NavShows : back == _settings ? NavSettings : NavHome).IsChecked = true;
+        (back == _guide ? NavGuide : back == _films ? NavFilms : back == _shows ? NavShows : back == _settings ? NavSettings
+            : back == _recordings ? NavRecordings : NavHome).IsChecked = true;
     }
 
 
@@ -989,6 +999,7 @@ public partial class MainWindow : Window
         FwdSeekButton.ToolTip = live ? "Forward 10 seconds (→)" : "Forward 30 seconds (→)";
         NextEpisodeButton.Visibility = !live && _vod?.Next != null ? Visibility.Visible : Visibility.Collapsed;
         QualityButton.Visibility = live && _variants.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+        RecordButton.Visibility = live ? Visibility.Visible : Visibility.Collapsed;
         if (live && _variants.Count > 1 && _variantIdx < _variants.Count)
             QualityButton.ToolTip = $"Version: {ChannelMerger.Label(_variants[_variantIdx])} ({_variantIdx + 1} of {_variants.Count})";
         NextEpisodeButton.ToolTip = _vod?.NextLabel;
@@ -1312,6 +1323,7 @@ public partial class MainWindow : Window
         {
             UpdateLiveInfo(_nowChannel);
             UpdateTimeshiftUi();
+            UpdateRecordButton();
             return;
         }
         long len = mp.Length, time = mp.Time;
@@ -1883,6 +1895,9 @@ public partial class MainWindow : Window
                 return true;
             case Key.S:
                 if (!_mini) { ShowSleepMenu(); return true; }
+                break;
+            case Key.R:
+                if (_nowLive) { RecordCurrent(); return true; }
                 break;
             case Key.V:
                 if (_nowLive && !_mini) { OpenMultiView(null); return true; }

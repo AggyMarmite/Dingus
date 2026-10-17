@@ -81,14 +81,20 @@ public static class KeepAwake
     static extern uint SetThreadExecutionState(uint flags);
     const uint ES_CONTINUOUS = 0x80000000, ES_SYSTEM_REQUIRED = 0x1, ES_DISPLAY_REQUIRED = 0x2;
 
-    static bool _on;
+    static bool _video, _recording;
+    static uint _applied = uint.MaxValue;
 
-    /// <summary>Call from the UI thread (the setting belongs to the thread that makes it).</summary>
-    public static void Set(bool on)
+    /// <summary>Video playing: keep the screen on. Call from the UI thread (the setting belongs to that thread).</summary>
+    public static void Set(bool on) { _video = on; Apply(); }
+
+    /// <summary>A recording running: keep the PC awake (the screen may still turn off).</summary>
+    public static void SetRecording(bool on) { _recording = on; Apply(); }
+
+    static void Apply()
     {
-        if (on == _on) return;
-        _on = on;
-        try { SetThreadExecutionState(on ? ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED : ES_CONTINUOUS); }
-        catch { }
+        uint flags = ES_CONTINUOUS | (_video || _recording ? ES_SYSTEM_REQUIRED : 0) | (_video ? ES_DISPLAY_REQUIRED : 0);
+        if (flags == _applied) return;
+        _applied = flags;
+        try { SetThreadExecutionState(flags); } catch { }
     }
 }

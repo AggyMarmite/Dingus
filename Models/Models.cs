@@ -121,6 +121,13 @@ public class AppSettings
     public string AudioLanguage { get; set; }
     public string SubtitleLanguage { get; set; }
 
+    // Recordings
+    /// <summary>Where recordings are saved (empty = Videos\Dingus Recordings). Can be another drive or a network share.</summary>
+    public string RecordingsFolder { get; set; }
+    /// <summary>Minutes to start early / carry on after, in case programmes start early or overrun.</summary>
+    public int RecordPadBefore { get; set; } = 2;
+    public int RecordPadAfter { get; set; } = 5;
+
     /// <summary>Pause &amp; rewind live TV (buffers the channel you're watching to disk).</summary>
     public bool Timeshift { get; set; } = true;
     /// <summary>How far back you can rewind live TV.</summary>

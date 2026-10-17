@@ -34,6 +34,7 @@ public partial class MainWindow
         ("V", "Multi-view (4 / 6 / 8 channels)"),
         ("I", "Stream info"),
         ("S", "Sleep timer"),
+        ("R", "Record this programme"),
         ("N", "Next episode"),
         ("Home", "Films: start from the beginning"),
         ("Ctrl + F", "Search everything"),
@@ -670,5 +671,31 @@ public partial class MainWindow
         Root.Margin = max ? NativeWindow.MaximisedOverhang(this) : new Thickness(0);
         MaxButton.Content = max ? "\uE923" : "\uE922";
         MaxButton.ToolTip = max ? "Restore down" : "Maximise";
+    }
+}
+
+// Recording from the player.
+public partial class MainWindow
+{
+    public string EpgIdForRow(Views.GuideRow row) => row == null ? null : _guide.EpgIdOf(row);
+
+    void Record_Click(object sender, RoutedEventArgs e) => RecordCurrent();
+
+    void RecordCurrent()
+    {
+        if (!_nowLive || _nowChannel == null) return;
+        Views.RecordUi.RecordNow(_guide.RowFor(_nowChannel.Id));
+        UpdateRecordButton();
+    }
+
+    void UpdateRecordButton()
+    {
+        if (RecordButton == null) return;
+        RecordButton.Visibility = _nowLive ? Visibility.Visible : Visibility.Collapsed;
+        var row = _nowChannel == null ? null : _guide.RowFor(_nowChannel.Id);
+        var p = row == null ? null : DataService.Instance.Epg.At(_guide.EpgIdOf(row), DateTime.Now);
+        bool on = row != null && p != null && RecordingService.IsScheduled(row.Channel.Id, p.Start);
+        RecordButton.Foreground = on ? (Brush)FindResource("LiveBrush") : Brushes.White;
+        RecordButton.ToolTip = on ? "Recording this programme – click to stop (R)" : "Record this programme (R)";
     }
 }

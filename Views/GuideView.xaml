@@ -98,6 +98,14 @@
                                 <TextBlock x:Name="CatchupText" Text="Start over"/>
                             </StackPanel>
                         </Button>
+                        <Button x:Name="RecordHeroButton" Style="{StaticResource BaseButton}" Margin="8,0,0,0" Click="RecordHero_Click"
+                                Visibility="Collapsed" ToolTip="Record this programme">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE7C8;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0"
+                                           Foreground="{StaticResource LiveBrush}"/>
+                                <TextBlock x:Name="RecordHeroText" Text="Record"/>
+                            </StackPanel>
+                        </Button>
                         <Button x:Name="RemindButton" Style="{StaticResource BaseButton}" Margin="8,0,0,0" Click="Remind_Click"
                                 Visibility="Collapsed" ToolTip="Get a pop-up a minute before it starts">
                             <StackPanel Orientation="Horizontal">
@@ -150,6 +158,7 @@
                      KeyDown="ChannelList_KeyDown" PreviewMouseRightButtonDown="List_RightDown">
                 <ListBox.ContextMenu>
                     <ContextMenu Opened="Ctx_Opened">
+                        <MenuItem x:Name="CtxRecord" Header="Record" Click="CtxRecord_Click"/>
                         <MenuItem x:Name="CtxRemind" Header="Remind me" Click="CtxRemind_Click"/>
                         <Separator x:Name="CtxRemindSep"/>
                         <MenuItem Header="Watch full screen" Click="WatchFull_Click"/>
@@ -220,6 +229,8 @@
                                                     <TextBlock x:Name="RB" DockPanel.Dock="Left" Text="&#xEA8F;" FontFamily="{StaticResource IconFont}"
                                                                FontSize="11" Margin="0,2,6,0" Foreground="{StaticResource AccentBrush}" Visibility="Collapsed"
                                                                ToolTip="Reminder set"/>
+                                                    <Ellipse x:Name="REC" DockPanel.Dock="Left" Width="8" Height="8" Margin="0,3,7,0" VerticalAlignment="Top"
+                                                             Fill="{StaticResource LiveBrush}" Visibility="Collapsed" ToolTip="Set to record"/>
                                                     <TextBlock x:Name="T" Text="{Binding Title}" FontSize="13" TextTrimming="CharacterEllipsis"/>
                                                 </DockPanel>
                                                 <TextBlock Text="{Binding TimeText}" FontSize="11" Margin="0,3,0,0"
@@ -239,6 +250,9 @@
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding HasReminder}" Value="True">
                                                 <Setter TargetName="RB" Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding HasRecording}" Value="True">
+                                                <Setter TargetName="REC" Property="Visibility" Value="Visible"/>
                                             </DataTrigger>
                                         </DataTemplate.Triggers>
                                     </DataTemplate>
@@ -275,6 +289,7 @@
                              KeyDown="NowList_KeyDown" PreviewMouseRightButtonDown="List_RightDown">
                         <ListBox.ContextMenu>
                             <ContextMenu Opened="Ctx_Opened">
+                                <MenuItem x:Name="CtxRecord2" Header="Record" Click="CtxRecord_Click"/>
                                 <MenuItem x:Name="CtxRemind2" Header="Remind me" Click="CtxRemind_Click"/>
                                 <Separator x:Name="CtxRemindSep2"/>
                                 <MenuItem Header="Watch full screen" Click="WatchFull_Click"/>

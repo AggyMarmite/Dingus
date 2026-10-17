@@ -62,6 +62,7 @@ public partial class GuideView : UserControl, IPage
         DataService.Instance.EpgChanged += OnEpgChanged;
         HistoryStore.Changed += OnHistoryChanged;
         ReminderService.Changed += OnRemindersChanged;
+        RecordingService.Changed += OnRemindersChanged;
 
         ChannelList.SizeChanged += (_, e) =>
         {
@@ -303,6 +304,7 @@ public partial class GuideView : UserControl, IPage
                     IsPast = p.End <= now,
                     CanCatchup = r.CatchupChannel != null && ds.CanCatchup(r.CatchupChannel, p),
                     HasReminder = p.Start > now && ReminderService.Has(r.Channel.Id, p.Start),
+                    HasRecording = p.End > now && RecordingService.IsScheduled(r.Channel.Id, p.Start),
                     Programme = p,
                     Row = r,
                 });
@@ -742,6 +744,13 @@ public partial class GuideView : UserControl, IPage
 
     void Ctx_Opened(object sender, RoutedEventArgs e)
     {
+        bool notOver = _ctxProg != null && _ctxProg.End > DateTime.Now && _ctxRow != null;
+        var rec = notOver ? RecordingService.Find(_ctxRow.Channel.Id, _ctxProg.Start) : null;
+        foreach (var mi in new[] { CtxRecord, CtxRecord2 })
+        {
+            mi.Visibility = notOver ? Visibility.Visible : Visibility.Collapsed;
+            mi.Header = rec?.IsActive == true ? "Stop recording" : rec != null ? "Cancel recording" : "Record";
+        }
         bool future = _ctxProg != null && _ctxProg.Start > DateTime.Now && _ctxRow != null;
         bool set = future && ReminderService.Has(_ctxRow.Channel.Id, _ctxProg.Start);
         foreach (var mi in new[] { CtxRemind, CtxRemind2 })
@@ -749,10 +758,12 @@ public partial class GuideView : UserControl, IPage
             mi.Visibility = future ? Visibility.Visible : Visibility.Collapsed;
             mi.Header = set ? "Cancel reminder" : $"Remind me ({_ctxProg?.Start:ddd HH:mm})";
         }
-        CtxRemindSep.Visibility = CtxRemindSep2.Visibility = future ? Visibility.Visible : Visibility.Collapsed;
+        CtxRemindSep.Visibility = CtxRemindSep2.Visibility = future || notOver ? Visibility.Visible : Visibility.Collapsed;
     }
 
     void CtxRemind_Click(object sender, RoutedEventArgs e) => ToggleReminder(_ctxRow, _ctxProg);
+    void CtxRecord_Click(object sender, RoutedEventArgs e) => RecordUi.ToggleProgramme(_ctxRow, _ctxProg);
+    void RecordHero_Click(object sender, RoutedEventArgs e) => RecordUi.ToggleProgramme(_heroRow, _heroProg);
     void Remind_Click(object sender, RoutedEventArgs e) => ToggleReminder(_heroRow, _heroProg);
 
     void ToggleReminder(GuideRow r, Programme p)
@@ -776,6 +787,10 @@ public partial class GuideView : UserControl, IPage
         bool future = _heroRow != null && _heroProg != null && _heroProg.Start > DateTime.Now;
         RemindButton.Visibility = future ? Visibility.Visible : Visibility.Collapsed;
         RemindText.Text = future && ReminderService.Has(_heroRow.Channel.Id, _heroProg.Start) ? "Reminder set" : "Remind me";
+        bool notOver = _heroRow != null && _heroProg != null && _heroProg.End > DateTime.Now;
+        RecordHeroButton.Visibility = notOver && DataService.Instance.Active != null ? Visibility.Visible : Visibility.Collapsed;
+        var rec = notOver ? RecordingService.Find(_heroRow.Channel.Id, _heroProg.Start) : null;
+        RecordHeroText.Text = rec?.IsActive == true ? "Recording" : rec != null ? "Set to record" : "Record";
     }
 
     /// <summary>Switches the guide to a category (so channel up/down stays inside it) and selects a channel.</summary>

@@ -322,6 +322,9 @@ public partial class HomeView : UserControl, IPage
         };
         var guide = new MenuItem { Header = "Show in Live TV" };
         guide.Click += (_, _) => MainWindow.Instance?.ShowInGuide(c.Row, c.Upcoming);
+        var recItem = new MenuItem { Header = RecordUi.IsRecording(c.Row, c.Upcoming) ? "Cancel recording" : "Record" };
+        recItem.Click += (_, _) => RecordUi.ToggleProgramme(c.Row, c.Upcoming);
+        menu.Items.Add(recItem);
         menu.Items.Add(item);
         menu.Items.Add(guide);
         menu.IsOpen = true;

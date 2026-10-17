@@ -50,6 +50,8 @@
                                     <RadioButton x:Name="NavGuide" Style="{StaticResource TabButton}" Tag="&#xE7F4;" Content="Live TV" Checked="Nav_Checked"/>
                                     <RadioButton x:Name="NavFilms" Style="{StaticResource TabButton}" Tag="&#xE8B2;" Content="Films" Checked="Nav_Checked"/>
                                     <RadioButton x:Name="NavShows" Style="{StaticResource TabButton}" Tag="&#xE8F1;" Content="TV Shows" Checked="Nav_Checked"/>
+                                    <RadioButton x:Name="NavRecordings" Style="{StaticResource TabButton}" Tag="&#xE7C8;" Content="Recordings" Checked="Nav_Checked"
+                                                 ToolTip="Recordings &amp; reminders"/>
                                     <!-- The Search page opens from the search bar (no tab of its own) -->
                                     <RadioButton x:Name="NavSearch" Style="{StaticResource TabButton}" Tag="&#xE721;" Content="Search" Checked="Nav_Checked"
                                                  Visibility="Collapsed"/>
@@ -400,6 +402,8 @@
                                     </Button>
                                 </StackPanel>
                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                    <Button x:Name="RecordButton" Style="{StaticResource OverlayIconButton}" Content="&#xE7C8;"
+                                            ToolTip="Record this programme (R)" Click="Record_Click"/>
                                     <Button x:Name="SleepButton" Style="{StaticResource OverlayIconButton}" Content="&#xE708;"
                                             ToolTip="Sleep timer (S)" Click="Sleep_Click"/>
                                     <Button x:Name="InfoButton" Style="{StaticResource OverlayIconButton}" Content="&#xE946;"
