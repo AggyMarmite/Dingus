@@ -1,4 +1,21 @@
-## What's new in Dingus 0.6.1
+## What's new in Dingus 0.7.0
+
+* **New title bar** – the side rail is gone: Home · Live TV · Films · TV Shows · Recordings, the search bar, playlist,
+  refresh and settings now sit in one bar along the top (with Dingus's own minimise / maximise / close). More room for
+  everything else. On narrower windows the tab labels tuck away to icons.
+* **"Guide" is now "Live TV".**
+* **Search from anywhere** – the search bar works on every page and finds channels, programmes, films and TV shows,
+  with filters (All · Channels · TV guide · Films · TV shows) and "See all". Esc goes back to where you were.
+* **Recordings & reminders** – a new Recordings tab. Record from the right-click menu (Live TV, Search, Home), the
+  Record button on a programme, or **R** / the record button in the player; or "Record a time slot…". Choose where
+  recordings are saved – this PC, another drive or a NAS share – with early start / overrun padding. It warns when your
+  plan's stream limit would be exceeded (each recording uses a stream, and so does watching). Dingus needs to be open
+  (minimised is fine) for recordings to happen.
+* **Home opens instantly** – "Carry on watching" shows the channel logo with a Play button instead of starting the
+  stream straight away.
+* **Fixed:** full screen and Multi-view no longer stay on top of other apps after you click away.
+
+## Dingus 0.6.1
 
 * **New picture-in-picture icon** – a screen with a small picture in the corner, in the player and on the previews.
 * **Full-screen button on the Guide and Home preview** – next to pause and picture-in-picture (double-click still works too).
@@ -52,4 +69,4 @@
   the video engine have been left out. If your PC doesn't have Microsoft's .NET 8 Desktop Runtime yet, the installer
   fetches it once (most PCs already have it).
 
-**Install:** download `Dingus-Setup-0.6.1.exe` below – or, if you already have Dingus, it will offer this update itself.
+**Install:** download `Dingus-Setup-0.7.0.exe` below – or, if you already have Dingus, it will offer this update itself.
