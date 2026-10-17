@@ -66,6 +66,7 @@ public partial class SettingsView : UserControl, IPage
             CheckChip(TimeshiftChips, S.TimeshiftMinutes.ToString());
             S.StartWithWindows = ThemeService.IsStartWithWindows(); // the installer can switch it on too
             StartWinToggle.IsChecked = S.StartWithWindows;
+            ArtToggle.IsChecked = S.OnlineArtwork;
             CheckChip(ThemeChips, S.Theme ?? "midnight");
             BuildAccentChips();
             BatteryStatus.Text = S.BatteryAware ? PowerService.Describe() : "";
@@ -325,6 +326,13 @@ public partial class SettingsView : UserControl, IPage
         RestartBar.Visibility = S.Theme != StartTheme || S.Accent != StartAccent ? Visibility.Visible : Visibility.Collapsed;
 
     void Restart_Click(object sender, RoutedEventArgs e) => App.Restart();
+
+    void Art_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        S.OnlineArtwork = ArtToggle.IsChecked == true;
+        SettingsStore.Save();
+    }
 
     void StartWin_Changed(object sender, RoutedEventArgs e)
     {

@@ -281,6 +281,13 @@
                         </DockPanel>
                     </Border>
                     <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                    <CheckBox x:Name="ArtToggle" Style="{StaticResource Toggle}" Checked="Art_Changed" Unchecked="Art_Changed" Margin="0,0,0,16">
+                        <StackPanel>
+                            <TextBlock Text="Programme artwork" FontWeight="SemiBold"/>
+                            <TextBlock Text="Shows a picture of the programme (e.g. Friends) on Home, from your TV guide, your Films and TV Shows, or TVmaze (a free TV database – only the programme's name is sent)."
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </CheckBox>
                     <CheckBox x:Name="StartWinToggle" Style="{StaticResource Toggle}" Checked="StartWin_Changed" Unchecked="StartWin_Changed">
                         <StackPanel>
                             <TextBlock Text="Start with Windows" FontWeight="SemiBold"/>

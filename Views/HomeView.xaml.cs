@@ -223,6 +223,7 @@ public partial class HomeView : UserControl, IPage
         BannerChannel.Text = _bannerRow.DisplayName;
         ImageLoader.SetUrl(BannerLogo, _bannerRow.Logo);
         ImageLoader.SetUrl(BannerBigLogo, _bannerRow.Logo);
+        ImageLoader.SetUrl(BannerBadgeLogo, _bannerRow.Logo);
         BannerBigInitials.Text = _bannerRow.Logo == null ? _bannerRow.Initials : "";
         var id = Guide.EpgIdOf(_bannerRow);
         var p = epg.At(id, now);
@@ -232,9 +233,12 @@ public partial class HomeView : UserControl, IPage
             BannerTime.Text = "No guide information";
             BannerProgress.Visibility = Visibility.Collapsed;
             BannerNext.Text = "";
+            _artFor = null;
+            ShowBannerArt(null);
             return;
         }
         BannerTitle.Text = p.Title;
+        LoadBannerArt(p);
         var left = Math.Max(1, (int)Math.Ceiling((p.End - now).TotalMinutes));
         BannerTime.Text = $"{p.Start:HH:mm} – {p.End:HH:mm}  ·  {left} min left";
         BannerProgress.Visibility = Visibility.Visible;
@@ -344,6 +348,31 @@ public partial class HomeView : UserControl, IPage
     }
 
     bool _playRequested;
+    Programme _artFor;
+
+    /// <summary>Looks up the programme's own artwork (guide image, your library, or TVmaze) – off the UI thread.</summary>
+    async void LoadBannerArt(Programme p)
+    {
+        if (ReferenceEquals(_artFor, p)) return;
+        _artFor = p;
+        ShowBannerArt(null);
+        var url = await ArtworkService.FindAsync(p);
+        if (!ReferenceEquals(_artFor, p) || !_shown) return; // moved on meanwhile
+        ShowBannerArt(url);
+    }
+
+    void ShowBannerArt(string url)
+    {
+        bool art = !string.IsNullOrEmpty(url);
+        ImageLoader.SetUrl(BannerArt, art ? url : null);
+        ImageLoader.SetUrl(BannerArtBack, art ? url : null);
+        var v = art ? Visibility.Visible : Visibility.Collapsed;
+        BannerArt.Visibility = BannerArtBack.Visibility = BannerArtShade.Visibility = v;
+        BannerLogoBadge.Visibility = art && _bannerRow?.Logo != null ? Visibility.Visible : Visibility.Collapsed;
+        // Without artwork, the big channel logo (or initials) shows as before.
+        BannerBigLogo.Visibility = art ? Visibility.Collapsed : Visibility.Visible;
+        BannerBigInitials.Visibility = art ? Visibility.Collapsed : Visibility.Visible;
+    }
 
     /// <summary>Play button on the banner: starts the channel in the banner's picture.</summary>
     void BannerPlay_Click(object sender, RoutedEventArgs e)

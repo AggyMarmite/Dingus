@@ -1,3 +1,10 @@
+## What's new in Dingus 0.7.1
+
+* **Programme artwork on Home** – "Carry on watching" now shows a picture of the programme itself (e.g. Friends)
+  instead of just the channel logo, with the logo as a small badge. Dingus uses the TV guide's own image when it has
+  one, then a matching show or film in your playlist, then TVmaze (a free TV database). Only the programme's name is
+  sent, and each title is looked up once. You can turn the online lookup off in Settings → Programme artwork.
+
 ## What's new in Dingus 0.7.0
 
 * **New title bar** – the side rail is gone: Home · Live TV · Films · TV Shows · Recordings, the search bar, playlist,

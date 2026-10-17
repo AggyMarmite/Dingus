@@ -121,6 +121,9 @@ public class AppSettings
     public string AudioLanguage { get; set; }
     public string SubtitleLanguage { get; set; }
 
+    /// <summary>Look up programme artwork online (TVmaze) when the guide and your library don't have any.</summary>
+    public bool OnlineArtwork { get; set; } = true;
+
     // Recordings
     /// <summary>Where recordings are saved (empty = Videos\Dingus Recordings). Can be another drive or a network share.</summary>
     public string RecordingsFolder { get; set; }
@@ -211,7 +214,30 @@ public class Programme
     public DescStore Store;
     public long DescOffset;
     public int DescLength;
-    public string Desc => DescLength > 0 ? Store?.Read(DescOffset, DescLength) : null;
+    // The stored text is "description" or "description\u0001image-url" (image only if the guide has one).
+    public const char ImageSeparator = '\u0001';
+    string Stored => DescLength > 0 ? Store?.Read(DescOffset, DescLength) : null;
+    public string Desc
+    {
+        get
+        {
+            var s = Stored;
+            if (s == null) return null;
+            int i = s.IndexOf(ImageSeparator);
+            var d = i < 0 ? s : s[..i];
+            return d.Length == 0 ? null : d;
+        }
+    }
+    /// <summary>The programme's own artwork from the TV guide, if there is any.</summary>
+    public string ImageUrl
+    {
+        get
+        {
+            var s = Stored;
+            int i = s?.IndexOf(ImageSeparator) ?? -1;
+            return i < 0 ? null : s[(i + 1)..];
+        }
+    }
 }
 
 /// <summary>"Remind me" for a programme that hasn't started yet.</summary>

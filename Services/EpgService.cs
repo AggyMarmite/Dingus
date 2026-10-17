@@ -251,6 +251,10 @@ public static class EpgService
 
                         };
                         var desc = TrimDesc(el.Element("desc")?.Value);
+                        // Programme artwork, if the guide has it: kept on disk next to the description (no extra memory).
+                        var img = (string)el.Element("icon")?.Attribute("src");
+                        if (!string.IsNullOrWhiteSpace(img) && img.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                            desc = (desc ?? "") + Programme.ImageSeparator + img.Trim();
                         if (desc != null)
                         {
                             var (off, len) = store.Add(desc);

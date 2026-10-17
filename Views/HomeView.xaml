@@ -98,6 +98,30 @@
                         <Button x:Name="BannerPlaceholder" Style="{StaticResource PosterCard}" Click="BannerPlay_Click"
                                 ToolTip="Play here (double-click the picture for full screen)">
                             <Grid Width="384" Height="216" Background="Transparent">
+                                <Grid.Clip>
+                                    <RectangleGeometry Rect="0,0,384,216" RadiusX="8" RadiusY="8"/>
+                                </Grid.Clip>
+                                <!-- The programme's artwork (when found): blurred fill behind, the whole picture on top -->
+                                <Image x:Name="BannerArtBack" Stretch="UniformToFill" Opacity="0.55" svc:ImageLoader.DecodeWidth="200"
+                                       Visibility="Collapsed">
+                                    <Image.Effect>
+                                        <BlurEffect Radius="28" RenderingBias="Performance"/>
+                                    </Image.Effect>
+                                </Image>
+                                <Image x:Name="BannerArt" Stretch="Uniform" svc:ImageLoader.DecodeWidth="768"
+                                       RenderOptions.BitmapScalingMode="HighQuality" Visibility="Collapsed"/>
+                                <Border x:Name="BannerArtShade" Visibility="Collapsed">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="#00000000" Offset="0.45"/>
+                                            <GradientStop Color="#AA000000" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                </Border>
+                                <Border x:Name="BannerLogoBadge" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10" Padding="6,4"
+                                        CornerRadius="6" Background="#B3111622" Visibility="Collapsed">
+                                    <Image x:Name="BannerBadgeLogo" Height="22" MaxWidth="70" Stretch="Uniform" svc:ImageLoader.DecodeWidth="140"/>
+                                </Border>
                                 <TextBlock x:Name="BannerBigInitials" FontSize="40" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 <Image x:Name="BannerBigLogo" Width="200" Height="110" Stretch="Uniform" Margin="0,0,0,30"
