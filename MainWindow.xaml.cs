@@ -137,6 +137,10 @@ public partial class MainWindow : Window
         PowerService.Changed += OnPowerChanged;
         // Full screen stays above the taskbar only while Dingus is in front, so Alt-Tab works normally.
         Activated += (_, _) => { if (_osFullscreen || _mini) Topmost = true; };
+        // Switching to another app (from any Dingus window – the player controls are a separate little window
+        // over the video): full screen stops sitting on top. Picture-in-picture stays on top, as it should.
+        Application.Current.Deactivated += (_, _) => { if (_osFullscreen && !_mini) Topmost = false; };
+        Application.Current.Activated += (_, _) => { if (_osFullscreen || _mini) Topmost = true; };
         Deactivated += (_, _) => Dispatcher.InvokeAsync(() =>
         {
             if (!_osFullscreen || _mini) return;

@@ -75,6 +75,11 @@ public partial class MultiViewWindow : Window
             Topmost = true;
         };
         Activated += (_, _) => Topmost = true;
+        // Another app clicked (even while a screen's controls had focus): stop sitting on top of it.
+        EventHandler appOff = (_, _) => Topmost = false, appOn = (_, _) => { if (IsVisible) Topmost = true; };
+        Application.Current.Deactivated += appOff;
+        Application.Current.Activated += appOn;
+        Closed += (_, _) => { Application.Current.Deactivated -= appOff; Application.Current.Activated -= appOn; };
         Deactivated += (_, _) => Dispatcher.InvokeAsync(() =>
         {
             if (!Application.Current.Windows.OfType<Window>().Any(w => w.IsActive && (w == this || w.Owner == this || w is ChannelPickerWindow)))
