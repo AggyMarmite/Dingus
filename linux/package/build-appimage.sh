@@ -18,6 +18,9 @@ echo "== Publishing Dingus $VERSION"
 dotnet publish "$ROOT/linux/Dingus.Linux.csproj" -c Release -r linux-x64 --self-contained true \
   -p:Version="$VERSION" -p:DebugType=none -o "$APPDIR/usr/bin"
 
+# Tracing support needs a library most systems don't have (and Dingus doesn't use); the debugger bits aren't needed either.
+rm -f "$APPDIR/usr/bin/libcoreclrtraceptprovider.so" "$APPDIR/usr/bin/libmscordbi.so" "$APPDIR/usr/bin/libmscordaccore.so" "$APPDIR/usr/bin/createdump"
+
 echo "== Copying the VLC video engine"
 SYS=/usr/lib/x86_64-linux-gnu
 cp -a "$SYS"/libvlc.so* "$SYS"/libvlccore.so* "$APPDIR/usr/lib/"
