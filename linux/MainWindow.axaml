@@ -195,6 +195,8 @@
                         <StackPanel Orientation="Horizontal">
                             <Button x:Name="PreviewPlayPause" Classes="overlay" Width="32" Height="32" FontSize="17" Margin="0"
                                     Content="{x:Static local:Icons.Pause}" ToolTip.Tip="Pause" Click="PlayPause_Click"/>
+                            <Button Classes="overlay" Width="32" Height="32" FontSize="17" Margin="0"
+                                    Content="{x:Static local:Icons.Pip}" ToolTip.Tip="Picture-in-picture (P)" Click="Mini_Click"/>
                             <Button Classes="overlay" Width="32" Height="32" FontSize="18" Margin="0"
                                     Content="{x:Static local:Icons.Fullscreen}" ToolTip.Tip="Full screen (F11 or double-click)" Click="PreviewFull_Click"/>
                         </StackPanel>
@@ -237,6 +239,34 @@
                             </StackPanel>
                         </StackPanel>
                     </Border>
+
+                    <!-- Picture-in-picture controls -->
+                    <Panel x:Name="MiniChrome" IsVisible="False">
+                        <Border VerticalAlignment="Top" Height="44">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                    <GradientStop Color="#C0000000" Offset="0"/>
+                                    <GradientStop Color="#00000000" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <DockPanel Margin="10,0,4,0">
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                    <Button Classes="overlay" Width="34" Height="34" FontSize="18" Content="{x:Static local:Icons.Fullscreen}"
+                                            ToolTip.Tip="Full screen" Click="MiniExpand_Click"/>
+                                    <Button Classes="overlay" Width="34" Height="34" FontSize="17" Content="{x:Static local:Icons.Close}"
+                                            ToolTip.Tip="Close picture-in-picture – back to the app" Click="MiniClose_Click"/>
+                                </StackPanel>
+                                <TextBlock x:Name="MiniTitle" Foreground="White" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </DockPanel>
+                        </Border>
+                        <Button x:Name="MiniPlayPause" Classes="overlay" Content="{x:Static local:Icons.Pause}" FontSize="26" Width="52" Height="52"
+                                CornerRadius="26" HorizontalAlignment="Center" VerticalAlignment="Center" Background="#80000000" Click="PlayPause_Click"/>
+                        <Border x:Name="PipGrip" HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="26" Height="26" Cursor="BottomRightCorner"
+                                Background="#01000000" ToolTip.Tip="Drag to resize" PointerPressed="PipGrip_PointerPressed">
+                            <Path Data="M 20,6 L 6,20 M 20,12 L 12,20 M 20,18 L 18,20" Stroke="#CCFFFFFF" StrokeThickness="1.5"/>
+                        </Border>
+                    </Panel>
 
                     <Grid x:Name="PlayerChrome" RowDefinitions="Auto,*,Auto" IsVisible="False">
                         <!-- Top bar -->
@@ -343,6 +373,8 @@
                                                 ToolTip.Tip="Mute (M)" Click="Mute_Click"/>
                                         <Slider x:Name="VolumeSlider" Classes="player" Width="110" Minimum="0" Maximum="100"
                                                 VerticalAlignment="Center" Margin="4,0,12,0"/>
+                                        <Button x:Name="MiniButton" Classes="overlay" Content="{x:Static local:Icons.Pip}"
+                                                ToolTip.Tip="Picture-in-picture (P)" Click="Mini_Click"/>
                                         <Button x:Name="FullscreenButton" Classes="overlay" Content="{x:Static local:Icons.FullscreenExit}"
                                                 ToolTip.Tip="Exit full screen – back to Live TV (Esc)" Click="Fullscreen_Click"/>
                                     </StackPanel>

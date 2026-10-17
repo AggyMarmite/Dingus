@@ -3,6 +3,10 @@
 # so it runs on most Linux desktops without installing anything. Run on Ubuntu 22.04 (the oldest base it supports).
 #   linux/package/build-appimage.sh <version> <output folder>
 set -euo pipefail
+# In GitHub Actions, say which step failed (shown on the run's summary).
+report() { echo "::error title=AppImage build::line $1: $2"; }
+trap 'report $LINENO "$BASH_COMMAND"' ERR
+logtail() { echo "::error title=$1::$(tail -c 3500 "$2" | sed ':a;N;$!ba;s/\n/%0A/g')"; }
 VERSION="${1:-0.0.0}"
 OUT="$(realpath -m "${2:-out}")"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -45,7 +49,7 @@ DESKTOP
 cp "$APPDIR/usr/share/applications/dingus.desktop" "$APPDIR/dingus.desktop"
 LIBS=()
 for f in "$APPDIR/usr/lib/"libvlc*.so.* $(find "$APPDIR/usr/lib/vlc" -name '*.so'); do LIBS+=(--library "$f"); done
-APPIMAGE_EXTRACT_AND_RUN=1 NO_STRIP=1 "$LD" --appdir "$APPDIR" "${LIBS[@]}" > "$WORK/linuxdeploy.log" 2>&1 || { tail -40 "$WORK/linuxdeploy.log"; exit 1; }
+APPIMAGE_EXTRACT_AND_RUN=1 NO_STRIP=1 "$LD" --appdir "$APPDIR" "${LIBS[@]}" > "$WORK/linuxdeploy.log" 2>&1 || { logtail linuxdeploy "$WORK/linuxdeploy.log"; exit 1; }
 # linuxdeploy copies the plugins flat into usr/lib as well – keep them only in usr/lib/vlc/plugins.
 for p in $(find "$APPDIR/usr/lib/vlc/plugins" -name '*.so' -printf '%f\n'); do rm -f "$APPDIR/usr/lib/$p"; done
 # Plugin cache: VLC starts faster.
@@ -64,5 +68,5 @@ echo "== Packing the AppImage"
 AT="$WORK/appimagetool-x86_64.AppImage"
 curl -sSL -o "$AT" https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
 chmod +x "$AT"
-ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "$AT" --no-appstream "$APPDIR" "$OUT/Dingus-$VERSION-x86_64.AppImage" > "$WORK/appimagetool.log" 2>&1 || { tail -40 "$WORK/appimagetool.log"; exit 1; }
+ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "$AT" --no-appstream "$APPDIR" "$OUT/Dingus-$VERSION-x86_64.AppImage" > "$WORK/appimagetool.log" 2>&1 || { logtail appimagetool "$WORK/appimagetool.log"; exit 1; }
 ls -la "$OUT"

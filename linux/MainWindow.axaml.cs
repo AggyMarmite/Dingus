@@ -311,7 +311,7 @@ public partial class MainWindow : Window
     void UpdateWindowFrame()
     {
         bool max = WindowState is WindowState.Maximized or WindowState.FullScreen;
-        ResizeGrips.IsVisible = !max;
+        ResizeGrips.IsVisible = !max && !_mini;
         MaxButton.Content = WindowState == WindowState.Maximized ? Icons.Restore : Icons.Maximise;
         ToolTip.SetTip(MaxButton, WindowState == WindowState.Maximized ? "Restore down" : "Maximise");
     }
@@ -617,7 +617,12 @@ public partial class MainWindow : Window
         PositionPreview();
     }
 
-    public void PlayLiveMini(Channel ch) => PlayLive(ch, false);
+    public void PlayLiveMini(Channel ch)
+    {
+        if (_svc == null || ch == null) return;
+        if (!StartLive(ch)) return;
+        EnterMini();
+    }
 
     public void PlayCatchup(Channel ch, Programme p)
     {
@@ -796,6 +801,8 @@ public partial class MainWindow : Window
 
     void EnterPlayer()
     {
+        if (_mini) LeaveMiniWindow();
+        MiniChrome.IsVisible = false;
         _playerMode = true;
         _stateBeforePlayer = WindowState == WindowState.FullScreen ? WindowState.Normal : WindowState;
         FillWindowWithVideo();
@@ -845,6 +852,7 @@ public partial class MainWindow : Window
 
     void ExitPlayerLayout()
     {
+        if (_mini) LeaveMiniWindow();
         ClosePanel();
         _playerMode = false;
         _uiTimer.Stop();
@@ -862,6 +870,84 @@ public partial class MainWindow : Window
         HideVideo();
     }
 
+    // ----- picture-in-picture: the window becomes a small player that stays on top -----
+
+    bool _mini;
+    PixelPoint _miniSavedPos;
+    double _miniSavedW, _miniSavedH;
+    WindowState _miniSavedState;
+
+    void Mini_Click(object sender, RoutedEventArgs e) => EnterMini();
+    void MiniExpand_Click(object sender, RoutedEventArgs e) => ExitMini(true);
+    void MiniClose_Click(object sender, RoutedEventArgs e) => ExitMini(false);
+
+    public void EnterMini()
+    {
+        if (_mini || _svc == null || (!_nowLive && _vod == null)) return;
+        ClosePanel();
+        _miniSavedState = _playerMode ? _stateBeforePlayer : WindowState;
+        if (WindowState != WindowState.Normal) WindowState = WindowState.Normal;
+        _miniSavedPos = Position;
+        _miniSavedW = Width; _miniSavedH = Height;
+
+        _mini = true;
+        _playerMode = true;
+        _previewActive = false;
+        FillWindowWithVideo();
+        Motion.HideNow(PlayerChrome);
+        HealthBadge.IsVisible = false;
+        _hideTimer.Stop();
+        ResizeGrips.IsVisible = false;
+        MinWidth = 0; MinHeight = 0;
+        var s = SettingsStore.Current;
+        double w = Math.Clamp(s.MiniWidth ?? 480, 320, 1280), h = w * 9 / 16;
+        Width = w; Height = h;
+        Topmost = true;
+        var screen = Screens.ScreenFromWindow(this) ?? Screens.Primary;
+        if (screen != null)
+        {
+            var wa = screen.WorkingArea;
+            double k = screen.Scaling;
+            int left = (int)(wa.Right - (w + 16) * k), top = (int)(wa.Bottom - (h + 16) * k);
+            if (s.MiniLeft is double ml && s.MiniTop is double mt && ml >= wa.X - 20 && mt >= wa.Y - 20 && ml + w * k <= wa.Right + 20 && mt + h * k <= wa.Bottom + 20)
+            { left = (int)ml; top = (int)mt; }
+            Position = new PixelPoint(left, top);
+        }
+        UpdateChromeText();
+        _uiTimer.Start();
+    }
+
+    void LeaveMiniWindow()
+    {
+        if (!_mini) return;
+        var s = SettingsStore.Current;
+        s.MiniLeft = Position.X; s.MiniTop = Position.Y; s.MiniWidth = Width;
+        _mini = false;
+        MiniChrome.IsVisible = false;
+        Topmost = false;
+        MinWidth = 900; MinHeight = 540;
+        Width = _miniSavedW; Height = _miniSavedH;
+        Position = _miniSavedPos;
+        if (_miniSavedState == WindowState.Maximized) WindowState = WindowState.Maximized;
+        _stateBeforePlayer = _miniSavedState;
+        UpdateWindowFrame();
+    }
+
+    void ExitMini(bool toPlayer)
+    {
+        if (!_mini) return;
+        LeaveMiniWindow();
+        if (toPlayer) EnterPlayer();
+        else ExitPlayer();
+    }
+
+    void PipGrip_PointerPressed(object sender, PointerPressedEventArgs e)
+    {
+        if (!_mini) return;
+        BeginResizeDrag(WindowEdge.SouthEast, e);
+        e.Handled = true;
+    }
+
     // =====================================================================================
     // Player chrome
     // =====================================================================================
@@ -874,6 +960,7 @@ public partial class MainWindow : Window
         {
             var row = _guide.RowFor(ch.Id);
             ChromeTitle.Text = row?.DisplayName ?? ch.Name;
+            MiniTitle.Text = row?.DisplayName ?? ch.Name;
             ImageLoader.SetUrl(ChromeLogo, row?.Logo);
             ChromeLogoBox.IsVisible = !string.IsNullOrEmpty(row?.Logo);
             UpdateLiveInfo(ch);
@@ -881,6 +968,7 @@ public partial class MainWindow : Window
         else
         {
             ChromeTitle.Text = _vod?.Title ?? "";
+            MiniTitle.Text = _vod?.Title ?? "";
             ChromeSubtitle.Text = _vod?.Subtitle ?? "";
             ChromeNext.Text = _vod?.NextLabel != null ? "Next   " + _vod.NextLabel : "";
             ChromeLogoBox.IsVisible = false;
@@ -911,6 +999,13 @@ public partial class MainWindow : Window
     {
         if (!_playerMode) return;
         if (_panelOpen) { BumpPanelTimer(); return; }
+        if (_mini)
+        {
+            MiniChrome.IsVisible = true;
+            _hideTimer.Stop();
+            _hideTimer.Start();
+            return;
+        }
         Motion.FadeIn(PlayerChrome, ms: 160);
         Overlay.Cursor = Cursor.Default;
         _hideTimer.Stop();
@@ -923,6 +1018,7 @@ public partial class MainWindow : Window
     {
         _hideTimer.Stop();
         if (!_playerMode || _menuOpen || _seeking || _liveSeeking) return;
+        if (_mini) { if (!Overlay.IsPointerOver) MiniChrome.IsVisible = false; return; }
         if (UpNextCard.IsVisible) return;
         Motion.FadeOut(PlayerChrome, ms: 260);
         Overlay.Cursor = new Cursor(StandardCursorType.None);
@@ -935,6 +1031,7 @@ public partial class MainWindow : Window
         var mp = _svc.Player;
         var glyph = mp.IsPlaying ? Icons.Pause : Icons.Play;
         PreviewPlayPause.Content = glyph;
+        MiniPlayPause.Content = glyph;
         if (!PlayerChrome.IsVisible) return;
         PlayPauseButton.Content = glyph;
         MuteButton.Content = _muted || VolumeSlider.Value <= 0 ? Icons.VolumeOff : Icons.Volume;
@@ -1398,6 +1495,7 @@ public partial class MainWindow : Window
         if (IsSheetKey(key, e) && (!typing || key == Key.F1)) { ToggleShortcutSheet(); e.Handled = true; return; }
         if (SheetOpen && key == Key.Escape) { CloseShortcutSheet(); e.Handled = true; return; }
         if (key == Key.F11 && _nowLive) { EnterPlayer(); e.Handled = true; return; }
+        if (key == Key.P && _nowLive && !typing) { EnterMini(); e.Handled = true; return; }
 
         if (_page == _guide && !typing)
         {
@@ -1416,7 +1514,7 @@ public partial class MainWindow : Window
         if (SheetOpen) { CloseShortcutSheet(); if (key == Key.Escape) return true; }
         if (Browsing && HandleBrowseKey(key)) return true;
         if (_panelOpen && HandlePanelKey(key)) return true;
-        if (_nowLive && (key == Key.Up || key == Key.Down)) { Browse(key == Key.Up ? -1 : 1); return true; }
+        if (_nowLive && !_mini && (key == Key.Up || key == Key.Down)) { Browse(key == Key.Up ? -1 : 1); return true; }
         ShowChrome();
         if (_nowLive && DigitOf(key) is int d) { TypeDigit(d); return true; }
 
@@ -1424,7 +1522,7 @@ public partial class MainWindow : Window
         {
             case Key.Escape:
                 if (_number.Length > 0) { ClearNumber(); return true; }
-                ExitPlayer();
+                if (_mini) ExitMini(false); else ExitPlayer();
                 return true;
             case Key.Back:
                 if (_nowLive) { GoToPreviousChannel(); return true; }
@@ -1439,7 +1537,10 @@ public partial class MainWindow : Window
                 break;
             case Key.F:
             case Key.F11:
-                ExitPlayer();
+                if (_mini) ExitMini(true); else ExitPlayer();
+                return true;
+            case Key.P:
+                if (_mini) ExitMini(true); else EnterMini();
                 return true;
             case Key.I:
                 ToggleHealthPinned();
@@ -1563,6 +1664,13 @@ public partial class MainWindow : Window
     {
         if (!e.GetCurrentPoint(Overlay).Properties.IsLeftButtonPressed) return;
         if (e.Source is Visual v && (v.FindAncestorOfType<Button>() != null || v.FindAncestorOfType<Slider>() != null || v.FindAncestorOfType<ListBox>() != null)) return;
+        if (_mini)
+        {
+            if (e.ClickCount == 2) ExitMini(true);
+            else BeginMoveDrag(e);
+            e.Handled = true;
+            return;
+        }
         if (e.ClickCount == 2)
         {
             if (!_playerMode) { if (_nowLive) EnterPlayer(); }
@@ -1575,6 +1683,13 @@ public partial class MainWindow : Window
 
     void Overlay_PointerWheelChanged(object sender, PointerWheelEventArgs e)
     {
+        if (_mini && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            double w = Math.Clamp(Width * (e.Delta.Y > 0 ? 1.1 : 1 / 1.1), 320, 1280);
+            Width = w; Height = w * 9 / 16;
+            SettingsStore.Current.MiniWidth = w;
+            return;
+        }
         if (!_playerMode) return;
         VolumeSlider.Value = Math.Clamp(VolumeSlider.Value + (e.Delta.Y > 0 ? 5 : -5), 0, 100);
         ShowChrome();
@@ -1666,6 +1781,7 @@ public partial class MainWindow : Window
         ("M", "Mute  ·  mouse wheel = volume"),
         ("F / F11", "Full screen on / off"),
         ("Esc", "Back to Live TV"),
+        ("P", "Picture-in-picture"),
         ("I", "Stream info"),
         ("S", "Sleep timer"),
         ("R", "Record this programme"),
@@ -1688,9 +1804,11 @@ public partial class MainWindow : Window
                 var key = new Border
                 {
                     MinWidth = 120,
+                    VerticalAlignment = VerticalAlignment.Center,
                     Child = new Border
                     {
                         HorizontalAlignment = HorizontalAlignment.Left,
+                        VerticalAlignment = VerticalAlignment.Center,
                         Background = new SolidColorBrush(Color.FromArgb(0x26, 0xFF, 0xFF, 0xFF)),
                         CornerRadius = new CornerRadius(5),
                         Padding = new Thickness(8, 2, 8, 3),

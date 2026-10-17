@@ -134,6 +134,7 @@
                         <MenuItem x:Name="CtxRemind" Header="Remind me" Click="CtxRemind_Click"/>
                         <Separator x:Name="CtxRemindSep"/>
                         <MenuItem Header="Watch full screen" Click="WatchFull_Click"/>
+                        <MenuItem Header="Watch in picture-in-picture" Click="Mini_Click"/>
                         <MenuItem Header="Add / remove favourite" Click="Fav_Click"/>
                         <Separator/>
                         <MenuItem Header="Match TV guide…" Click="MatchGuide_Click"/>
@@ -212,6 +213,7 @@
                                 <MenuItem x:Name="CtxRemind2" Header="Remind me" Click="CtxRemind_Click"/>
                                 <Separator x:Name="CtxRemindSep2"/>
                                 <MenuItem Header="Watch full screen" Click="WatchFull_Click"/>
+                        <MenuItem Header="Watch in picture-in-picture" Click="Mini_Click"/>
                                 <MenuItem Header="Add / remove favourite" Click="Fav_Click"/>
                             </ContextMenu>
                         </ListBox.ContextMenu>
