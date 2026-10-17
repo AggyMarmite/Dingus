@@ -1,12 +1,10 @@
 name: Release
 
-# When the <Version> in Dingus.csproj changes on main (or on demand), build the installer and publish
-# it as release vX.Y.Z – unless that release already exists. The app's updater offers the
+# Run by hand only (Actions → Release → Run workflow), when a release is wanted: builds the installer for the
+# <Version> in Dingus.csproj and publishes it as release vX.Y.Z – unless that release already exists.
+# Pushing to main never releases anything; it only builds and tests. The app's updater offers the
 # Dingus-Setup-x.y.z.exe attached to the latest release.
 on:
-  push:
-    branches: [main]
-    paths: ['Dingus.csproj']
   workflow_dispatch:
 
 permissions:

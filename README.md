@@ -34,12 +34,8 @@ rights, and it adds Start menu and (optionally) desktop shortcuts.
 
 ### Making a release
 
-Push a version tag. GitHub Actions builds the app, makes the installer and attaches it to a new release:
-
-```powershell
-git tag v0.3.0
-git push origin v0.3.0
-```
+Releases are made by hand: raise `<Version>` in `Dingus.csproj`, update `installer/release-notes.md`, push, then
+run **Actions → Release → Run workflow**. Pushing to main on its own only builds and tests.
 
 ## What's in this build
 
