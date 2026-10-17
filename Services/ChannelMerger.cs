@@ -4,8 +4,8 @@ using Dingus.Models;
 namespace Dingus.Services;
 
 /// <summary>
-/// Works out which playlist entries are the same channel ("UK: BBC One", "UK: BBC One HD",
-/// "UK: BBC One FHD (Backup)") so the guide can show them as one row, and orders the versions
+/// Works out which playlist entries are the same channel ("UK: Channel One", "UK: Channel One HD",
+/// "UK: Channel One FHD (Backup)") so the guide can show them as one row, and orders the versions
 /// best-first for playback and automatic fallback.
 /// </summary>
 public static class ChannelMerger

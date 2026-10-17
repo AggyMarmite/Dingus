@@ -1,6 +1,6 @@
 ## What's new in Dingus 0.7.1
 
-* **Programme artwork on Home** – "Carry on watching" now shows a picture of the programme itself (e.g. Friends)
+* **Programme artwork on Home** – "Carry on watching" now shows a picture of the programme itself (e.g. a sitcom's own artwork)
   instead of just the channel logo, with the logo as a small badge. Dingus uses the TV guide's own image when it has
   one, then a matching show or film in your playlist, then TVmaze (a free TV database). Only the programme's name is
   sent, and each title is looked up once. You can turn the online lookup off in Settings → Programme artwork.
@@ -45,7 +45,7 @@
 * **Fix the guide yourself** – right-click a channel with the wrong (or no) guide → **Match TV guide…**, search, and pick
   the right one; each guide channel shows what's on now so you can tell them apart. Or choose "No guide". Your choices
   are kept when the playlist refreshes.
-* **Sky-style info bar** – while watching, ↑ / ↓ show what's on other channels now and next, without changing.
+* **Now & next info bar** – while watching, ↑ / ↓ show what's on other channels now and next, without changing.
   **Enter** watches, **Esc** closes. Page Up / Page Down still change channel straight away.
 * **Smoother full screen** – no more flicker/animation when double-clicking into or out of full screen.
 * **Smoother everywhere** – controls, toasts, the channel list, the info bar and pages now fade and slide in

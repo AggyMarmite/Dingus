@@ -39,11 +39,11 @@ run **Actions → Release → Run workflow**. Pushing to main on its own only bu
 
 ## What's in this build
 
-- **TV Guide** – Sky/TiviMate-style grid with channel logos, wrapped channel names, a live mini player,
+- **TV Guide** – Classic grid with channel logos, wrapped channel names, a live mini player,
   now/next details, a red "now" line, earlier/later/now navigation, favourites (right-click a channel)
   and a category rail. Search covers every channel, not just the selected category.
 - **EPG auto-matching** – guide channels are matched by EPG id first, then by normalised name
-  ("UK: BBC One HD" ↔ "BBC One"), so most channels line up without manual work. Missing logos fall back to the guide's icons.
+  ("UK: Channel One HD" ↔ "Channel One"), so most channels line up without manual work. Missing logos fall back to the guide's icons.
 - **Films / TV Shows** – virtualised poster grids, categories, sort (recently added, A–Z, top rated),
   detail pages with plot/cast/backdrop, seasons and episodes.
 - **Full-screen player** – double-click the mini player (or "Watch full screen"). Auto-hiding controls,
@@ -91,7 +91,7 @@ run **Actions → Release → Run workflow**. Pushing to main on its own only bu
 - **Catch-up** (Xtream providers that offer it): a ⟲ mark on guide programmes – double-click one,
   or use "Start over" / "Watch catch-up" on the programme details.
 - **Stream health**: if a stream stalls or errors, it reconnects automatically (up to 3 tries).
-- **Merged channels**: "BBC One", "BBC One HD", "BBC One FHD" and backups show as one channel; if a version
+- **Merged channels**: "Channel One", "Channel One HD", "Channel One FHD" and backups show as one channel; if a version
   fails the next is tried automatically, and the player's quality button lets you pick a version.
 - **On now / Tonight**: buttons above the guide's categories switch to a list of what's on now or this evening,
   colour-coded by genre (sport, film, news, kids, factual, entertainment).

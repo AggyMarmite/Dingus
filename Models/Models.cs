@@ -74,7 +74,7 @@ public class AppSettings
     public bool ShowStreamInfo { get; set; }
     /// <summary>Switch the display's refresh rate to match the video while watching full screen.</summary>
     public bool AdaptiveFrameRate { get; set; } = true;
-    /// <summary>Show "BBC One", "BBC One HD", "BBC One FHD" … as one channel with automatic fallback.</summary>
+    /// <summary>Show "Channel One", "Channel One HD", "Channel One FHD" … as one channel with automatic fallback.</summary>
     public bool MergeDuplicates { get; set; } = true;
     /// <summary>Highest quality to pick for merged channels: best | 1080 | 720.</summary>
     public string PreferredQuality { get; set; } = "best";

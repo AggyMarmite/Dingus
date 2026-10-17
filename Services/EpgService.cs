@@ -369,7 +369,7 @@ public static class EpgService
     static string Find(Dictionary<string, string> d, string key) =>
         key.Length > 0 && d.TryGetValue(key, out var v) ? v : null;
 
-    /// <summary>"UK: BBC One HD" → "bbcone"; "Sky Sports+1" → "skysportsplus1".</summary>
+    /// <summary>"UK: Channel One HD" → "channelone"; "Sports Main+1" → "sportsmainplus1".</summary>
     public static string Norm(string s)
     {
         if (string.IsNullOrWhiteSpace(s)) return "";

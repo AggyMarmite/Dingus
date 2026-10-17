@@ -2,13 +2,13 @@
 param([string]$Dir)
 New-Item -ItemType Directory -Force $Dir | Out-Null
 $channels = @(
-  @{id='bbc1.uk'; name='UK| BBC One HD'; group='UK Entertainment'}, @{id='bbc1.uk'; name='UK| BBC One FHD'; group='UK Entertainment'},
-  @{id='bbc2.uk'; name='UK| BBC Two HD'; group='UK Entertainment'}, @{id='itv1.uk'; name='UK| ITV 1 HD'; group='UK Entertainment'},
-  @{id='ch4.uk'; name='UK| Channel 4 HD'; group='UK Entertainment'}, @{id='sky.news'; name='UK| Sky News'; group='UK News'},
-  @{id='bbc.news'; name='UK| BBC News HD'; group='UK News'}, @{id='sky.sports.main'; name='UK| Sky Sports Main Event 4K'; group='UK Sport'},
-  @{id='sky.sports.pl'; name='UK| Sky Sports Premier League HD'; group='UK Sport'}, @{id='tnt1'; name='UK| TNT Sports 1 HD'; group='UK Sport'},
-  @{id='film4'; name='UK| Film4 HD'; group='UK Films'}, @{id='sky.cinema'; name='UK| Sky Cinema Premiere HD'; group='UK Films'},
-  @{id='cbeebies'; name='UK| CBeebies'; group='UK Kids'}, @{id='adult1'; name='XXX Channel 1'; group='Adult XXX'}
+  @{id='one.uk'; name='UK| Channel One HD'; group='UK Entertainment'}, @{id='one.uk'; name='UK| Channel One FHD'; group='UK Entertainment'},
+  @{id='two.uk'; name='UK| Channel Two HD'; group='UK Entertainment'}, @{id='three.uk'; name='UK| Channel Three HD'; group='UK Entertainment'},
+  @{id='four.uk'; name='UK| Channel Four HD'; group='UK Entertainment'}, @{id='news24'; name='UK| News 24'; group='UK News'},
+  @{id='world.news'; name='UK| World News HD'; group='UK News'}, @{id='sports.main'; name='UK| Sports Main Event 4K'; group='UK Sport'},
+  @{id='sports.football'; name='UK| Football Plus HD'; group='UK Sport'}, @{id='sports2'; name='UK| Sports Two HD'; group='UK Sport'},
+  @{id='films1'; name='UK| Film Classics HD'; group='UK Films'}, @{id='cinema.prem'; name='UK| Cinema Premiere HD'; group='UK Films'},
+  @{id='kids1'; name='UK| Kids Zone'; group='UK Kids'}, @{id='adult1'; name='XXX Channel 1'; group='Adult XXX'}
 )
 $m3u = New-Object System.Text.StringBuilder
 [void]$m3u.AppendLine('#EXTM3U')
@@ -29,11 +29,11 @@ foreach ($e in 1..4) {
 Set-Content -Path "$Dir\sample.m3u" -Value $m3u.ToString() -Encoding UTF8
 
 $titles = @{
-  'UK Entertainment' = @('EastEnders','The One Show','Pointless','Gogglebox','Strictly Come Dancing','Match of the Day','Coronation Street','Have I Got News for You')
-  'UK News' = @('Sky News Tonight','BBC News at Six','The Briefing','World News Today')
-  'UK Sport' = @('Live: Arsenal v Chelsea','Premier League Review','Live: England v India – Test Cricket','Super Sunday','Live F1: Qualifying')
+  'UK Entertainment' = @('The Village','Evening Live','Quiz Masters','Sofa Critics','Dance Off','Football Highlights','Back Street','Panel of Fools')
+  'UK News' = @('News Tonight','News at Six','The Briefing','World News Today')
+  'UK Sport' = @('Live: Rovers v United','Football Review','Live: Test Cricket – Day 2','Super Sunday','Live: Grand Prix Qualifying')
   'UK Films' = @('The Long Journey','Night Shift','Blue Harbour','The Last Summer')
-  'UK Kids' = @('Hey Duggee','Bluey','Numberblocks')
+  'UK Kids' = @('Puppy Club','Little Explorers','Counting Friends')
   'Adult XXX' = @('Late Show')
 }
 $genre = @{ 'UK Entertainment'='Entertainment'; 'UK News'='News'; 'UK Sport'='Sport'; 'UK Films'='Film'; 'UK Kids'='Children'; 'Adult XXX'='Adult' }

@@ -6,7 +6,7 @@ using Dingus.Models;
 namespace Dingus.Services;
 
 /// <summary>
-/// Finds artwork for a programme ("Friends" → a Friends image): first the TV guide's own image, then a matching
+/// Finds artwork for a programme (a show's title → that show's picture): first the TV guide's own image, then a matching
 /// show or film in your playlist, then TVmaze (a free TV database – looked up once per title and remembered).
 /// </summary>
 public static class ArtworkService
@@ -23,7 +23,7 @@ public static class ArtworkService
         return c;
     }
 
-    // "Live: Arsenal v Chelsea", "Friends (R)", "New: Taskmaster", "Friends S3 E2", "The Office: Christmas Special" …
+    // "Live: Team A v Team B", "My Show (R)", "New: My Show", "My Show S3 E2", "My Show: Christmas Special" …
     static readonly Regex Noise = new(@"^(live|new|premiere|repeat|exclusive)\s*[:\-]\s*|\s*\((r|repeat|hd|new|\d{4})\)\s*$|\s*[:\-]?\s*s\d+\s*e\d+.*$|\s*-\s*series\s+\d+.*$|\s*:\s*episode\s+\d+.*$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 

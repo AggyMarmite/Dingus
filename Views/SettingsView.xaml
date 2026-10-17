@@ -116,7 +116,7 @@
                     <CheckBox x:Name="MergeToggle" Style="{StaticResource Toggle}" Checked="Merge_Changed" Unchecked="Merge_Changed">
                         <StackPanel>
                             <TextBlock Text="Merge duplicate channels" FontWeight="SemiBold"/>
-                            <TextBlock Text="Shows “BBC One”, “BBC One HD”, “BBC One FHD” and backups as one channel. If a version stops working, the next one is tried automatically."
+                            <TextBlock Text="Shows “Channel One”, “Channel One HD”, “Channel One FHD” and backups as one channel. If a version stops working, the next one is tried automatically."
                                        Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
                     </CheckBox>
@@ -284,7 +284,7 @@
                     <CheckBox x:Name="ArtToggle" Style="{StaticResource Toggle}" Checked="Art_Changed" Unchecked="Art_Changed" Margin="0,0,0,16">
                         <StackPanel>
                             <TextBlock Text="Programme artwork" FontWeight="SemiBold"/>
-                            <TextBlock Text="Shows a picture of the programme (e.g. Friends) on Home, from your TV guide, your Films and TV Shows, or TVmaze (a free TV database – only the programme's name is sent)."
+                            <TextBlock Text="Shows a picture of the programme itself on Home, from your TV guide, your Films and TV Shows, or TVmaze (a free TV database – only the programme's name is sent)."
                                        Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
                     </CheckBox>
