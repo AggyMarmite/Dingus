@@ -52,6 +52,10 @@
     <Compile Remove="tests/**" />
     <None Remove="tests/**" />
     <Page Remove="tests/**" />
+    <!-- The Linux app (Avalonia) builds separately. -->
+    <Compile Remove="linux/**" />
+    <None Remove="linux/**" />
+    <Page Remove="linux/**" />
   </ItemGroup>
 
   <ItemGroup>

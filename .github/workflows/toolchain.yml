@@ -1,0 +1,38 @@
+name: Toolchain snapshot
+# Development helper: packs the .NET SDK and the NuGet packages Dingus uses into the "toolchain" branch,
+# so the code can be compiled in places without access to the .NET download servers.
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  pack:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore both apps
+        run: |
+          dotnet restore linux/Dingus.Linux.csproj
+          dotnet restore Dingus.csproj -p:EnableWindowsTargeting=true
+      - name: Pack
+        run: |
+          set -e
+          # The Windows VLC binaries aren't needed to compile – keep the package, drop the big files.
+          find ~/.nuget/packages/videolan.libvlc.windows -type f -size +200k -delete || true
+          DOTNET_DIR=$(dirname $(readlink -f $(which dotnet)))
+          mkdir -p out
+          tar -C "$DOTNET_DIR" -cJf out/sdk.tar.xz .
+          tar -C ~/.nuget -cJf out/nuget.tar.xz packages
+          cd out && split -b 45m sdk.tar.xz sdk.part. && split -b 45m nuget.tar.xz nuget.part. && rm sdk.tar.xz nuget.tar.xz
+          ls -la
+      - name: Push to the toolchain branch
+        run: |
+          cd out
+          git init -q -b toolchain
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git add -A
+          git commit -q -m "Toolchain snapshot"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" toolchain

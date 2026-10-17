@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Dingus for Linux: the same playlists, guide, recordings and player code as the Windows app
+       (shared from ../Models and ../Services), with an Avalonia interface. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>dingus</AssemblyName>
+    <RootNamespace>Dingus</RootNamespace>
+    <Product>Dingus</Product>
+    <Version>0.8.0</Version>
+    <DefineConstants>$(DefineConstants);LINUX</DefineConstants>
+    <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <TieredPGO>true</TieredPGO>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+    <ApplicationIcon>../Assets/Dingus.ico</ApplicationIcon>
+    <NoWarn>$(NoWarn);CS0067;CS0169;CS0414;CS0649</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="7" />
+    <RuntimeHostConfigurationOption Include="System.GC.RetainVM" Value="false" />
+  </ItemGroup>
+
+  <!-- Shared with the Windows app -->
+  <ItemGroup>
+    <Compile Include="../Models/*.cs" LinkBase="Shared/Models" />
+    <Compile Include="../Services/ArtworkService.cs;../Services/Backup.cs;../Services/ChannelMerger.cs;../Services/EpgService.cs;../Services/JsonExt.cs;../Services/M3uParser.cs;../Services/PlayerService.cs;../Services/Timeshift.cs;../Services/XtreamClient.cs;../Services/Core.cs;../Services/DataService.cs;../Services/HistoryStore.cs;../Services/RecordingService.cs;../Services/ReminderService.cs;../Services/Genres.cs;../Services/Parental.cs;../Services/CategoryOrder.cs;../Services/LogoTint.cs;../Services/Updater.cs"
+             LinkBase="Shared/Services" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.3" />
+    <PackageReference Include="LibVLCSharp" Version="3.9.0" />
+    <PackageReference Include="LibVLCSharp.Avalonia" Version="3.9.0" />
+  </ItemGroup>
+
+</Project>
