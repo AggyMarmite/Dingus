@@ -1,33 +1,125 @@
 <UserControl x:Class="Dingus.Views.HomeView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:svc="clr-namespace:Dingus.Services">
+             xmlns:svc="clr-namespace:Dingus.Services"
+             SizeChanged="Home_SizeChanged">
     <UserControl.Resources>
-        <!-- Channel card: logo, channel, programme, progress or start time -->
+        <!-- Big white pill (Watch / More info) -->
+        <Style x:Key="HeroPill" TargetType="Button">
+            <Setter Property="Foreground" Value="#0B0E14"/>
+            <Setter Property="Background" Value="#F4F6FA"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Height" Value="50"/>
+            <Setter Property="Padding" Value="30,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid RenderTransformOrigin="0.5,0.5">
+                            <Grid.RenderTransform><ScaleTransform x:Name="S"/></Grid.RenderTransform>
+                            <Border CornerRadius="25" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"/>
+                            <Border x:Name="Hi" CornerRadius="25" Background="White" Opacity="0"/>
+                            <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard><Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hi" Storyboard.TargetProperty="Opacity" To="0.16" Duration="0:0:0.15"/>
+                                        <DoubleAnimation Storyboard.TargetName="S" Storyboard.TargetProperty="ScaleX" To="1.03" Duration="0:0:0.15"/>
+                                        <DoubleAnimation Storyboard.TargetName="S" Storyboard.TargetProperty="ScaleY" To="1.03" Duration="0:0:0.15"/>
+                                    </Storyboard></BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard><Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hi" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2"/>
+                                        <DoubleAnimation Storyboard.TargetName="S" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.2"/>
+                                        <DoubleAnimation Storyboard.TargetName="S" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.2"/>
+                                    </Storyboard></BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="S" Property="ScaleX" Value="0.97"/>
+                                <Setter TargetName="S" Property="ScaleY" Value="0.97"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- See-through pill and round arrow button -->
+        <Style x:Key="HeroGlass" TargetType="Button" BasedOn="{StaticResource HeroPill}">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#2EFFFFFF"/>
+            <Setter Property="BorderBrush" Value="#38FFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="24,0"/>
+        </Style>
+        <Style x:Key="HeroRound" TargetType="Button" BasedOn="{StaticResource HeroGlass}">
+            <Setter Property="Width" Value="50"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+        </Style>
+        <Style x:Key="HeroLink" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="Transparent" Padding="8,4">
+                            <ContentPresenter x:Name="C" Opacity="0.85"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="C" Property="Opacity" Value="1"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="RowHeader" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="19"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#C9D0DC"/>
+        </Style>
+
+        <!-- Channel card: the logo on a tile in the logo's own colour, what's on, the channel -->
         <DataTemplate x:Key="ChannelCardTemplate">
-            <Button Style="{StaticResource PosterCard}" Width="236" Margin="8,6,8,10" Click="Channel_Click" ToolTip="{Binding Row.Name}"
+            <Button Style="{StaticResource PosterCard}" Width="220" Margin="8,6,8,10" Click="Channel_Click" ToolTip="{Binding Row.Name}"
                     MouseRightButtonUp="Card_RightClick">
-                <Border CornerRadius="10" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
+                <Border CornerRadius="12" Background="{StaticResource SurfaceBrush}">
                     <StackPanel>
-                        <Grid Height="104">
-                            <Border CornerRadius="10,10,0,0" Background="{StaticResource Surface2Brush}"/>
-                            <TextBlock Text="{Binding Initials}" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}"
+                        <Grid Height="124">
+                            <Grid.Clip>
+                                <RectangleGeometry Rect="0,0,220,140" RadiusX="12" RadiusY="12"/>
+                            </Grid.Clip>
+                            <Border Background="{StaticResource Surface3Brush}"/>
+                            <Border x:Name="Tint"/>
+                            <TextBlock Text="{Binding Initials}" FontSize="24" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <Image Margin="34,18" svc:ImageLoader.DecodeWidth="200" svc:ImageLoader.Url="{Binding Logo}"
-                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                            <Image Margin="40,24" svc:ImageLoader.DecodeWidth="200" svc:ImageLoader.TintTarget="{Binding ElementName=Tint}"
+                                   svc:ImageLoader.Url="{Binding Logo}" RenderOptions.BitmapScalingMode="HighQuality"/>
                             <Border x:Name="SoonBadge" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10" Padding="8,2"
                                     CornerRadius="10" Background="{StaticResource AccentBrush}" Visibility="Collapsed">
                                 <TextBlock Text="{Binding When}" FontSize="11" FontWeight="SemiBold" Foreground="White"/>
                             </Border>
-                            <Border VerticalAlignment="Bottom" Height="3" Background="{Binding GenreBrush}"/>
-                        </Grid>
-                        <StackPanel Margin="14,10,14,12">
-                            <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                            <TextBlock Text="{Binding Name}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0"
-                                       TextTrimming="CharacterEllipsis"/>
                             <ProgressBar x:Name="Prog" Style="{StaticResource ThinProgress}" Maximum="1" Value="{Binding Progress, Mode=OneTime}"
-                                         Height="3" Margin="0,8,0,0" Visibility="Collapsed"/>
-                            <TextBlock x:Name="WhenText" Text="{Binding When}" FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0"/>
+                                         Foreground="White" Height="3" VerticalAlignment="Bottom" Visibility="Collapsed"/>
+                        </Grid>
+                        <StackPanel Margin="12,10,12,12">
+                            <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock x:Name="WhenText" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis">
+                                <Run Text="{Binding Name, Mode=OneWay}"/><Run x:Name="WhenRun" Text="{Binding WhenSuffix, Mode=OneWay}"/>
+                            </TextBlock>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -38,7 +130,6 @@
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Soon}" Value="True">
                     <Setter TargetName="SoonBadge" Property="Visibility" Value="Visible"/>
-                    <Setter TargetName="WhenText" Property="Visibility" Value="Collapsed"/>
                 </DataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>
@@ -72,129 +163,153 @@
     </UserControl.Resources>
 
     <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="20,10,20,36">
-            <TextBlock x:Name="Greeting" FontSize="26" FontWeight="SemiBold" Margin="8,14,0,2"/>
-            <TextBlock x:Name="GreetingSub" FontSize="13" Foreground="{StaticResource MutedBrush}" Margin="8,0,0,6"/>
+        <StackPanel>
+            <!-- ================= Featured: a big picture with the title over it, a few slides that change by themselves ================= -->
+            <Grid x:Name="Hero" Height="560" ClipToBounds="True" MouseEnter="Hero_MouseEnter" MouseLeave="Hero_MouseLeave">
+                <Border Background="{StaticResource BgBrush}"/>
+                <Grid x:Name="HeroArt">
+                    <!-- No picture: a soft colour wash with the channel's logo -->
+                    <Border x:Name="HeroWash" Visibility="Collapsed">
+                        <Border.Background>
+                            <RadialGradientBrush Center="0.75,0.35" GradientOrigin="0.75,0.35" RadiusX="0.7" RadiusY="0.9">
+                                <GradientStop Color="#2A3F6E" Offset="0"/>
+                                <GradientStop Color="#141B2B" Offset="0.6"/>
+                                <GradientStop Color="#0A0D13" Offset="1"/>
+                            </RadialGradientBrush>
+                        </Border.Background>
+                    </Border>
+                    <Image x:Name="HeroLogo" Width="360" Height="200" Stretch="Uniform" HorizontalAlignment="Right" VerticalAlignment="Center"
+                           Margin="0,0,120,40" svc:ImageLoader.DecodeWidth="720" RenderOptions.BitmapScalingMode="HighQuality" Visibility="Collapsed"/>
+                    <!-- A portrait poster: blurred to fill, and the whole poster on the right -->
+                    <Image x:Name="HeroBlur" Stretch="UniformToFill" Opacity="0.6" Visibility="Collapsed">
+                        <Image.Effect><BlurEffect Radius="48" RenderingBias="Performance"/></Image.Effect>
+                    </Image>
+                    <Border x:Name="HeroPosterFrame" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,110,50" CornerRadius="12"
+                            Visibility="Collapsed">
+                        <Border.Effect><DropShadowEffect BlurRadius="40" ShadowDepth="10" Opacity="0.55" RenderingBias="Performance"/></Border.Effect>
+                        <Border.Background>
+                            <ImageBrush x:Name="HeroPosterBrush" Stretch="UniformToFill"/>
+                        </Border.Background>
+                    </Border>
+                    <!-- A wide picture: fills the whole area -->
+                    <Image x:Name="HeroBackdrop" Stretch="UniformToFill" VerticalAlignment="Top" RenderOptions.BitmapScalingMode="HighQuality"
+                           Visibility="Collapsed"/>
+                </Grid>
+                <!-- Shading so the text reads, fading into the page at the bottom -->
+                <Border IsHitTestVisible="False">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Color="#E60A0D13" Offset="0"/>
+                            <GradientStop Color="#990A0D13" Offset="0.35"/>
+                            <GradientStop Color="#000A0D13" Offset="0.7"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                </Border>
+                <Border IsHitTestVisible="False">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#660A0D13" Offset="0"/>
+                            <GradientStop Color="#000A0D13" Offset="0.18"/>
+                            <GradientStop Color="#000A0D13" Offset="0.5"/>
+                            <GradientStop Color="#B30A0D13" Offset="0.82"/>
+                            <GradientStop Color="#FF0A0D13" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                </Border>
 
-            <!-- Account status -->
-            <Border x:Name="AccountStrip" Margin="8,10,8,0" Padding="14,9" CornerRadius="10" HorizontalAlignment="Left"
-                    Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" Visibility="Collapsed">
-                <StackPanel Orientation="Horizontal">
-                    <Ellipse x:Name="AccountDot" Width="9" Height="9" Fill="#4ADE80" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <TextBlock x:Name="AccountText" FontSize="12" VerticalAlignment="Center"/>
+                <StackPanel x:Name="HeroText" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="56,0,40,118" MaxWidth="720">
+                    <StackPanel.RenderTransform><TranslateTransform x:Name="HeroTextShift"/></StackPanel.RenderTransform>
+                    <Border x:Name="HeroChip" HorizontalAlignment="Left" Padding="10,4" CornerRadius="6" Background="#99151A24"
+                            BorderBrush="#26FFFFFF" BorderThickness="1">
+                        <TextBlock x:Name="HeroLabel" FontSize="12" FontWeight="SemiBold" Foreground="White"/>
+                    </Border>
+                    <TextBlock x:Name="HeroTitle" FontFamily="Segoe UI Variable Display, Segoe UI" FontSize="52" FontWeight="Bold" Foreground="White"
+                               TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="136" LineHeight="64" LineStackingStrategy="BlockLineHeight"
+                               Margin="0,12,0,0"/>
+                    <TextBlock x:Name="HeroMeta" FontSize="15" FontWeight="SemiBold" Foreground="#E6EAF2" Margin="0,6,0,0" TextTrimming="CharacterEllipsis"/>
+                    <ProgressBar x:Name="HeroProgress" Style="{StaticResource ThinProgress}" Maximum="1" Width="280" Height="4" Foreground="White"
+                                 HorizontalAlignment="Left" Margin="0,12,0,0" Visibility="Collapsed"/>
+                    <TextBlock x:Name="HeroDesc" FontSize="14" Foreground="#D5DAE3" TextWrapping="Wrap" TextTrimming="WordEllipsis"
+                               MaxWidth="620" HorizontalAlignment="Left" MaxHeight="62" LineHeight="20.5" LineStackingStrategy="BlockLineHeight" Margin="0,12,0,0"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                        <Button x:Name="HeroPrimary" Style="{StaticResource HeroPill}" Click="HeroPrimary_Click" MinWidth="170">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="HeroPrimaryIcon" FontFamily="{StaticResource IconFont}" FontSize="15" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBlock x:Name="HeroPrimaryText" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="HeroSecondary" Style="{StaticResource HeroGlass}" Click="HeroSecondary_Click" Margin="12,0,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="HeroSecondaryIcon" FontFamily="{StaticResource IconFont}" FontSize="14" VerticalAlignment="Center" Margin="0,0,9,0"/>
+                                <TextBlock x:Name="HeroSecondaryText" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="HeroNext" Style="{StaticResource HeroRound}" Content="&#xE76C;" Click="HeroNext_Click" Margin="12,0,0,0" ToolTip="Next"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Which slide you're on -->
+                <Border x:Name="HeroDotsBox" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,80" Padding="8,6" CornerRadius="10"
+                        Background="#661A1F2B">
+                    <ItemsControl x:Name="HeroDots">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Click="HeroDot_Click" Cursor="Hand" FocusVisualStyle="{x:Null}" ToolTip="{Binding Title}">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="Transparent" Padding="3,2"><ContentPresenter/></Border>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                    <Border x:Name="Dot" Width="6" Height="6" CornerRadius="3" Background="#80FFFFFF"/>
+                                </Button>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding On}" Value="True">
+                                        <Setter TargetName="Dot" Property="Width" Value="18"/>
+                                        <Setter TargetName="Dot" Property="Background" Value="White"/>
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+
+                <!-- Account status -->
+                <Border x:Name="AccountStrip" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,18,28,0" Padding="12,7" CornerRadius="16"
+                        Background="#99151A24" BorderBrush="#26FFFFFF" BorderThickness="1" Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse x:Name="AccountDot" Width="8" Height="8" Fill="#4ADE80" VerticalAlignment="Center" Margin="0,0,9,0"/>
+                        <TextBlock x:Name="AccountText" FontSize="12" Foreground="#E6EAF2" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- ================= Rows (they sit up into the bottom of the picture) ================= -->
+            <StackPanel Margin="40,-74,40,40">
+            <StackPanel x:Name="FavSection">
+                <Grid Margin="8,26,8,4">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock Style="{StaticResource RowHeader}" Text="Favourite channels"/>
+                    <Button Grid.Column="1" Style="{StaticResource HeroLink}" Content="View all" Tag="fav" Click="ViewAll_Click" VerticalAlignment="Bottom"/>
+                </Grid>
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Row_PreviewMouseWheel">
+                    <ItemsControl x:Name="FavList" ItemsPanel="{StaticResource RowPanel}" ItemTemplate="{StaticResource ChannelCardTemplate}"/>
+                </ScrollViewer>
+            </StackPanel>
+            <Border x:Name="FavEmpty" Style="{StaticResource Card}" Margin="8,4,8,0" Visibility="Collapsed" HorizontalAlignment="Left" MaxWidth="560">
+                <StackPanel>
+                    <TextBlock Text="No favourites yet" FontWeight="SemiBold"/>
+                    <TextBlock Text="In Live TV, right-click a channel (or use the button on its details) and choose “Add to favourites”. They'll appear here with what's on now."
+                               Foreground="{StaticResource MutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
-
-            <!-- Resume your last channel, with a live preview -->
-            <Border x:Name="Banner" Margin="8,18,8,0" CornerRadius="14" Background="{StaticResource SurfaceBrush}"
-                    BorderBrush="{StaticResource LineBrush}" BorderThickness="1" Padding="16" Visibility="Collapsed" HorizontalAlignment="Left">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Border x:Name="BannerSlot" Width="384" Height="216" CornerRadius="8" Background="{StaticResource Surface2Brush}">
-                        <!-- Nothing plays until you ask: the channel's logo with a Play button (opens instantly, no buffering) -->
-                        <Button x:Name="BannerPlaceholder" Style="{StaticResource PosterCard}" Click="BannerPlay_Click"
-                                ToolTip="Play here (double-click the picture for full screen)">
-                            <Grid Width="384" Height="216" Background="Transparent">
-                                <Grid.Clip>
-                                    <RectangleGeometry Rect="0,0,384,216" RadiusX="8" RadiusY="8"/>
-                                </Grid.Clip>
-                                <!-- The programme's artwork (when found): blurred fill behind, the whole picture on top -->
-                                <Image x:Name="BannerArtBack" Stretch="UniformToFill" Opacity="0.55" svc:ImageLoader.DecodeWidth="200"
-                                       Visibility="Collapsed">
-                                    <Image.Effect>
-                                        <BlurEffect Radius="28" RenderingBias="Performance"/>
-                                    </Image.Effect>
-                                </Image>
-                                <Image x:Name="BannerArt" Stretch="Uniform" svc:ImageLoader.DecodeWidth="768"
-                                       RenderOptions.BitmapScalingMode="HighQuality" Visibility="Collapsed"/>
-                                <Border x:Name="BannerArtShade" Visibility="Collapsed">
-                                    <Border.Background>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                            <GradientStop Color="#00000000" Offset="0.45"/>
-                                            <GradientStop Color="#AA000000" Offset="1"/>
-                                        </LinearGradientBrush>
-                                    </Border.Background>
-                                </Border>
-                                <Border x:Name="BannerLogoBadge" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10" Padding="6,4"
-                                        CornerRadius="6" Background="#B3111622" Visibility="Collapsed">
-                                    <Image x:Name="BannerBadgeLogo" Height="22" MaxWidth="70" Stretch="Uniform" svc:ImageLoader.DecodeWidth="140"/>
-                                </Border>
-                                <TextBlock x:Name="BannerBigInitials" FontSize="40" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                <Image x:Name="BannerBigLogo" Width="200" Height="110" Stretch="Uniform" Margin="0,0,0,30"
-                                       svc:ImageLoader.DecodeWidth="400" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                <Border Width="56" Height="56" CornerRadius="28" Background="{StaticResource AccentBrush}"
-                                        HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18">
-                                    <TextBlock Text="&#xE768;" FontFamily="{StaticResource IconFont}" FontSize="22" Foreground="White"
-                                               HorizontalAlignment="Center" VerticalAlignment="Center" Margin="3,0,0,0"/>
-                                </Border>
-                            </Grid>
-                        </Button>
-                    </Border>
-                    <StackPanel Grid.Column="1" Margin="24,4,8,0" MinWidth="280" MaxWidth="520">
-                        <TextBlock Text="CARRY ON WATCHING" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                            <Border Width="52" Height="34" CornerRadius="6" Background="{StaticResource Surface2Brush}">
-                                <Image x:Name="BannerLogo" Margin="4" svc:ImageLoader.DecodeWidth="104"/>
-                            </Border>
-                            <TextBlock x:Name="BannerChannel" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Margin="12,0,0,0"
-                                       TextTrimming="CharacterEllipsis"/>
-                        </StackPanel>
-                        <TextBlock x:Name="BannerTitle" FontSize="22" FontWeight="SemiBold" Margin="0,12,0,0" TextTrimming="CharacterEllipsis"/>
-                        <TextBlock x:Name="BannerTime" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/>
-                        <ProgressBar x:Name="BannerProgress" Style="{StaticResource ThinProgress}" Maximum="1" Width="260"
-                                     HorizontalAlignment="Left" Margin="0,10,0,0"/>
-                        <TextBlock x:Name="BannerNext" FontSize="12" Margin="0,10,0,0" TextTrimming="CharacterEllipsis"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
-                            <Button Style="{StaticResource PrimaryButton}" Click="BannerWatch_Click">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE740;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBlock Text="Watch full screen"/>
-                                </StackPanel>
-                            </Button>
-                            <Button Style="{StaticResource BaseButton}" Content="Open in Live TV" Margin="8,0,0,0" Click="BannerGuide_Click"/>
-                        </StackPanel>
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- Coming up next on your channels -->
-            <StackPanel x:Name="NextSection">
-                <TextBlock Style="{StaticResource SectionHeader}" Text="COMING UP NEXT" Margin="8,22,0,6"/>
-                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Row_PreviewMouseWheel">
-                    <ItemsControl x:Name="NextList" ItemsPanel="{StaticResource RowPanel}" ItemTemplate="{StaticResource ChannelCardTemplate}"/>
-                </ScrollViewer>
-            </StackPanel>
-
-            <!-- Live sport on now, across all channels -->
-            <StackPanel x:Name="SportSection" Visibility="Collapsed">
-                <TextBlock Style="{StaticResource SectionHeader}" Text="LIVE SPORT NOW" Margin="8,22,0,6"/>
-                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Row_PreviewMouseWheel">
-                    <ItemsControl x:Name="SportList" ItemsPanel="{StaticResource RowPanel}" ItemTemplate="{StaticResource ChannelCardTemplate}"/>
-                </ScrollViewer>
-            </StackPanel>
-
-            <!-- Tonight's picks: films and sport starting this evening -->
-            <StackPanel x:Name="RemindSection" Visibility="Collapsed">
-                <TextBlock Style="{StaticResource SectionHeader}" Text="YOUR REMINDERS" Margin="8,22,0,6"/>
-                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Row_PreviewMouseWheel">
-                    <ItemsControl x:Name="RemindList" ItemsPanel="{StaticResource RowPanel}" ItemTemplate="{StaticResource ChannelCardTemplate}"/>
-                </ScrollViewer>
-            </StackPanel>
-
-            <StackPanel x:Name="PicksSection" Visibility="Collapsed">
-                <TextBlock x:Name="PicksHeader" Style="{StaticResource SectionHeader}" Text="TONIGHT'S PICKS" Margin="8,22,0,6"/>
-                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Row_PreviewMouseWheel">
-                    <ItemsControl x:Name="PicksList" ItemsPanel="{StaticResource RowPanel}" ItemTemplate="{StaticResource ChannelCardTemplate}"/>
-                </ScrollViewer>
-            </StackPanel>
-
-            <!-- Continue watching (films and episodes) -->
             <StackPanel x:Name="ResumeSection">
-                <TextBlock Style="{StaticResource SectionHeader}" Text="CONTINUE WATCHING" Margin="8,22,0,6"/>
+                <Grid Margin="8,26,8,4">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock Style="{StaticResource RowHeader}" Text="Continue watching"/>
+                </Grid>
                 <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Row_PreviewMouseWheel">
                     <ItemsControl x:Name="ResumeList" ItemsPanel="{StaticResource RowPanel}">
                         <ItemsControl.ItemTemplate>
@@ -230,41 +345,72 @@
                     </ItemsControl>
                 </ScrollViewer>
             </StackPanel>
-
-            <!-- Recently watched channels -->
+            <StackPanel x:Name="NextSection">
+                <Grid Margin="8,26,8,4">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock Style="{StaticResource RowHeader}" Text="Coming up next"/>
+                </Grid>
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Row_PreviewMouseWheel">
+                    <ItemsControl x:Name="NextList" ItemsPanel="{StaticResource RowPanel}" ItemTemplate="{StaticResource ChannelCardTemplate}"/>
+                </ScrollViewer>
+            </StackPanel>
+            <StackPanel x:Name="SportSection" Visibility="Collapsed">
+                <Grid Margin="8,26,8,4">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock Style="{StaticResource RowHeader}" Text="Live sport now"/>
+                </Grid>
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Row_PreviewMouseWheel">
+                    <ItemsControl x:Name="SportList" ItemsPanel="{StaticResource RowPanel}" ItemTemplate="{StaticResource ChannelCardTemplate}"/>
+                </ScrollViewer>
+            </StackPanel>
+            <StackPanel x:Name="RemindSection" Visibility="Collapsed">
+                <Grid Margin="8,26,8,4">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock Style="{StaticResource RowHeader}" Text="Your reminders"/>
+                </Grid>
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Row_PreviewMouseWheel">
+                    <ItemsControl x:Name="RemindList" ItemsPanel="{StaticResource RowPanel}" ItemTemplate="{StaticResource ChannelCardTemplate}"/>
+                </ScrollViewer>
+            </StackPanel>
+            <StackPanel x:Name="PicksSection" Visibility="Collapsed">
+                <Grid Margin="8,26,8,4">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock x:Name="PicksHeader" Style="{StaticResource RowHeader}" Text="Tonight’s picks"/>
+                </Grid>
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Row_PreviewMouseWheel">
+                    <ItemsControl x:Name="PicksList" ItemsPanel="{StaticResource RowPanel}" ItemTemplate="{StaticResource ChannelCardTemplate}"/>
+                </ScrollViewer>
+            </StackPanel>
             <StackPanel x:Name="RecentSection">
-                <TextBlock Style="{StaticResource SectionHeader}" Text="RECENTLY WATCHED" Margin="8,22,0,6"/>
+                <Grid Margin="8,26,8,4">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock Style="{StaticResource RowHeader}" Text="Recently watched"/>
+                    <Button Grid.Column="1" Style="{StaticResource HeroLink}" Content="View all" Tag="recent" Click="ViewAll_Click" VerticalAlignment="Bottom"/>
+                </Grid>
                 <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Row_PreviewMouseWheel">
                     <ItemsControl x:Name="RecentList" ItemsPanel="{StaticResource RowPanel}" ItemTemplate="{StaticResource ChannelCardTemplate}"/>
                 </ScrollViewer>
             </StackPanel>
-
-            <!-- Favourites -->
-            <TextBlock Style="{StaticResource SectionHeader}" Text="FAVOURITES" Margin="8,22,0,6"/>
-            <ScrollViewer x:Name="FavScroller" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
-                          PreviewMouseWheel="Row_PreviewMouseWheel">
-                <ItemsControl x:Name="FavList" ItemsPanel="{StaticResource RowPanel}" ItemTemplate="{StaticResource ChannelCardTemplate}"/>
-            </ScrollViewer>
-            <Border x:Name="FavEmpty" Style="{StaticResource Card}" Margin="8,4,8,0" Visibility="Collapsed" HorizontalAlignment="Left" MaxWidth="560">
-                <StackPanel>
-                    <TextBlock Text="No favourites yet" FontWeight="SemiBold"/>
-                    <TextBlock Text="In the TV Guide, right-click a channel (or use the button on its details) and choose “Add to favourites”. They'll appear here with what's on now and next."
-                               Foreground="{StaticResource MutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"/>
-                </StackPanel>
-            </Border>
-
-            <!-- Newly added to your provider -->
             <StackPanel x:Name="NewFilmsSection" Visibility="Collapsed">
-                <TextBlock Style="{StaticResource SectionHeader}" Text="NEW FILMS" Margin="8,22,0,6"/>
+                <Grid Margin="8,26,8,4">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock Style="{StaticResource RowHeader}" Text="New films"/>
+                    <Button Grid.Column="1" Style="{StaticResource HeroLink}" Content="View all" Tag="films" Click="ViewAll_Click" VerticalAlignment="Bottom"/>
+                </Grid>
                 <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Row_PreviewMouseWheel">
                     <ItemsControl x:Name="NewFilmsList" ItemsPanel="{StaticResource RowPanel}" ItemTemplate="{StaticResource PosterCardTemplate}"/>
                 </ScrollViewer>
             </StackPanel>
             <StackPanel x:Name="NewShowsSection" Visibility="Collapsed">
-                <TextBlock Style="{StaticResource SectionHeader}" Text="NEW TV SHOWS" Margin="8,22,0,6"/>
+                <Grid Margin="8,26,8,4">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock Style="{StaticResource RowHeader}" Text="New TV shows"/>
+                    <Button Grid.Column="1" Style="{StaticResource HeroLink}" Content="View all" Tag="shows" Click="ViewAll_Click" VerticalAlignment="Bottom"/>
+                </Grid>
                 <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Row_PreviewMouseWheel">
                     <ItemsControl x:Name="NewShowsList" ItemsPanel="{StaticResource RowPanel}" ItemTemplate="{StaticResource PosterCardTemplate}"/>
                 </ScrollViewer>
+            </StackPanel>
             </StackPanel>
         </StackPanel>
     </ScrollViewer>

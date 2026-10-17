@@ -129,6 +129,8 @@ public class HomeChannelCard
     public double Progress { get; init; }
     public bool HasProgress => Progress > 0.001;
     public bool Soon { get; init; }
+    /// <summary>"  ·  In 10 min" after the channel name, for cards without a progress bar or badge.</summary>
+    public string WhenSuffix => HasProgress || Soon || string.IsNullOrEmpty(When) ? "" : "  ·  " + When;
     public System.Windows.Media.Brush GenreBrush { get; init; }
     /// <summary>For future programmes (Tonight's picks): opens the guide on it instead of playing now.</summary>
     public Programme Upcoming { get; init; }

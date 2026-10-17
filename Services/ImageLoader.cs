@@ -29,17 +29,32 @@ public static class ImageLoader
     public static string GetUrl(DependencyObject o) => (string)o.GetValue(UrlProperty);
     public static void SetUrl(DependencyObject o, string v) => o.SetValue(UrlProperty, v);
 
+    /// <summary>
+    /// Optional: a Border whose background takes a dark shade of the logo's main colour once it loads
+    /// (channel cards on Home). Logos without a clear colour leave it unset.
+    /// </summary>
+    public static readonly DependencyProperty TintTargetProperty =
+        DependencyProperty.RegisterAttached("TintTarget", typeof(Border), typeof(ImageLoader), new PropertyMetadata(null));
+    public static Border GetTintTarget(DependencyObject o) => (Border)o.GetValue(TintTargetProperty);
+    public static void SetTintTarget(DependencyObject o, Border v) => o.SetValue(TintTargetProperty, v);
+
+    static void Show(Image img, string url, BitmapSource bmp)
+    {
+        img.Source = bmp;
+        if (GetTintTarget(img) is Border b) b.Background = bmp == null ? null : LogoTint.For(url, bmp);
+    }
+
     static async void OnUrlChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is not Image img) return;
-        img.Source = null;
         var url = e.NewValue as string;
+        Show(img, url, null);
         if (string.IsNullOrWhiteSpace(url) || !url.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return;
 
         int w = GetDecodeWidth(img);
         var key = w + "|" + url;
         var hit = Cache.Get(key);
-        if (hit != null) { img.Source = hit; return; }
+        if (hit != null) { Show(img, url, hit); return; }
         lock (FailLock) if (Failed.Contains(url)) return;
 
         try
@@ -47,9 +62,26 @@ public static class ImageLoader
             var bmp = await LoadAsync(url, w);
             if (bmp == null) return;
             Cache.Add(key, bmp);
-            if (GetUrl(img) == url) img.Source = bmp;
+            if (GetUrl(img) == url) Show(img, url, bmp);
         }
         catch (Exception ex) { Log.Error(ex); }
+    }
+
+    /// <summary>Loads an image directly (cached like the rest), or null if it can't be loaded.</summary>
+    public static async Task<BitmapSource> GetAsync(string url, int decodeWidth)
+    {
+        if (string.IsNullOrWhiteSpace(url) || !url.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return null;
+        var key = decodeWidth + "|" + url;
+        var hit = Cache.Get(key);
+        if (hit != null) return hit;
+        lock (FailLock) if (Failed.Contains(url)) return null;
+        try
+        {
+            var bmp = await LoadAsync(url, decodeWidth);
+            if (bmp != null) Cache.Add(key, bmp);
+            return bmp;
+        }
+        catch (Exception ex) { Log.Error(ex); return null; }
     }
 
     static async Task<BitmapSource> LoadAsync(string url, int w)

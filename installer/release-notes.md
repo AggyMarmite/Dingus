@@ -1,7 +1,11 @@
 ## What's new in Dingus 0.7.1
 
-* **Programme artwork on Home** – "Carry on watching" now shows a picture of the programme itself (e.g. a sitcom's own artwork)
-  instead of just the channel logo, with the logo as a small badge. Dingus uses the TV guide's own image when it has
+* **New Home page** – a big featured picture across the top with the title, details and **Watch** / **More info**
+  buttons. It moves through your last channel, films and episodes you're part-way through, what's on your favourites,
+  and new films and shows (dots and the arrow to move on yourself; it pauses while the mouse is over it). Below it, rows
+  of channels and titles – favourite channels now sit on tiles in their logo's colour, with "View all" links.
+* **Tidier tabs** – a little more space between the tabs along the top, so the hover highlights don't touch.
+* **Programme artwork on Home** – the featured picture shows the programme itself rather than just the channel logo. Dingus uses the TV guide's own image when it has
   one, then a matching show or film in your playlist, then TVmaze (a free TV database). Only the programme's name is
   sent, and each title is looked up once. You can turn the online lookup off in Settings → Programme artwork.
 

@@ -470,7 +470,7 @@ public partial class MainWindow : Window
     void Navigate(IPage page)
     {
         if (_page == page) return;
-        bool previewPage(IPage pg) => pg == _guide || pg == _home;
+        bool previewPage(IPage pg) => pg == _guide;
         if (_previewActive && !_playerMode && previewPage(_page) && !previewPage(page)) StopPlayback();
         _lastSlot = Rect.Empty;
 
@@ -1011,7 +1011,7 @@ public partial class MainWindow : Window
         CloseShortcutSheet();
         SaveVodProgress();
         ExitPlayerLayout();
-        if (_nowLive && (_page == _guide || _page == _home))
+        if (_nowLive && _page == _guide)
         {
             // back to the Guide – the channel keeps playing in the guide's preview
             _previewActive = true;

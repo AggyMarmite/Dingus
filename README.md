@@ -82,8 +82,10 @@ run **Actions → Release → Run workflow**. Pushing to main on its own only bu
 
 ### Watching
 
-- **Home**: carry on watching (your last channel, with a Play button – nothing starts until you press it), account status, coming up next on your favourites,
-  live sport now, tonight's picks (films and sport), continue watching, recently watched, favourites, new films and new shows.
+- **Home**: a big featured picture across the top that moves on every few seconds – carry on watching (your last channel),
+  films and episodes you're part-way through, what's on your favourites, and new films and shows – with Watch / More info
+  buttons. Below: favourite channels (each on a tile in its logo's colour), continue watching, coming up next, live sport,
+  your reminders, tonight's picks, recently watched, new films and new TV shows. Nothing plays until you press Watch.
   (Settings → TV Guide → "Open on the TV Guide" to start on the guide instead.)
 - Opens on the channel you last watched; **Recently watched** is in the guide's categories.
 - **Continue watching** in Films and TV Shows; films and episodes resume where you stopped.
