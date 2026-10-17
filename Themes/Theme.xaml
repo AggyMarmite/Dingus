@@ -221,6 +221,8 @@
         <Setter Property="GroupName" Value="Nav"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
+        <!-- A small gap between tabs, so the hover highlights don't touch -->
+        <Setter Property="Margin" Value="3,0"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
