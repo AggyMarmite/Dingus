@@ -58,6 +58,8 @@ for p in $(find "$APPDIR/usr/lib/vlc/plugins" -name '*.so' -printf '%f\n'); do r
 # Plugin cache: VLC starts faster.
 if [ -x "$SYS/vlc/vlc-cache-gen" ]; then "$SYS/vlc/vlc-cache-gen" "$APPDIR/usr/lib/vlc/plugins" || true; fi
 
+# linuxdeploy leaves AppRun as a link to the app – replace it (writing through the link would overwrite the app).
+rm -f "$APPDIR/AppRun"
 cat > "$APPDIR/AppRun" <<'APPRUN'
 #!/bin/sh
 HERE="$(dirname "$(readlink -f "$0")")"
@@ -71,5 +73,5 @@ echo "== Packing the AppImage"
 AT="$WORK/appimagetool-x86_64.AppImage"
 curl -sSL -o "$AT" https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
 chmod +x "$AT"
-ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "$AT" --no-appstream "$APPDIR" "$OUT/Dingus-$VERSION-x86_64.AppImage" > "$WORK/appimagetool.log" 2>&1 || { logtail appimagetool "$WORK/appimagetool.log"; exit 1; }
+ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "$AT" --no-appstream --comp zstd "$APPDIR" "$OUT/Dingus-$VERSION-x86_64.AppImage" > "$WORK/appimagetool.log" 2>&1 || { logtail appimagetool "$WORK/appimagetool.log"; exit 1; }
 ls -la "$OUT"

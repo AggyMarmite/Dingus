@@ -457,3 +457,8 @@ public partial class MainWindow
     internal void SelfTestPlay(string url) => PlayVod(new VodItem { Kind = "movie", Title = "Test video", Subtitle = "Dingus self-test", Url = url }, resume: false);
     internal void SelfTestExitPlayer() => ExitPlayer();
 }
+
+public partial class MainWindow
+{
+    void MultiView_Click(object sender, RoutedEventArgs e) => OpenMultiView(null);
+}

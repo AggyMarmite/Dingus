@@ -104,6 +104,12 @@
                                 <TextBlock x:Name="RemindText" Text="Remind me" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
+                        <Button Margin="0,0,8,8" Click="MultiView_Click" ToolTip.Tip="Watch 4, 6 or 8 channels at once (V)">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Classes="icon" Text="{x:Static local:Icons.MultiView}"/>
+                                <TextBlock Text="Multi-view" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
                         <Button x:Name="FavButton" Margin="0,0,8,8" Click="Fav_Click">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <TextBlock x:Name="FavGlyph" Classes="icon" Text="{x:Static local:Icons.StarOutline}"/>

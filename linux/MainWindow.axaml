@@ -344,6 +344,8 @@
                                                 ToolTip.Tip="Next channel in the list" Click="ChDown_Click"/>
                                         <Button x:Name="ChannelsButton" Classes="overlay" Content="{x:Static local:Icons.ChannelList}"
                                                 ToolTip.Tip="Channel list – what's on now (Enter or L)" Click="Channels_Click"/>
+                                        <Button x:Name="MultiViewButton" Classes="overlay" Content="{x:Static local:Icons.MultiView}"
+                                                ToolTip.Tip="Multi-view – watch 4, 6 or 8 channels at once (V)" Click="MultiView_Click"/>
                                         <Button x:Name="LastChButton" Classes="overlay" Content="{x:Static local:Icons.LastChannel}"
                                                 ToolTip.Tip="Back to the last channel (0 or Backspace)" Click="LastCh_Click"/>
                                         <Button x:Name="NextEpisodeButton" Classes="overlay" IsVisible="False" Width="NaN" Padding="12,0"

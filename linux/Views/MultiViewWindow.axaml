@@ -1,0 +1,41 @@
+<Window xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svc="clr-namespace:Dingus.Services"
+             xmlns:local="clr-namespace:Dingus"
+             x:Class="Dingus.Views.MultiViewWindow"
+        Title="Dingus – Multi-view" SystemDecorations="None" WindowStartupLocation="CenterOwner" WindowState="FullScreen"
+        Background="Black">
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Top bar (ordinary app content, kept above the video tiles) -->
+        <Border Background="{StaticResource BgBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="16,8">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <TextBlock Text="Click a tile for its sound  ·  1–8 select  ·  Enter change channel  ·  F full screen  ·  Del remove"
+                               Classes="muted" FontSize="11" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                    <Button Click="Close_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{x:Static local:Icons.Close}" Classes="icon" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="Close multi-view (Esc)"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Multi-view" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,18,0"/>
+                    <RadioButton x:Name="L4" Classes="chip" GroupName="MvLayout" Content="4 screens" Tag="4" IsCheckedChanged="Layout_Checked"/>
+                    <RadioButton x:Name="L6" Classes="chip" GroupName="MvLayout" Content="6 screens" Tag="6" IsCheckedChanged="Layout_Checked"/>
+                    <RadioButton x:Name="L8" Classes="chip" GroupName="MvLayout" Content="8 screens" Tag="8" IsCheckedChanged="Layout_Checked"/>
+                    <Border x:Name="WarnPill" CornerRadius="14" Padding="12,5" Margin="14,0,0,0" Background="#3A2A0A" IsVisible="False">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{x:Static local:Icons.Alert}" Classes="icon" FontSize="12" Foreground="#FBBF24"
+                                       VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock x:Name="WarnText" Foreground="#FDE68A" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="620"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <UniformGrid x:Name="Tiles" Grid.Row="1"/>
+    </Grid>
+</Window>

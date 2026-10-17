@@ -245,7 +245,26 @@ public partial class MainWindow : Window
         (movie ? _films : _shows).OpenItem(id);
     }
 
-    public void OpenMultiView(GuideRow first) => ShowToast("Multi-view isn't in the Linux version yet.");
+    /// <summary>Opens Multi-view, starting with <paramref name="first"/> (or what's playing) in the first screen.</summary>
+    public void OpenMultiView(GuideRow first)
+    {
+        if (_svc == null) return;
+        if (_nowLive && _nowChannel != null) first = _guide.RowFor(_nowChannel.Id) ?? first;
+        if (_mini) LeaveMiniWindow();
+        if (_playerMode) ExitPlayerLayout();
+        StopPlayback(); // frees the connection the main player was using
+        var mv = new MultiViewWindow(_svc.Vlc, _guide, first);
+        mv.Closed += async (_, _) =>
+        {
+            Activate();
+            if (mv.OpenFullScreen && mv.FocusedRow != null)
+            {
+                await Task.Delay(800); // let the tiles hang up first, so we don't go over the connection limit
+                PlayLive(mv.FocusedRow.Channel, true);
+            }
+        };
+        mv.Show(this);
+    }
 
     // =====================================================================================
     // Window size & position
@@ -824,6 +843,7 @@ public partial class MainWindow : Window
         LiveRow.IsVisible = live;
         ChUpButton.IsVisible = ChDownButton.IsVisible = live;
         ChannelsButton.IsVisible = live;
+        MultiViewButton.IsVisible = live;
         LastChButton.IsVisible = live && _prevChannelId != null;
         BackSeekButton.IsVisible = FwdSeekButton.IsVisible = !live || LiveSeekable;
         FwdSeekButton.Content = live ? Icons.Fwd10 : Icons.Fwd30;
@@ -1496,6 +1516,7 @@ public partial class MainWindow : Window
         if (SheetOpen && key == Key.Escape) { CloseShortcutSheet(); e.Handled = true; return; }
         if (key == Key.F11 && _nowLive) { EnterPlayer(); e.Handled = true; return; }
         if (key == Key.P && _nowLive && !typing) { EnterMini(); e.Handled = true; return; }
+        if (key == Key.V && _page == _guide && !typing) { OpenMultiView(null); e.Handled = true; return; }
 
         if (_page == _guide && !typing)
         {
@@ -1550,6 +1571,9 @@ public partial class MainWindow : Window
                 return true;
             case Key.R:
                 if (_nowLive) { RecordCurrent(); return true; }
+                break;
+            case Key.V:
+                if (_nowLive && !_mini) { OpenMultiView(null); return true; }
                 break;
             case Key.N:
                 if (!_nowLive) { PlayNextEpisodeNow(); return true; }
@@ -1782,6 +1806,7 @@ public partial class MainWindow : Window
         ("F / F11", "Full screen on / off"),
         ("Esc", "Back to Live TV"),
         ("P", "Picture-in-picture"),
+        ("V", "Multi-view (4 / 6 / 8 channels)"),
         ("I", "Stream info"),
         ("S", "Sleep timer"),
         ("R", "Record this programme"),
