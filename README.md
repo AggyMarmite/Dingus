@@ -1,6 +1,6 @@
 # Dingus
 
-A lightweight, modern IPTV player for Windows 10/11 (WPF + .NET 8, VLC video engine).
+A lightweight, modern IPTV player for Windows 10/11 and Linux (.NET 8 and the VLC video engine; WPF on Windows, Avalonia on Linux).
 
 ## Build & run
 
@@ -32,10 +32,35 @@ Ready-made installers are on the [Releases page](https://github.com/AggyMarmite/
 Download `Dingus-Setup-x.y.z.exe` and run it. It installs for your Windows account only, so it doesn't need admin
 rights, and it adds Start menu and (optionally) desktop shortcuts.
 
+### Linux
+
+Download `Dingus-x.y.z-x86_64.AppImage` from the same page, make it executable and run it:
+
+```bash
+chmod +x Dingus-*-x86_64.AppImage
+./Dingus-*-x86_64.AppImage
+```
+
+The AppImage carries everything it needs, including its own copy of VLC, so nothing else has to be installed. It runs on
+most 64-bit distributions from 2022 onwards (Ubuntu 22.04+, Fedora 36+, Debian 12, Mint 21+, …). If your system can't
+run AppImages directly, install `libfuse2` (Ubuntu/Debian: `sudo apt install libfuse2`), or run it with
+`--appimage-extract-and-run`. Dingus updates itself from the releases page, as on Windows.
+
+The Linux version has the same pages and player as the Windows one. Not yet on Linux: media keys / desktop media
+controls, adaptive frame rate, battery-aware mode and the colour themes.
+
+To build it yourself (needs the .NET 8 SDK and VLC: `sudo apt install vlc libvlc-dev`):
+
+```bash
+dotnet run --project linux/Dingus.Linux.csproj
+linux/package/build-appimage.sh 0.8.0 out    # builds the AppImage (on Ubuntu 22.04)
+```
+
 ### Making a release
 
 Releases are made by hand: raise `<Version>` in `Dingus.csproj`, update `installer/release-notes.md`, push, then
-run **Actions → Release → Run workflow**. Pushing to main on its own only builds and tests.
+run **Actions → Release → Run workflow**. It builds the Windows installer and the Linux AppImage and attaches both.
+Pushing to main on its own only builds and tests (both versions).
 
 ## What's in this build
 

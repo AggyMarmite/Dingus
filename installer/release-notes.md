@@ -1,3 +1,10 @@
+## What's new in Dingus 0.8.0
+
+* **Dingus for Linux** – the same app, now on Linux as an AppImage (`Dingus-0.8.0-x86_64.AppImage`): Home, Live TV with
+  the guide and preview, the full-screen player with pause & rewind and catch-up, picture-in-picture, Multi-view, Films,
+  TV Shows, Search, Recordings & reminders, Settings, parental PIN, backup & restore and in-app updates. It carries its own
+  copy of VLC, so there's nothing else to install – make the file executable and open it.
+
 ## What's new in Dingus 0.7.1
 
 * **New Home page** – a big featured picture across the top with the title, details and **Watch** / **More info**

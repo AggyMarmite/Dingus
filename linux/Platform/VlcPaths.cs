@@ -12,6 +12,9 @@ public static class VlcPaths
     /// <summary>Development only: run the interface without the video engine.</summary>
     public static bool Disabled => Environment.GetEnvironmentVariable("DINGUS_NO_VLC") == "1";
 
+    /// <summary>Points VLC at the AppImage's own plugins when they're there (libvlc itself comes from LD_LIBRARY_PATH).</summary>
+    public static void Prepare() => _ = LibDir;
+
     public static string LibDir
     {
         get

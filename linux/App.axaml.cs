@@ -23,7 +23,7 @@ public partial class App : Application
                 MainWindow.Instance?.ShowToast("Something went wrong: " + a.Exception.Message);
             };
 
-            try { LibVLCSharp.Shared.Core.Initialize(VlcPaths.LibDir); }
+            try { VlcPaths.Prepare(); LibVLCSharp.Shared.Core.Initialize(); } // the AppImage puts its own VLC on the library path
             catch (Exception ex) { VlcPaths.StartError = ex; Log.Error(ex); } // the window still opens and explains
             SettingsStore.Load();
             TimeshiftSession.CleanUp(); // live TV buffers from last time
