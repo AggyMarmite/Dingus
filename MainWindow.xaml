@@ -34,6 +34,7 @@
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
                             <!-- The Dingus logo is the Home button -->
                             <Button x:Name="HomeLogo" Click="HomeLogo_Click" ToolTip="Home" Cursor="Hand" FocusVisualStyle="{x:Null}" Foreground="{StaticResource TextBrush}"
+                                    WindowChrome.IsHitTestVisibleInChrome="True"
                                     VerticalAlignment="Center" Margin="-6,0,8,0">
                                 <Button.Template>
                                     <ControlTemplate TargetType="Button">

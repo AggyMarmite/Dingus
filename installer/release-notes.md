@@ -1,3 +1,8 @@
+## What's new in Dingus 0.9.3
+
+* **The logo goes Home again** – clicking the Dingus logo at the top left now opens Home (in 0.9.1 and 0.9.2 Windows
+  treated the click as the start of moving the window).
+
 ## What's new in Dingus 0.9.2
 
 * **Recordings show the right length** – live streams sometimes jump in time (the provider restarts the stream, or

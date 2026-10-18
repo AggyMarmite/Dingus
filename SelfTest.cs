@@ -35,6 +35,7 @@ public static class SelfTest
             Note($"channels: {DataService.Instance.Catalog.Channels.Count}, guide-matched: {DataService.Instance.Epg.MatchedChannels}");
             await Idle(1500);
 
+            CheckTitleBarClickable(main);
             await Page(main, main.NavHome, "01-home", fullScroll: true);
             await Page(main, main.NavGuide, "02-guide");
             await GuideMode(main, "now", "03-guide-on-now");
@@ -116,6 +117,26 @@ public static class SelfTest
     }
 
     static void Note(string s) => Log.Add(s);
+
+    /// <summary>
+    /// The title bar doubles as the window's drag handle: anything clickable in it has to be marked as such,
+    /// or Windows turns the click into a window drag and the button does nothing.
+    /// </summary>
+    static void CheckTitleBarClickable(MainWindow main)
+    {
+        if (main.FindName("TitleBar") is not DependencyObject bar) return;
+        var bad = new List<string>();
+        void Walk(DependencyObject o)
+        {
+            if (o is System.Windows.Controls.Primitives.ButtonBase or TextBox && o is FrameworkElement fe
+                && !System.Windows.Shell.WindowChrome.GetIsHitTestVisibleInChrome((IInputElement)o))
+                bad.Add(string.IsNullOrEmpty(fe.Name) ? fe.GetType().Name + " " + (fe.ToolTip ?? "") : fe.Name);
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(o); i++) Walk(VisualTreeHelper.GetChild(o, i));
+        }
+        Walk(bar);
+        if (bad.Count > 0) Error(new Exception("Title bar controls that can't be clicked (missing WindowChrome.IsHitTestVisibleInChrome): " + string.Join(", ", bad)));
+        else Note("title bar: every button can be clicked");
+    }
 
     static async Task Page(MainWindow main, RadioButton nav, string name, bool fullScroll = false)
     {
