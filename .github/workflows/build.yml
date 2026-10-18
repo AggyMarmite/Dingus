@@ -198,7 +198,9 @@ jobs:
           git commit -q -m "Linux self-test for ${{ github.sha }}"
           git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" selftest-linux
 
+  # Parked: the Mac version isn't finished (video doesn't play yet). Runs only when started by hand.
   mac:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4

@@ -1,10 +1,5 @@
 ## What's new in Dingus 0.9.0
 
-* **Dingus for Mac** – the same app, now on macOS 12 and later, for Apple Silicon (`Dingus-0.9.0-mac-arm64.dmg`) and
-  Intel Macs (`Dingus-0.9.0-mac-x64.dmg`). Open the disk image and drag Dingus into Applications – VLC is built in. It
-  has the Mac's own window buttons and full screen, a Dingus menu (⌘, for Settings), ⌘ shortcuts, "Start when I log in",
-  and updates itself from inside the app. The first time you open it, macOS asks you to allow it in System Settings →
-  Privacy & Security → Open Anyway (Dingus isn't signed with a paid Apple Developer ID).
 * **Smoother Home page** – the featured picture now cross-fades straight into the next one (no more dip to black), with a
   gentle settling zoom; the words drift in as the picture changes, and the slide dots glide along. Dingus waits for the
   next picture to load before changing, and draws the blurred poster background once instead of on every frame.

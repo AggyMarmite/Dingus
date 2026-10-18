@@ -1,7 +1,7 @@
 name: Release
 
 # Run by hand only (Actions → Release → Run workflow), when a release is wanted: builds the installer (plus the Linux
-# AppImage and Mac disk images) for the
+# AppImage) for the
 # <Version> in Dingus.csproj and publishes it as release vX.Y.Z – unless that release already exists.
 # Pushing to main never releases anything; it only builds and tests. The app's updater offers the
 # Dingus-Setup-x.y.z.exe attached to the latest release.
@@ -81,7 +81,9 @@ jobs:
           linux/package/build-appimage.sh "$V" out
           gh release upload "v$V" "out/Dingus-$V-x86_64.AppImage" --repo ${{ github.repository }} --clobber
 
+  # Parked until the Mac version is finished – turn on by removing the "if: false".
   mac:
+    if: false
     needs: release
     runs-on: macos-14
     steps:
