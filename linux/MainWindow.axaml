@@ -17,7 +17,7 @@
             <Border x:Name="TitleBar" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}"
                     BorderThickness="0,0,0,1">
                 <Grid ColumnDefinitions="Auto,*,Auto">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                    <StackPanel x:Name="TitleLeft" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
                         <Border Width="26" Height="26" CornerRadius="7">
                             <Border.Background>
                                 <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
@@ -70,9 +70,9 @@
                                 VerticalAlignment="Center" ToolTip.Tip="Refresh playlist and TV guide" Click="Refresh_Click"/>
                         <RadioButton x:Name="NavSettings" Classes="tab tabIcon" Tag="{x:Static local:Icons.Settings}" ToolTip.Tip="Settings"
                                      IsCheckedChanged="Nav_Checked" Margin="2,0,8,0" VerticalAlignment="Center"/>
-                        <Button Classes="caption" Content="{x:Static local:Icons.Minimise}" ToolTip.Tip="Minimise" Click="Minimise_Click"/>
+                        <Button x:Name="MinButton" Classes="caption" Content="{x:Static local:Icons.Minimise}" ToolTip.Tip="Minimise" Click="Minimise_Click"/>
                         <Button x:Name="MaxButton" Classes="caption" Content="{x:Static local:Icons.Maximise}" ToolTip.Tip="Maximise" Click="Maximise_Click"/>
-                        <Button Classes="caption captionClose" Content="{x:Static local:Icons.Close}" ToolTip.Tip="Close" Click="Close_Click"/>
+                        <Button x:Name="CloseButton" Classes="caption captionClose" Content="{x:Static local:Icons.Close}" ToolTip.Tip="Close" Click="Close_Click"/>
                     </StackPanel>
                 </Grid>
             </Border>

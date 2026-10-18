@@ -1,6 +1,6 @@
 # Dingus
 
-A lightweight, modern IPTV player for Windows 10/11 and Linux (.NET 8 and the VLC video engine; WPF on Windows, Avalonia on Linux).
+A lightweight, modern IPTV player for Windows 10/11, Linux and macOS (.NET 8 and the VLC video engine; WPF on Windows, Avalonia on Linux and Mac).
 
 ## Build & run
 
@@ -53,14 +53,38 @@ To build it yourself (needs the .NET 8 SDK and VLC: `sudo apt install vlc libvlc
 
 ```bash
 dotnet run --project linux/Dingus.Linux.csproj
-linux/package/build-appimage.sh 0.8.0 out    # builds the AppImage (on Ubuntu 22.04)
+linux/package/build-appimage.sh 0.9.0 out    # builds the AppImage (on Ubuntu 22.04)
+```
+
+### Mac
+
+Download the disk image for your Mac from the same page:
+
+* **Apple Silicon** (M1 and later): `Dingus-x.y.z-mac-arm64.dmg`
+* **Intel**: `Dingus-x.y.z-mac-x64.dmg`
+
+Open it and drag **Dingus** into **Applications**. Needs macOS 12 (Monterey) or later; VLC is built in.
+
+Dingus isn't signed with a paid Apple Developer ID, so the first time you open it macOS says it can't check it for
+malicious software. Open **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to the
+message about Dingus (on older macOS: right-click Dingus in Applications → **Open**). You only need to do this once,
+and updates installed from inside Dingus don't ask again.
+
+The Mac version is the same app as the Linux one, with the usual red/yellow/green window buttons, the Dingus menu
+(⌘, for Settings) and ⌘ in place of Ctrl for shortcuts. Not yet on the Mac: media keys / Control Centre's Now Playing,
+adaptive frame rate, battery-aware mode and the colour themes.
+
+To build it on a Mac (needs the .NET 8 SDK; VLC is downloaded by the script):
+
+```bash
+linux/package/build-mac.sh 0.9.0 arm64 out   # or x64 for Intel
 ```
 
 ### Making a release
 
 Releases are made by hand: raise `<Version>` in `Dingus.csproj`, update `installer/release-notes.md`, push, then
-run **Actions → Release → Run workflow**. It builds the Windows installer and the Linux AppImage and attaches both.
-Pushing to main on its own only builds and tests (both versions).
+run **Actions → Release → Run workflow**. It builds the Windows installer, the Linux AppImage and the two
+Mac disk images and attaches them all. Pushing to main on its own only builds and tests (all three versions).
 
 ## What's in this build
 

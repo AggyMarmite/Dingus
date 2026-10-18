@@ -68,7 +68,10 @@ settings = {
     'AutoUpdate': False,
     'Timeshift': False,
 }
-data = os.environ.get('XDG_DATA_HOME') or os.path.join(os.path.expanduser('~'), '.local', 'share')
+if sys.platform == 'darwin':  # .NET's LocalApplicationData on a Mac
+    data = os.path.join(os.path.expanduser('~'), 'Library', 'Application Support')
+else:
+    data = os.environ.get('XDG_DATA_HOME') or os.path.join(os.path.expanduser('~'), '.local', 'share')
 app = os.path.join(data, 'Dingus')
 os.makedirs(app, exist_ok=True)
 json.dump(settings, open(os.path.join(app, 'settings.json'), 'w'), indent=2)

@@ -141,6 +141,8 @@ public partial class MainWindow : Window
             }
         };
 
+        if (Os.Mac) UseMacWindowButtons();
+
         // Title bar: drag to move, double-click to maximise.
         DragArea.PointerPressed += TitleBar_PointerPressed;
         TitleBar.PointerPressed += TitleBar_PointerPressed;
@@ -179,7 +181,7 @@ public partial class MainWindow : Window
             if (VlcPaths.Disabled) { }
             else if (SelfTest.Dir != null) SelfTest.Error(ex);
             else await Dialogs.Message(this, "The video engine didn't start",
-                "Dingus uses VLC to play video. " + ex.Message + "\n\nIf you're not using the AppImage, install VLC (for example: sudo apt install vlc).");
+                "Dingus uses VLC to play video. " + ex.Message + (Os.Mac ? "\n\nTry downloading Dingus again from the releases page." : "\n\nIf you're not using the AppImage, install VLC (for example: sudo apt install vlc)."));
         }
 
         if (SettingsStore.Current.Playlists.Count > 0 && !DataService.Instance.HasStartedLoading)
@@ -320,6 +322,36 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    /// <summary>
+    /// Mac: the usual red/yellow/green buttons (and native resizing) at the left of Dingus's own title bar,
+    /// instead of the Windows-style buttons on the right.
+    /// </summary>
+    void UseMacWindowButtons()
+    {
+        SystemDecorations = SystemDecorations.Full;
+        ExtendClientAreaToDecorationsHint = true;
+        ExtendClientAreaChromeHints = Avalonia.Platform.ExtendClientAreaChromeHints.PreferSystemChrome;
+        ExtendClientAreaTitleBarHeightHint = 46;
+        MinButton.IsVisible = MaxButton.IsVisible = CloseButton.IsVisible = false;
+        ResizeGrips.IsVisible = false;
+        TitleLeft.Margin = new Thickness(80, 0, 0, 0);
+        PropertyChanged += (_, e) =>
+        {
+            // Full screen hides the window buttons, so the title bar doesn't need to leave room for them.
+            if (e.Property == WindowStateProperty)
+                TitleLeft.Margin = new Thickness(WindowState == WindowState.FullScreen ? 12 : 80, 0, 0, 0);
+        };
+    }
+
+    /// <summary>Mac menu bar: Dingus → Settings / About.</summary>
+    public void OpenSettingsPage()
+    {
+        if (_mini) ExitMini(false);
+        ExitPlayer();
+        BringToFront();
+        NavSettings.IsChecked = true;
+    }
+
     void Minimise_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
     void Maximise_Click(object sender, RoutedEventArgs e) =>
@@ -330,7 +362,7 @@ public partial class MainWindow : Window
     void UpdateWindowFrame()
     {
         bool max = WindowState is WindowState.Maximized or WindowState.FullScreen;
-        ResizeGrips.IsVisible = !max && !_mini;
+        ResizeGrips.IsVisible = !max && !_mini && !Os.Mac;
         MaxButton.Content = WindowState == WindowState.Maximized ? Icons.Restore : Icons.Maximise;
         ToolTip.SetTip(MaxButton, WindowState == WindowState.Maximized ? "Restore down" : "Maximise");
     }
@@ -918,6 +950,7 @@ public partial class MainWindow : Window
         HealthBadge.IsVisible = false;
         _hideTimer.Stop();
         ResizeGrips.IsVisible = false;
+        if (Os.Mac) SystemDecorations = SystemDecorations.None; // no window buttons over the little player
         MinWidth = 0; MinHeight = 0;
         var s = SettingsStore.Current;
         double w = Math.Clamp(s.MiniWidth ?? 480, 320, 1280), h = w * 9 / 16;
@@ -945,6 +978,7 @@ public partial class MainWindow : Window
         _mini = false;
         MiniChrome.IsVisible = false;
         Topmost = false;
+        if (Os.Mac) SystemDecorations = SystemDecorations.Full;
         MinWidth = 900; MinHeight = 540;
         Width = _miniSavedW; Height = _miniSavedH;
         Position = _miniSavedPos;
@@ -1511,7 +1545,7 @@ public partial class MainWindow : Window
             return;
         }
         bool typing = Typing;
-        if (key == Key.F && e.KeyModifiers == KeyModifiers.Control) { FocusSearch(); e.Handled = true; return; }
+        if (key == Key.F && e.KeyModifiers == Os.Command) { FocusSearch(); e.Handled = true; return; }
         if (IsSheetKey(key, e) && (!typing || key == Key.F1)) { ToggleShortcutSheet(); e.Handled = true; return; }
         if (SheetOpen && key == Key.Escape) { CloseShortcutSheet(); e.Handled = true; return; }
         if (key == Key.F11 && _nowLive) { EnterPlayer(); e.Handled = true; return; }
@@ -1604,11 +1638,11 @@ public partial class MainWindow : Window
                 break;
             case Key.Left:
                 if (!_nowLive) { _svc?.SeekBy(-10_000); return true; }
-                if (LiveSeekable) { SeekLiveBy(mods.HasFlag(KeyModifiers.Control) ? -300 : -10); return true; }
+                if (LiveSeekable) { SeekLiveBy(Os.HasCommand(mods) ? -300 : -10); return true; }
                 break;
             case Key.Right:
                 if (!_nowLive) { _svc?.SeekBy(30_000); return true; }
-                if (LiveSeekable && _svc.BehindLive > TimeSpan.FromSeconds(4)) { SeekLiveBy(mods.HasFlag(KeyModifiers.Control) ? 300 : 10); return true; }
+                if (LiveSeekable && _svc.BehindLive > TimeSpan.FromSeconds(4)) { SeekLiveBy(Os.HasCommand(mods) ? 300 : 10); return true; }
                 break;
             case Key.End:
                 if (LiveSeekable) { GoLiveNow(); ShowToast("Back to live"); return true; }
@@ -1707,7 +1741,7 @@ public partial class MainWindow : Window
 
     void Overlay_PointerWheelChanged(object sender, PointerWheelEventArgs e)
     {
-        if (_mini && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        if (_mini && Os.HasCommand(e.KeyModifiers))
         {
             double w = Math.Clamp(Width * (e.Delta.Y > 0 ? 1.1 : 1 / 1.1), 320, 1280);
             Width = w; Height = w * 9 / 16;
@@ -1823,8 +1857,9 @@ public partial class MainWindow : Window
         if (SheetOpen) { CloseShortcutSheet(); return; }
         var (sheet, grid) = _playerMode ? (OverlaySheet, OverlaySheetGrid) : (ShortcutSheet, ShortcutSheetGrid);
         if (grid.Children.Count == 0)
-            foreach (var (keys, what) in Shortcuts)
+            foreach (var (k, what) in Shortcuts)
             {
+                var keys = Os.Mac ? k.Replace("Ctrl", "⌘") : k;
                 var row = new DockPanel { Margin = new Thickness(0, 5, 28, 5) };
                 var key = new Border
                 {

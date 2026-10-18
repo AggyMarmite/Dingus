@@ -78,7 +78,7 @@ public partial class SettingsView : UserControl, IPage
             var bytes = ImageLoader.DiskCacheBytes();
             CacheText.Text = $"{bytes / 1024.0 / 1024.0:0.0} MB on disk";
             var v = typeof(SettingsView).Assembly.GetName().Version;
-            VersionText.Text = $"Dingus {v?.ToString(3)} for Linux  ·  Video engine: VLC  ·  Using {Memory.WorkingSetMB():N0} MB of memory";
+            VersionText.Text = $"Dingus {v?.ToString(3)} for {(Os.Mac ? "Mac" : "Linux")}  ·  Video engine: VLC  ·  Using {Memory.WorkingSetMB():N0} MB of memory";
         }
         finally { _loading = false; }
     }

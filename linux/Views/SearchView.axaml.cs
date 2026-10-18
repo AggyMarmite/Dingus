@@ -65,7 +65,7 @@ public partial class SearchView : UserControl, IPage
             foreach (var s in new[] { ChannelSection, ProgSection, FilmSection, ShowSection }) s.IsVisible = false;
             Filters.IsVisible = false;
             EmptyTitle.Text = "Search everything";
-            EmptyBody.Text = "Channels, programmes in the TV guide, films and TV shows – all at once. Type at least two letters in the search bar at the top (Ctrl+F from anywhere).";
+            EmptyBody.Text = "Channels, programmes in the TV guide, films and TV shows – all at once. Type at least two letters in the search bar at the top (" + (Os.Mac ? "⌘F" : "Ctrl+F") + " from anywhere).";
             EmptyState.IsVisible = true;
             return;
         }

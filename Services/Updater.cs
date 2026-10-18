@@ -42,7 +42,7 @@ public static partial class Updater
         {
             var name = a.GetProperty("name").GetString() ?? "";
 #if LINUX
-            if (name.StartsWith("Dingus-", StringComparison.OrdinalIgnoreCase) && name.EndsWith("-x86_64.AppImage", StringComparison.OrdinalIgnoreCase))
+            if (name.StartsWith("Dingus-", StringComparison.OrdinalIgnoreCase) && name.EndsWith(AssetSuffix, StringComparison.OrdinalIgnoreCase))
 #else
             if (name.StartsWith("Dingus-Setup", StringComparison.OrdinalIgnoreCase) && name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
 #endif
@@ -64,7 +64,7 @@ public static partial class Updater
         var dir = Path.Combine(Path.GetTempPath(), "Dingus-update");
         Directory.CreateDirectory(dir);
 #if LINUX
-        var path = Path.Combine(dir, $"Dingus-{r.Version.ToString(3)}-x86_64.AppImage");
+        var path = Path.Combine(dir, $"Dingus-{r.Version.ToString(3)}{AssetSuffix}");
 #else
         var path = Path.Combine(dir, $"Dingus-Setup-{r.Version.ToString(3)}.exe");
 #endif
