@@ -7,6 +7,17 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Themes/Theme.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- The Dingus logo (Assets/Dingus-icon.svg): a white "D" with a play button, on purple -->
+            <DrawingImage x:Key="DingusLogo">
+                <DrawingImage.Drawing>
+                    <DrawingGroup>
+                        <GeometryDrawing Brush="#5B4FE8"><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,100,100" RadiusX="24" RadiusY="24"/></GeometryDrawing.Geometry></GeometryDrawing>
+                        <GeometryDrawing Brush="#FFFFFF" Geometry="M28,22 H50 A28,28 0 0 1 50,78 H28 Z"/>
+                        <GeometryDrawing Brush="#5B4FE8" Geometry="M43,37 L63,50 L43,63 Z"/>
+                    </DrawingGroup>
+                </DrawingImage.Drawing>
+            </DrawingImage>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

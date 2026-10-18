@@ -53,16 +53,7 @@
                                     </ControlTemplate>
                                 </Button.Template>
                                 <StackPanel Orientation="Horizontal">
-                                    <Border x:Name="LogoMark" Width="26" Height="26" CornerRadius="7" VerticalAlignment="Center">
-                                        <Border.Background>
-                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                                <GradientStop Color="#60A5FA" Offset="0"/>
-                                                <GradientStop Color="#7C3AED" Offset="1"/>
-                                            </LinearGradientBrush>
-                                        </Border.Background>
-                                        <TextBlock Text="&#xE7F4;" FontFamily="{StaticResource IconFont}" FontSize="12" Foreground="White"
-                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
+                                    <Image Source="{StaticResource DingusLogo}" Width="26" Height="26" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     <TextBlock x:Name="WordMark" Text="Dingus" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" Margin="9,0,0,0"/>
                                 </StackPanel>
                             </Button>
@@ -173,16 +164,7 @@
 
                 <Grid x:Name="Welcome" Grid.Row="1" Background="{StaticResource BgBrush}" Visibility="Collapsed">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="470">
-                        <Border Width="64" Height="64" CornerRadius="18" HorizontalAlignment="Center">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                    <GradientStop Color="#60A5FA" Offset="0"/>
-                                    <GradientStop Color="#7C3AED" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
-                            <TextBlock Text="&#xE7F4;" FontFamily="{StaticResource IconFont}" FontSize="28" Foreground="White"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
+                        <Image Source="{StaticResource DingusLogo}" Width="64" Height="64" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         <TextBlock Text="Welcome to Dingus" FontSize="30" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,22,0,0"/>
                         <TextBlock Text="Add your IPTV playlist to get started. Xtream Codes logins and M3U links are both supported."
                                    TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource MutedBrush}" FontSize="14" Margin="0,12,0,26"/>
