@@ -89,11 +89,16 @@ PLIST
 echo "== Signing (ad hoc)"
 # Apple Silicon only runs signed code. Without a paid Apple Developer ID this is an "ad hoc" signature,
 # so the first time it's opened macOS asks the user to confirm (System Settings → Privacy & Security → Open Anyway).
-find "$C" -type f | while read -r f; do
-  if file -b "$f" | grep -q 'Mach-O'; then codesign --force --sign - --timestamp=none "$f" 2> /dev/null; fi
-done
+BAD=0
+while read -r f; do
+  [ "$f" = "$C/MacOS/dingus" ] && continue # signed with the app below
+  if file -b "$f" | grep -q 'Mach-O'; then
+    if ! msg=$(codesign --force --sign - --timestamp=none "$f" 2>&1); then echo "codesign failed: ${f#$C/}: $msg"; BAD=1; fi
+  fi
+done < <(find "$C" -type f)
+[ $BAD = 0 ] || exit 1
 codesign --force --sign - --timestamp=none "$APP"
-codesign --verify --deep --strict "$APP"
+codesign --verify --deep --strict --verbose=2 "$APP"
 
 echo "== Making the disk image"
 ln -s /Applications "$WORK/stage/Applications"
