@@ -61,8 +61,46 @@ public static class PerfTest
             bool ui = Application.Current?.Dispatcher.CheckAccess() == true;
             lock (Work) Work.Add((what, ms, ui, _phase));
         };
+        // Every job the window's thread runs: anything slow is noted with what it was (layout and drawing included).
+        var hooks = Dispatcher.CurrentDispatcher.Hooks;
+        var started = new Dictionary<DispatcherOperation, long>();
+        hooks.OperationStarted += (_, e) => started[e.Operation] = Stopwatch.GetTimestamp();
+        hooks.OperationCompleted += (_, e) =>
+        {
+            if (!started.Remove(e.Operation, out var t0)) return;
+            var ms = Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
+            if (ms < 80) return;
+            lock (Work) Work.Add(("job: " + Describe(e.Operation), ms, true, _phase));
+        };
+        hooks.OperationAborted += (_, e) => started.Remove(e.Operation);
         var t = new Thread(Watch) { IsBackground = true, Name = "Speed test: responsiveness" };
         t.Start();
+    }
+
+    /// <summary>What a dispatcher job is: the method it runs (from .NET's private fields – speed test only).</summary>
+    static string Describe(DispatcherOperation op)
+    {
+        try
+        {
+            var f = typeof(DispatcherOperation).GetField("_method", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (f?.GetValue(op) is Delegate d)
+            {
+                var m = d.Method;
+                var name = $"{m.DeclaringType?.Name}.{m.Name}";
+                // Posted callbacks (async code, Invoke) carry what they really run in "_args".
+                var a = typeof(DispatcherOperation).GetField("_args", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(op);
+                var inner = a switch
+                {
+                    Delegate ad => ad.Target?.GetType().FullName + "." + ad.Method.Name,
+                    null => null,
+                    _ => a.GetType().FullName,
+                };
+                if (inner != null) name += " → " + System.Text.RegularExpressions.Regex.Replace(inner, @"System\.Runtime\.CompilerServices\.|`\d|\[\[|\]\]|, [^,\]]*, Version=[^\]]*", "");
+                return $"{name} ({op.Priority})";
+            }
+        }
+        catch { }
+        return $"? ({op.Priority})";
     }
 
     static void Watch()
@@ -210,7 +248,7 @@ public static class PerfTest
             Line("");
             Line("Slowest work (over 30 ms; \"window\" = the window waits for it, \"background\" = it doesn't):");
             lock (Work)
-                foreach (var w in Work.OrderByDescending(w => w.Ms).Take(25))
+                foreach (var w in Work.OrderByDescending(w => w.Ms).Take(40))
                     Line($"  {w.Ms,7:N0} ms  {(w.Ui ? "window    " : "background")}  {w.What}  ({w.Phase})");
         }
         catch (Exception ex) { SelfTest.Error(ex); }
