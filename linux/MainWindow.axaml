@@ -18,21 +18,29 @@
                     BorderThickness="0,0,0,1">
                 <Grid ColumnDefinitions="Auto,*,Auto">
                     <StackPanel x:Name="TitleLeft" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
-                        <Border Width="26" Height="26" CornerRadius="7">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                                    <GradientStop Color="#60A5FA" Offset="0"/>
-                                    <GradientStop Color="#7C3AED" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
-                            <TextBlock Classes="icon" Text="{x:Static local:Icons.Tv}" FontSize="15" Foreground="White"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <TextBlock x:Name="WordMark" Text="Dingus" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" Margin="9,0,14,0"/>
+                        <!-- The Dingus logo is the Home button -->
+                        <Button x:Name="HomeLogo" Classes="logo" Click="HomeLogo_Click" ToolTip.Tip="Home" Cursor="Hand"
+                                VerticalAlignment="Center" Margin="-6,0,8,0" Padding="6,5,10,5">
+                            <StackPanel Orientation="Horizontal">
+                                <Border Width="26" Height="26" CornerRadius="7">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                            <GradientStop Color="#60A5FA" Offset="0"/>
+                                            <GradientStop Color="#7C3AED" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                    <TextBlock Classes="icon" Text="{x:Static local:Icons.Tv}" FontSize="15" Foreground="White"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock x:Name="WordMark" Text="Dingus" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" Margin="9,0,0,0"/>
+                            </StackPanel>
+                        </Button>
                         <Border Background="{StaticResource BgBrush}" CornerRadius="10" Padding="1,3" VerticalAlignment="Center"
                                 BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
                             <StackPanel Orientation="Horizontal">
-                                <RadioButton x:Name="NavHome" Classes="tab" Tag="{x:Static local:Icons.Home}" Content="Home" IsCheckedChanged="Nav_Checked"/>
+                                <!-- Home is the logo on the left; this hidden tab keeps track of being on Home -->
+                                <RadioButton x:Name="NavHome" Classes="tab" Tag="{x:Static local:Icons.Home}" Content="Home" IsCheckedChanged="Nav_Checked"
+                                             IsVisible="False"/>
                                 <RadioButton x:Name="NavGuide" Classes="tab" Tag="{x:Static local:Icons.LiveTv}" Content="Live TV" IsCheckedChanged="Nav_Checked"/>
                                 <RadioButton x:Name="NavFilms" Classes="tab" Tag="{x:Static local:Icons.Films}" Content="Films" IsCheckedChanged="Nav_Checked"/>
                                 <RadioButton x:Name="NavShows" Classes="tab" Tag="{x:Static local:Icons.Shows}" Content="TV Shows" IsCheckedChanged="Nav_Checked"/>

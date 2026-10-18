@@ -352,6 +352,9 @@ public partial class MainWindow : Window
         NavSettings.IsChecked = true;
     }
 
+    /// <summary>The Dingus logo at the top left goes Home.</summary>
+    void HomeLogo_Click(object sender, RoutedEventArgs e) => NavHome.IsChecked = true;
+
     void Minimise_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
     void Maximise_Click(object sender, RoutedEventArgs e) =>
@@ -394,6 +397,7 @@ public partial class MainWindow : Window
     void Nav_Checked(object sender, RoutedEventArgs e)
     {
         if (_guide == null || sender is not RadioButton { IsChecked: true } rb) return;
+        HomeLogo.Classes.Set("home", rb == NavHome);
         IPage page = _guide;
         if (rb == NavHome) page = _home;
         else if (rb == NavFilms) page = _films;

@@ -293,6 +293,12 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Opens a film or show's details page.</summary>
+    /// <summary>The Dingus logo at the top left goes Home.</summary>
+    void HomeLogo_Click(object sender, RoutedEventArgs e)
+    {
+        NavHome.IsChecked = true;
+    }
+
     public void OpenLibraryItem(bool movie, string id)
     {
         (movie ? NavFilms : NavShows).IsChecked = true;

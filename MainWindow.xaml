@@ -32,21 +32,46 @@
 
                         <!-- Logo + sections -->
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
-                            <Border Width="26" Height="26" CornerRadius="7" VerticalAlignment="Center">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                        <GradientStop Color="#60A5FA" Offset="0"/>
-                                        <GradientStop Color="#7C3AED" Offset="1"/>
-                                    </LinearGradientBrush>
-                                </Border.Background>
-                                <TextBlock Text="&#xE7F4;" FontFamily="{StaticResource IconFont}" FontSize="12" Foreground="White"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                            <TextBlock x:Name="WordMark" Text="Dingus" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" Margin="9,0,14,0"/>
+                            <!-- The Dingus logo is the Home button -->
+                            <Button x:Name="HomeLogo" Click="HomeLogo_Click" ToolTip="Home" Cursor="Hand" FocusVisualStyle="{x:Null}"
+                                    VerticalAlignment="Center" Margin="-6,0,8,0">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Grid Background="Transparent">
+                                            <Border x:Name="HoverBg" CornerRadius="9" Background="{StaticResource HoverBrush}" Opacity="0"/>
+                                            <Border x:Name="OnBg" CornerRadius="9" Background="{StaticResource Surface3Brush}" Opacity="0"/>
+                                            <ContentPresenter Margin="6,5,10,5"/>
+                                        </Grid>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="HoverBg" Property="Opacity" Value="1"/>
+                                            </Trigger>
+                                            <DataTrigger Binding="{Binding IsChecked, ElementName=NavHome}" Value="True">
+                                                <Setter TargetName="OnBg" Property="Opacity" Value="1"/>
+                                            </DataTrigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                                <StackPanel Orientation="Horizontal">
+                                    <Border x:Name="LogoMark" Width="26" Height="26" CornerRadius="7" VerticalAlignment="Center">
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                <GradientStop Color="#60A5FA" Offset="0"/>
+                                                <GradientStop Color="#7C3AED" Offset="1"/>
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                        <TextBlock Text="&#xE7F4;" FontFamily="{StaticResource IconFont}" FontSize="12" Foreground="White"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock x:Name="WordMark" Text="Dingus" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" Margin="9,0,0,0"/>
+                                </StackPanel>
+                            </Button>
                             <Border Background="{StaticResource BgBrush}" CornerRadius="10" Padding="1,3" VerticalAlignment="Center"
                                     BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
                                 <StackPanel Orientation="Horizontal">
-                                    <RadioButton x:Name="NavHome" Style="{StaticResource TabButton}" Tag="&#xE80F;" Content="Home" Checked="Nav_Checked"/>
+                                    <!-- Home is the logo on the left; this hidden tab keeps track of being on Home -->
+                                    <RadioButton x:Name="NavHome" Style="{StaticResource TabButton}" Tag="&#xE80F;" Content="Home" Checked="Nav_Checked"
+                                                 Visibility="Collapsed"/>
                                     <RadioButton x:Name="NavGuide" Style="{StaticResource TabButton}" Tag="&#xE7F4;" Content="Live TV" Checked="Nav_Checked"/>
                                     <RadioButton x:Name="NavFilms" Style="{StaticResource TabButton}" Tag="&#xE8B2;" Content="Films" Checked="Nav_Checked"/>
                                     <RadioButton x:Name="NavShows" Style="{StaticResource TabButton}" Tag="&#xE8F1;" Content="TV Shows" Checked="Nav_Checked"/>

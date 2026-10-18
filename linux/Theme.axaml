@@ -394,4 +394,19 @@
         <Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/>
         <Setter Property="FontSize" Value="12"/>
     </Style>
+    <!-- The Dingus logo / Home button at the top left -->
+    <Style Selector="Button.logo">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="9"/>
+    </Style>
+    <Style Selector="Button.logo /template/ ContentPresenter">
+        <Setter Property="CornerRadius" Value="9"/>
+    </Style>
+    <Style Selector="Button.logo:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource HoverBrush}"/>
+    </Style>
+    <Style Selector="Button.logo.home /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource Surface3Brush}"/>
+    </Style>
 </Styles>
