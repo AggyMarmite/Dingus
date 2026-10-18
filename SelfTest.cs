@@ -42,6 +42,22 @@ public static class SelfTest
             await GuideMode(main, "grid", null);
             await Page(main, main.NavFilms, "06-films");
             await Page(main, main.NavShows, "07-shows");
+
+            // My List: save two films and a show, then see them on Home, in Films and on a film's page.
+            var cat = DataService.Instance.Catalog;
+            foreach (var m in cat.Movies.Take(2)) HistoryStore.ToggleSaved("movie", m.Id, m.Name, m.Poster);
+            foreach (var x in cat.Series.Take(1)) HistoryStore.ToggleSaved("series", x.Id, x.Name, x.Cover);
+            Note($"my list: {HistoryStore.MyList.Count} saved");
+            await Page(main, main.NavHome, "01b-home-mylist", fullScroll: true);
+            main.OpenLibraryCategory(true, LibraryView.MyListId);
+            await Idle(1500);
+            Snap(main.SelfTestRoot, "06b-films-mylist");
+            if (cat.Movies.Count > 0)
+            {
+                main.OpenLibraryItem(true, cat.Movies[0].Id);
+                await Idle(1500);
+                Snap(main.SelfTestRoot, "06c-film-details");
+            }
             await Page(main, main.NavSettings, "09-settings", fullScroll: true);
             var row0 = main.SelfTestGuide.SelfTestFirstRow;
             if (row0 != null)

@@ -1,5 +1,8 @@
 ## What's new in Dingus 0.9.0
 
+* **My List** – save films and shows for later: the **My List** button on a film or show's page, or right-click its
+  poster (in Films, TV Shows or on Home). They appear in a My List row on Home and under **My List** in Films and TV Shows,
+  with a tick on the poster. Each playlist keeps its own list.
 * **Smoother Home page** – the featured picture now cross-fades straight into the next one (no more dip to black), with a
   gentle settling zoom; the words drift in as the picture changes, and the slide dots glide along. Dingus waits for the
   next picture to load before changing, and draws the blurred poster background once instead of on every frame.

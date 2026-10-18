@@ -59,7 +59,7 @@ public partial class HomeView : UserControl, IPage
         _shown = false;
         _refresh.Stop();
         _advance.Stop();
-        foreach (var list in new ItemsControl[] { NextList, SportList, RemindList, PicksList, ResumeList, RecentList, FavList, NewFilmsList, NewShowsList })
+        foreach (var list in new ItemsControl[] { NextList, SportList, RemindList, PicksList, ResumeList, MyListList, RecentList, FavList, NewFilmsList, NewShowsList })
             list.ItemsSource = null;
         HeroArt.Children.Clear();
         _layer = null;
@@ -197,6 +197,8 @@ public partial class HomeView : UserControl, IPage
             .Select(m => new HomePosterCard { Id = m.Id, IsMovie = true, Title = m.Name, Image = m.Poster, Subtitle = m.Year ?? "Film" }).ToList();
         var newShows = data.Series.Where(x => !hiddenSeries.Contains(x.CategoryId)).OrderByDescending(x => x.Added).Take(20)
             .Select(x => new HomePosterCard { Id = x.Id, IsMovie = false, Title = x.Name, Image = x.Cover, Subtitle = x.Year ?? "TV show" }).ToList();
+        MyListList.ItemsSource = BuildMyList(data, hiddenVod, hiddenSeries);
+        MyListSection.Visibility = ((List<HomePosterCard>)MyListList.ItemsSource).Count == 0 ? Visibility.Collapsed : Visibility.Visible;
         NewFilmsList.ItemsSource = newFilms;
         NewFilmsSection.Visibility = newFilms.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
         NewShowsList.ItemsSource = newShows;
@@ -695,6 +697,10 @@ public partial class HomeView : UserControl, IPage
             case "recent": mw.NavGuide.IsChecked = true; Guide.ShowAndSelect(GuideView.RecentId, null); break;
             case "films": mw.NavFilms.IsChecked = true; break;
             case "shows": mw.NavShows.IsChecked = true; break;
+            case "mylist":
+                // Opens on the kind you saved most recently (films or shows).
+                mw.OpenLibraryCategory(HistoryStore.MyList.FirstOrDefault()?.Kind != "series", LibraryView.MyListId);
+                break;
         }
     }
 
@@ -738,6 +744,25 @@ public partial class HomeView : UserControl, IPage
             Progress = p == null ? 0 : (now - p.Start).TotalSeconds / Math.Max(1, (p.End - p.Start).TotalSeconds),
             GenreBrush = Genres.Brush(p?.Genre),
         };
+    }
+
+    /// <summary>My List: saved films and shows the playlist still has (hidden categories left out), newest first.</summary>
+    static List<HomePosterCard> BuildMyList(CatalogData data, HashSet<string> hiddenVod, HashSet<string> hiddenSeries)
+    {
+        var saved = HistoryStore.MyList;
+        if (saved.Count == 0) return new List<HomePosterCard>();
+        var films = saved.Where(x => x.Kind == "movie").Select(x => x.Id).ToHashSet();
+        var shows = saved.Where(x => x.Kind == "series").Select(x => x.Id).ToHashSet();
+        var found = new Dictionary<string, HomePosterCard>();
+        if (films.Count > 0)
+            foreach (var m in data.Movies)
+                if (films.Contains(m.Id) && !hiddenVod.Contains(m.CategoryId))
+                    found.TryAdd("movie:" + m.Id, new HomePosterCard { Id = m.Id, IsMovie = true, Title = m.Name, Image = m.Poster, Subtitle = m.Year ?? "Film" });
+        if (shows.Count > 0)
+            foreach (var x in data.Series)
+                if (shows.Contains(x.Id) && !hiddenSeries.Contains(x.CategoryId))
+                    found.TryAdd("series:" + x.Id, new HomePosterCard { Id = x.Id, IsMovie = false, Title = x.Name, Image = x.Cover, Subtitle = x.Year ?? "TV show" });
+        return saved.Select(x => found.GetValueOrDefault(x.Kind + ":" + x.Id)).Where(c => c != null).Take(20).ToList();
     }
 
     static string Left(long ms)
@@ -796,6 +821,32 @@ public partial class HomeView : UserControl, IPage
     void Poster_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is HomePosterCard c) MainWindow.Instance?.OpenLibraryItem(c.IsMovie, c.Id);
+    }
+
+    /// <summary>Right-click a film or show: add to / remove from My List.</summary>
+    void Poster_RightUp(object sender, MouseButtonEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not HomePosterCard c) return;
+        string kind = c.IsMovie ? "movie" : "series";
+        bool saved = HistoryStore.IsSaved(kind, c.Id);
+        var menu = new ContextMenu();
+        var open = new MenuItem { Header = c.IsMovie ? "Open film" : "Open show" };
+        open.Click += (_, _) => MainWindow.Instance?.OpenLibraryItem(c.IsMovie, c.Id);
+        var save = new MenuItem
+        {
+            Header = saved ? "Remove from My List" : "Add to My List",
+            Icon = new TextBlock { Text = saved ? "\uE738" : "\uE710", FontFamily = (System.Windows.Media.FontFamily)FindResource("IconFont") },
+        };
+        save.Click += (_, _) =>
+        {
+            bool now = HistoryStore.ToggleSaved(kind, c.Id, c.Title, c.Image);
+            MainWindow.Instance?.ShowToast(now ? $"Added “{c.Title}” to My List" : $"Removed “{c.Title}” from My List");
+        };
+        menu.Items.Add(open);
+        menu.Items.Add(save);
+        menu.PlacementTarget = sender as UIElement;
+        menu.IsOpen = true;
+        e.Handled = true;
     }
 
     /// <summary>Mouse wheel scrolls the page (not the row it's over); Shift + wheel scrolls the row sideways.</summary>

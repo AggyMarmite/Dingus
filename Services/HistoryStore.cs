@@ -9,7 +9,7 @@ using Dingus.Models;
 namespace Dingus.Services;
 
 /// <summary>
-/// Per-playlist viewing history: recently watched channels and resume positions for films/episodes.
+/// Per-playlist viewing history: recently watched channels, resume positions for films/episodes and My List.
 /// Kept in its own small file (not settings.json) because it changes every few seconds while playing.
 /// </summary>
 public static class HistoryStore
@@ -44,6 +44,7 @@ public static class HistoryStore
         catch (Exception ex) { Log.Error(ex); _data = new HistoryData(); }
         _data.RecentChannels ??= new();
         _data.Resume ??= new();
+        _data.MyList ??= new();
         Changed?.Invoke();
     }
 
@@ -92,6 +93,35 @@ public static class HistoryStore
     /// <summary>Most recently watched entries of a kind, newest first.</summary>
     public static IEnumerable<ResumeEntry> Recent(string kind) =>
         _data.Resume.Values.Where(e => e.Kind == kind).OrderByDescending(e => e.UpdatedUtc);
+
+    // ------------------------------------------------------------------ My List
+
+    const int MaxSaved = 1000;
+
+    public static bool IsSaved(string kind, string id) =>
+        id != null && _data.MyList.Any(x => x.Kind == kind && x.Id == id);
+
+    /// <summary>Films ("movie") or shows ("series") on My List, newest first.</summary>
+    public static IEnumerable<SavedItem> Saved(string kind) => _data.MyList.Where(x => x.Kind == kind);
+
+    public static IReadOnlyList<SavedItem> MyList => _data.MyList;
+
+    /// <summary>Adds or removes a title; returns true when it's now on the list.</summary>
+    public static bool ToggleSaved(string kind, string id, string title, string image)
+    {
+        if (string.IsNullOrEmpty(id)) return false;
+        int at = _data.MyList.FindIndex(x => x.Kind == kind && x.Id == id);
+        if (at >= 0)
+        {
+            _data.MyList.RemoveAt(at);
+            Touch();
+            return false;
+        }
+        _data.MyList.Insert(0, new SavedItem { Kind = kind, Id = id, Title = title, Image = image, AddedUtc = DateTime.UtcNow });
+        if (_data.MyList.Count > MaxSaved) _data.MyList.RemoveRange(MaxSaved, _data.MyList.Count - MaxSaved);
+        Touch();
+        return true;
+    }
 
     static void Touch()
     {

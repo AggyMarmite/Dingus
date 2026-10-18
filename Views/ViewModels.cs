@@ -230,6 +230,10 @@ public class PosterItem : Observable
         set { if (Set(ref _progress, value)) Raise(nameof(HasProgress)); }
     }
     public bool HasProgress => _progress > 0.01;
+
+    bool _saved;
+    /// <summary>On My List (a small bookmark on the poster).</summary>
+    public bool Saved { get => _saved; set => Set(ref _saved, value); }
 }
 
 public class PosterRow

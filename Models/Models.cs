@@ -305,6 +305,19 @@ public class HistoryData
 {
     public List<string> RecentChannels { get; set; } = new();
     public Dictionary<string, ResumeEntry> Resume { get; set; } = new();
+    /// <summary>Films and shows saved for later ("My List"), newest first.</summary>
+    public List<SavedItem> MyList { get; set; } = new();
+}
+
+/// <summary>A film or show on My List. The name and picture are kept so the list still reads well if the
+/// provider drops the title.</summary>
+public class SavedItem
+{
+    public string Kind { get; set; } // movie | series
+    public string Id { get; set; }
+    public string Title { get; set; }
+    public string Image { get; set; }
+    public DateTime AddedUtc { get; set; }
 }
 
 public class CatalogData

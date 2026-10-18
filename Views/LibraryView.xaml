@@ -62,7 +62,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Button Style="{StaticResource PosterCard}" Width="156" Margin="8,8,8,14" Click="Poster_Click"
-                                            ToolTip="{Binding Title}">
+                                            MouseRightButtonUp="Poster_RightUp" ToolTip="{Binding Title}">
                                         <StackPanel>
                                             <Grid Width="156" Height="234">
                                                 <Grid.Clip>
@@ -74,6 +74,13 @@
                                                 </Border>
                                                 <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="240"
                                                        svc:ImageLoader.Url="{Binding Image}"/>
+                                                <!-- On My List -->
+                                                <Border x:Name="SavedBadge" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                                                        Width="26" Height="26" CornerRadius="13" Background="#CC0A0D13" Visibility="Collapsed"
+                                                        ToolTip="On My List">
+                                                    <TextBlock Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="12" Foreground="White"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
                                                 <Border x:Name="ProgBg" VerticalAlignment="Bottom" Height="5" Background="#99000000" Visibility="Collapsed">
                                                     <ProgressBar Style="{StaticResource ThinProgress}" Maximum="1" Value="{Binding Progress, Mode=OneWay}"
                                                                  Margin="8,0" VerticalAlignment="Center" Height="3"/>
@@ -89,6 +96,9 @@
                                     <DataTemplate.Triggers>
                                         <DataTrigger Binding="{Binding HasProgress}" Value="True">
                                             <Setter TargetName="ProgBg" Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Saved}" Value="True">
+                                            <Setter TargetName="SavedBadge" Property="Visibility" Value="Visible"/>
                                         </DataTrigger>
                                     </DataTemplate.Triggers>
                                 </DataTemplate>
@@ -166,6 +176,12 @@
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xE72C;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                         <TextBlock Text="Play from start"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="SaveButton" Style="{StaticResource BaseButton}" Padding="18,11" Margin="8,0,0,0" Click="Save_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock x:Name="SaveIcon" Text="&#xE710;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBlock x:Name="SaveText" Text="My List"/>
                                     </StackPanel>
                                 </Button>
                             </StackPanel>

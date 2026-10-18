@@ -145,7 +145,8 @@
         </DataTemplate>
 
         <DataTemplate x:Key="PosterCardTemplate">
-            <Button Style="{StaticResource PosterCard}" Width="156" Margin="8,6,8,10" Click="Poster_Click" ToolTip="{Binding Title}">
+            <Button Style="{StaticResource PosterCard}" Width="156" Margin="8,6,8,10" Click="Poster_Click" MouseRightButtonUp="Poster_RightUp"
+                    ToolTip="{Binding Title}">
                 <StackPanel>
                     <Grid Width="156" Height="234">
                         <Grid.Clip>
@@ -341,6 +342,16 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                </ScrollViewer>
+            </StackPanel>
+            <StackPanel x:Name="MyListSection" Visibility="Collapsed">
+                <Grid Margin="8,26,8,4">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock Style="{StaticResource RowHeader}" Text="My List"/>
+                    <Button Grid.Column="1" Style="{StaticResource HeroLink}" Content="View all" Tag="mylist" Click="ViewAll_Click" VerticalAlignment="Bottom"/>
+                </Grid>
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Row_PreviewMouseWheel">
+                    <ItemsControl x:Name="MyListList" ItemsPanel="{StaticResource RowPanel}" ItemTemplate="{StaticResource PosterCardTemplate}"/>
                 </ScrollViewer>
             </StackPanel>
             <StackPanel x:Name="NextSection">
