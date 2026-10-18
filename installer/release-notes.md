@@ -3,6 +3,11 @@
 * **My List** – save films and shows for later: the **My List** button on a film or show's page, or right-click its
   poster (in Films, TV Shows or on Home). They appear in a My List row on Home and under **My List** in Films and TV Shows,
   with a tick on the poster. Each playlist keeps its own list.
+* **Faster with big playlists** – tested with 30,000 channels, 80,000 films, 15,000 shows and a 300,000-programme
+  guide. Reading the playlist and building the Live TV channel list now happen in the background, Home no longer sorts
+  every film to find the newest, and memory is tidied up once you leave the window alone rather than while you're
+  using it – so the window keeps responding while a big playlist loads (the longest freezes are a third of what they were).
+  Dingus also starts and opens its first pages a little quicker.
 * **Smoother Home page** – the featured picture now cross-fades straight into the next one (no more dip to black), with a
   gentle settling zoom; the words drift in as the picture changes, and the slide dots glide along. Dingus waits for the
   next picture to load before changing, and draws the blurred poster background once instead of on every frame.

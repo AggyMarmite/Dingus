@@ -141,7 +141,11 @@ public static class EpgService
     static readonly Regex IdSuffixRx = new(@"\.[a-z]{2,3}$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     static readonly Regex NonAlnumRx = new(@"[^\p{L}\p{N}]+", RegexOptions.Compiled);
 
-    public static async Task DownloadAsync(string url, string dest, CancellationToken ct)
+    /// <summary>Downloads the guide to a file, on a background thread (it can be 100 MB+).</summary>
+    public static Task DownloadAsync(string url, string dest, CancellationToken ct) =>
+        Task.Run(() => DataService.TimeAsync("guide: downloading", async () => { await DownloadCoreAsync(url, dest, ct); return 0; }), ct);
+
+    static async Task DownloadCoreAsync(string url, string dest, CancellationToken ct)
     {
         var tmp = dest + ".part";
         if (File.Exists(url)) { File.Copy(url, dest, true); return; } // a guide file on this PC
