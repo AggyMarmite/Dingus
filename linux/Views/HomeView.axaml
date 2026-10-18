@@ -53,11 +53,18 @@
             <Setter Property="Width" Value="6"/>
             <Setter Property="Height" Value="6"/>
             <Setter Property="CornerRadius" Value="3"/>
-            <Setter Property="Background" Value="#80FFFFFF"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Opacity" Value="0.5"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Width" Duration="0:0:0.35" Easing="CubicEaseOut"/>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.35" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter>
         </Style>
         <Style Selector="Border.dot.on">
             <Setter Property="Width" Value="18"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Opacity" Value="1"/>
         </Style>
     </UserControl.Styles>
 
@@ -145,30 +152,8 @@
             <!-- ================= Featured: a big picture with the title over it ================= -->
             <Panel x:Name="Hero" Height="560" ClipToBounds="True" PointerEntered="Hero_PointerEntered" PointerExited="Hero_PointerExited">
                 <Border Background="{StaticResource BgBrush}"/>
-                <Panel x:Name="HeroArt">
-                    <Panel.Transitions>
-                        <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.35"/></Transitions>
-                    </Panel.Transitions>
-                    <Border x:Name="HeroWash" IsVisible="False">
-                        <Border.Background>
-                            <RadialGradientBrush Center="75%,35%" GradientOrigin="75%,35%" RadiusX="70%" RadiusY="90%">
-                                <GradientStop Color="#2A3F6E" Offset="0"/>
-                                <GradientStop Color="#141B2B" Offset="0.6"/>
-                                <GradientStop Color="#0A0D13" Offset="1"/>
-                            </RadialGradientBrush>
-                        </Border.Background>
-                    </Border>
-                    <Image x:Name="HeroLogo" Width="360" Height="200" Stretch="Uniform" HorizontalAlignment="Right" VerticalAlignment="Center"
-                           Margin="0,0,120,40" svc:ImageLoader.DecodeWidth="720" IsVisible="False"/>
-                    <Image x:Name="HeroBlur" Stretch="UniformToFill" Opacity="0.6" IsVisible="False">
-                        <Image.Effect><BlurEffect Radius="48"/></Image.Effect>
-                    </Image>
-                    <Border x:Name="HeroPosterFrame" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,110,50" CornerRadius="12"
-                            ClipToBounds="True" IsVisible="False" BoxShadow="0 10 40 0 #8C000000">
-                        <Image x:Name="HeroPoster" Stretch="UniformToFill"/>
-                    </Border>
-                    <Image x:Name="HeroBackdrop" Stretch="UniformToFill" VerticalAlignment="Top" IsVisible="False"/>
-                </Panel>
+                <!-- The picture: built in code, one layer per slide, so a new picture fades in over the old one -->
+                <Panel x:Name="HeroArt" IsHitTestVisible="False"/>
                 <!-- Shading so the text reads, fading into the page at the bottom -->
                 <Border IsHitTestVisible="False">
                     <Border.Background>
@@ -192,9 +177,6 @@
                 </Border>
 
                 <StackPanel x:Name="HeroText" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="56,0,40,118" MaxWidth="720">
-                    <StackPanel.Transitions>
-                        <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.3"/></Transitions>
-                    </StackPanel.Transitions>
                     <Border x:Name="HeroChip" HorizontalAlignment="Left" Padding="10,4" CornerRadius="6" Background="#99151A24"
                             BorderBrush="#26FFFFFF" BorderThickness="1">
                         <TextBlock x:Name="HeroLabel" FontSize="12" FontWeight="SemiBold" Foreground="White"/>

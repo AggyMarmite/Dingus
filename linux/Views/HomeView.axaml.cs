@@ -70,7 +70,8 @@ public partial class HomeView : UserControl, IPage
         _advance.Stop();
         foreach (var list in new ItemsControl[] { NextList, SportList, RemindList, PicksList, ResumeList, RecentList, FavList, NewFilmsList, NewShowsList })
             list.ItemsSource = null;
-        HeroBackdrop.Source = HeroBlur.Source = HeroPoster.Source = null;
+        HeroArt.Children.Clear();
+        _layer = null;
     }
 
     public void SetPreviewPlaying(bool playing) { }
@@ -225,10 +226,16 @@ public partial class HomeView : UserControl, IPage
         public Func<Task<Extra>> Enrich;
     }
     sealed record Extra(string Art, string Desc, string Meta);
-    public sealed class Dot
+    public sealed class Dot : System.ComponentModel.INotifyPropertyChanged
     {
         public string Title { get; init; }
-        public bool On { get; init; }
+        bool _on;
+        public bool On
+        {
+            get => _on;
+            set { if (_on == value) return; _on = value; PropertyChanged?.Invoke(this, new(nameof(On))); }
+        }
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
     }
 
     readonly Dictionary<string, Extra> _extras = new();
@@ -482,23 +489,49 @@ public partial class HomeView : UserControl, IPage
     {
         var token = ++_showToken;
         var s = _slides[index];
-        HeroDots.ItemsSource = _slides.Count > 1 ? _slides.Select((x, i) => new Dot { Title = x.Title, On = i == index }).ToList() : null;
-        HeroDotsBox.IsVisible = _slides.Count > 1;
-        HeroNext.IsVisible = _slides.Count > 1;
+        UpdateDots(index);
         _advance.Stop(); _advance.Start();
 
-        if (animate)
+        if (!animate)
         {
-            // Quick fade out, swap, then fade in.
-            HeroText.Opacity = 0;
-            HeroArt.Opacity = 0;
-            PreloadNext();
-            await Task.Delay(320);
+            ApplyText(s);
+            Motion.FadeIn(HeroText, ms: 200);
+            _ = ApplyArt(s, token, first: true);
+            return;
+        }
+
+        // Wait (briefly) for the next picture, so the picture and the words change together – no dip to black.
+        var art = ArtUrl(s);
+        if (!string.IsNullOrEmpty(art))
+        {
+            var load = ImageLoader.GetAsync(art, 1600);
+            await Task.WhenAny(load, Task.Delay(1200));
             if (token != _showToken) return;
         }
+        // The words: a quick fade out, swap, then they drift in. The picture cross-fades underneath.
+        _ = ApplyArt(s, token, first: false);
+        PreloadNext();
+        Motion.FadeOut(HeroText, ms: 180);
+        await Task.Delay(190);
+        if (token != _showToken) return;
         ApplyText(s);
-        HeroText.Opacity = 1;
-        await ApplyArt(s, token);
+        Motion.FadeIn(HeroText, fromX: -18, ms: 520);
+    }
+
+    /// <summary>Moves the highlight along the dots (rebuilding them only when the slides change).</summary>
+    void UpdateDots(int index)
+    {
+        bool many = _slides.Count > 1;
+        HeroDotsBox.IsVisible = many;
+        HeroNext.IsVisible = many;
+        if (!many) { HeroDots.ItemsSource = null; return; }
+        if (HeroDots.ItemsSource is not List<Dot> dots || dots.Count != _slides.Count
+            || dots.Where((d, i) => d.Title != _slides[i].Title).Any())
+        {
+            dots = _slides.Select(x => new Dot { Title = x.Title }).ToList();
+            HeroDots.ItemsSource = dots;
+        }
+        for (int i = 0; i < dots.Count; i++) dots[i].On = i == index;
     }
 
     void ApplyText(Slide s)
@@ -525,14 +558,16 @@ public partial class HomeView : UserControl, IPage
         HeroSecondaryIcon.Text = s.SecondaryIcon ?? "";
     }
 
-    async Task ApplyArt(Slide s, int token)
+    string ArtUrl(Slide s) =>
+        _extras.TryGetValue(s.Key, out var x) && !string.IsNullOrEmpty(x?.Art) ? x.Art : s.Poster;
+
+    async Task ApplyArt(Slide s, int token, bool first)
     {
         _extras.TryGetValue(s.Key, out var x);
-        var url = !string.IsNullOrEmpty(x?.Art) ? x.Art : s.Poster;
+        var url = ArtUrl(s);
         var bmp = string.IsNullOrEmpty(url) ? null : await ImageLoader.GetAsync(url, 1600);
         if (token != _showToken) return;
-        Place(bmp, s.Logo);
-        HeroArt.Opacity = 1;
+        CrossFade(bmp, s.Logo, first ? 350 : 900);
 
         if (x != null || s.Enrich == null || !_enriching.Add(s.Key)) return;
         try { _extras[s.Key] = await s.Enrich() ?? new Extra(null, null, null); }
@@ -545,11 +580,7 @@ public partial class HomeView : UserControl, IPage
         {
             var b2 = await ImageLoader.GetAsync(better.Art, 1600);
             if (b2 == null || token != _showToken) return;
-            HeroArt.Opacity = 0;
-            await Task.Delay(250);
-            if (token != _showToken) return;
-            Place(b2, s.Logo);
-            HeroArt.Opacity = 1;
+            CrossFade(b2, s.Logo, 900);
         }
     }
 
@@ -565,38 +596,122 @@ public partial class HomeView : UserControl, IPage
         if (!string.IsNullOrEmpty(art)) _ = ImageLoader.GetAsync(art, 1600);
     }
 
-    /// <summary>Wide pictures fill the area; posters sit on the right on a blurred copy; no picture → the logo on a colour wash.</summary>
-    void Place(Bitmap bmp, string logo)
+    // ------------------------------------------------------------------ the picture
+
+    /// <summary>The picture now showing, and its poster / logo (resized with the window).</summary>
+    Panel _layer;
+    Border _layerPoster;
+    Image _layerLogo;
+
+    static readonly IBrush WashBrush = new RadialGradientBrush
     {
-        bool wide = bmp != null && bmp.PixelSize.Width >= bmp.PixelSize.Height * 1.25;
-        bool tall = bmp != null && !wide;
-        HeroBackdrop.Source = wide ? bmp : null;
-        HeroBackdrop.IsVisible = wide;
-        HeroBlur.Source = tall ? bmp : null;
-        HeroBlur.IsVisible = tall;
-        HeroPoster.Source = tall ? bmp : null;
-        HeroPosterFrame.IsVisible = tall;
-        if (tall)
+        Center = new RelativePoint(0.75, 0.35, RelativeUnit.Relative),
+        GradientOrigin = new RelativePoint(0.75, 0.35, RelativeUnit.Relative),
+        RadiusX = new RelativeScalar(0.7, RelativeUnit.Relative), RadiusY = new RelativeScalar(0.9, RelativeUnit.Relative),
+        GradientStops = { new GradientStop(Color.Parse("#2A3F6E"), 0), new GradientStop(Color.Parse("#141B2B"), 0.6), new GradientStop(Color.Parse("#0A0D13"), 1) },
+    };
+
+    /// <summary>Fades a new picture in over the current one (which then goes), with a slight settling zoom.</summary>
+    void CrossFade(Bitmap bmp, string logo, int ms)
+    {
+        var layer = MakeLayer(bmp, logo, out _layerPoster, out _layerLogo);
+        _layer = layer;
+        layer.Opacity = 0;
+        layer.RenderTransform = Avalonia.Media.Transformation.TransformOperations.Parse("scale(1.045)");
+        layer.Transitions = new Avalonia.Animation.Transitions
         {
-            double h = Hero.Height * 0.66;
-            HeroPosterFrame.Height = h;
-            HeroPosterFrame.Width = h * bmp.PixelSize.Width / Math.Max(1, bmp.PixelSize.Height);
+            new Avalonia.Animation.DoubleTransition
+            {
+                Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(ms),
+                Easing = new Avalonia.Animation.Easings.CubicEaseInOut(),
+            },
+            new Avalonia.Animation.TransformOperationsTransition
+            {
+                Property = RenderTransformProperty, Duration = TimeSpan.FromMilliseconds(ms + 900),
+                Easing = new Avalonia.Animation.Easings.QuinticEaseOut(),
+            },
+        };
+        HeroArt.Children.Add(layer);
+        while (HeroArt.Children.Count > 3) HeroArt.Children.RemoveAt(0); // lots of quick clicks
+        // Start once it's on screen, so the change animates.
+        Dispatcher.UIThread.Post(() =>
+        {
+            layer.Opacity = 1;
+            layer.RenderTransform = Avalonia.Media.Transformation.TransformOperations.Parse("scale(1)");
+        }, DispatcherPriority.Render);
+        DispatcherTimer.RunOnce(() =>
+        {
+            // Everything under the new picture has gone from view.
+            int at = HeroArt.Children.IndexOf(layer);
+            for (int i = at - 1; i >= 0; i--) HeroArt.Children.RemoveAt(i);
+        }, TimeSpan.FromMilliseconds(ms + 60));
+    }
+
+    /// <summary>Wide pictures fill the area; posters sit on the right on a blurred copy; no picture → the logo on a colour wash.</summary>
+    Panel MakeLayer(Bitmap bmp, string logo, out Border posterFrame, out Image logoImg)
+    {
+        var g = new Panel { Background = MainWindow.Res("BgBrush"), RenderTransformOrigin = new RelativePoint(0.62, 0.4, RelativeUnit.Relative) };
+        posterFrame = null; logoImg = null;
+        bool wide = bmp != null && bmp.PixelSize.Width >= bmp.PixelSize.Height * 1.25;
+        double side = Math.Clamp(Bounds.Width * 0.08, 40, 160);
+        if (bmp == null)
+        {
+            g.Children.Add(new Border { Background = WashBrush });
+            if (logo != null)
+            {
+                logoImg = new Image
+                {
+                    Width = 360, Height = 200, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Right,
+                    VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, side, 60),
+                };
+                ImageLoader.SetDecodeWidth(logoImg, 720);
+                ImageLoader.SetUrl(logoImg, logo);
+                g.Children.Add(logoImg);
+            }
         }
-        HeroWash.IsVisible = bmp == null;
-        HeroLogo.IsVisible = bmp == null && logo != null;
-        ImageLoader.SetUrl(HeroLogo, bmp == null ? logo : null);
+        else if (wide)
+        {
+            g.Children.Add(new Image { Source = bmp, Stretch = Stretch.UniformToFill, VerticalAlignment = VerticalAlignment.Top });
+        }
+        else
+        {
+            // The blurred fill: a tiny copy of the poster, smoothly scaled up – looks like a heavy blur and costs
+            // almost nothing to draw (a real blur effect would be redrawn on every frame of the fade).
+            Bitmap small = null;
+            try
+            {
+                int w = 36, h = Math.Max(1, (int)Math.Round(36.0 * bmp.PixelSize.Height / Math.Max(1, bmp.PixelSize.Width)));
+                small = bmp.CreateScaledBitmap(new PixelSize(w, h), BitmapInterpolationMode.HighQuality);
+            }
+            catch { }
+            var blur = new Image { Source = small ?? bmp, Stretch = Stretch.UniformToFill, Opacity = 0.6 };
+            RenderOptions.SetBitmapInterpolationMode(blur, BitmapInterpolationMode.HighQuality);
+            g.Children.Add(blur);
+            double ph = Hero.Height * 0.66;
+            posterFrame = new Border
+            {
+                HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, side, 60), CornerRadius = new CornerRadius(12), ClipToBounds = true,
+                Height = ph, Width = ph * bmp.PixelSize.Width / Math.Max(1, bmp.PixelSize.Height),
+                BoxShadow = BoxShadows.Parse("0 10 40 0 #8C000000"),
+                Child = new Image { Source = bmp, Stretch = Stretch.UniformToFill },
+                Tag = bmp,
+            };
+            g.Children.Add(posterFrame);
+        }
+        return g;
     }
 
     void Home_SizeChanged()
     {
         Hero.Height = Math.Clamp(Bounds.Height * 0.74, 420, 780);
         double side = Math.Clamp(Bounds.Width * 0.08, 40, 160);
-        HeroPosterFrame.Margin = new Thickness(0, 0, side, 60);
-        HeroLogo.Margin = new Thickness(0, 0, side, 60);
-        if (HeroPosterFrame.IsVisible && HeroPoster.Source is Bitmap b)
+        if (_layerLogo != null) _layerLogo.Margin = new Thickness(0, 0, side, 60);
+        if (_layerPoster is { Tag: Bitmap b })
         {
-            HeroPosterFrame.Height = Hero.Height * 0.66;
-            HeroPosterFrame.Width = HeroPosterFrame.Height * b.PixelSize.Width / Math.Max(1, b.PixelSize.Height);
+            _layerPoster.Margin = new Thickness(0, 0, side, 60);
+            _layerPoster.Height = Hero.Height * 0.66;
+            _layerPoster.Width = _layerPoster.Height * b.PixelSize.Width / Math.Max(1, b.PixelSize.Height);
         }
         HeroText.MaxWidth = Math.Max(360, Math.Min(720, Bounds.Width - 120));
     }

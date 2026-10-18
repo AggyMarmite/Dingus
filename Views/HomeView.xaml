@@ -177,34 +177,8 @@
             <!-- ================= Featured: a big picture with the title over it, a few slides that change by themselves ================= -->
             <Grid x:Name="Hero" Height="560" ClipToBounds="True" MouseEnter="Hero_MouseEnter" MouseLeave="Hero_MouseLeave">
                 <Border Background="{StaticResource BgBrush}"/>
-                <Grid x:Name="HeroArt">
-                    <!-- No picture: a soft colour wash with the channel's logo -->
-                    <Border x:Name="HeroWash" Visibility="Collapsed">
-                        <Border.Background>
-                            <RadialGradientBrush Center="0.75,0.35" GradientOrigin="0.75,0.35" RadiusX="0.7" RadiusY="0.9">
-                                <GradientStop Color="#2A3F6E" Offset="0"/>
-                                <GradientStop Color="#141B2B" Offset="0.6"/>
-                                <GradientStop Color="#0A0D13" Offset="1"/>
-                            </RadialGradientBrush>
-                        </Border.Background>
-                    </Border>
-                    <Image x:Name="HeroLogo" Width="360" Height="200" Stretch="Uniform" HorizontalAlignment="Right" VerticalAlignment="Center"
-                           Margin="0,0,120,40" svc:ImageLoader.DecodeWidth="720" RenderOptions.BitmapScalingMode="HighQuality" Visibility="Collapsed"/>
-                    <!-- A portrait poster: blurred to fill, and the whole poster on the right -->
-                    <Image x:Name="HeroBlur" Stretch="UniformToFill" Opacity="0.6" Visibility="Collapsed">
-                        <Image.Effect><BlurEffect Radius="48" RenderingBias="Performance"/></Image.Effect>
-                    </Image>
-                    <Border x:Name="HeroPosterFrame" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,110,50" CornerRadius="12"
-                            Visibility="Collapsed">
-                        <Border.Effect><DropShadowEffect BlurRadius="40" ShadowDepth="10" Opacity="0.55" RenderingBias="Performance"/></Border.Effect>
-                        <Border.Background>
-                            <ImageBrush x:Name="HeroPosterBrush" Stretch="UniformToFill"/>
-                        </Border.Background>
-                    </Border>
-                    <!-- A wide picture: fills the whole area -->
-                    <Image x:Name="HeroBackdrop" Stretch="UniformToFill" VerticalAlignment="Top" RenderOptions.BitmapScalingMode="HighQuality"
-                           Visibility="Collapsed"/>
-                </Grid>
+                <!-- The picture: built in code, one layer per slide, so a new picture fades in over the old one -->
+                <Grid x:Name="HeroArt" IsHitTestVisible="False"/>
                 <!-- Shading so the text reads, fading into the page at the bottom -->
                 <Border IsHitTestVisible="False">
                     <Border.Background>
@@ -273,12 +247,26 @@
                                             <Border Background="Transparent" Padding="3,2"><ContentPresenter/></Border>
                                         </ControlTemplate>
                                     </Button.Template>
-                                    <Border x:Name="Dot" Width="6" Height="6" CornerRadius="3" Background="#80FFFFFF"/>
+                                    <Border x:Name="Dot" Width="6" Height="6" CornerRadius="3" Background="White" Opacity="0.5"/>
                                 </Button>
                                 <DataTemplate.Triggers>
                                     <DataTrigger Binding="{Binding On}" Value="True">
-                                        <Setter TargetName="Dot" Property="Width" Value="18"/>
-                                        <Setter TargetName="Dot" Property="Background" Value="White"/>
+                                        <DataTrigger.EnterActions>
+                                            <BeginStoryboard><Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="Dot" Storyboard.TargetProperty="Width" To="18" Duration="0:0:0.35">
+                                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                                <DoubleAnimation Storyboard.TargetName="Dot" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.35"/>
+                                            </Storyboard></BeginStoryboard>
+                                        </DataTrigger.EnterActions>
+                                        <DataTrigger.ExitActions>
+                                            <BeginStoryboard><Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="Dot" Storyboard.TargetProperty="Width" To="6" Duration="0:0:0.35">
+                                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                                <DoubleAnimation Storyboard.TargetName="Dot" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0:0:0.35"/>
+                                            </Storyboard></BeginStoryboard>
+                                        </DataTrigger.ExitActions>
                                     </DataTrigger>
                                 </DataTemplate.Triggers>
                             </DataTemplate>
