@@ -208,8 +208,13 @@ jobs:
       - name: Build the Mac apps (Apple Silicon and Intel)
         run: |
           V=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Dingus.csproj | head -1)
-          linux/package/build-mac.sh "$V" arm64 out
-          linux/package/build-mac.sh "$V" x64 out
+          for arch in arm64 x64; do
+            if ! linux/package/build-mac.sh "$V" $arch out > $RUNNER_TEMP/build-$arch.log 2>&1; then
+              echo "::error title=Mac build ($arch)::$(tail -c 3500 $RUNNER_TEMP/build-$arch.log | tr '\n' '\r' | sed 's/\r/%0A/g')"
+              exit 1
+            fi
+            tail -5 $RUNNER_TEMP/build-$arch.log
+          done
           for f in out/*.dmg; do echo "::notice title=Mac::$(basename $f) · $(du -m $f | cut -f1) MB"; done
       - name: Self-test (the Apple Silicon app)
         run: |

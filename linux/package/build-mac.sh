@@ -2,7 +2,7 @@
 # Builds Dingus-<version>-mac-<arch>.dmg: Dingus.app (self-contained .NET) with its own copy of the VLC video engine,
 # so it runs without installing anything else. Run on a Mac (GitHub's macOS runners).
 #   linux/package/build-mac.sh <version> <arm64|x64> <output folder>
-set -euo pipefail
+set -Eeuo pipefail
 report() { echo "::error title=Mac build::line $1: $2"; }
 trap 'report $LINENO "$BASH_COMMAND"' ERR
 VERSION="${1:-0.0.0}"
