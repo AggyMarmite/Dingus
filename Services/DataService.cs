@@ -52,6 +52,14 @@ public sealed class DataService
 
     public static void Time(string what, Action work) => Time(what, () => { work(); return 0; });
 
+    public static async Task<T> TimeAsync<T>(string what, Func<Task<T>> work)
+    {
+        if (TimingHook == null) return await work();
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        try { return await work(); }
+        finally { TimingHook(what, sw.Elapsed.TotalMilliseconds); }
+    }
+
     /// <summary>Raises an event one listener at a time, so the speed test can say which one was slow.</summary>
     static void Raise(Action ev, string what)
     {

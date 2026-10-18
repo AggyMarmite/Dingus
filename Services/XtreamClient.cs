@@ -70,9 +70,14 @@ public class XtreamClient
 
     /// <summary>
     /// Downloads a list (channels, films, shows) and maps it item by item as it streams in, so a
-    /// 100 MB film list never has to sit in memory all at once.
+    /// 100 MB film list never has to sit in memory all at once. Runs on a background thread: reading
+    /// 100,000 films takes the best part of a second, and the window mustn't wait for it.
     /// </summary>
-    async Task<List<T>> GetListAsync<T>(string action, Func<JsonElement, T> map, CancellationToken ct, string extra = "") where T : class
+    Task<List<T>> GetListAsync<T>(string action, Func<JsonElement, T> map, CancellationToken ct, string extra = "") where T : class =>
+        Task.Run(() => DataService.TimeAsync($"playlist: downloading and reading {action.Replace("get_", "").Replace('_', ' ')}",
+            () => ReadListAsync(action, map, ct, extra)), ct);
+
+    async Task<List<T>> ReadListAsync<T>(string action, Func<JsonElement, T> map, CancellationToken ct, string extra) where T : class
     {
         var list = new List<T>();
         using var resp = await Http.Client.GetAsync(Api(action, extra), HttpCompletionOption.ResponseHeadersRead, ct);

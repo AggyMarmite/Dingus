@@ -148,8 +148,8 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-      - name: Build
-        run: dotnet build Dingus.csproj -c Release
+      - name: Build (as a release would)
+        run: dotnet publish Dingus.csproj -c Release -r win-x64 --self-contained false -o publish
       - name: Speed test
         shell: pwsh
         run: |
@@ -165,7 +165,7 @@ jobs:
             Playlists = @(@{ Id = 'perf'; Name = 'Big provider'; Type = 0; Server = 'http://127.0.0.1:8765'; Username = 'perf'; ProtectedPassword = $pw })
             ActivePlaylistId = 'perf'; AutoUpdate = $false; Timeshift = $false; OnlineArtwork = $false
           } | ConvertTo-Json -Depth 6 | Set-Content -Path "$appData\settings.json" -Encoding UTF8
-          $exe = (Get-ChildItem -Recurse -Filter Dingus.exe bin\Release | Select-Object -First 1).FullName
+          $exe = (Resolve-Path publish\Dingus.exe).Path
           $failed = $false
           foreach ($run in 'first-run', 'next-run') {
             $out = Join-Path $env:RUNNER_TEMP "perf\$run"

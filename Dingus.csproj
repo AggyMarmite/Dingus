@@ -25,6 +25,9 @@
          (with 100,000+ titles a full pause can be over a second). -->
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
     <TieredPGO>true</TieredPGO>
+    <!-- Releases ship Dingus's code already compiled for the PC, so it starts and draws its first pages faster
+         (otherwise .NET compiles it while you wait, the first time each part is used). -->
+    <PublishReadyToRun Condition="'$(_IsPublishing)' == 'true'">true</PublishReadyToRun>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 
