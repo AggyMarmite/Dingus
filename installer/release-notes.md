@@ -1,3 +1,11 @@
+## What's new in Dingus 0.9.2
+
+* **Recordings show the right length** – live streams sometimes jump in time (the provider restarts the stream, or
+  Dingus reconnects after a drop), and players then worked out the recording's length from those jumps – so a
+  30-minute episode could show as 6 hours, and seeking went wrong. Dingus now keeps the recording's timeline running
+  straight through. Recordings you already have are checked once in the background and repaired if needed (the
+  pictures and sound aren't changed).
+
 ## What's new in Dingus 0.9.1
 
 * **New logo** – Dingus has a new icon: a white "D" with a play button, on purple. You'll see it on the

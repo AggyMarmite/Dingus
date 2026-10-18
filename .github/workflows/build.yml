@@ -208,6 +208,18 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y -q --no-install-recommends vlc-bin vlc-plugin-base vlc-plugin-video-output libvlc-dev libvlccore-dev \
             xvfb openbox xcompmgr ffmpeg imagemagick libfuse2 fonts-dejavu-core > /dev/null
+      - name: Recording timeline fix (a recording with jumps in its time marks comes out the right length)
+        run: |
+          d=$RUNNER_TEMP/ts; mkdir -p $d
+          mk() { ffmpeg -loglevel error -f lavfi -i testsrc2=size=640x360:rate=25 -f lavfi -i sine=frequency=$3 -t $1 -c:v libx264 -preset ultrafast -g 50 -pix_fmt yuv420p -c:a aac -shortest -output_ts_offset $2 -f mpegts $d/$4; }
+          mk 40 10 440 a.ts; mk 40 21600 660 b.ts; mk 40 5 880 c.ts; mk 40 95420 500 wrap.ts
+          cat $d/a.ts $d/b.ts > $d/jump.ts; cat $d/a.ts $d/b.ts $d/c.ts > $d/jumps.ts
+          dotnet run --project tests/RecordingTest -c Release -- $d/jump.ts $d/jumps.ts $d/wrap.ts $d/a.ts
+          check() { got=$(ffprobe -v error -show_entries format=duration -of csv=p=0 $d/$1); errs=$(ffmpeg -v error -i $d/$1 -f null - 2>&1 | wc -l)
+                    echo "::notice title=recording $1::length ${got}s (expected about $2 s) · decode warnings $errs"
+                    python3 -c "import sys; sys.exit(0 if abs(float('$got')-$2) < 3 and $errs == 0 else 1)"; }
+          check jump.fixed.ts 80; check jump.live.ts 80; check jumps.fixed.ts 121; check jumps.live.ts 121
+          check wrap.fixed.ts 40; check a.live.ts 40
       - name: Build the AppImage
         run: |
           V=$(grep -oPm1 '(?<=<Version>)[^<]+' Dingus.csproj)

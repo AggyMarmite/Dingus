@@ -31,6 +31,8 @@ public class Recording
     public string FilePath { get; set; }
     public long Bytes { get; set; }
     public string Error { get; set; }
+    /// <summary>The file's timeline has been checked (and repaired if it jumped). Recordings made since 0.9.2 are fixed as they record.</summary>
+    public bool TimelineChecked { get; set; }
 
     [JsonIgnore] public DateTime RecordFrom => Start.AddMinutes(-PadBefore);
     [JsonIgnore] public DateTime RecordUntil => End.AddMinutes(PadAfter);
@@ -100,6 +102,7 @@ public static class RecordingService
             r.Error ??= "Dingus was closed during the recording.";
         }
         Save();
+        _ = RepairOldRecordingsAsync();
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };
         _timer.Tick += (_, _) => Tick();
@@ -256,8 +259,10 @@ public static class RecordingService
 
     static async Task RecordAsync(Recording r, string url, CancellationToken stop)
     {
-        var buf = new byte[128 * 1024];
+        var buf = new byte[256 * 1024];
         int failures = 0;
+        // Keeps the time marks running straight through stream restarts and reconnects, so the file's length is right.
+        var timeline = new TsTimeline();
         await using var file = new FileStream(r.FilePath, FileMode.Create, FileAccess.Write, FileShare.Read, 1 << 20);
         while (!stop.IsCancellationRequested && DateTime.Now < r.RecordUntil)
         {
@@ -273,16 +278,45 @@ public static class RecordingService
                 resp.EnsureSuccessStatusCode();
                 await using var src = await resp.Content.ReadAsStreamAsync(until.Token);
                 using var idle = CancellationTokenSource.CreateLinkedTokenSource(until.Token);
-                int n;
+
+                timeline.NewConnection();
+                int have = 0;          // bytes in buf not written yet
+                bool synced = false;   // found where packets start
+                bool clocked = false;  // seen this connection's first clock mark
                 while (true)
                 {
                     idle.CancelAfter(TimeSpan.FromSeconds(20));
-                    n = await src.ReadAsync(buf, idle.Token);
+                    if (have == buf.Length)
+                    {
+                        // No clock mark in the first 256 KB: write what's there as it is.
+                        clocked = true;
+                    }
+                    int n = await src.ReadAsync(buf.AsMemory(have, buf.Length - have), idle.Token);
                     if (n <= 0) break;
-                    await file.WriteAsync(buf.AsMemory(0, n), CancellationToken.None);
-                    r.Bytes += n;
+                    have += n;
                     failures = 0;
+                    int start = 0;
+                    if (!synced)
+                    {
+                        int sync = TsTimeline.FindSync(buf.AsSpan(0, have));
+                        if (sync < 0) { if (have > 4096) { await Write(file, r, buf, 0, have); have = 0; } continue; } // not TS: as is
+                        start = sync;
+                        synced = true;
+                    }
+                    if (!clocked)
+                    {
+                        int at = -1;
+                        for (int i = start; i + 188 <= have; i += 188)
+                            if (TsTimeline.HasPcr(buf.AsSpan(i, 188))) { at = i; break; }
+                        if (at < 0) { Shift(buf, ref have, start); continue; } // keep holding until the clock arrives
+                        timeline.Prime(buf.AsSpan(at, 188));
+                        clocked = true;
+                    }
+                    int done = timeline.Process(buf.AsSpan(start, have - start));
+                    await Write(file, r, buf, start, done);
+                    Shift(buf, ref have, start + done);
                 }
+                if (have > 0) await Write(file, r, buf, 0, have);
             }
             catch (OperationCanceledException) when (stop.IsCancellationRequested || DateTime.Now >= r.RecordUntil) { break; }
             catch (Exception ex) when (++failures <= 6)
@@ -294,6 +328,54 @@ public static class RecordingService
             if (failures > 6) throw new IOException("the stream kept dropping");
         }
         await file.FlushAsync();
+        if (timeline.Jumps > 0) Log.Info($"Recording {r.Title}: smoothed {timeline.Jumps} jump(s) in the stream's timeline");
+    }
+
+    static async Task Write(FileStream file, Recording r, byte[] buf, int offset, int count)
+    {
+        if (count <= 0) return;
+        await file.WriteAsync(buf.AsMemory(offset, count), CancellationToken.None);
+        r.Bytes += count;
+    }
+
+    /// <summary>Drops the first <paramref name="from"/> bytes of the buffer (already written or not needed).</summary>
+    static void Shift(byte[] buf, ref int have, int from)
+    {
+        if (from <= 0) return;
+        Buffer.BlockCopy(buf, from, buf, 0, have - from);
+        have -= from;
+    }
+
+    /// <summary>
+    /// Recordings made before the timeline fix can show as hours long. Shortly after start-up, each one is checked
+    /// once in the background and repaired if needed (one at a time; a recording that's playing is tried next time).
+    /// </summary>
+    static async Task RepairOldRecordingsAsync()
+    {
+        await Task.Delay(TimeSpan.FromSeconds(20));
+        foreach (var r in All.Where(r => r.IsFinished && !r.TimelineChecked))
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(r.FilePath) || !File.Exists(r.FilePath)) { r.TimelineChecked = true; continue; }
+                int jumps = await RepairAsync(r);
+                r.TimelineChecked = true;
+                if (jumps > 0) Log.Info($"Repaired the length of recording {r.Title} ({jumps} jump(s) in its timeline)");
+            }
+            catch (Exception ex) { Log.Error(ex); } // e.g. it's playing – try again next time
+        }
+        Save();
+    }
+
+    /// <summary>Repairs a recording made before the timeline fix (its length showed as hours). Runs in the background.</summary>
+    public static async Task<int> RepairAsync(Recording r, IProgress<double> progress = null)
+    {
+        if (r.IsActive || string.IsNullOrEmpty(r.FilePath) || !File.Exists(r.FilePath)) return -1;
+        int jumps = await Task.Run(() => TsTimeline.RepairFileAsync(r.FilePath, progress));
+        try { r.Bytes = new FileInfo(r.FilePath).Length; } catch { }
+        Save();
+        Changed?.Invoke();
+        return jumps;
     }
 
     static void Finish(Recording r, string error, bool stoppedByYou)
@@ -314,6 +396,7 @@ public static class RecordingService
             r.Error = error ?? r.Error ?? "Stopped early.";
         }
         else r.Status = RecordingStatus.Done;
+        r.TimelineChecked = true; // smoothed as it recorded
         Save();
         Changed?.Invoke();
         KeepAwake.SetRecording(ActiveCount > 0);

@@ -192,6 +192,14 @@ public static class Log
     public static void Error(Exception ex)
     {
         if (ex == null) return;
+        Write(ex.ToString());
+    }
+
+    /// <summary>A note (not an error) for the log.</summary>
+    public static void Info(string message) => Write(message);
+
+    static void Write(string text)
+    {
         try
         {
             lock (Gate)
@@ -199,7 +207,7 @@ public static class Log
                 Directory.CreateDirectory(AppPaths.Root);
                 var fi = new FileInfo(AppPaths.LogFile);
                 if (fi.Exists && fi.Length > 512 * 1024) fi.Delete();
-                File.AppendAllText(AppPaths.LogFile, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {ex}\n\n");
+                File.AppendAllText(AppPaths.LogFile, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {text}\n\n");
             }
         }
         catch { }
