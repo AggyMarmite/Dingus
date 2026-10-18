@@ -29,6 +29,10 @@ public static class SelfTest
         Directory.CreateDirectory(Dir);
         try
         {
+            var wa = SystemParameters.WorkArea;
+            Note($"window opened at {main.ActualWidth:0}×{main.ActualHeight:0} ({main.WindowState}) on a {wa.Width:0}×{wa.Height:0} screen");
+            if (main.WindowState != WindowState.Normal || main.ActualWidth > wa.Width * 0.85 || main.ActualHeight > wa.Height * 0.85)
+                Error(new Exception("Dingus should open as a window, at about 80% of the screen"));
             main.WindowState = WindowState.Maximized; // screenshots at the full screen size
             // Wait for the sample playlist and guide to load.
             for (int i = 0; i < 60 && (DataService.Instance.IsBusy || DataService.Instance.Catalog.Channels.Count == 0); i++) await Task.Delay(500);

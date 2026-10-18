@@ -272,10 +272,18 @@ public partial class MainWindow : Window
     // Window size & position
     // =====================================================================================
 
+    /// <summary>
+    /// Opens as a window (never maximised): the size you last left it if that's smaller than most of the screen,
+    /// otherwise centred at about 80% of the screen.
+    /// </summary>
     void RestorePlacement()
     {
         var s = SettingsStore.Current;
-        if (s.WindowWidth is double w && s.WindowHeight is double h && w > 400 && h > 300)
+        var screen = Screens?.Primary;
+        double sw = 1600, sh = 900;
+        if (screen != null) { sw = screen.WorkingArea.Width / screen.Scaling; sh = screen.WorkingArea.Height / screen.Scaling; }
+        double maxW = Math.Max(MinWidth, Math.Round(sw * 0.82)), maxH = Math.Max(MinHeight, Math.Round(sh * 0.82));
+        if (s.WindowWidth is double w && s.WindowHeight is double h && w > 400 && h > 300 && w <= maxW && h <= maxH)
         {
             Width = Math.Max(MinWidth, w);
             Height = Math.Max(MinHeight, h);
@@ -284,8 +292,11 @@ public partial class MainWindow : Window
                 WindowStartupLocation = WindowStartupLocation.Manual;
                 Position = new PixelPoint((int)l, (int)t);
             }
+            return;
         }
-        if (s.WindowMaximized) WindowState = WindowState.Maximized;
+        Width = Math.Max(MinWidth, Math.Min(1440, Math.Round(sw * 0.8)));
+        Height = Math.Max(MinHeight, Math.Min(900, Math.Round(sh * 0.8)));
+        WindowStartupLocation = WindowStartupLocation.CenterScreen;
     }
 
     void SavePlacement()

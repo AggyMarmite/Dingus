@@ -1,3 +1,9 @@
+## What's new in Dingus 0.9.4
+
+* **Opens as a window** – Dingus no longer fills the whole screen when it starts: it opens centred at about 80% of the
+  screen (or the size you last left it, if that's smaller). Maximise it with the button or by double-clicking the
+  title bar whenever you like.
+
 ## What's new in Dingus 0.9.3
 
 * **The logo goes Home again** – clicking the Dingus logo at the top left now opens Home (in 0.9.1 and 0.9.2 Windows

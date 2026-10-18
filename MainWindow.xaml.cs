@@ -411,8 +411,8 @@ public partial class MainWindow : Window
     // =====================================================================================
 
     /// <summary>
-    /// Opens where you left it, or – first time – sized to fit inside the screen's work area so the
-    /// title bar and edges are never hidden behind the top of the screen or the taskbar.
+    /// Opens as a window (never maximised) where you left it, or centred at about 80% of the screen, always inside
+    /// the work area so the title bar and edges are never hidden behind the top of the screen or the taskbar.
     /// </summary>
     void RestorePlacement()
     {
@@ -420,8 +420,15 @@ public partial class MainWindow : Window
         MinWidth = Math.Min(960, wa.Width - 40);
         MinHeight = Math.Min(560, wa.Height - 40);
 
+        // Dingus opens as a window, not filling the screen: about 80% of it, centred – or the size you last left it,
+        // if that's smaller. (Maximise it with the button or by double-clicking the title bar whenever you like.)
+        double maxW = Math.Max(MinWidth, Math.Round(wa.Width * 0.82)), maxH = Math.Max(MinHeight, Math.Round(wa.Height * 0.82));
+        double defW = Math.Max(MinWidth, Math.Min(1440, Math.Round(wa.Width * 0.8)));
+        double defH = Math.Max(MinHeight, Math.Min(900, Math.Round(wa.Height * 0.8)));
+
         var s = SettingsStore.Current;
-        if (s.WindowLeft is double l && s.WindowTop is double t && s.WindowWidth is double w && s.WindowHeight is double h)
+        if (s.WindowLeft is double l && s.WindowTop is double t && s.WindowWidth is double w && s.WindowHeight is double h
+            && w <= maxW && h <= maxH)
         {
             var r = new Rect(l, t, Math.Max(MinWidth, w), Math.Max(MinHeight, h));
             var screen = new Rect(SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenTop,
@@ -431,13 +438,12 @@ public partial class MainWindow : Window
             {
                 Left = r.Left; Top = r.Top; Width = r.Width; Height = r.Height;
                 _normalBounds = r;
-                if (s.WindowMaximized) WindowState = WindowState.Maximized;
                 return;
             }
         }
 
-        Width = Math.Min(1280, wa.Width - 40);
-        Height = Math.Min(760, wa.Height - 40);
+        Width = defW;
+        Height = defH;
         Left = wa.Left + (wa.Width - Width) / 2;
         Top = wa.Top + (wa.Height - Height) / 2;
         _normalBounds = new Rect(Left, Top, Width, Height);
