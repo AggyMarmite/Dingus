@@ -80,6 +80,12 @@ public partial class App : Application
             return;
         }
         MainWindow = main;
+        // Memory is tidied up only once you've left the window alone for a moment (see Memory.CompactSoon).
+        System.Windows.Input.InputManager.Current.PreProcessInput += (_, a) =>
+        {
+            if (a.StagingItem.Input is System.Windows.Input.KeyEventArgs or System.Windows.Input.MouseButtonEventArgs
+                or System.Windows.Input.MouseWheelEventArgs) Memory.NoteInput();
+        };
         if (PerfTest.On) main.Loaded += async (_, _) => await PerfTest.RunAsync(main);
         else if (SelfTest.Dir != null) main.Loaded += async (_, _) => await SelfTest.RunAsync(main);
         main.Show();

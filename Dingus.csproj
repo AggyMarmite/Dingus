@@ -21,7 +21,9 @@
 
     <!-- Low resource use: workstation, non-concurrent GC, no background GC thread -->
     <ServerGarbageCollection>false</ServerGarbageCollection>
-    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <!-- Background GC: most memory clean-up runs alongside the app instead of pausing the window
+         (with 100,000+ titles a full pause can be over a second). -->
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
     <TieredPGO>true</TieredPGO>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>

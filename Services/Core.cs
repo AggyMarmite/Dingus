@@ -208,35 +208,54 @@ public static class Log
 
 /// <summary>
 /// After big one-off jobs (loading a playlist, matching the guide) .NET keeps the freed memory
-/// reserved. Compacting once afterwards hands it back to Windows.
+/// reserved. Compacting once afterwards hands it back to Windows – but only once you've left the window alone
+/// for a few seconds, because a full compaction pauses the app (over a second with a very big playlist) and the
+/// memory handed back has to be read in again on the next click.
 /// </summary>
 public static class Memory
 {
     static DispatcherTimer _timer;
+    static bool _wanted;
+    static DateTime _requested, _lastInput = DateTime.MinValue;
 
-    /// <summary>Compacts a couple of seconds from now (several calls in a row collapse into one).</summary>
+    /// <summary>How long you need to have left the window alone before tidying up.</summary>
+    static readonly TimeSpan Quiet = TimeSpan.FromSeconds(4);
+
+    /// <summary>Called on every key press, click and mouse wheel (and by the speed test's pretend clicks).</summary>
+    public static void NoteInput() => _lastInput = DateTime.UtcNow;
+
+    /// <summary>Compacts soon – a couple of seconds from now, once the window is quiet (several calls collapse into one).</summary>
     public static void CompactSoon()
     {
         if (_timer == null)
         {
 #if LINUX
-            _timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(2) };
+            _timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(1) };
 #else
-            _timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle) { Interval = TimeSpan.FromSeconds(2) };
+            _timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle) { Interval = TimeSpan.FromSeconds(1) };
 #endif
-            _timer.Tick += (_, _) => { _timer.Stop(); CompactNow(); };
+            _timer.Tick += (_, _) =>
+            {
+                var now = DateTime.UtcNow;
+                if (!_wanted) { _timer.Stop(); return; }
+                if (now - _requested < TimeSpan.FromSeconds(2) || now - _lastInput < Quiet) return; // not yet
+                _wanted = false;
+                _timer.Stop();
+                CompactNow();
+            };
         }
-        _timer.Stop();
+        _wanted = true;
+        _requested = DateTime.UtcNow;
         _timer.Start();
     }
 
-    public static void CompactNow()
+    public static void CompactNow() => DataService.Time("memory: compacting", () =>
     {
         GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
         GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
         GC.WaitForPendingFinalizers();
         TrimWorkingSet();
-    }
+    });
 
 #if LINUX
     [System.Runtime.InteropServices.DllImport("libc")]

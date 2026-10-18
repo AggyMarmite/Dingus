@@ -83,9 +83,22 @@ public static class PerfTest
         }
     }
 
+    static TimeSpan _gcAtStart;
+    static int _gen2AtStart;
+
     static void Begin(string name)
     {
         lock (Gate) { _phase = name; _maxLag = 0; _frozenMs = 0; _freezes = 0; }
+        _gcAtStart = GC.GetTotalPauseDuration();
+        _gen2AtStart = GC.CollectionCount(2);
+    }
+
+    /// <summary>Time the whole app was paused for memory clean-up since the step began.</summary>
+    static string GcPauses()
+    {
+        var ms = (GC.GetTotalPauseDuration() - _gcAtStart).TotalMilliseconds;
+        int full = GC.CollectionCount(2) - _gen2AtStart;
+        return ms < 20 ? "" : $" · memory clean-up paused {ms:N0} ms ({full} full)";
     }
 
     static string Freezes()
@@ -108,6 +121,7 @@ public static class PerfTest
     static async Task Step(string name, Func<Task> action, int settleMs = 1200)
     {
         Begin(name);
+        Memory.NoteInput(); // as if you'd clicked
         var t0 = Clock.Elapsed.TotalMilliseconds;
         await action();
         await Task.Yield();
@@ -115,7 +129,7 @@ public static class PerfTest
         var took = Clock.Elapsed.TotalMilliseconds - t0;
         await Task.Delay(settleMs); // pictures and late work still count towards freezes
         await WhenIdle();
-        Line($"{name,-34} {took,8:N0} ms   {Freezes()} · memory {Memory.WorkingSetMB():N0} MB");
+        Line($"{name,-34} {took,8:N0} ms   {Freezes()}{GcPauses()} · memory {Memory.WorkingSetMB():N0} MB");
     }
 
     static Task Nav(RadioButton b) { b.IsChecked = true; return Task.CompletedTask; }
@@ -155,7 +169,7 @@ public static class PerfTest
             while (DateTime.UtcNow < until && (ds.IsBusy || _catalogLoaded == null || (_guideLoaded == null && ds.Catalog.Channels.Count > 0)))
                 await Task.Delay(250);
             await WhenIdle();
-            string loadFreezes = Freezes();
+            string loadFreezes = Freezes() + GcPauses();
 
             Line($"Playlist: {_channels:N0} channels · {_films:N0} films · {_shows:N0} shows · guide for {_guideChannels:N0} channels");
             Line("");
@@ -185,8 +199,14 @@ public static class PerfTest
             main.SelfTestSearch("");
             await Step("Home again", () => Nav(main.NavHome));
             await Step("Settings", () => Nav(main.NavSettings));
+            // Leave the window alone: the memory tidy-up happens now (when nobody's clicking).
+            Begin("left alone");
+            long before = Memory.WorkingSetMB();
+            await Task.Delay(8000);
+            await WhenIdle();
+            Line($"{"Left alone for 8 s",-34} {"",8}      {Freezes()}{GcPauses()} · memory {before:N0} → {Memory.WorkingSetMB():N0} MB");
             Line("");
-            Line($"Memory at the end: {Memory.WorkingSetMB():N0} MB");
+            Line($"Memory at the end: {Memory.WorkingSetMB():N0} MB · memory clean-up paused the app {GC.GetTotalPauseDuration().TotalMilliseconds:N0} ms in all ({GC.CollectionCount(2)} full)");
             Line("");
             Line("Slowest work (over 30 ms; \"window\" = the window waits for it, \"background\" = it doesn't):");
             lock (Work)
