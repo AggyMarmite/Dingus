@@ -14,6 +14,35 @@ namespace Dingus;
 public static class SelfTest
 {
     public static string Dir { get; set; }
+
+    /// <summary>Notes what the video engine finds (plugins, a bare start-up and its log) – for diagnosing a new platform.</summary>
+    public static void VlcCheck()
+    {
+        var sb = new System.Text.StringBuilder();
+        try
+        {
+            sb.AppendLine("lib: " + VlcPaths.LibDir);
+            var pp = Environment.GetEnvironmentVariable("VLC_PLUGIN_PATH");
+            sb.AppendLine("VLC_PLUGIN_PATH: " + pp);
+            if (pp != null && Directory.Exists(pp))
+            {
+                var files = Directory.GetFiles(pp).Select(Path.GetFileName).OrderBy(n => n).ToList();
+                sb.AppendLine($"plugins: {files.Count}");
+                sb.AppendLine(string.Join(" ", files.Where(n => n.Contains("http") || n.Contains("avcodec") || n.Contains("vout") || n.Contains("auhal") || n.Contains("filesystem"))));
+            }
+            using var vlc = new LibVLCSharp.Shared.LibVLC(false, "--verbose=2");
+            var log = new List<string>();
+            vlc.Log += (_, e) => { lock (log) if (log.Count < 300) log.Add($"{e.Level} {e.Module}: {e.Message}"); };
+            sb.AppendLine("version: " + vlc.Version);
+            sb.AppendLine("audio outputs: " + string.Join(", ", vlc.AudioOutputs.Select(a => a.Name)));
+            sb.AppendLine("video filters: " + vlc.VideoFilters.Length);
+            try { using var t = new LibVLCSharp.Shared.LibVLC(false, "--http-reconnect"); sb.AppendLine("--http-reconnect: ok"); }
+            catch (Exception ex) { sb.AppendLine("--http-reconnect: " + ex.Message); }
+            lock (log) sb.AppendLine(string.Join("\n", log.Take(120)));
+        }
+        catch (Exception ex) { sb.AppendLine("ERROR " + ex); }
+        try { File.WriteAllText(Path.Combine(Dir, "vlc-check.txt"), sb.ToString()); } catch { }
+    }
     public static readonly List<string> Errors = new();
     static readonly List<string> Notes = new();
 

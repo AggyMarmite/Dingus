@@ -31,6 +31,7 @@ public partial class App : Application
                 else LibVLCSharp.Shared.Core.Initialize();
             }
             catch (Exception ex) { VlcPaths.StartError = ex; Log.Error(ex); } // the window still opens and explains
+            if (SelfTest.Dir != null && VlcPaths.StartError == null && !VlcPaths.Disabled) SelfTest.VlcCheck();
             SettingsStore.Load();
             TimeshiftSession.CleanUp(); // live TV buffers from last time
 

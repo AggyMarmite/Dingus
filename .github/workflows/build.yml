@@ -233,7 +233,7 @@ jobs:
           done
           ( sleep 60; kill $pid 2>/dev/null ) &
           wait $pid || true
-          for f in result.txt crash.txt; do
+          for f in vlc-check.txt result.txt crash.txt; do
             if [ -f $out/$f ]; then echo "::notice title=mac $f::$(head -c 4000 $out/$f | tr '\n' '\r' | sed 's/\r/%0A/g')"; fi
           done
           log="$HOME/Library/Application Support/Dingus/log.txt"
