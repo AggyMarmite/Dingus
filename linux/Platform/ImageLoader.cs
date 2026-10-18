@@ -42,6 +42,13 @@ public class ImageLoader : AvaloniaObject
     static void Show(Image img, string url, Bitmap bmp)
     {
         img.Source = bmp;
+        // The initials under a logo are only a stand-in: hide them once the logo has loaded.
+        if (img.Parent is Panel p)
+        {
+            int at = p.Children.IndexOf(img);
+            for (int k = 0; k < at; k++)
+                if (p.Children[k] is TextBlock t) t.Opacity = bmp != null ? 0 : 1;
+        }
         if (GetTintTarget(img) is Border b) b.Background = bmp == null ? null : LogoTint.For(url, bmp);
     }
 

@@ -42,6 +42,19 @@ public static class ImageLoader
     {
         img.Source = bmp;
         if (GetTintTarget(img) is Border b) b.Background = bmp == null ? null : LogoTint.For(url, bmp);
+        HidePlaceholder(img, bmp != null);
+    }
+
+    /// <summary>
+    /// The channel's initials sit underneath its logo as a stand-in. Once the logo has loaded they're hidden,
+    /// so they don't show through logos with a see-through background.
+    /// </summary>
+    static void HidePlaceholder(Image img, bool loaded)
+    {
+        if (img.Parent is not Panel p) return;
+        int at = p.Children.IndexOf(img);
+        for (int i = 0; i < at; i++)
+            if (p.Children[i] is TextBlock t) t.Visibility = loaded ? Visibility.Hidden : Visibility.Visible;
     }
 
     static async void OnUrlChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)

@@ -1,3 +1,8 @@
+## What's new in Dingus 0.9.1
+
+* **Cleaner channel logos** – the channel's initials (shown when there's no logo) no longer peek through logos with a
+  see-through background once the logo has loaded.
+
 ## What's new in Dingus 0.9.0
 
 * **My List** – save films and shows for later: the **My List** button on a film or show's page, or right-click its
