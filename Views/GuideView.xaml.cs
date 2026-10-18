@@ -822,6 +822,28 @@ public partial class GuideView : UserControl, IPage
 
     /// <summary>Self-test: switch the guide's view (grid | now | tonight | find).</summary>
     internal GuideRow SelfTestFirstRow => _all.FirstOrDefault();
+    internal int SelfTestRowCount => _all.Count;
+
+    /// <summary>Speed test: scrolls the channel list a page at a time (like holding Page Down), for <paramref name="pages"/> pages.</summary>
+    internal async Task SelfTestScroll(int pages)
+    {
+        var sv = FindScroller(ChannelList);
+        if (sv == null) return;
+        for (int i = 0; i < pages; i++)
+        {
+            sv.PageDown();
+            await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.Background);
+        }
+        sv.ScrollToTop();
+    }
+
+    static ScrollViewer FindScroller(DependencyObject o)
+    {
+        if (o is ScrollViewer sv) return sv;
+        for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(o); i++)
+            if (FindScroller(System.Windows.Media.VisualTreeHelper.GetChild(o, i)) is { } f) return f;
+        return null;
+    }
 
     internal void SelfTestMode(string mode)
     {

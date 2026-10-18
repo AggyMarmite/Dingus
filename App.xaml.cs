@@ -16,6 +16,8 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         int st = Array.IndexOf(e.Args, "--self-test");
+        int pt = Array.IndexOf(e.Args, "--perf-test");
+        if (pt >= 0 && pt + 1 < e.Args.Length) { st = pt; PerfTest.On = true; PerfTest.Attach(); }
         if (st >= 0 && st + 1 < e.Args.Length)
         {
             SelfTest.Dir = e.Args[st + 1];
@@ -78,7 +80,8 @@ public partial class App : Application
             return;
         }
         MainWindow = main;
-        if (SelfTest.Dir != null) main.Loaded += async (_, _) => await SelfTest.RunAsync(main);
+        if (PerfTest.On) main.Loaded += async (_, _) => await PerfTest.RunAsync(main);
+        else if (SelfTest.Dir != null) main.Loaded += async (_, _) => await SelfTest.RunAsync(main);
         main.Show();
     }
 

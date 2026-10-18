@@ -136,6 +136,8 @@ public static class SelfTest
         if (search != null) main.SelfTestSearch("");
     }
 
+    internal static void SnapForPerf(MainWindow main, string name) => Snap(main.SelfTestRoot, name);
+
     static void Snap(FrameworkElement el, string name)
     {
         try

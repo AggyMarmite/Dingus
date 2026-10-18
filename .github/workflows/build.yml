@@ -138,6 +138,63 @@ jobs:
           git commit -q -m "Self-test for ${{ github.sha }}"
           git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" selftest
 
+  # Speed test: a big made-up playlist (30,000 channels, 80,000 films, 15,000 shows, a 300,000-programme guide) from a
+  # stand-in Xtream server on the runner. Times start-up, loading and every page, and how long the window freezes.
+  # Run twice: the first time (nothing saved) and the next time (opening on the saved copy while it refreshes).
+  perf:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build
+        run: dotnet build Dingus.csproj -c Release
+      - name: Speed test
+        shell: pwsh
+        run: |
+          $big = Join-Path $env:RUNNER_TEMP 'big'
+          python tests/perf/make-big.py $big
+          $srv = Start-Process python -ArgumentList 'tests/perf/fake-xtream.py', $big, '8765' -PassThru -WindowStyle Hidden
+          Start-Sleep 2
+          Add-Type -AssemblyName System.Security
+          $pw = [Convert]::ToBase64String([Security.Cryptography.ProtectedData]::Protect([Text.Encoding]::UTF8.GetBytes('perf'), $null, 'CurrentUser'))
+          $appData = "$env:LOCALAPPDATA\Dingus"
+          New-Item -ItemType Directory -Force $appData | Out-Null
+          @{
+            Playlists = @(@{ Id = 'perf'; Name = 'Big provider'; Type = 0; Server = 'http://127.0.0.1:8765'; Username = 'perf'; ProtectedPassword = $pw })
+            ActivePlaylistId = 'perf'; AutoUpdate = $false; Timeshift = $false; OnlineArtwork = $false
+          } | ConvertTo-Json -Depth 6 | Set-Content -Path "$appData\settings.json" -Encoding UTF8
+          $exe = (Get-ChildItem -Recurse -Filter Dingus.exe bin\Release | Select-Object -First 1).FullName
+          $failed = $false
+          foreach ($run in 'first-run', 'next-run') {
+            $out = Join-Path $env:RUNNER_TEMP "perf\$run"
+            New-Item -ItemType Directory -Force $out | Out-Null
+            $p = Start-Process $exe -ArgumentList '--perf-test', "`"$out`"" -PassThru
+            if (-not $p.WaitForExit(900000)) { Write-Host "::warning::$run did not finish in time"; $p.Kill(); $failed = $true }
+            foreach ($f in 'result.txt', 'crash.txt') {
+              if (Test-Path "$out\$f") { $t = (Get-Content "$out\$f" -Raw) -replace "`r", '' -replace "`n", '%0A'; Write-Host "::notice title=$run $f::$t" }
+            }
+            if (-not (Select-String -Path "$out\result.txt" -Pattern 'PASSED' -Quiet -ErrorAction SilentlyContinue)) { $failed = $true }
+          }
+          $log = "$appData\log.txt"
+          if (Test-Path $log) { $t = (Get-Content $log -Raw) -replace "`r", '' -replace "`n", '%0A'; Write-Host "::notice title=perf log.txt::$t"; Copy-Item $log (Join-Path $env:RUNNER_TEMP 'perf') }
+          Stop-Process -Id $srv.Id -Force -ErrorAction SilentlyContinue
+          if ($failed) { exit 1 }
+      - name: Publish results to the selftest-perf branch
+        if: always() && github.event_name == 'push'
+        shell: pwsh
+        run: |
+          $out = Join-Path $env:RUNNER_TEMP 'perf'
+          if (-not (Test-Path $out)) { exit 0 }
+          Set-Location $out
+          git init -q -b selftest-perf
+          git config user.name 'github-actions'
+          git config user.email 'github-actions@users.noreply.github.com'
+          git add -A
+          git commit -q -m "Speed test for ${{ github.sha }}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" selftest-perf
+
   # The Linux version: builds the AppImage, then runs it on a virtual screen (with a real test video) and saves screenshots.
   linux:
     runs-on: ubuntu-22.04
