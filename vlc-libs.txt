@@ -1,0 +1,14 @@
+out/Dingus-arm64.app/Contents/Frameworks/vlc/plugins/libhttp_plugin.dylib:
+	.libs/libhttp_plugin.dylib (compatibility version 0.0.0, current version 0.0.0)
+	@rpath/libvlccore.dylib (compatibility version 10.0.0, current version 10.1.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1292.60.1)
+	/usr/lib/libiconv.2.dylib (compatibility version 7.0.0, current version 7.0.0)
+out/Dingus-arm64.app/Contents/Frameworks/vlc/lib/libvlccore.9.dylib:
+	@rpath/libvlccore.dylib (compatibility version 10.0.0, current version 10.1.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1292.60.1)
+	/usr/lib/libiconv.2.dylib (compatibility version 7.0.0, current version 7.0.0)
+	/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 1770.255.0)
+Executable=/Users/runner/work/Dingus/Dingus/out/Dingus-arm64.app/Contents/Frameworks/vlc/plugins/libhttp_plugin.dylib
+Identifier=libhttp_plugin-555549444ca2c8f417a731eaa7debb55ba7b8e71
+Format=Mach-O thin (arm64)
+CodeDirectory v=20400 size=752 flags=0x2(adhoc) hashes=17+2 location=embedded

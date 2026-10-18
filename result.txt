@@ -1,0 +1,29 @@
+channels: 14, guide-matched: 14
+01-home: 1920×970
+02-guide: 1920×970
+03-guide-on-now: 1920×970
+04-guide-tonight: 1920×970
+06-films: 1920×970
+07-shows: 1920×970
+09-settings: 1920×970
+16-recordings: 1920×970
+14-search: 1920×970
+15-search-films: 1920×970
+10-shortcuts: 1920×970
+11-channel-editor: 980×680
+13-guide-match: 592×580
+12-reminder: 300×146
+ERROR: LibVLCSharp.Shared.VLCException: Failed to perform instanciation on the native side. Make sure you installed the correct VideoLAN.LibVLC.[YourPlatform] package in your platform specific project
+   at LibVLCSharp.Shared.Internal.OnNativeInstanciationError()
+   at LibVLCSharp.Shared.Internal..ctor(Func`1 create, Action`1 release)
+   at LibVLCSharp.Shared.LibVLC..ctor(Boolean enableDebugLogs, String[] options)
+   at Dingus.Services.PlayerService..ctor()
+   at Dingus.MainWindow.<>c.<OnOpened>b__59_0()
+   at System.Threading.Tasks.Task`1.InnerInvoke()
+   at System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(Thread threadPoolThread, ExecutionContext executionContext, ContextCallback callback, Object state)
+--- End of stack trace from previous location ---
+   at System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(Thread threadPoolThread, ExecutionContext executionContext, ContextCallback callback, Object state)
+   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)
+--- End of stack trace from previous location ---
+   at Dingus.MainWindow.OnOpened(Object sender, EventArgs e)
+FAILED

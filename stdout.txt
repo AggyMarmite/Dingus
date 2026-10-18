@@ -1,0 +1,2 @@
+vlc: unknown option or missing mandatory argument `--http-reconnect'
+Try `vlc --help' for more information.
