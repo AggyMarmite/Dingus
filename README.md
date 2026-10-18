@@ -1,3 +1,5 @@
+<p align="center"><img src="Assets/Dingus-256.png" width="128" alt="Dingus logo"></p>
+
 # Dingus
 
 A lightweight, modern IPTV player for Windows 10/11 and Linux (.NET 8 and the VLC video engine; WPF on Windows, Avalonia on Linux).

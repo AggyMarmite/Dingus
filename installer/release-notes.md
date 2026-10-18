@@ -1,5 +1,7 @@
 ## What's new in Dingus 0.9.1
 
+* **New logo** – Dingus has a new icon: a white "D" with a play button, on purple. You'll see it on the
+  taskbar, Start menu, desktop shortcut, installer and app window.
 * **Cleaner channel logos** – the channel's initials (shown when there's no logo) no longer peek through logos with a
   see-through background once the logo has loaded.
 
