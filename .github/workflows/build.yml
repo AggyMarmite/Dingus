@@ -224,6 +224,11 @@ jobs:
             -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest $RUNNER_TEMP/sample/test.mp4
           out=$RUNNER_TEMP/selftest-mac
           mkdir -p $out
+          P=out/Dingus-arm64.app/Contents/Frameworks/vlc
+          { otool -L $P/plugins/libhttp_plugin.dylib; otool -l $P/plugins/libhttp_plugin.dylib | grep -A2 LC_RPATH; otool -L $P/lib/libvlccore.9.dylib | head -5;
+            otool -l $P/lib/libvlccore.9.dylib | grep -A2 LC_RPATH; codesign -dv $P/plugins/libhttp_plugin.dylib 2>&1 | head -4; } > $out/vlc-libs.txt 2>&1 || true
+          echo "::notice title=mac vlc-libs::$(head -c 3000 $out/vlc-libs.txt | tr '\n' '\r' | sed 's/\r/%0A/g')"
+          export VLC_VERBOSE=2
           DINGUS_TEST_VIDEO=$RUNNER_TEMP/sample/test.mp4 out/Dingus-arm64.app/Contents/MacOS/dingus --self-test $out > $out/stdout.txt 2>&1 &
           pid=$!
           for i in $(seq 1 280); do
@@ -238,7 +243,7 @@ jobs:
           done
           log="$HOME/Library/Application Support/Dingus/log.txt"
           if [ -f "$log" ]; then cp "$log" $out/; echo "::notice title=mac log.txt::$(head -c 3000 "$log" | tr '\n' '\r' | sed 's/\r/%0A/g')"; fi
-          echo "::notice title=mac stdout::$(tail -c 2000 $out/stdout.txt | tr '\n' '\r' | sed 's/\r/%0A/g')"
+          echo "::notice title=mac stdout::$(grep -iE 'error|warn|cannot|fail|plugin|dlopen' $out/stdout.txt | head -c 4000 | tr '\n' '\r' | sed 's/\r/%0A/g')"
           grep -q PASSED $out/result.txt
       - name: Publish screenshots to the selftest-mac branch
         if: always() && github.event_name == 'push'
