@@ -92,7 +92,8 @@ echo "== Signing (ad hoc)"
 BAD=0
 while read -r f; do
   [ "$f" = "$C/MacOS/dingus" ] && continue # signed with the app below
-  if file -b "$f" | grep -q 'Mach-O'; then
+  # Everything in Contents/MacOS counts as code to macOS (the .NET .dll files too); elsewhere only real binaries.
+  if [[ "$f" == "$C/MacOS/"* ]] || file -b "$f" | grep -q 'Mach-O'; then
     if ! msg=$(codesign --force --sign - --timestamp=none "$f" 2>&1); then echo "codesign failed: ${f#$C/}: $msg"; BAD=1; fi
   fi
 done < <(find "$C" -type f)
