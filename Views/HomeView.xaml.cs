@@ -24,6 +24,7 @@ public partial class HomeView : UserControl, IPage
 
     /// <summary>The guide's rows (merged channels, favourites, guide data) are shared with Home.</summary>
     public GuideView Guide { get; set; }
+    bool _hooked;
     /// <summary>Kept for the main window; Home doesn't play video in the page any more (Watch opens full screen).</summary>
     public Func<bool> CanPreview { get; set; } = () => false;
     public FrameworkElement PreviewSlotElement => null;
@@ -37,7 +38,13 @@ public partial class HomeView : UserControl, IPage
         InitializeComponent();
         _refresh.Tick += (_, _) => Build();
         _advance.Tick += (_, _) => { if (!_heroHover && IsVisible) Step(+1); };
-        DataService.Instance.CatalogChanged += () => { if (_shown) Dispatcher.InvokeAsync(Build, DispatcherPriority.Background); };
+        // Rebuilt when Live TV has its new channel rows (it works them out in the background after a new playlist).
+        Loaded += (_, _) =>
+        {
+            if (_hooked || Guide == null) return;
+            _hooked = true;
+            Guide.RowsRebuilt += () => { if (_shown) Dispatcher.InvokeAsync(Build, DispatcherPriority.Background); };
+        };
         DataService.Instance.EpgChanged += () => { if (_shown) Build(); };
         HistoryStore.Changed += () => { if (_shown) Build(); };
         ReminderService.Changed += () => { if (_shown) Build(); };
@@ -75,7 +82,9 @@ public partial class HomeView : UserControl, IPage
 
     // ------------------------------------------------------------------ building
 
-    void Build()
+    void Build() => DataService.Time("Home: building the page", BuildNow);
+
+    void BuildNow()
     {
         if (!_shown || Guide == null) return;
         var ds = DataService.Instance;
@@ -193,9 +202,10 @@ public partial class HomeView : UserControl, IPage
         var data = ds.Catalog;
         var hiddenVod = ds.HiddenSet("vod");
         var hiddenSeries = ds.HiddenSet("series");
-        var newFilms = data.Movies.Where(m => !hiddenVod.Contains(m.CategoryId)).OrderByDescending(m => m.Added).Take(20)
+        // Newest 20 without sorting the whole list (it can be 100,000 titles, and Home rebuilds often).
+        var newFilms = Newest(data.Movies.Where(m => !hiddenVod.Contains(m.CategoryId)), m => m.Added, 20)
             .Select(m => new HomePosterCard { Id = m.Id, IsMovie = true, Title = m.Name, Image = m.Poster, Subtitle = m.Year ?? "Film" }).ToList();
-        var newShows = data.Series.Where(x => !hiddenSeries.Contains(x.CategoryId)).OrderByDescending(x => x.Added).Take(20)
+        var newShows = Newest(data.Series.Where(x => !hiddenSeries.Contains(x.CategoryId)), x => x.Added, 20)
             .Select(x => new HomePosterCard { Id = x.Id, IsMovie = false, Title = x.Name, Image = x.Cover, Subtitle = x.Year ?? "TV show" }).ToList();
         MyListList.ItemsSource = BuildMyList(data, hiddenVod, hiddenSeries);
         MyListSection.Visibility = ((List<HomePosterCard>)MyListList.ItemsSource).Count == 0 ? Visibility.Collapsed : Visibility.Visible;
@@ -744,6 +754,25 @@ public partial class HomeView : UserControl, IPage
             Progress = p == null ? 0 : (now - p.Start).TotalSeconds / Math.Max(1, (p.End - p.Start).TotalSeconds),
             GenreBrush = Genres.Brush(p?.Genre),
         };
+    }
+
+    /// <summary>The <paramref name="n"/> items with the biggest <paramref name="key"/>, biggest first – one pass, no full sort.
+    /// Ties keep the playlist's order, like a stable sort would.</summary>
+    static List<T> Newest<T>(IEnumerable<T> items, Func<T, long> key, int n)
+    {
+        var heap = new PriorityQueue<(T Item, int Index), (long Key, int Index)>(n + 1, Comparer<(long Key, int Index)>.Create((a, b) =>
+            a.Key != b.Key ? a.Key.CompareTo(b.Key) : b.Index.CompareTo(a.Index)));
+        int i = 0;
+        foreach (var it in items)
+        {
+            heap.Enqueue((it, i), (key(it), i));
+            if (heap.Count > n) heap.Dequeue(); // drops the oldest
+            i++;
+        }
+        var res = new List<(T Item, int Index, long Key)>(heap.Count);
+        while (heap.TryDequeue(out var e, out var pr)) res.Add((e.Item, e.Index, pr.Key));
+        res.Reverse();
+        return res.Select(x => x.Item).ToList();
     }
 
     /// <summary>My List: saved films and shows the playlist still has (hidden categories left out), newest first.</summary>

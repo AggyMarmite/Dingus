@@ -58,7 +58,7 @@ public partial class GuideView : UserControl, IPage
             if (ChannelList.SelectedItem is GuideRow r) PreviewRequested?.Invoke(r);
         };
 
-        DataService.Instance.CatalogChanged += Rebuild;
+        DataService.Instance.CatalogChanged += OnCatalogChanged;
         DataService.Instance.EpgChanged += OnEpgChanged;
         HistoryStore.Changed += OnHistoryChanged;
         ReminderService.Changed += OnRemindersChanged;
@@ -107,7 +107,32 @@ public partial class GuideView : UserControl, IPage
 
     // ------------------------------------------------------------------ data
 
+    /// <summary>Raised after the channel rows have been rebuilt (a new playlist, channel edits…).</summary>
+    public event Action RowsRebuilt;
+
+    sealed record RowSet(List<GuideRow> All, List<GuideRow> Everything, Dictionary<string, GuideRow> ById, Dictionary<string, int> Counts);
+
+    int _rebuildGen;
+
+    /// <summary>A new playlist: the rows are worked out in the background (tens of thousands of channels take a
+    /// moment to merge), so the window keeps responding; then they're swapped in.</summary>
+    async void OnCatalogChanged()
+    {
+        int gen = ++_rebuildGen;
+        var set = await Task.Run(() => DataService.Time("Live TV: building channel rows", ComputeRows));
+        if (gen != _rebuildGen) return;
+        DataService.Time("Live TV: showing channel rows", () => ApplyRows(set));
+    }
+
+    /// <summary>Rebuilds the rows straight away (after your own changes – favourites, channel edits).</summary>
     void Rebuild()
+    {
+        ++_rebuildGen;
+        ApplyRows(ComputeRows());
+    }
+
+    /// <summary>Works out the rows: merges versions of the same channel, guide links, favourites, your names. No UI.</summary>
+    static RowSet ComputeRows()
     {
         var ds = DataService.Instance;
         var data = ds.Catalog;
@@ -117,8 +142,8 @@ public partial class GuideView : UserControl, IPage
         var hiddenCh = new HashSet<string>(ds.Active?.HiddenChannels ?? new List<string>());
         var names = ds.Active?.ChannelNames ?? new Dictionary<string, string>();
 
-        _all = new List<GuideRow>(data.Channels.Count);
-        _byId = new Dictionary<string, GuideRow>(data.Channels.Count);
+        var all = new List<GuideRow>(data.Channels.Count);
+        var byId = new Dictionary<string, GuideRow>(data.Channels.Count);
         bool merge = SettingsStore.Current.MergeDuplicates;
         var groups = new Dictionary<string, GuideRow>();
         int i = 1;
@@ -128,14 +153,14 @@ public partial class GuideView : UserControl, IPage
             var key = merge ? ChannelMerger.Key(c) : "";
             if (key.Length == 0 || !groups.TryGetValue(key, out var row))
             {
-                row = new GuideRow(c, i++) { BlockBuilder = BuildRowBlocks };
-                _all.Add(row);
+                row = new GuideRow(c, i++);
+                all.Add(row);
                 if (key.Length > 0) groups[key] = row;
             }
             row.AddVariant(c);
-            _byId.TryAdd(c.Id, row);
+            byId.TryAdd(c.Id, row);
         }
-        foreach (var r in _all)
+        foreach (var r in all)
         {
             r.IsFavourite = r.Variants.Any(v => favs.Contains(v.Id));
             r.Logo = r.Variants.Select(v => v.Logo).FirstOrDefault(l => l != null) ?? r.Variants.Select(v => epg.Icon(v.Id)).FirstOrDefault(l => l != null);
@@ -143,12 +168,25 @@ public partial class GuideView : UserControl, IPage
             r.CustomName = r.Variants.Select(v => names.TryGetValue(v.Id, out var n) ? n : null).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
             r.IsHidden = hiddenCh.Count > 0 && r.Variants.Any(v => hiddenCh.Contains(v.Id));
         }
-        _everything = _all;
-        if (hiddenCh.Count > 0) _all = _all.Where(r => !r.IsHidden).ToList();
+        var everything = all;
+        if (hiddenCh.Count > 0) all = all.Where(r => !r.IsHidden).ToList();
 
         var counts = new Dictionary<string, int>();
-        foreach (var r in _all)
+        foreach (var r in all)
             foreach (var cid in r.CategoryIds) counts[cid] = counts.TryGetValue(cid, out var n0) ? n0 + 1 : 1;
+        return new RowSet(all, everything, byId, counts);
+    }
+
+    void ApplyRows(RowSet set)
+    {
+        foreach (var r in set.Everything) r.BlockBuilder = BuildRowBlocks;
+        _all = set.All;
+        _everything = set.Everything;
+        _byId = set.ById;
+        var counts = set.Counts;
+        var data = DataService.Instance.Catalog;
+        var hidden = DataService.Instance.HiddenSet("live");
+
         _favCat = new CategoryItem { Id = FavId, Name = "Favourites", Count = _all.Count(r => r.IsFavourite) };
         _recentCat = new CategoryItem { Id = RecentId, Name = "Recently watched", Count = RecentRows().Count };
         var cats = new List<CategoryItem>
@@ -169,6 +207,7 @@ public partial class GuideView : UserControl, IPage
         _suppressCat = false;
 
         ApplyFilter();
+        RowsRebuilt?.Invoke();
     }
 
     static string PickEpgId(GuideRow r, EpgData epg) =>

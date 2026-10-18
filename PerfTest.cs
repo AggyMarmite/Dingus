@@ -18,6 +18,7 @@ public static class PerfTest
     static readonly Stopwatch Clock = Stopwatch.StartNew();
     static readonly List<string> Lines = new();
     static readonly object Gate = new();
+    static readonly List<(string What, double Ms, bool Ui, string Phase)> Work = new();
     static double _startOffsetMs; // process start → this class first used
 
     // Responsiveness, measured from another thread: how long a tiny job waits for the window's thread.
@@ -53,6 +54,12 @@ public static class PerfTest
         ds.EpgChanged += () =>
         {
             if (ds.Epg.MatchedChannels > 0) { _guideLoaded = Now; _guideChannels = ds.Epg.MatchedChannels; }
+        };
+        DataService.TimingHook = (what, ms) =>
+        {
+            if (ms < 30) return;
+            bool ui = Application.Current?.Dispatcher.CheckAccess() == true;
+            lock (Work) Work.Add((what, ms, ui, _phase));
         };
         var t = new Thread(Watch) { IsBackground = true, Name = "Speed test: responsiveness" };
         t.Start();
@@ -180,6 +187,11 @@ public static class PerfTest
             await Step("Settings", () => Nav(main.NavSettings));
             Line("");
             Line($"Memory at the end: {Memory.WorkingSetMB():N0} MB");
+            Line("");
+            Line("Slowest work (over 30 ms; \"window\" = the window waits for it, \"background\" = it doesn't):");
+            lock (Work)
+                foreach (var w in Work.OrderByDescending(w => w.Ms).Take(25))
+                    Line($"  {w.Ms,7:N0} ms  {(w.Ui ? "window    " : "background")}  {w.What}  ({w.Phase})");
         }
         catch (Exception ex) { SelfTest.Error(ex); }
 

@@ -38,6 +38,29 @@ public sealed class DataService
     public bool HasStartedLoading => _gen > 0;
 
     /// <summary>Raised when channels/films/shows or category visibility change.</summary>
+    /// <summary>Speed test only: told how long named pieces of work took (null otherwise – costs nothing).</summary>
+    public static Action<string, double> TimingHook;
+
+    /// <summary>Runs <paramref name="work"/>, telling the speed test how long it took.</summary>
+    public static T Time<T>(string what, Func<T> work)
+    {
+        if (TimingHook == null) return work();
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        try { return work(); }
+        finally { TimingHook(what, sw.Elapsed.TotalMilliseconds); }
+    }
+
+    public static void Time(string what, Action work) => Time(what, () => { work(); return 0; });
+
+    /// <summary>Raises an event one listener at a time, so the speed test can say which one was slow.</summary>
+    static void Raise(Action ev, string what)
+    {
+        if (ev == null) return;
+        if (TimingHook == null) { ev(); return; }
+        foreach (Action h in ev.GetInvocationList())
+            Time($"{what} → {h.Method.DeclaringType?.Name}.{h.Method.Name}", h);
+    }
+
     public event Action CatalogChanged;
     public event Action EpgChanged;
     public event Action<bool, string> BusyChanged;
@@ -67,7 +90,7 @@ public sealed class DataService
         _catDebounce.Tick += async (_, _) =>
         {
             _catDebounce.Stop();
-            CatalogChanged?.Invoke();
+            Raise(CatalogChanged, "new playlist");
             Memory.CompactSoon();
             // Hidden live categories aren't matched in the guide (saves memory), so re-match after changes.
             if (_liveHiddenChanged) { _liveHiddenChanged = false; await ReloadEpgAsync(); }
@@ -123,8 +146,8 @@ public sealed class DataService
         if (p == null)
         {
             HistoryStore.Load(null);
-            CatalogChanged?.Invoke();
-            EpgChanged?.Invoke();
+            Raise(CatalogChanged, "new playlist");
+            Raise(EpgChanged, "new guide");
             return;
         }
 
@@ -132,12 +155,12 @@ public sealed class DataService
         if (p.Type == PlaylistType.Xtream) Xtream = new XtreamClient(p);
         HistoryStore.Load(p.Id);
 
-        var cached = await Task.Run(() => ReadCatalog(CatalogFile(p)));
+        var cached = await Task.Run(() => Time("playlist: reading the saved copy", () => ReadCatalog(CatalogFile(p))));
         if (gen != _gen) return;
         if (cached != null) Catalog = cached;
-        CatalogChanged?.Invoke();
+        Raise(CatalogChanged, "new playlist");
         Memory.CompactSoon();
-        EpgChanged?.Invoke();
+        Raise(EpgChanged, "new guide");
 
         bool stale = cached == null || (S.AutoRefresh &&
                      (refreshNow || DateTime.UtcNow - p.LastRefreshUtc > TimeSpan.FromHours(S.RefreshIntervalHours)));
@@ -168,10 +191,10 @@ public sealed class DataService
         var channels = GuideChannels();
         var shift = S.EpgShiftMinutes;
         var overrides = new Dictionary<string, string>(p.EpgOverrides);
-            var epg = await Task.Run(() => EpgService.Parse(file, channels, shift, overrides));
+            var epg = await Task.Run(() => Time("guide: reading and matching", () => EpgService.Parse(file, channels, shift, overrides)));
         if (gen != _gen) return;
         SetEpg(epg);
-        EpgChanged?.Invoke();
+        Raise(EpgChanged, "new guide");
         Memory.CompactSoon();
     }
 
@@ -197,11 +220,11 @@ public sealed class DataService
         {
             var data = p.Type == PlaylistType.Xtream ? await FetchXtreamAsync(p, ct) : await FetchM3uAsync(p, ct);
             if (gen != _gen) return;
-            await Task.Run(() => WriteCatalog(CatalogFile(p), data));
+            await Task.Run(() => Time("playlist: saving a copy", () => WriteCatalog(CatalogFile(p), data)));
             p.LastRefreshUtc = DateTime.UtcNow;
             SettingsStore.Save();
             Catalog = data;
-            CatalogChanged?.Invoke();
+            Raise(CatalogChanged, "new playlist");
             Memory.CompactSoon();
             Message?.Invoke($"Playlist updated · {data.Channels.Count:N0} channels · {data.Movies.Count:N0} films · {data.Series.Count:N0} shows");
             ok = true;
@@ -299,13 +322,13 @@ public sealed class DataService
             var shift = S.EpgShiftMinutes;
             var file = EpgFile(p);
             var overrides = new Dictionary<string, string>(p.EpgOverrides);
-            var epg = await Task.Run(() => EpgService.Parse(file, channels, shift, overrides));
+            var epg = await Task.Run(() => Time("guide: reading and matching", () => EpgService.Parse(file, channels, shift, overrides)));
             if (gen != _gen) return;
             SetEpg(epg);
             Memory.CompactSoon();
             p.LastEpgRefreshUtc = DateTime.UtcNow;
             SettingsStore.Save();
-            EpgChanged?.Invoke();
+            Raise(EpgChanged, "new guide");
             Message?.Invoke($"TV guide updated · {epg.MatchedChannels:N0} of {channels.Count:N0} channels matched");
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
@@ -477,7 +500,7 @@ public sealed class DataService
     }
 
     /// <summary>Asks every page to rebuild from the current catalogue (e.g. after a display setting changes).</summary>
-    public void NotifyCatalogChanged() => CatalogChanged?.Invoke();
+    public void NotifyCatalogChanged() => Raise(CatalogChanged, "playlist changed");
 
     public HashSet<string> FavouriteSet() => new(Active?.Favourites ?? new List<string>());
 
