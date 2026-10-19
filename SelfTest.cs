@@ -146,7 +146,7 @@ public static class SelfTest
         Note($"video, picture-in-picture: playing={main.SelfTestPlaying} · {Mem()}");
         main.SelfTestMiniControls();
         await Idle(700);
-        Snap(main.SelfTestRoot, "18-pip");
+        Snap(main.SelfTestOverlay, "18-pip-controls"); // the controls sit in their own layer over the video
         main.SelfTestMini(false);
         await Task.Delay(6000);
         Note($"video, full player again: playing={main.SelfTestPlaying} · {Mem()}");
