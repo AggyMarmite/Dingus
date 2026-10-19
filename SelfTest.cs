@@ -144,6 +144,8 @@ public static class SelfTest
         main.SelfTestMini(true);
         await Task.Delay(6000);
         Note($"video, picture-in-picture: playing={main.SelfTestPlaying} · {Mem()}");
+        main.SelfTestMiniControls();
+        await Idle(700);
         Snap(main.SelfTestRoot, "18-pip");
         main.SelfTestMini(false);
         await Task.Delay(6000);
