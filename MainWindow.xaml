@@ -288,6 +288,19 @@
                     </Border>
                     <Button x:Name="MiniPlayPause" Style="{StaticResource OverlayIconButton}" Content="&#xE769;" FontSize="22" Width="52" Height="52"
                             HorizontalAlignment="Center" VerticalAlignment="Center" Background="#80000000" Click="PlayPause_Click"/>
+                    <!-- Mute; hover for a volume slider (the same volume as the full player) -->
+                    <Border x:Name="MiniVolume" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="8" CornerRadius="17" Height="34"
+                            Background="#99000000" MouseEnter="MiniVolume_MouseEnter" MouseLeave="MiniVolume_MouseLeave">
+                        <StackPanel Orientation="Horizontal">
+                            <Button x:Name="MiniMute" Style="{StaticResource OverlayIconButton}" Width="34" Height="34" FontSize="14" Content="&#xE767;"
+                                    ToolTip="Mute (M)" Click="Mute_Click"/>
+                            <Border x:Name="MiniVolumeHost" Width="0" ClipToBounds="True">
+                                <Slider x:Name="MiniVolumeSlider" Style="{StaticResource PlayerSlider}" Width="84" Minimum="0" Maximum="100"
+                                        VerticalAlignment="Center" Margin="0,0,12,0" IsMoveToPointEnabled="True" Focusable="False"
+                                        Value="{Binding Value, ElementName=VolumeSlider, Mode=TwoWay}" ToolTip="Volume"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
                     <!-- Drag to resize (keeps 16:9) -->
                     <Thumb x:Name="PipGrip" HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="26" Height="26" Cursor="SizeNWSE"
                            DragDelta="PipGrip_DragDelta" DragCompleted="PipGrip_DragCompleted" ToolTip="Drag to resize">

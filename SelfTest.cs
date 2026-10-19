@@ -106,6 +106,7 @@ public static class SelfTest
             await Idle(800);
             if (card != null) { Snap((FrameworkElement)card.Content, "12-reminder"); card.Close(); }
 
+            await VideoMemory(main);
             Note($"memory: {Memory.WorkingSetMB()} MB");
         }
         catch (Exception ex) { Error(ex); }
@@ -121,6 +122,36 @@ public static class SelfTest
     }
 
     static void Note(string s) => Log.Add(s);
+
+    /// <summary>
+    /// Plays a short test video (DINGUS_TEST_VIDEO) in the full player, then picture-in-picture, then the full player
+    /// again, noting memory at each stage – picture-in-picture shouldn't need more than the full player.
+    /// </summary>
+    static async Task VideoMemory(MainWindow main)
+    {
+        var video = Environment.GetEnvironmentVariable("DINGUS_TEST_VIDEO");
+        if (string.IsNullOrEmpty(video) || !File.Exists(video)) return;
+        string Mem()
+        {
+            using var p = System.Diagnostics.Process.GetCurrentProcess();
+            return $"working set {p.WorkingSet64 >> 20} MB · private {p.PrivateMemorySize64 >> 20} MB · .NET heap {GC.GetTotalMemory(false) >> 20} MB";
+        }
+        main.PlayVod(new Models.VodItem { Kind = "movie", Title = "Test video", Url = new Uri(video).AbsoluteUri }, resume: false);
+        for (int i = 0; i < 40 && !main.SelfTestPlaying; i++) await Task.Delay(250);
+        await Task.Delay(6000);
+        Note($"video, full player: playing={main.SelfTestPlaying} · {Mem()}");
+        Snap(main.SelfTestRoot, "17-player");
+        main.SelfTestMini(true);
+        await Task.Delay(6000);
+        Note($"video, picture-in-picture: playing={main.SelfTestPlaying} · {Mem()}");
+        Snap(main.SelfTestRoot, "18-pip");
+        main.SelfTestMini(false);
+        await Task.Delay(6000);
+        Note($"video, full player again: playing={main.SelfTestPlaying} · {Mem()}");
+        main.SelfTestExitPlayer();
+        await Idle(1500);
+        Note($"video stopped: {Mem()}");
+    }
 
     /// <summary>
     /// The title bar doubles as the window's drag handle: anything clickable in it has to be marked as such,

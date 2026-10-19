@@ -507,6 +507,9 @@ public partial class MainWindow
     internal Views.GuideView SelfTestGuide => _guide;
     internal void SelfTestShortcuts(bool open) { if (open != SheetOpen) ToggleShortcutSheet(); }
     internal void SelfTestSearch(string text) => SearchBox.Text = text;
+    internal void SelfTestMini(bool on) { if (on) EnterMini(); else ExitMini(true); }
+    internal void SelfTestExitPlayer() { if (_mini) ExitMini(false); else ExitPlayer(); }
+    internal bool SelfTestPlaying => _svc?.Player?.IsPlaying == true;
     internal void SelfTestSearchFilter(string f) => _search.SelfTestFilter(f);
 }
 

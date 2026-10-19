@@ -1334,9 +1334,9 @@ public partial class MainWindow : Window
         var glyph = mp.IsPlaying ? "" : "";
         MiniPlayPause.Content = glyph;
         PreviewPlayPause.Content = glyph;
+        UpdateVolumeGlyphs();
         if (PlayerChrome.Visibility != Visibility.Visible) return;
         PlayPauseButton.Content = glyph;
-        MuteButton.Content = _muted || VolumeSlider.Value <= 0 ? "" : "";
 
         if (_nowLive)
         {
@@ -2042,7 +2042,37 @@ public partial class MainWindow : Window
     {
         _muted = !_muted;
         _svc?.SetMute(_muted);
+        UpdateVolumeGlyphs();
         UpdatePlayerUi();
+    }
+
+    /// <summary>The speaker icon on the player's and the mini player's mute buttons (crossed out when muted or at 0).</summary>
+    void UpdateVolumeGlyphs()
+    {
+        var g = _muted || VolumeSlider.Value <= 0 ? "\uE74F" : "\uE767";
+        if (MuteButton != null) MuteButton.Content = g;
+        if (MiniMute != null) MiniMute.Content = g;
+    }
+
+    // Mini player: the volume slider slides out while the mouse is over the mute button.
+    void MiniVolume_MouseEnter(object sender, MouseEventArgs e) => SlideMiniVolume(open: true);
+
+    void MiniVolume_MouseLeave(object sender, MouseEventArgs e)
+    {
+        if (MiniVolumeSlider.IsMouseCaptureWithin) return; // still dragging
+        SlideMiniVolume(open: false);
+    }
+
+    void SlideMiniVolume(bool open)
+    {
+        var a = new System.Windows.Media.Animation.DoubleAnimation(open ? 96 : 0, TimeSpan.FromMilliseconds(open ? 200 : 160))
+        {
+            EasingFunction = new System.Windows.Media.Animation.CubicEase
+            {
+                EasingMode = open ? System.Windows.Media.Animation.EasingMode.EaseOut : System.Windows.Media.Animation.EasingMode.EaseIn,
+            },
+        };
+        MiniVolumeHost.BeginAnimation(WidthProperty, a);
     }
 
     // ----- mouse over the video -----
@@ -2127,7 +2157,7 @@ public partial class MainWindow : Window
         SettingsStore.Current.Volume = v;
         if (v > 0 && _muted) { _muted = false; _svc?.SetMute(false); }
         _svc?.SetVolume(v);
-        if (MuteButton != null) MuteButton.Content = _muted || v <= 0 ? "" : "";
+        UpdateVolumeGlyphs();
     }
 
     void Audio_Click(object sender, RoutedEventArgs e) =>
