@@ -1,3 +1,8 @@
+## What's new in Dingus 0.9.5
+
+* **Volume in the mini player** – picture-in-picture has a mute button in its bottom-left corner; hover over it and a
+  volume slider slides out. It's the same volume as the full player.
+
 ## What's new in Dingus 0.9.4
 
 * **Opens as a window** – Dingus no longer fills the whole screen when it starts: it opens centred at about 80% of the
