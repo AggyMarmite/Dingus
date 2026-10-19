@@ -183,6 +183,7 @@ public partial class MainWindow : Window
         Root.LayoutUpdated += (_, _) => { if (_previewActive && !_playerMode) PositionPreview(); };
 
         VolumeSlider.Value = SettingsStore.Current.Volume;
+        MiniVolumeSlider.Value = VolumeSlider.Value;
         (SettingsStore.Current.StartOnGuide ? NavGuide : NavHome).IsChecked = true;
         OnPlaylistChanged();
 
@@ -2054,7 +2055,13 @@ public partial class MainWindow : Window
         if (MiniMute != null) MiniMute.Content = g;
     }
 
-    // Mini player: the volume slider slides out while the mouse is over the mute button.
+    // Mini player: the volume slider slides out while the mouse is over the mute button. It and the player's own
+    // slider are the same volume, kept in step both ways.
+    void MiniVolume_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (VolumeSlider != null && Math.Abs(VolumeSlider.Value - e.NewValue) > 0.5) VolumeSlider.Value = e.NewValue;
+    }
+
     void MiniVolume_MouseEnter(object sender, MouseEventArgs e) => SlideMiniVolume(open: true);
 
     void MiniVolume_MouseLeave(object sender, MouseEventArgs e)
@@ -2158,6 +2165,7 @@ public partial class MainWindow : Window
         if (v > 0 && _muted) { _muted = false; _svc?.SetMute(false); }
         _svc?.SetVolume(v);
         UpdateVolumeGlyphs();
+        if (MiniVolumeSlider != null && Math.Abs(MiniVolumeSlider.Value - v) > 0.5) MiniVolumeSlider.Value = v;
     }
 
     void Audio_Click(object sender, RoutedEventArgs e) =>

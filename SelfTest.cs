@@ -147,6 +147,9 @@ public static class SelfTest
         main.SelfTestMiniControls();
         await Idle(700);
         Snap(main.SelfTestOverlay, "18-pip-controls"); // the controls sit in their own layer over the video
+        var vol = main.SelfTestVolumes;
+        Note($"mini player volume {vol.Mini:0} (player {vol.Player:0})");
+        if (Math.Abs(vol.Mini - vol.Player) > 0.5) Error(new Exception("The mini player's volume slider doesn't match the player's volume"));
         main.SelfTestMini(false);
         await Task.Delay(6000);
         Note($"video, full player again: playing={main.SelfTestPlaying} · {Mem()}");

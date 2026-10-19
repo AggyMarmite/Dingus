@@ -297,7 +297,7 @@
                             <Border x:Name="MiniVolumeHost" Width="0" ClipToBounds="True">
                                 <Slider x:Name="MiniVolumeSlider" Style="{StaticResource PlayerSlider}" Width="84" Minimum="0" Maximum="100"
                                         VerticalAlignment="Center" Margin="0,0,12,0" IsMoveToPointEnabled="True" Focusable="False"
-                                        Value="{Binding Value, ElementName=VolumeSlider, Mode=TwoWay}" ToolTip="Volume"/>
+                                        ValueChanged="MiniVolume_Changed" ToolTip="Volume"/>
                             </Border>
                         </StackPanel>
                     </Border>
