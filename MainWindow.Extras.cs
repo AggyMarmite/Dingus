@@ -515,7 +515,8 @@ public partial class MainWindow
     internal void SelfTestExitPlayer() { if (_mini) ExitMini(false); else ExitPlayer(); }
     internal bool SelfTestPlaying => _svc?.Player?.IsPlaying == true;
     internal bool SelfTestFullscreen => _osFullscreen;
-    internal void SelfTestGoFullscreen() { if (!_osFullscreen) SetOsFullscreen(true); }
+    internal void SelfTestGoFullscreen() { if (_playerMode && !_mini && !_osFullscreen) SetOsFullscreen(true); }
+    internal bool SelfTestInPlayer => _playerMode;
     internal void SelfTestSearchFilter(string f) => _search.SelfTestFilter(f);
 }
 
