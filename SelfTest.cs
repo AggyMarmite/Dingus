@@ -136,6 +136,14 @@ public static class SelfTest
             using var p = System.Diagnostics.Process.GetCurrentProcess();
             return $"working set {p.WorkingSet64 >> 20} MB · private {p.PrivateMemorySize64 >> 20} MB · .NET heap {GC.GetTotalMemory(false) >> 20} MB";
         }
+        // Note every change to "always on top", and what changed it.
+        System.ComponentModel.DependencyPropertyDescriptor.FromProperty(Window.TopmostProperty, typeof(Window)).AddValueChanged(main, (_, _) =>
+        {
+            var who = string.Join(" < ", new System.Diagnostics.StackTrace().GetFrames().Skip(1)
+                .Select(f => f.GetMethod()).Where(m => m?.DeclaringType?.Namespace?.StartsWith("Dingus") == true)
+                .Take(4).Select(m => m.DeclaringType.Name + "." + m.Name));
+            Note($"  on top → {main.Topmost} (fullscreen {main.SelfTestFullscreen}) from {who}");
+        });
         main.PlayVod(new Models.VodItem { Kind = "movie", Title = "Test video", Url = new Uri(video).AbsoluteUri }, resume: false);
         for (int i = 0; i < 40 && !main.SelfTestPlaying; i++) await Task.Delay(250);
         await Task.Delay(6000);
