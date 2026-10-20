@@ -155,9 +155,12 @@ public static class SelfTest
         main.SelfTestMini(false);
         await Task.Delay(6000);
         Note($"video, full player again: playing={main.SelfTestPlaying} · {Mem()}");
+        Note($"full screen: {main.SelfTestFullscreen} · on top: {main.Topmost}");
         main.SelfTestExitPlayer();
         await Idle(1500);
-        Note($"video stopped: {Mem()}");
+        Note($"video stopped: {Mem()} · on top: {main.Topmost}");
+        // Back in the app after full screen and picture-in-picture: other apps must be able to go in front again.
+        if (main.Topmost) Error(new Exception("Dingus is still always-on-top after leaving the player"));
     }
 
     /// <summary>

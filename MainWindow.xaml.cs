@@ -142,7 +142,7 @@ public partial class MainWindow : Window
             NativeWindow.DisableAnimations(this);
             NativeWindow.RoundCorners(this, true);
         };
-        StateChanged += (_, _) => UpdateWindowFrame();
+        StateChanged += (_, _) => { UpdateWindowFrame(); DropTopmostSoon(); };
         PowerService.Changed += OnPowerChanged;
         // Full screen stays above the taskbar only while Dingus is in front, so Alt-Tab works normally.
         Activated += (_, _) => { if (_osFullscreen || _mini) Topmost = true; };
@@ -1085,6 +1085,9 @@ public partial class MainWindow : Window
         }
         else
         {
+            // No longer full screen from here on: changing the window back below re-activates it, and the activation
+            // handlers would otherwise put it back on top of everything.
+            _osFullscreen = false;
             if (!_mini) Topmost = false;
             _streamingFullscreen = false;
             bool toMaximized = restoreMaximized && _prevState == WindowState.Maximized && !_mini;
@@ -1108,12 +1111,22 @@ public partial class MainWindow : Window
             NativeWindow.ApplyDarkTitleBar(this);
         }
         _osFullscreen = on;
+        if (!on) DropTopmostSoon();
         NativeWindow.RoundCorners(this, !on);
         UpdateWindowFrame();
         FullscreenButton.Content = "\uE73F"; // "exit full screen" – the player is always full screen
     }
 
     bool _streamingFullscreen;
+
+    /// <summary>
+    /// Safety net: only full screen (while Dingus is in front) and picture-in-picture sit above other apps. Once the
+    /// window has settled after a change, anything else that left it on top is undone.
+    /// </summary>
+    void DropTopmostSoon() => Dispatcher.InvokeAsync(() =>
+    {
+        if (!_osFullscreen && !_mini && Topmost) Topmost = false;
+    }, DispatcherPriority.ApplicationIdle);
 
     /// <summary>The monitor the window is on, in WPF units.</summary>
     Rect MonitorBoundsDip()

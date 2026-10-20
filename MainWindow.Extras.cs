@@ -514,6 +514,7 @@ public partial class MainWindow
     internal void SelfTestMiniControls() { MiniChrome.Visibility = Visibility.Visible; _hideTimer.Stop(); SlideMiniVolume(open: true); UpdateMiniInfo(); }
     internal void SelfTestExitPlayer() { if (_mini) ExitMini(false); else ExitPlayer(); }
     internal bool SelfTestPlaying => _svc?.Player?.IsPlaying == true;
+    internal bool SelfTestFullscreen => _osFullscreen;
     internal void SelfTestSearchFilter(string f) => _search.SelfTestFilter(f);
 }
 
