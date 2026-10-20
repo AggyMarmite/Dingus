@@ -1,3 +1,9 @@
+## What's new in Dingus 0.9.6
+
+* **What's on, in the mini player** – hover over picture-in-picture to see the channel, the programme and how long is
+  left, with a thin progress line (for films and episodes: the time left).
+* **Time left in the player** – the full player now shows how long is left of the programme, film or episode.
+
 ## What's new in Dingus 0.9.5
 
 * **Volume in the mini player** – picture-in-picture has a mute button in its bottom-left corner; hover over it and a

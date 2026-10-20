@@ -139,8 +139,10 @@ public static class SelfTest
         main.PlayVod(new Models.VodItem { Kind = "movie", Title = "Test video", Url = new Uri(video).AbsoluteUri }, resume: false);
         for (int i = 0; i < 40 && !main.SelfTestPlaying; i++) await Task.Delay(250);
         await Task.Delay(6000);
+        main.SelfTestShowChrome();
+        await Idle(500);
         Note($"video, full player: playing={main.SelfTestPlaying} · {Mem()}");
-        Snap(main.SelfTestRoot, "17-player");
+        Snap(main.SelfTestOverlay, "17-player-controls");
         main.SelfTestMini(true);
         await Task.Delay(6000);
         Note($"video, picture-in-picture: playing={main.SelfTestPlaying} · {Mem()}");

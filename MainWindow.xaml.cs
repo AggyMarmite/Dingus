@@ -1265,7 +1265,9 @@ public partial class MainWindow : Window
             MiniTitle.Text = ch.Name;
             ImageLoader.SetUrl(ChromeLogo, row?.Logo);
             ChromeLogoBox.Visibility = string.IsNullOrEmpty(row?.Logo) ? Visibility.Collapsed : Visibility.Visible;
+            ChromeLeft.Text = ""; // live: the time left is next to the programme's times
             UpdateLiveInfo(ch);
+            UpdateMiniInfo();
         }
         else
         {
@@ -1274,6 +1276,7 @@ public partial class MainWindow : Window
             ChromeNext.Text = _vod?.NextLabel != null ? "Next   " + _vod.NextLabel : "";
             MiniTitle.Text = _vod?.Title ?? "";
             ChromeLogoBox.Visibility = Visibility.Collapsed;
+            UpdateMiniInfo();
         }
     }
 
@@ -1295,7 +1298,41 @@ public partial class MainWindow : Window
         var next = row != null ? DataService.Instance.Epg.StartingFrom(_guide.EpgIdOf(row), p.End) : _guide.NextOn(ch);
         ChromeNext.Text = next != null ? $"Next   {next.Start:HH:mm}   {next.Title}" : "";
         LiveProgress.Value = (now - p.Start).TotalSeconds / Math.Max(1, (p.End - p.Start).TotalSeconds);
-        LiveTimes.Text = $"{p.Start:HH:mm} – {p.End:HH:mm}";
+        LiveTimes.Text = $"{p.Start:HH:mm} – {p.End:HH:mm}  ·  {LeftText(p.End - now)}";
+    }
+
+    /// <summary>"23 min left", "1 h 5 min left", "Ending" – for live programmes, films and episodes.</summary>
+    static string LeftText(TimeSpan left)
+    {
+        if (left.TotalSeconds < 60) return "Ending";
+        int mins = (int)Math.Ceiling(left.TotalMinutes);
+        return mins >= 60 ? $"{mins / 60} h {mins % 60} min left" : $"{mins} min left";
+    }
+
+    /// <summary>The mini player's info: the channel (or title), what's on and how long is left, with a thin progress line.</summary>
+    void UpdateMiniInfo()
+    {
+        if (!_mini || _svc == null) return;
+        if (_nowLive && _nowChannel != null)
+        {
+            var at = DateTime.Now - (_svc.BehindLive);
+            var row = _guide.RowFor(_nowChannel.Id);
+            MiniTitle.Text = row?.DisplayName ?? _nowChannel.Name;
+            var p = row != null ? DataService.Instance.Epg.At(_guide.EpgIdOf(row), at) : _guide.NowOn(_nowChannel);
+            if (p == null) { MiniInfo.Text = "No guide information"; MiniProgress.Visibility = Visibility.Collapsed; return; }
+            MiniInfo.Text = $"{p.Title}  ·  {LeftText(p.End - at)}";
+            MiniProgress.Value = (at - p.Start).TotalSeconds / Math.Max(1, (p.End - p.Start).TotalSeconds);
+            MiniProgress.Visibility = Visibility.Visible;
+            return;
+        }
+        var mp = _svc.Player;
+        long len = mp.Length, time = mp.Time;
+        MiniTitle.Text = _vod?.Title ?? "";
+        var sub = _vod?.Subtitle;
+        var left = len > 0 ? LeftText(TimeSpan.FromMilliseconds(Math.Max(0, len - time))) : null;
+        MiniInfo.Text = string.Join("  ·  ", new[] { sub, left }.Where(x => !string.IsNullOrEmpty(x)));
+        MiniProgress.Visibility = len > 0 ? Visibility.Visible : Visibility.Collapsed;
+        MiniProgress.Value = len > 0 ? Math.Clamp((double)time / len, 0, 1) : 0;
     }
 
     void ShowChrome()
@@ -1336,6 +1373,7 @@ public partial class MainWindow : Window
         MiniPlayPause.Content = glyph;
         PreviewPlayPause.Content = glyph;
         UpdateVolumeGlyphs();
+        UpdateMiniInfo();
         if (PlayerChrome.Visibility != Visibility.Visible) return;
         PlayPauseButton.Content = glyph;
 
@@ -1354,6 +1392,7 @@ public partial class MainWindow : Window
         }
         PosText.Text = Fmt(time);
         LenText.Text = len > 0 ? Fmt(len) : "--:--";
+        ChromeLeft.Text = len > 0 ? LeftText(TimeSpan.FromMilliseconds(Math.Max(0, len - time))) : "";
     }
 
     static string Fmt(long ms)

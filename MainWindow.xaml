@@ -268,22 +268,28 @@
 
                 <!-- Floating mini player controls -->
                 <Grid x:Name="MiniChrome" Visibility="Collapsed">
-                    <Border VerticalAlignment="Top" Height="44">
+                    <Border VerticalAlignment="Top" Height="70">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                <GradientStop Color="#C0000000" Offset="0"/>
+                                <GradientStop Color="#D8000000" Offset="0"/>
+                                <GradientStop Color="#99000000" Offset="0.55"/>
                                 <GradientStop Color="#00000000" Offset="1"/>
                             </LinearGradientBrush>
                         </Border.Background>
-                        <DockPanel Margin="10,0,4,0">
+                        <DockPanel Margin="12,6,4,0" VerticalAlignment="Top">
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                                 <Button Style="{StaticResource OverlayIconButton}" Width="34" Height="34" FontSize="13" Content="&#xE740;"
                                         ToolTip="Full screen" Click="MiniExpand_Click"/>
                                 <Button Style="{StaticResource OverlayIconButton}" Width="34" Height="34" FontSize="12" Content="&#xE8BB;"
                                         ToolTip="Close picture-in-picture – back to the app" Click="MiniClose_Click"/>
                             </StackPanel>
-                            <TextBlock x:Name="MiniTitle" Foreground="White" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
-                                       TextTrimming="CharacterEllipsis"/>
+                            <!-- What's on: channel, programme, how long left -->
+                            <StackPanel VerticalAlignment="Top" Margin="0,3,6,0">
+                                <TextBlock x:Name="MiniTitle" Foreground="White" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock x:Name="MiniInfo" Foreground="#E6FFFFFF" FontSize="12" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                                <ProgressBar x:Name="MiniProgress" Style="{StaticResource ThinProgress}" Maximum="1" Height="3" Width="120"
+                                             HorizontalAlignment="Left" Margin="0,6,0,0" Foreground="White" Visibility="Collapsed"/>
+                            </StackPanel>
                         </DockPanel>
                     </Border>
                     <Button x:Name="MiniPlayPause" Style="{StaticResource OverlayIconButton}" Content="&#xE769;" FontSize="22" Width="52" Height="52"
@@ -340,6 +346,7 @@
                                 <TextBlock x:Name="ChromeTitle" FontSize="22" FontWeight="SemiBold" Foreground="White" TextTrimming="CharacterEllipsis"/>
                                 <TextBlock x:Name="ChromeSubtitle" FontSize="14" Foreground="#E6FFFFFF" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
                                 <TextBlock x:Name="ChromeNext" FontSize="13" Foreground="#AAFFFFFF" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock x:Name="ChromeLeft" FontSize="13" Foreground="#E6FFFFFF" Margin="0,3,0,0"/>
                             </StackPanel>
                         </DockPanel>
                     </Border>

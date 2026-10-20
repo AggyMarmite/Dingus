@@ -509,8 +509,9 @@ public partial class MainWindow
     internal void SelfTestSearch(string text) => SearchBox.Text = text;
     internal void SelfTestMini(bool on) { if (on) EnterMini(); else ExitMini(true); }
     internal FrameworkElement SelfTestOverlay => Overlay;
+    internal void SelfTestShowChrome() { UpdatePlayerUi(); ShowChrome(); }
     internal (double Player, double Mini) SelfTestVolumes => (VolumeSlider.Value, MiniVolumeSlider.Value);
-    internal void SelfTestMiniControls() { MiniChrome.Visibility = Visibility.Visible; _hideTimer.Stop(); SlideMiniVolume(open: true); }
+    internal void SelfTestMiniControls() { MiniChrome.Visibility = Visibility.Visible; _hideTimer.Stop(); SlideMiniVolume(open: true); UpdateMiniInfo(); }
     internal void SelfTestExitPlayer() { if (_mini) ExitMini(false); else ExitPlayer(); }
     internal bool SelfTestPlaying => _svc?.Player?.IsPlaying == true;
     internal void SelfTestSearchFilter(string f) => _search.SelfTestFilter(f);
