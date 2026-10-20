@@ -156,6 +156,7 @@ public static class SelfTest
         await Task.Delay(6000);
         Note($"video, full player again: playing={main.SelfTestPlaying} · {Mem()}");
         main.SelfTestGoFullscreen();
+        Note($"just after going full screen: {main.SelfTestFullscreen} · {main.WindowState} · {main.WindowStyle} · {main.ActualWidth:0}×{main.ActualHeight:0}");
         await Idle(1500);
         Note($"full screen: {main.SelfTestFullscreen} · on top: {main.Topmost}");
         main.SelfTestExitPlayer();
