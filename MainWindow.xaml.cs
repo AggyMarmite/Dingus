@@ -1312,6 +1312,7 @@ public partial class MainWindow : Window
             ChromeLeft.Text = ""; // live: the time left is next to the programme's times
             UpdateLiveInfo(ch);
             UpdateMiniInfo();
+            TidyChromeLines();
         }
         else
         {
@@ -1321,6 +1322,7 @@ public partial class MainWindow : Window
             MiniTitle.Text = _vod?.Title ?? "";
             ChromeLogoBox.Visibility = Visibility.Collapsed;
             UpdateMiniInfo();
+            TidyChromeLines();
         }
     }
 
@@ -1343,6 +1345,13 @@ public partial class MainWindow : Window
         ChromeNext.Text = next != null ? $"Next   {next.Start:HH:mm}   {next.Title}" : "";
         LiveProgress.Value = (now - p.Start).TotalSeconds / Math.Max(1, (p.End - p.Start).TotalSeconds);
         LiveTimes.Text = $"{p.Start:HH:mm} – {p.End:HH:mm}  ·  {LeftText(p.End - now)}";
+    }
+
+    /// <summary>Empty lines in the player's top bar take no space (a film has no "Next", a channel no "time left" line).</summary>
+    void TidyChromeLines()
+    {
+        foreach (var t in new[] { ChromeSubtitle, ChromeNext, ChromeLeft })
+            t.Visibility = string.IsNullOrEmpty(t.Text) ? Visibility.Collapsed : Visibility.Visible;
     }
 
     /// <summary>"23 min left", "1 h 5 min left", "Ending" – for live programmes, films and episodes.</summary>
@@ -1437,6 +1446,7 @@ public partial class MainWindow : Window
         PosText.Text = Fmt(time);
         LenText.Text = len > 0 ? Fmt(len) : "--:--";
         ChromeLeft.Text = len > 0 ? LeftText(TimeSpan.FromMilliseconds(Math.Max(0, len - time))) : "";
+        TidyChromeLines();
     }
 
     static string Fmt(long ms)
