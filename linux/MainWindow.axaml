@@ -130,6 +130,46 @@
             </Panel>
         </Grid>
 
+        <!-- ================= Splash: shown as Dingus opens (and, with no playlist yet, with "Add playlist") ================= -->
+        <Panel x:Name="Splash" Background="{StaticResource BgBrush}">
+            <Panel.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.32" Easing="CubicEaseIn"/>
+                </Transitions>
+            </Panel.Transitions>
+            <!-- the top strip still drags the window -->
+            <Border x:Name="SplashDrag" Height="46" VerticalAlignment="Top" Background="Transparent"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                <Button Classes="caption" Content="{x:Static local:Icons.Minimise}" ToolTip.Tip="Minimise" Click="Minimise_Click"/>
+                <Button Classes="caption" Content="{x:Static local:Icons.Maximise}" ToolTip.Tip="Maximise" Click="Maximise_Click"/>
+                <Button Classes="caption captionClose" Content="{x:Static local:Icons.Close}" ToolTip.Tip="Close" Click="Close_Click"/>
+            </StackPanel>
+            <StackPanel x:Name="SplashContent" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,40"
+                        RenderTransformOrigin="50%,50%" RenderTransform="scale(1)">
+                <StackPanel.Transitions>
+                    <Transitions>
+                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.32" Easing="CubicEaseIn"/>
+                    </Transitions>
+                </StackPanel.Transitions>
+                <Image Source="{StaticResource DingusLogo}" Width="96" Height="96" HorizontalAlignment="Center"/>
+                <TextBlock Text="Dingus" FontSize="42" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,22,0,0"/>
+                <TextBlock x:Name="SplashSlogan" Text="All your TV, in one place" FontSize="16" Classes="muted"
+                           HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                <StackPanel x:Name="SplashAdd" IsVisible="False" Margin="0,34,0,0">
+                    <Button Classes="primary" Content="Add playlist" HorizontalAlignment="Center" Padding="28,12" Click="AddPlaylist_Click"/>
+                    <TextBlock Text="Xtream Codes logins and M3U links are both supported." FontSize="12" Classes="muted"
+                               HorizontalAlignment="Center" Margin="0,14,0,0"/>
+                    <Button Classes="ghost" HorizontalAlignment="Center" Margin="0,18,0,0" Click="LoadingSettings_Click"
+                            ToolTip.Tip="E.g. to restore a backup">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Classes="icon" Text="{x:Static local:Icons.Settings}"/>
+                            <TextBlock Text="Open Settings" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+        </Panel>
+
         <!-- Toast -->
         <Border x:Name="Toast" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,28" Padding="18,11"
                 CornerRadius="10" Background="{StaticResource Surface3Brush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
@@ -232,23 +272,46 @@
 
                     <!-- Picture-in-picture controls -->
                     <Panel x:Name="MiniChrome" IsVisible="False">
-                        <Border VerticalAlignment="Top" Height="44">
+                        <Border VerticalAlignment="Top" Height="70">
                             <Border.Background>
                                 <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                                    <GradientStop Color="#C0000000" Offset="0"/>
+                                    <GradientStop Color="#D8000000" Offset="0"/>
+                                    <GradientStop Color="#99000000" Offset="0.55"/>
                                     <GradientStop Color="#00000000" Offset="1"/>
                                 </LinearGradientBrush>
                             </Border.Background>
-                            <DockPanel Margin="10,0,4,0">
+                            <DockPanel Margin="12,6,4,0" VerticalAlignment="Top">
                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                                     <Button Classes="overlay" Width="34" Height="34" FontSize="18" Content="{x:Static local:Icons.Fullscreen}"
                                             ToolTip.Tip="Full screen" Click="MiniExpand_Click"/>
                                     <Button Classes="overlay" Width="34" Height="34" FontSize="17" Content="{x:Static local:Icons.Close}"
                                             ToolTip.Tip="Close picture-in-picture – back to the app" Click="MiniClose_Click"/>
                                 </StackPanel>
-                                <TextBlock x:Name="MiniTitle" Foreground="White" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
-                                           TextTrimming="CharacterEllipsis"/>
+                                <!-- What's on: channel, programme, how long left -->
+                                <StackPanel VerticalAlignment="Top" Margin="0,3,6,0">
+                                    <TextBlock x:Name="MiniTitle" Foreground="White" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock x:Name="MiniInfo" Foreground="#E6FFFFFF" FontSize="12" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                                    <ProgressBar x:Name="MiniProgress" Classes="thin" Maximum="1" Height="3" Width="120" MinWidth="0"
+                                                 HorizontalAlignment="Left" Margin="0,6,0,0" Foreground="White" IsVisible="False"/>
+                                </StackPanel>
                             </DockPanel>
+                        </Border>
+                        <!-- Mute; hover for a volume slider (the same volume as the full player) -->
+                        <Border x:Name="MiniVolume" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="8" CornerRadius="17" Height="34"
+                                Background="#99000000">
+                            <StackPanel Orientation="Horizontal">
+                                <Button x:Name="MiniMute" Classes="overlay" Width="34" Height="34" FontSize="16" Content="{x:Static local:Icons.Volume}"
+                                        ToolTip.Tip="Mute (M)" Click="Mute_Click"/>
+                                <Border x:Name="MiniVolumeHost" Width="0" ClipToBounds="True">
+                                    <Border.Transitions>
+                                        <Transitions>
+                                            <DoubleTransition Property="Width" Duration="0:0:0.18" Easing="CubicEaseOut"/>
+                                        </Transitions>
+                                    </Border.Transitions>
+                                    <Slider x:Name="MiniVolumeSlider" Classes="player" Width="84" Minimum="0" Maximum="100" HorizontalAlignment="Left"
+                                            VerticalAlignment="Center" Margin="0,0,12,0" Focusable="False" ToolTip.Tip="Volume"/>
+                                </Border>
+                            </StackPanel>
                         </Border>
                         <Button x:Name="MiniPlayPause" Classes="overlay" Content="{x:Static local:Icons.Pause}" FontSize="26" Width="52" Height="52"
                                 CornerRadius="26" HorizontalAlignment="Center" VerticalAlignment="Center" Background="#80000000" Click="PlayPause_Click"/>
@@ -278,6 +341,7 @@
                                     <TextBlock x:Name="ChromeTitle" FontSize="22" FontWeight="SemiBold" Foreground="White" TextTrimming="CharacterEllipsis"/>
                                     <TextBlock x:Name="ChromeSubtitle" FontSize="14" Foreground="#E6FFFFFF" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
                                     <TextBlock x:Name="ChromeNext" FontSize="13" Foreground="#AAFFFFFF" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock x:Name="ChromeLeft" FontSize="13" Foreground="#E6FFFFFF" Margin="0,3,0,0"/>
                                 </StackPanel>
                             </DockPanel>
                         </Border>

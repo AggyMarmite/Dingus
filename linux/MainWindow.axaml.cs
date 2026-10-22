@@ -69,7 +69,7 @@ public partial class MainWindow : Window
         RestorePlacement();
 
         _guide = new GuideView();
-        _guide.CanPreview = () => _svc != null && !LoadingOverlayShown;
+        _guide.CanPreview = () => _svc != null && !LoadingOverlayShown && !SplashUp;
         _home = new HomeView { Guide = _guide };
         _films = new LibraryView(LibraryMode.Movies);
         _shows = new LibraryView(LibraryMode.Series);
@@ -156,11 +156,35 @@ public partial class MainWindow : Window
         VolumeSlider.PropertyChanged += (_, e) => { if (e.Property == RangeBase.ValueProperty) Volume_Changed((double)e.NewValue!); };
 
         VolumeSlider.Value = SettingsStore.Current.Volume;
+        // Mini player: the volume slider slides out while the pointer is over the mute button. It and the player's own
+        // slider are the same volume, kept in step both ways.
+        MiniVolumeSlider.Value = VolumeSlider.Value;
+        MiniVolumeSlider.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == RangeBase.ValueProperty && Math.Abs(VolumeSlider.Value - (double)e.NewValue!) > 0.5) VolumeSlider.Value = (double)e.NewValue!;
+        };
+        MiniVolume.PointerEntered += (_, _) => SlideMiniVolume(open: true);
+        MiniVolume.PointerExited += (_, _) => { if (!MiniVolumeSlider.IsPointerOver) SlideMiniVolume(open: false); };
         (SettingsStore.Current.StartOnGuide ? NavGuide : NavHome).IsChecked = true;
         OnPlaylistChanged();
 
         _startupLoading = SettingsStore.Current.Playlists.Count > 0;
         UpdateLoadingOverlay(null);
+
+        // The splash goes once your saved playlist is on Home (the fresh copy carries on downloading in the
+        // background) – or after a few seconds whatever happens.
+        SplashDrag.PointerPressed += TitleBar_PointerPressed;
+        DataService.Instance.CatalogChanged += () =>
+        {
+            UpdateLoadingOverlay(_busyStep);
+            var c = DataService.Instance.Catalog;
+            if (c.Channels.Count + c.Movies.Count + c.Series.Count > 0)
+                Dispatcher.UIThread.Post(() => HideSplash(), DispatcherPriority.Background);
+        };
+        var splashLimit = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        splashLimit.Tick += (_, _) => { splashLimit.Stop(); HideSplash(); };
+        splashLimit.Start();
+        UpdateWelcome();
     }
 
     async void OnOpened(object sender, EventArgs e)
@@ -445,8 +469,67 @@ public partial class MainWindow : Window
         Spin();
     }
 
-    void UpdateWelcome() =>
-        Welcome.IsVisible = SettingsStore.Current.Playlists.Count == 0 && _page != _settings;
+    /// <summary>No playlist yet: the splash stays up with "Add playlist" (Settings can still be opened over it).</summary>
+    void UpdateWelcome()
+    {
+        Welcome.IsVisible = false; // the splash does this job now
+        if (Splash == null) return;
+        bool none = SettingsStore.Current.Playlists.Count == 0;
+        if (none && _page != _settings) ShowSplash(withAdd: true);
+        else if (none || SplashAdd.IsVisible) HideSplash(now: true); // Settings opened, or a playlist was just added
+    }
+
+    // ------------------------------------------------------------------ splash
+
+    readonly DateTime _splashShownAt = DateTime.UtcNow;
+    bool _splashGone;
+    DispatcherTimer _splashOff;
+    /// <summary>The splash is up – the video (drawn on its own surface, above everything) has to stay hidden meanwhile.</summary>
+    bool SplashUp => Splash != null && Splash.IsVisible && !_splashGone;
+
+    void ShowSplash(bool withAdd)
+    {
+        SplashAdd.IsVisible = withAdd;
+        if (SplashUp) return;
+        _splashOff?.Stop();
+        _splashGone = false;
+        Splash.Opacity = 1;
+        SplashContent.RenderTransform = Avalonia.Media.Transformation.TransformOperations.Parse("scale(1)");
+        Splash.IsVisible = true;
+        HideVideo();
+    }
+
+    /// <summary>
+    /// Fades the splash away (after it's been up for at least a moment, so it doesn't just flicker) – the logo grows
+    /// a touch as it goes.
+    /// </summary>
+    void HideSplash(bool now = false)
+    {
+        if (!SplashUp) return;
+        if (SettingsStore.Current.Playlists.Count == 0 && _page != _settings) return; // waiting for a playlist
+        var wait = TimeSpan.FromMilliseconds(800) - (DateTime.UtcNow - _splashShownAt);
+        if (!now && wait > TimeSpan.Zero)
+        {
+            var t = new DispatcherTimer { Interval = wait };
+            t.Tick += (_, _) => { t.Stop(); HideSplash(now: true); };
+            t.Start();
+            return;
+        }
+        _splashGone = true;
+        SplashAdd.IsVisible = false;
+        Splash.Opacity = 0;
+        SplashContent.RenderTransform = Avalonia.Media.Transformation.TransformOperations.Parse("scale(1.05)");
+        _splashOff = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(340) };
+        _splashOff.Tick += (_, _) =>
+        {
+            _splashOff.Stop();
+            if (!_splashGone) return;
+            Splash.IsVisible = false;
+            // Now the last channel can start in Live TV's mini player (it waited for the splash).
+            _guide.TryAutoPreview();
+        };
+        _splashOff.Start();
+    }
 
     public void ClearSearch()
     {
@@ -596,7 +679,13 @@ public partial class MainWindow : Window
     {
         var ds = DataService.Instance;
         bool playlistWork = ds.IsBusy && !ds.BusyIsGuide && ds.IsFirstLoad;
-        bool show = !_loadingDismissed && (playlistWork || _startupLoading) && SettingsStore.Current.Playlists.Count > 0 && _page != _settings;
+        bool hasSavedNow = ds.Catalog.Channels.Count > 0 || ds.Catalog.Movies.Count > 0 || ds.Catalog.Series.Count > 0;
+        // With a saved playlist Dingus opens straight on it and refreshes in the background (the pill in the title bar
+        // shows progress); the full loading screen is only for when there's nothing to show yet.
+        bool show = !_loadingDismissed && (playlistWork || _startupLoading) && SettingsStore.Current.Playlists.Count > 0 &&
+                    _page != _settings && !hasSavedNow;
+        // Nothing saved: the loading screen takes over from the splash.
+        if (show && playlistWork && Splash != null) Dispatcher.UIThread.Post(() => HideSplash(), DispatcherPriority.Background);
         bool was = LoadingOverlayShown;
         LoadingOverlay.IsVisible = show;
         if (show)
@@ -831,7 +920,7 @@ public partial class MainWindow : Window
     void PositionPreview()
     {
         var slot = _page == _guide ? _guide.PreviewSlotElement : null;
-        if (slot == null || !slot.IsEffectivelyVisible || Welcome.IsVisible || LoadingOverlayShown) { HideVideo(); return; }
+        if (slot == null || !slot.IsEffectivelyVisible || Welcome.IsVisible || LoadingOverlayShown || SplashUp) { HideVideo(); return; }
         if (slot.Bounds.Width < 10) return;
         var p = slot.TranslatePoint(new Point(0, 0), Root);
         var hp = PageHost.TranslatePoint(new Point(0, 0), Root);
@@ -1041,6 +1130,8 @@ public partial class MainWindow : Window
             ChromeSubtitle.Text = _vod?.Subtitle ?? "";
             ChromeNext.Text = _vod?.NextLabel != null ? "Next   " + _vod.NextLabel : "";
             ChromeLogoBox.IsVisible = false;
+            TidyChromeLines();
+            UpdateMiniInfo();
         }
     }
 
@@ -1053,15 +1144,21 @@ public partial class MainWindow : Window
         {
             ChromeSubtitle.Text = "No guide information";
             ChromeNext.Text = "";
+            ChromeLeft.Text = "";
             LiveProgress.Value = 0;
             LiveTimes.Text = "";
+            TidyChromeLines();
+            UpdateMiniInfo();
             return;
         }
         ChromeSubtitle.Text = p.Title;
         var next = row != null ? DataService.Instance.Epg.StartingFrom(_guide.EpgIdOf(row), p.End) : _guide.NextOn(ch);
         ChromeNext.Text = next != null ? $"Next   {next.Start:HH:mm}   {next.Title}" : "";
         LiveProgress.Value = (at - p.Start).TotalSeconds / Math.Max(1, (p.End - p.Start).TotalSeconds);
-        LiveTimes.Text = $"{p.Start:HH:mm} – {p.End:HH:mm}";
+        LiveTimes.Text = $"{p.Start:HH:mm} – {p.End:HH:mm}  ·  {LeftText(p.End - at)}";
+        ChromeLeft.Text = ""; // live: the time left is next to the programme's times
+        TidyChromeLines();
+        UpdateMiniInfo();
     }
 
     void ShowChrome()
@@ -1071,6 +1168,7 @@ public partial class MainWindow : Window
         if (_mini)
         {
             MiniChrome.IsVisible = true;
+            UpdateMiniInfo();
             _hideTimer.Stop();
             _hideTimer.Start();
             return;
@@ -1087,7 +1185,7 @@ public partial class MainWindow : Window
     {
         _hideTimer.Stop();
         if (!_playerMode || _menuOpen || _seeking || _liveSeeking) return;
-        if (_mini) { if (!Overlay.IsPointerOver) MiniChrome.IsVisible = false; return; }
+        if (_mini) { if (!Overlay.IsPointerOver) { MiniChrome.IsVisible = false; SlideMiniVolume(open: false); } return; }
         if (UpNextCard.IsVisible) return;
         Motion.FadeOut(PlayerChrome, ms: 260);
         Overlay.Cursor = new Cursor(StandardCursorType.None);
@@ -1101,9 +1199,10 @@ public partial class MainWindow : Window
         var glyph = mp.IsPlaying ? Icons.Pause : Icons.Play;
         PreviewPlayPause.Content = glyph;
         MiniPlayPause.Content = glyph;
+        if (_mini && MiniChrome.IsVisible) UpdateMiniInfo();
         if (!PlayerChrome.IsVisible) return;
         PlayPauseButton.Content = glyph;
-        MuteButton.Content = _muted || VolumeSlider.Value <= 0 ? Icons.VolumeOff : Icons.Volume;
+        UpdateVolumeGlyphs();
         if (_nowLive)
         {
             UpdateLiveInfo(_nowChannel);
@@ -1119,6 +1218,49 @@ public partial class MainWindow : Window
         }
         PosText.Text = Fmt(time);
         LenText.Text = len > 0 ? Fmt(len) : "--:--";
+        ChromeLeft.Text = len > 0 ? LeftText(TimeSpan.FromMilliseconds(Math.Max(0, len - time))) : "";
+        TidyChromeLines();
+    }
+
+    /// <summary>Empty lines in the player's top bar take no space (a film has no "Next", a channel no "time left" line).</summary>
+    void TidyChromeLines()
+    {
+        foreach (var t in new[] { ChromeSubtitle, ChromeNext, ChromeLeft })
+            t.IsVisible = !string.IsNullOrEmpty(t.Text);
+    }
+
+    /// <summary>"23 min left", "1 h 5 min left", "Ending" – for live programmes, films and episodes.</summary>
+    static string LeftText(TimeSpan left)
+    {
+        if (left.TotalSeconds < 60) return "Ending";
+        int mins = (int)Math.Ceiling(left.TotalMinutes);
+        return mins >= 60 ? $"{mins / 60} h {mins % 60} min left" : $"{mins} min left";
+    }
+
+    /// <summary>The mini player's info: the channel (or title), what's on and how long is left, with a thin progress line.</summary>
+    void UpdateMiniInfo()
+    {
+        if (!_mini || _svc == null) return;
+        if (_nowLive && _nowChannel != null)
+        {
+            var at = DateTime.Now - _svc.BehindLive;
+            var row = _guide.RowFor(_nowChannel.Id);
+            MiniTitle.Text = row?.DisplayName ?? _nowChannel.Name;
+            var p = row != null ? DataService.Instance.Epg.At(_guide.EpgIdOf(row), at) : _guide.NowOn(_nowChannel);
+            if (p == null) { MiniInfo.Text = "No guide information"; MiniProgress.IsVisible = false; return; }
+            MiniInfo.Text = $"{p.Title}  ·  {LeftText(p.End - at)}";
+            MiniProgress.Value = (at - p.Start).TotalSeconds / Math.Max(1, (p.End - p.Start).TotalSeconds);
+            MiniProgress.IsVisible = true;
+            return;
+        }
+        var mp = _svc.Player;
+        long len = mp.Length, time = mp.Time;
+        MiniTitle.Text = _vod?.Title ?? "";
+        var sub = _vod?.Subtitle;
+        var left = len > 0 ? LeftText(TimeSpan.FromMilliseconds(Math.Max(0, len - time))) : null;
+        MiniInfo.Text = string.Join("  ·  ", new[] { sub, left }.Where(x => !string.IsNullOrEmpty(x)));
+        MiniProgress.IsVisible = len > 0;
+        MiniProgress.Value = len > 0 ? Math.Clamp((double)time / len, 0, 1) : 0;
     }
 
     static string Fmt(long ms)
@@ -1559,6 +1701,7 @@ public partial class MainWindow : Window
             if (!_menuOpen && HandleKey(key, e.KeyModifiers)) e.Handled = true;
             return;
         }
+        if (SplashUp) return; // no shortcuts into the pages hidden behind the splash
         bool typing = Typing;
         if (key == Key.F && e.KeyModifiers == Os.Command) { FocusSearch(); e.Handled = true; return; }
         if (IsSheetKey(key, e) && (!typing || key == Key.F1)) { ToggleShortcutSheet(); e.Handled = true; return; }
@@ -1722,6 +1865,7 @@ public partial class MainWindow : Window
     {
         _muted = !_muted;
         _svc?.SetMute(_muted);
+        UpdateVolumeGlyphs();
         UpdatePlayerUi();
     }
 
@@ -1793,8 +1937,19 @@ public partial class MainWindow : Window
         SettingsStore.Current.Volume = v;
         if (v > 0 && _muted) { _muted = false; _svc?.SetMute(false); }
         _svc?.SetVolume(v);
-        if (MuteButton != null) MuteButton.Content = _muted || v <= 0 ? Icons.VolumeOff : Icons.Volume;
+        if (MiniVolumeSlider != null && Math.Abs(MiniVolumeSlider.Value - v) > 0.5) MiniVolumeSlider.Value = v;
+        UpdateVolumeGlyphs();
     }
+
+    /// <summary>The speaker icon on the player's and the mini player's mute buttons (crossed out when muted or at 0).</summary>
+    void UpdateVolumeGlyphs()
+    {
+        var g = _muted || VolumeSlider.Value <= 0 ? Icons.VolumeOff : Icons.Volume;
+        if (MuteButton != null) MuteButton.Content = g;
+        if (MiniMute != null) MiniMute.Content = g;
+    }
+
+    void SlideMiniVolume(bool open) => MiniVolumeHost.Width = open ? 96 : 0;
 
     void Audio_Click(object sender, RoutedEventArgs e) =>
         ShowTrackMenu(AudioButton, _svc?.AudioTracks(), id => _svc.SetAudioTrack(id), "No other audio tracks");

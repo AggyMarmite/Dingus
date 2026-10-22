@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Dingus.Services;
 using Dingus.Views;
 
@@ -69,11 +70,33 @@ public static class SelfTest
                 main.Width = scr.WorkingArea.Width / scr.Scaling;
                 main.Height = scr.WorkingArea.Height / scr.Scaling;
             }
+            if (main.SelfTestSplashShowing) Snap(main.SelfTestRoot, "00-splash");
             for (int i = 0; i < 60 && (DataService.Instance.IsBusy || DataService.Instance.Catalog.Channels.Count == 0); i++) await Task.Delay(500);
+            for (int i = 0; i < 20 && main.SelfTestSplashShowing; i++) await Task.Delay(250);
+            if (main.SelfTestSplashShowing) Error(new Exception("The splash screen was still up after the playlist loaded."));
+            main.SelfTestSplash(true);
+            await Idle(500);
+            Snap(main.SelfTestRoot, "00-splash-add-playlist");
+            main.SelfTestSplash(false);
+            await Idle(400);
             Note($"channels: {DataService.Instance.Catalog.Channels.Count}, guide-matched: {DataService.Instance.Epg.MatchedChannels}");
             await Idle(1500);
 
             await Page(main, main.NavHome, "01-home");
+            // Eased wheel scrolling: it glides to where it's asked to.
+            var homeScroll = main.SelfTestRoot.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault(SmoothScroll.GetEnabled);
+            if (homeScroll == null) Error(new Exception("Home has no smooth-scrolling ScrollViewer."));
+            else if (homeScroll.Extent.Height - homeScroll.Viewport.Height > 300)
+            {
+                SmoothScroll.ScrollBy(homeScroll, 300);
+                await Task.Delay(50);
+                double mid = homeScroll.Offset.Y;
+                await Idle(900);
+                Note($"smooth scroll: {mid:0} px after 50 ms, {homeScroll.Offset.Y:0} px at the end");
+                if (Math.Abs(homeScroll.Offset.Y - 300) > 2) Error(new Exception($"Smooth scrolling ended at {homeScroll.Offset.Y:0} px, not 300."));
+                homeScroll.Offset = homeScroll.Offset.WithY(0);
+                await Idle(300);
+            }
             await Page(main, main.NavGuide, "02-guide");
             await GuideMode(main, "now", "03-guide-on-now");
             await GuideMode(main, "tonight", "04-guide-tonight");
@@ -136,6 +159,18 @@ public static class SelfTest
                 if (main.SelfTestOverlay is { } ov) Snap(ov, "18-player-controls");
                 File.WriteAllText(Path.Combine(Dir, "player-ready.txt"), "ok"); // the build captures the screen now
                 await Task.Delay(2500);
+                // Picture-in-picture: info at the top, mute + volume bottom-left (the same volume as the player's).
+                main.SelfTestMini(true);
+                await Idle(800);
+                main.SelfTestMiniControls();
+                main.SelfTestSetVolume(40);
+                await Idle(600);
+                if (main.SelfTestOverlay is { } mov) Snap(mov, "19-mini-player");
+                var vols = main.SelfTestVolumes;
+                Note($"mini volume: player={vols.Player} mini={vols.Mini}");
+                if (Math.Abs(vols.Player - vols.Mini) > 0.5) Error(new Exception("The mini player's volume doesn't match the player's."));
+                main.SelfTestMini(false);
+                await Idle(800);
                 main.SelfTestExitPlayer();
                 await Idle(800);
             }

@@ -147,7 +147,7 @@
         </ItemsPanelTemplate>
     </UserControl.Resources>
 
-    <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" svc:SmoothScroll.Enabled="True">
         <StackPanel>
             <!-- ================= Featured: a big picture with the title over it ================= -->
             <Panel x:Name="Hero" Height="560" ClipToBounds="True" PointerEntered="Hero_PointerEntered" PointerExited="Hero_PointerExited">

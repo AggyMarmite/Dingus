@@ -454,6 +454,16 @@ public partial class MainWindow
     internal void SelfTestSearchFilter(string f) => _search.SelfTestFilter(f);
     internal PlayerService SelfTestPlayer => _svc;
     internal Control SelfTestOverlay => Overlay;
+    internal bool SelfTestSplashShowing => SplashUp;
+    internal void SelfTestMini(bool on) { if (on) EnterMini(); else ExitMini(true); }
+    internal void SelfTestMiniControls() { MiniChrome.IsVisible = true; _hideTimer.Stop(); SlideMiniVolume(open: true); UpdateMiniInfo(); }
+    internal (double Player, double Mini) SelfTestVolumes => (VolumeSlider.Value, MiniVolumeSlider.Value);
+    internal void SelfTestSetVolume(double v) => VolumeSlider.Value = v;
+    internal void SelfTestSplash(bool show)
+    {
+        if (show) { ShowSplash(withAdd: true); return; }
+        _splashGone = true; _splashOff?.Stop(); Splash.IsVisible = false; SplashAdd.IsVisible = false;
+    }
     internal void SelfTestPlay(string url) => PlayVod(new VodItem { Kind = "movie", Title = "Test video", Subtitle = "Dingus self-test", Url = url }, resume: false);
     internal void SelfTestExitPlayer() => ExitPlayer();
 }
