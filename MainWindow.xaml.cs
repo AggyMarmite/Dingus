@@ -148,7 +148,11 @@ public partial class MainWindow : Window
         Activated += (_, _) => { if (_osFullscreen || _mini) Topmost = true; };
         // Switching to another app (from any Dingus window – the player controls are a separate little window
         // over the video): full screen stops sitting on top. Picture-in-picture stays on top, as it should.
-        Application.Current.Deactivated += (_, _) => { if (_osFullscreen && !_mini) Topmost = false; };
+        Application.Current.Deactivated += (_, _) =>
+        {
+            if (_osFullscreen && !_mini) Topmost = false;
+            if (!_osFullscreen && !_mini) EnsureNotOnTop(); // switching to another app: never stay in front of it
+        };
         Application.Current.Activated += (_, _) => { if (_osFullscreen || _mini) Topmost = true; };
         Deactivated += (_, _) => Dispatcher.InvokeAsync(() =>
         {
@@ -1111,7 +1115,14 @@ public partial class MainWindow : Window
             NativeWindow.ApplyDarkTitleBar(this);
         }
         _osFullscreen = on;
-        if (!on) DropTopmostSoon();
+        if (!on)
+        {
+            DropTopmostSoon();
+            // …and again once the video and its controls have settled at the new size.
+            var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
+            t.Tick += (_, _) => { t.Stop(); EnsureNotOnTop(); };
+            t.Start();
+        }
         NativeWindow.RoundCorners(this, !on);
         UpdateWindowFrame();
         FullscreenButton.Content = "\uE73F"; // "exit full screen" – the player is always full screen
@@ -1123,10 +1134,29 @@ public partial class MainWindow : Window
     /// Safety net: only full screen (while Dingus is in front) and picture-in-picture sit above other apps. Once the
     /// window has settled after a change, anything else that left it on top is undone.
     /// </summary>
-    void DropTopmostSoon() => Dispatcher.InvokeAsync(() =>
+    void DropTopmostSoon() => Dispatcher.InvokeAsync(EnsureNotOnTop, DispatcherPriority.ApplicationIdle);
+
+    /// <summary>
+    /// Unless it's full screen or picture-in-picture, no Dingus window may sit above other apps: the main window and
+    /// everything it owns (the player controls over the video, dialogs) – checked against what Windows itself has,
+    /// not just WPF's Topmost. Windows meant to be on top (the reminder pop-up) are left alone.
+    /// </summary>
+    void EnsureNotOnTop()
     {
-        if (!_osFullscreen && !_mini && Topmost) Topmost = false;
-    }, DispatcherPriority.ApplicationIdle);
+        if (_osFullscreen || _mini) return;
+        if (Topmost) Topmost = false;
+        int fixedCount = 0;
+        if (NativeWindow.ClearTopmost(this)) fixedCount++;
+        foreach (Window w in OwnedWindows)
+            if (!w.Topmost && NativeWindow.ClearTopmost(w)) fixedCount++;
+        foreach (var w in Application.Current.Windows.OfType<Window>())
+            if (w != this && w.Owner == null && !w.Topmost && w.IsVisible && NativeWindow.ClearTopmost(w)) fixedCount++;
+        if (fixedCount > 0) Log.Info($"Took {fixedCount} window(s) off 'always on top'");
+        LastTopmostFixes += fixedCount;
+    }
+
+    /// <summary>For the self-test: how many windows had to be taken off "always on top".</summary>
+    internal int LastTopmostFixes;
 
     /// <summary>The monitor the window is on, in WPF units.</summary>
     Rect MonitorBoundsDip()
@@ -1192,6 +1222,7 @@ public partial class MainWindow : Window
         _mini = false;
         MiniChrome.Visibility = Visibility.Collapsed;
         Topmost = false;
+        DropTopmostSoon();
         var m = _miniSaved;
         WindowStyle = m.Style == WindowStyle.None ? WindowStyle.SingleBorderWindow : m.Style;
         ResizeMode = m.Resize == ResizeMode.NoResize ? ResizeMode.CanResize : m.Resize;

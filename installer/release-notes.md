@@ -4,7 +4,8 @@
   left, with a thin progress line (for films and episodes: the time left).
 * **Time left in the player** – the full player now shows how long is left of the programme, film or episode.
 * **No more "always on top" after full screen** – leaving full screen could leave Dingus stuck above every other app.
-  Now only full screen (while Dingus is in front) and picture-in-picture stay on top.
+  Now only full screen (while Dingus is in front) and picture-in-picture stay on top – and Dingus double-checks with
+  Windows itself, including the player's controls over the video, whenever you leave full screen or switch apps.
 
 ## What's new in Dingus 0.9.5
 

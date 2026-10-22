@@ -170,8 +170,14 @@ public static class SelfTest
         main.SelfTestExitPlayer();
         await Idle(1500);
         Note($"video stopped: {Mem()} · on top: {main.Topmost}");
-        // Back in the app after full screen and picture-in-picture: other apps must be able to go in front again.
-        if (main.Topmost) Error(new Exception("Dingus is still always-on-top after leaving the player"));
+        // Back in the app after full screen and picture-in-picture: other apps must be able to go in front again –
+        // checked against what Windows itself has, for the window and the player-controls window over the video.
+        await Task.Delay(1000);
+        var onTop = new[] { (Window)main }.Concat(main.OwnedWindows.Cast<Window>())
+            .Where(w => !w.Topmost && NativeWindow.IsTopmost(w)).Select(w => w.GetType().Name).ToList();
+        Note($"after full screen: {main.LastTopmostFixes} window(s) had to be taken off 'always on top'; still on top: {(onTop.Count == 0 ? "none" : string.Join(", ", onTop))}");
+        if (main.Topmost || onTop.Count > 0)
+            Error(new Exception("Dingus is still always-on-top after leaving the player: " + string.Join(", ", onTop.DefaultIfEmpty("main window"))));
     }
 
     /// <summary>

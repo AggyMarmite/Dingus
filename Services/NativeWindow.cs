@@ -6,6 +6,33 @@ namespace Dingus.Services;
 
 public static class NativeWindow
 {
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int index);
+    [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr hWnd, IntPtr after, int x, int y, int cx, int cy, uint flags);
+    const int GWL_EXSTYLE = -20;
+    const long WS_EX_TOPMOST = 0x8;
+    static readonly IntPtr HWND_NOTOPMOST = new(-2);
+    const uint SWP_NOSIZE = 0x1, SWP_NOMOVE = 0x2, SWP_NOACTIVATE = 0x10;
+
+    /// <summary>True when Windows has this window "always on top" (whatever WPF's own Topmost says).</summary>
+    public static bool IsTopmost(Window w)
+    {
+        var hwnd = new WindowInteropHelper(w).Handle;
+        return hwnd != IntPtr.Zero && (GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64() & WS_EX_TOPMOST) != 0;
+    }
+
+    /// <summary>
+    /// Makes sure Windows no longer keeps this window above other apps. Setting WPF's Topmost to false isn't always
+    /// enough: the player's controls are a separate little window over the video, and Windows can leave it (or the
+    /// window itself) "always on top" after full screen. Returns true if it had to fix something.
+    /// </summary>
+    public static bool ClearTopmost(Window w)
+    {
+        if (!IsTopmost(w)) return false;
+        var hwnd = new WindowInteropHelper(w).Handle;
+        SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        return true;
+    }
+
     [DllImport("dwmapi.dll")]
     static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
     [DllImport("user32.dll")] static extern bool ReleaseCapture();
