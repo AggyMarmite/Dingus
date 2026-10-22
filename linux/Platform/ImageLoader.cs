@@ -63,7 +63,7 @@ public class ImageLoader : AvaloniaObject
         lock (FailLock) if (Failed.Contains(url)) return;
         try
         {
-            var bmp = await LoadAsync(url, w);
+            var bmp = await Task.Run(() => LoadAsync(url, w)); // all off the window's thread
             if (bmp == null) return;
             Cache.Add(key, bmp);
             if (GetUrl(img) == url) Show(img, url, bmp);
@@ -81,7 +81,7 @@ public class ImageLoader : AvaloniaObject
         lock (FailLock) if (Failed.Contains(url)) return null;
         try
         {
-            var bmp = await LoadAsync(url, decodeWidth);
+            var bmp = await Task.Run(() => LoadAsync(url, decodeWidth));
             if (bmp != null) Cache.Add(key, bmp);
             return bmp;
         }

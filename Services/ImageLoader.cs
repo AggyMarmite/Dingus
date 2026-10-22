@@ -72,7 +72,8 @@ public static class ImageLoader
 
         try
         {
-            var bmp = await LoadAsync(url, w);
+            // Downloading, saving and decoding all happen off the window's thread (a page of posters is dozens at once).
+            var bmp = await Task.Run(() => LoadAsync(url, w));
             if (bmp == null) return;
             Cache.Add(key, bmp);
             if (GetUrl(img) == url) Show(img, url, bmp);
@@ -90,7 +91,7 @@ public static class ImageLoader
         lock (FailLock) if (Failed.Contains(url)) return null;
         try
         {
-            var bmp = await LoadAsync(url, decodeWidth);
+            var bmp = await Task.Run(() => LoadAsync(url, decodeWidth));
             if (bmp != null) Cache.Add(key, bmp);
             return bmp;
         }
