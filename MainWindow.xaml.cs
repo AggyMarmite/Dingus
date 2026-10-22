@@ -501,9 +501,17 @@ public partial class MainWindow : Window
         _page?.OnHidden();
         _page = page;
         PageHost.Content = page;
-        // A gentle fade as the new page appears (no slide – keeps big pages cheap to draw).
-        PageHost.BeginAnimation(OpacityProperty, new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(150))
-            { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+        // A gentle fade as the new page appears (no slide – keeps big pages cheap to draw). It starts once the page
+        // has built and laid itself out, so the whole fade is seen instead of being swallowed by that work.
+        PageHost.BeginAnimation(OpacityProperty, null);
+        PageHost.Opacity = 0;
+        var fadeFor = page;
+        Dispatcher.InvokeAsync(() =>
+        {
+            if (_page != fadeFor) return;
+            PageHost.BeginAnimation(OpacityProperty, new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(170))
+                { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+        }, DispatcherPriority.Loaded);
         PageTitle.Text = page.Title;
         // One search bar for the whole app: whatever page you're on, typing searches everything.
         SearchHost.Visibility = Visibility.Visible;

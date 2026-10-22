@@ -135,7 +135,7 @@
                 </Rectangle.Fill>
             </Rectangle>
 
-            <ScrollViewer x:Name="DetailScroll" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer x:Name="DetailScroll" VerticalScrollBarVisibility="Auto" svc:SmoothScroll.Enabled="True">
                 <StackPanel Margin="40,20,40,40">
                     <Button Style="{StaticResource GhostButton}" HorizontalAlignment="Left" Click="Back_Click" Margin="-12,0,0,0">
                         <StackPanel Orientation="Horizontal">

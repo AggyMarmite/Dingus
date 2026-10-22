@@ -26,7 +26,7 @@
         </DataTemplate>
     </UserControl.Resources>
     <Grid>
-        <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" svc:SmoothScroll.Enabled="True">
             <StackPanel Margin="28,10,28,40">
                 <WrapPanel x:Name="Filters" Margin="8,14,0,4">
                     <RadioButton x:Name="FAll" Style="{StaticResource Chip}" GroupName="SearchFilter" Tag="all" IsChecked="True" Checked="Filter_Checked" Margin="0,0,8,8"/>

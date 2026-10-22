@@ -173,7 +173,7 @@
         </ItemsPanelTemplate>
     </UserControl.Resources>
 
-    <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto">
+    <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" svc:SmoothScroll.Enabled="True">
         <StackPanel>
             <!-- ================= Featured: a big picture with the title over it, a few slides that change by themselves ================= -->
             <Grid x:Name="Hero" Height="560" ClipToBounds="True" MouseEnter="Hero_MouseEnter" MouseLeave="Hero_MouseLeave">

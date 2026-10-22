@@ -1,7 +1,8 @@
 <UserControl x:Class="Dingus.Views.SettingsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svc="clr-namespace:Dingus.Services">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" svc:SmoothScroll.Enabled="True">
         <StackPanel Margin="36,8,36,48" MaxWidth="900">
 
             <!-- Playlists -->

@@ -1,6 +1,7 @@
 <UserControl x:Class="Dingus.Views.RecordingsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svc="clr-namespace:Dingus.Services">
     <UserControl.Resources>
         <!-- One line in "Recording now" / "Coming up" / "Recorded" -->
         <DataTemplate x:Key="ItemRow">
@@ -29,7 +30,7 @@
         </DataTemplate>
     </UserControl.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" svc:SmoothScroll.Enabled="True">
         <StackPanel Margin="36,16,36,48" MaxWidth="1000">
 
             <DockPanel Margin="0,0,0,6">

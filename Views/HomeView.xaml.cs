@@ -885,6 +885,6 @@ public partial class HomeView : UserControl, IPage
         if (sender is not ScrollViewer row) return;
         e.Handled = true;
         if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) row.ScrollToHorizontalOffset(row.HorizontalOffset - e.Delta);
-        else Scroller.ScrollToVerticalOffset(Scroller.VerticalOffset - e.Delta);
+        else SmoothScroll.ScrollBy(Scroller, -e.Delta * 1.1);
     }
 }
