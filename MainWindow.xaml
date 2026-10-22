@@ -176,6 +176,36 @@
             </Grid>
         </Grid>
 
+        <!-- ================= Splash: shown as Dingus opens (and, with no playlist yet, with "Add playlist") ================= -->
+        <Grid x:Name="Splash" Background="{StaticResource BgBrush}">
+            <!-- window buttons (the top strip still drags the window) -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                <Button Style="{StaticResource CaptionButton}" Content="&#xE921;" ToolTip="Minimise" Click="Minimise_Click"/>
+                <Button Style="{StaticResource CaptionButton}" Content="&#xE922;" ToolTip="Maximise" Click="Maximise_Click"/>
+                <Button Style="{StaticResource CaptionCloseButton}" Content="&#xE8BB;" ToolTip="Close" Click="Close_Click"/>
+            </StackPanel>
+            <StackPanel x:Name="SplashContent" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,40">
+                <StackPanel.RenderTransform><ScaleTransform x:Name="SplashScale" CenterX="0" CenterY="0"/></StackPanel.RenderTransform>
+                <Image Source="{StaticResource DingusLogo}" Width="96" Height="96" HorizontalAlignment="Center"/>
+                <TextBlock Text="Dingus" FontSize="42" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,22,0,0"/>
+                <TextBlock x:Name="SplashSlogan" Text="All your TV, in one place" FontSize="16" Foreground="{StaticResource MutedBrush}"
+                           HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                <StackPanel x:Name="SplashAdd" Visibility="Collapsed" Margin="0,34,0,0">
+                    <Button Style="{StaticResource PrimaryButton}" Content="Add playlist" HorizontalAlignment="Center" Padding="28,12"
+                            Click="AddPlaylist_Click" WindowChrome.IsHitTestVisibleInChrome="True"/>
+                    <TextBlock Text="Xtream Codes logins and M3U links are both supported." FontSize="12"
+                               Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" Margin="0,14,0,0"/>
+                    <Button Style="{StaticResource GhostButton}" HorizontalAlignment="Center" Margin="0,18,0,0" Click="LoadingSettings_Click"
+                            ToolTip="E.g. to restore a backup" WindowChrome.IsHitTestVisibleInChrome="True">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE713;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="Open Settings"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+
         <!-- Toast -->
         <Border x:Name="Toast" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,28" Padding="18,11"
                 CornerRadius="10" Background="{StaticResource Surface3Brush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1"

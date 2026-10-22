@@ -193,6 +193,20 @@ public partial class MainWindow : Window
 
         _startupLoading = SettingsStore.Current.Playlists.Count > 0;
         UpdateLoadingOverlay(null);
+
+        // The splash goes once your saved playlist is on Home (the fresh copy carries on downloading in the
+        // background) – or after a few seconds whatever happens.
+        DataService.Instance.CatalogChanged += () =>
+        {
+            UpdateLoadingOverlay(_busyStep);
+            var c = DataService.Instance.Catalog;
+            if (c.Channels.Count + c.Movies.Count + c.Series.Count > 0)
+                Dispatcher.InvokeAsync(() => HideSplash(), DispatcherPriority.Background);
+        };
+        var splashLimit = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        splashLimit.Tick += (_, _) => { splashLimit.Stop(); HideSplash(); };
+        splashLimit.Start();
+        UpdateWelcome();
     }
 
     async void OnLoaded(object sender, RoutedEventArgs e)
@@ -529,8 +543,62 @@ public partial class MainWindow : Window
         Spin(BusyRotate, busy && !overlay);
     }
 
-    void UpdateWelcome() =>
-        Welcome.Visibility = SettingsStore.Current.Playlists.Count == 0 && _page != _settings ? Visibility.Visible : Visibility.Collapsed;
+    /// <summary>No playlist yet: the splash stays up with "Add playlist" (Settings can still be opened over it).</summary>
+    void UpdateWelcome()
+    {
+        Welcome.Visibility = Visibility.Collapsed; // the splash does this job now
+        if (Splash == null) return;
+        bool none = SettingsStore.Current.Playlists.Count == 0;
+        if (none && _page != _settings) ShowSplash(withAdd: true);
+        else if (none || SplashAdd.Visibility == Visibility.Visible) HideSplash(now: true); // Settings opened, or a playlist was just added
+    }
+
+    // ------------------------------------------------------------------ splash
+
+    readonly DateTime _splashShownAt = DateTime.UtcNow;
+    bool _splashGone;
+
+    void ShowSplash(bool withAdd)
+    {
+        SplashAdd.Visibility = withAdd ? Visibility.Visible : Visibility.Collapsed;
+        if (Splash.Visibility == Visibility.Visible && !_splashGone) return;
+        _splashGone = false;
+        Splash.BeginAnimation(OpacityProperty, null);
+        Splash.Opacity = 1;
+        SplashScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, null);
+        SplashScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, null);
+        SplashScale.ScaleX = SplashScale.ScaleY = 1;
+        Splash.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>
+    /// Fades the splash away (after it's been up for at least a moment, so it doesn't just flicker) – the logo grows
+    /// a touch as it goes.
+    /// </summary>
+    void HideSplash(bool now = false)
+    {
+        if (_splashGone || Splash.Visibility != Visibility.Visible) return;
+        if (SettingsStore.Current.Playlists.Count == 0 && _page != _settings) return; // waiting for a playlist
+        var wait = TimeSpan.FromMilliseconds(800) - (DateTime.UtcNow - _splashShownAt);
+        if (!now && wait > TimeSpan.Zero)
+        {
+            var t = new DispatcherTimer { Interval = wait };
+            t.Tick += (_, _) => { t.Stop(); HideSplash(now: true); };
+            t.Start();
+            return;
+        }
+        _splashGone = true;
+        SplashAdd.Visibility = Visibility.Collapsed;
+        var ms = TimeSpan.FromMilliseconds(320);
+        var fade = new DoubleAnimation(1, 0, ms) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
+        fade.Completed += (_, _) => { if (_splashGone) Splash.Visibility = Visibility.Collapsed; };
+        Splash.BeginAnimation(OpacityProperty, fade);
+        var grow = new DoubleAnimation(1, 1.05, ms) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
+        SplashScale.CenterX = SplashContent.ActualWidth / 2;
+        SplashScale.CenterY = SplashContent.ActualHeight / 2;
+        SplashScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, grow);
+        SplashScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, grow);
+    }
 
     public void ClearSearch()
     {
@@ -688,8 +756,13 @@ public partial class MainWindow : Window
     {
         var ds = DataService.Instance;
         bool playlistWork = ds.IsBusy && !ds.BusyIsGuide && ds.IsFirstLoad;
+        bool hasSavedNow = ds.Catalog.Channels.Count > 0 || ds.Catalog.Movies.Count > 0 || ds.Catalog.Series.Count > 0;
+        // With a saved playlist Dingus opens straight on it and refreshes in the background (the pill in the title bar
+        // shows progress); the full loading screen is only for when there's nothing to show yet.
         bool show = !_loadingDismissed && (playlistWork || _startupLoading) && SettingsStore.Current.Playlists.Count > 0 &&
-                    _page != _settings;
+                    _page != _settings && !hasSavedNow;
+        // Nothing saved: the loading screen takes over from the splash.
+        if (show && playlistWork && Splash != null) Dispatcher.InvokeAsync(() => HideSplash(), DispatcherPriority.Background);
         bool was = LoadingOverlayShown;
 
         LoadingOverlay.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
