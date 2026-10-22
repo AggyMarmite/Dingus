@@ -242,6 +242,9 @@ public sealed class DataService
             {
                 unchanged = true;
                 Catalog.Account = data.Account ?? Catalog.Account;
+                // Saved by an older Dingus: save the quicker copy now (in the background).
+                if (!File.Exists(Path.ChangeExtension(file, ".bin")))
+                    _ = Task.Run(() => { try { WriteCatalog(file, data); } catch (Exception ex) { Log.Error(ex); } });
                 AccountChanged?.Invoke();
                 Message?.Invoke($"Playlist up to date · {Catalog.Channels.Count:N0} channels · {Catalog.Movies.Count:N0} films · {Catalog.Series.Count:N0} shows");
             }
@@ -563,6 +566,13 @@ public sealed class DataService
     {
         try
         {
+            var bin = Path.ChangeExtension(path, ".bin");
+            if (File.Exists(bin))
+            {
+                var d = CatalogFile_.Read(bin);
+                if (d != null) return d;
+            }
+            // A copy saved by an older Dingus (JSON) – read it once; the next refresh saves the quick format.
             if (!File.Exists(path)) return null;
             using var fs = File.OpenRead(path);
             return JsonSerializer.Deserialize<CatalogData>(fs, JsonOpts);
@@ -572,9 +582,11 @@ public sealed class DataService
 
     static void WriteCatalog(string path, CatalogData data)
     {
-        var tmp = path + ".tmp";
-        using (var fs = File.Create(tmp)) JsonSerializer.Serialize(fs, data, JsonOpts);
-        File.Move(tmp, path, true);
+        var bin = Path.ChangeExtension(path, ".bin");
+        var tmp = bin + ".tmp";
+        CatalogFile_.Write(tmp, data);
+        File.Move(tmp, bin, true);
+        try { if (File.Exists(path)) File.Delete(path); } catch { } // the old JSON copy isn't needed any more
         try { File.WriteAllText(path + ".hash", Fingerprint(data)); } catch { }
     }
 
@@ -584,7 +596,8 @@ public sealed class DataService
         try
         {
             var hashFile = path + ".hash";
-            return File.Exists(path) && File.Exists(hashFile) && File.ReadAllText(hashFile) == Fingerprint(data);
+            return (File.Exists(path) || File.Exists(Path.ChangeExtension(path, ".bin"))) && File.Exists(hashFile)
+                   && File.ReadAllText(hashFile) == Fingerprint(data);
         }
         catch { return false; }
     }
