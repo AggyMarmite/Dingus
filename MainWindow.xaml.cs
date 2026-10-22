@@ -76,9 +76,9 @@ public partial class MainWindow : Window
         SetupTaskbar();
 
         _guide = new GuideView();
-        _guide.CanPreview = () => _svc != null && !LoadingOverlayShown;
+        _guide.CanPreview = () => _svc != null && !LoadingOverlayShown && !SplashUp;
         _home = new HomeView { Guide = _guide };
-        _home.CanPreview = () => _svc != null && !LoadingOverlayShown;
+        _home.CanPreview = () => _svc != null && !LoadingOverlayShown && !SplashUp;
         _films = new LibraryView(LibraryMode.Movies);
         _shows = new LibraryView(LibraryMode.Series);
         _settings = new SettingsView();
@@ -557,6 +557,8 @@ public partial class MainWindow : Window
 
     readonly DateTime _splashShownAt = DateTime.UtcNow;
     bool _splashGone;
+    /// <summary>The splash is up – the video (drawn on its own surface, above everything) has to stay hidden meanwhile.</summary>
+    bool SplashUp => Splash != null && Splash.Visibility == Visibility.Visible && !_splashGone;
 
     void ShowSplash(bool withAdd)
     {
@@ -591,7 +593,14 @@ public partial class MainWindow : Window
         SplashAdd.Visibility = Visibility.Collapsed;
         var ms = TimeSpan.FromMilliseconds(320);
         var fade = new DoubleAnimation(1, 0, ms) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
-        fade.Completed += (_, _) => { if (_splashGone) Splash.Visibility = Visibility.Collapsed; };
+        fade.Completed += (_, _) =>
+        {
+            if (!_splashGone) return;
+            Splash.Visibility = Visibility.Collapsed;
+            // Now the last channel can start in Live TV's mini player (it waited for the splash).
+            _guide.TryAutoPreview();
+            _home?.TryStartPreview();
+        };
         Splash.BeginAnimation(OpacityProperty, fade);
         var grow = new DoubleAnimation(1, 1.05, ms) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
         SplashScale.CenterX = SplashContent.ActualWidth / 2;
@@ -1040,7 +1049,7 @@ public partial class MainWindow : Window
         try
         {
             FrameworkElement slot = _page == _guide ? _guide.PreviewSlotElement : _page == _home ? _home.PreviewSlotElement : null;
-            if (slot == null || !slot.IsVisible || Welcome.Visibility == Visibility.Visible || LoadingOverlayShown) { HideVideo(); return; }
+            if (slot == null || !slot.IsVisible || Welcome.Visibility == Visibility.Visible || LoadingOverlayShown || SplashUp) { HideVideo(); return; }
             if (slot.ActualWidth < 10) return;
             var p = slot.TranslatePoint(new Point(0, 0), Root);
             var r = new Rect(p.X, p.Y, slot.ActualWidth, slot.ActualHeight);
@@ -2028,6 +2037,7 @@ public partial class MainWindow : Window
     void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (_playerMode) return; // handled app-wide in OnThreadMessage
+        if (SplashUp) return;     // no shortcuts into the pages hidden behind the splash
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
 
         bool typing = Keyboard.FocusedElement is TextBox || Keyboard.FocusedElement is PasswordBox;
