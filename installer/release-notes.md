@@ -1,3 +1,8 @@
+## What's new in Dingus 0.9.8
+
+* Linux version brought up to date with Windows.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.9.7
 
 * New splash screen when Dingus opens.
