@@ -15,11 +15,22 @@ public sealed class DescStore : IDisposable
     FileStream _fs;
     byte[] _buf = new byte[2048];
 
-    public DescStore(string path)
+    /// <summary>Where the descriptions are kept.</summary>
+    public string Path { get; }
+
+    /// <param name="keep">Keep the file after closing (the saved guide refers to it); otherwise it's deleted on close.</param>
+    public DescStore(string path, bool keep = false)
     {
+        Path = path;
         _fs = new FileStream(path, FileMode.Create, FileAccess.ReadWrite, FileShare.Read | FileShare.Delete,
-                             1 << 16, FileOptions.DeleteOnClose | FileOptions.RandomAccess);
+                             1 << 16, (keep ? FileOptions.None : FileOptions.DeleteOnClose) | FileOptions.RandomAccess);
     }
+
+    DescStore(FileStream fs, string path) { _fs = fs; Path = path; }
+
+    /// <summary>Opens the descriptions of a saved guide (read only).</summary>
+    public static DescStore Open(string path) =>
+        new(new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, 1 << 16, FileOptions.RandomAccess), path);
 
     /// <summary>Appends a description (only called while the guide is being built).</summary>
     public (long Offset, int Length) Add(string s)
@@ -160,12 +171,154 @@ public static class EpgService
         File.Move(tmp, dest, true);
     }
 
+    // ---------------------------------------------------------------- the saved, matched guide
+
+    /// <summary>
+    /// The guide for these channels: from the saved, already-matched copy when nothing has changed (a fraction of a
+    /// second), otherwise read and matched from the provider's guide file (seconds for a big guide) and saved for
+    /// next time. The saved copy is used only while it's for the same guide file, channels and settings, and less
+    /// than six hours old (so "what's on now" and the guide's time window stay right).
+    /// </summary>
+    public static EpgData LoadOrParse(string path, IReadOnlyList<Channel> channels, int shiftMinutes, IReadOnlyDictionary<string, string> overrides = null)
+    {
+        if (!File.Exists(path) || channels.Count == 0) return Parse(path, channels, shiftMinutes, overrides);
+        var key = CacheKey(path, channels, shiftMinutes, overrides);
+        var cache = path + ".matched";
+        var saved = DataService.Time("guide: loading the saved copy", () => LoadCache(cache, key));
+        if (saved != null) return saved;
+        var data = DataService.Time("guide: reading and matching", () => Parse(path, channels, shiftMinutes, overrides));
+        _ = Task.Run(() => DataService.Time("guide: saving a copy", () => SaveCache(cache, key, data, path)));
+        return data;
+    }
+
+    const string CacheMagic = "DingusGuide2";
+
+    static string CacheKey(string path, IReadOnlyList<Channel> channels, int shiftMinutes, IReadOnlyDictionary<string, string> overrides)
+    {
+        var fi = new FileInfo(path);
+        using var h = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
+        void Add(string v) { h.AppendData(System.Text.Encoding.UTF8.GetBytes(v ?? "")); h.AppendData(new byte[] { 0 }); }
+        Add(fi.Length.ToString()); Add(fi.LastWriteTimeUtc.Ticks.ToString()); Add(shiftMinutes.ToString());
+        foreach (var c in channels) { Add(c.Id); Add(c.Name); Add(c.EpgId); Add(c.HasArchive ? c.ArchiveDays.ToString() : "-"); }
+        if (overrides != null) foreach (var kv in overrides.OrderBy(k => k.Key, StringComparer.Ordinal)) { Add(kv.Key); Add(kv.Value); }
+        return Convert.ToHexString(h.GetHashAndReset());
+    }
+
+    static void SaveCache(string cache, string key, EpgData d, string guidePath)
+    {
+        if (d.Descs == null) return;
+        var tmp = cache + ".tmp";
+        try
+        {
+            // Strings (titles, genres, ids) are stored once and referred to by number.
+            var strings = new List<string>();
+            var index = new Dictionary<string, int>(StringComparer.Ordinal);
+            int S(string v)
+            {
+                if (v == null) return -1;
+                if (!index.TryGetValue(v, out var i)) { i = strings.Count; strings.Add(v); index[v] = i; }
+                return i;
+            }
+            // One programme list per guide channel (versions of a channel share it).
+            var lists = new Dictionary<List<Programme>, int>(ReferenceEqualityComparer.Instance);
+            var listOrder = new List<List<Programme>>();
+            foreach (var l in d.ByChannel.Values)
+                if (!lists.ContainsKey(l)) { lists[l] = listOrder.Count; listOrder.Add(l); }
+            // Programmes can be shared between lists too – each is written once, lists refer to it.
+            var progs = new Dictionary<Programme, int>(ReferenceEqualityComparer.Instance);
+            var progOrder = new List<Programme>();
+            foreach (var l in listOrder)
+                foreach (var p in l)
+                    if (!progs.ContainsKey(p)) { progs[p] = progOrder.Count; progOrder.Add(p); }
+            foreach (var p in progOrder) { S(p.Title); S(p.Genre); }
+
+            using (var fs = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 16))
+            using (var w = new BinaryWriter(fs, System.Text.Encoding.UTF8))
+            {
+                w.Write(CacheMagic); w.Write(key); w.Write(DateTime.UtcNow.Ticks); w.Write(System.IO.Path.GetFileName(d.Descs.Path));
+                // strings referred to below need to be in the table first
+                foreach (var kv in d.NowTitles) { S(kv.Key); S(kv.Value); }
+                foreach (var (id, name) in d.Sources) { S(id); S(name); }
+                foreach (var kv in d.Icons) { S(kv.Key); S(kv.Value); }
+                foreach (var kv in d.MatchedTo) { S(kv.Key); S(kv.Value); }
+                foreach (var k in d.ByChannel.Keys) S(k);
+
+                w.Write(strings.Count); foreach (var v in strings) w.Write(v);
+                w.Write(progOrder.Count);
+                foreach (var p in progOrder)
+                {
+                    w.Write(p.Start.ToBinary()); w.Write(p.End.ToBinary());
+                    w.Write(S(p.Title)); w.Write(S(p.Genre)); w.Write(p.DescOffset); w.Write(p.DescLength);
+                }
+                w.Write(listOrder.Count);
+                foreach (var l in listOrder) { w.Write(l.Count); foreach (var p in l) w.Write(progs[p]); }
+                w.Write(d.ByChannel.Count); foreach (var kv in d.ByChannel) { w.Write(S(kv.Key)); w.Write(lists[kv.Value]); }
+                w.Write(d.NowTitles.Count); foreach (var kv in d.NowTitles) { w.Write(S(kv.Key)); w.Write(S(kv.Value)); }
+                w.Write(d.Sources.Count); foreach (var (id, name) in d.Sources) { w.Write(S(id)); w.Write(S(name)); }
+                w.Write(d.Icons.Count); foreach (var kv in d.Icons) { w.Write(S(kv.Key)); w.Write(S(kv.Value)); }
+                w.Write(d.MatchedTo.Count); foreach (var kv in d.MatchedTo) { w.Write(S(kv.Key)); w.Write(S(kv.Value)); }
+            }
+            File.Move(tmp, cache, true);
+            // Descriptions from earlier guides aren't needed any more (one still open stays readable until it closes).
+            var keep = d.Descs.Path;
+            foreach (var f in Directory.EnumerateFiles(System.IO.Path.GetDirectoryName(guidePath)!, System.IO.Path.GetFileName(guidePath) + ".*.desc"))
+                if (!string.Equals(f, keep, StringComparison.OrdinalIgnoreCase)) try { File.Delete(f); } catch { }
+        }
+        catch (Exception ex) { Log.Error(ex); try { File.Delete(tmp); } catch { } }
+    }
+
+    static EpgData LoadCache(string cache, string key)
+    {
+        if (!File.Exists(cache)) return null;
+        try
+        {
+            using var fs = new FileStream(cache, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 16, FileOptions.SequentialScan);
+            using var r = new BinaryReader(fs, System.Text.Encoding.UTF8);
+            if (r.ReadString() != CacheMagic || r.ReadString() != key) return null;
+            var made = new DateTime(r.ReadInt64(), DateTimeKind.Utc);
+            if (DateTime.UtcNow - made > TimeSpan.FromHours(6) || made > DateTime.UtcNow.AddMinutes(5)) return null;
+            var descPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(cache)!, r.ReadString());
+            if (!File.Exists(descPath)) return null;
+
+            var strings = new string[r.ReadInt32()];
+            for (int i = 0; i < strings.Length; i++) strings[i] = r.ReadString();
+            string Str(int i) => i < 0 ? null : strings[i];
+
+            var store = DescStore.Open(descPath);
+            var data = new EpgData { Descs = store };
+            var progs = new Programme[r.ReadInt32()];
+            for (int i = 0; i < progs.Length; i++)
+            {
+                var p = new Programme { Start = DateTime.FromBinary(r.ReadInt64()), End = DateTime.FromBinary(r.ReadInt64()) };
+                p.Title = Str(r.ReadInt32()) ?? ""; p.Genre = Str(r.ReadInt32());
+                p.DescOffset = r.ReadInt64(); p.DescLength = r.ReadInt32();
+                if (p.DescLength > 0) p.Store = store;
+                progs[i] = p;
+            }
+            var lists = new List<Programme>[r.ReadInt32()];
+            for (int i = 0; i < lists.Length; i++)
+            {
+                int n = r.ReadInt32();
+                var l = new List<Programme>(n);
+                for (int j = 0; j < n; j++) l.Add(progs[r.ReadInt32()]);
+                lists[i] = l;
+            }
+            for (int i = 0, n = r.ReadInt32(); i < n; i++) data.ByChannel[Str(r.ReadInt32())] = lists[r.ReadInt32()];
+            for (int i = 0, n = r.ReadInt32(); i < n; i++) data.NowTitles[Str(r.ReadInt32())] = Str(r.ReadInt32());
+            for (int i = 0, n = r.ReadInt32(); i < n; i++) data.Sources.Add((Str(r.ReadInt32()), Str(r.ReadInt32())));
+            for (int i = 0, n = r.ReadInt32(); i < n; i++) data.Icons[Str(r.ReadInt32())] = Str(r.ReadInt32());
+            for (int i = 0, n = r.ReadInt32(); i < n; i++) data.MatchedTo[Str(r.ReadInt32())] = Str(r.ReadInt32());
+            return data;
+        }
+        catch (Exception ex) { Log.Error(ex); return null; } // damaged or from an older Dingus: read the guide again
+    }
+
     /// <param name="overrides">Your own matches (playlist channel id → guide channel id; "" = no guide).</param>
     public static EpgData Parse(string path, IReadOnlyList<Channel> channels, int shiftMinutes, IReadOnlyDictionary<string, string> overrides = null)
     {
         var data = new EpgData();
         if (!File.Exists(path) || channels.Count == 0) return data;
-        var store = new DescStore(path + "." + Guid.NewGuid().ToString("N").Substring(0, 8) + ".desc");
+        var store = new DescStore(path + "." + Guid.NewGuid().ToString("N").Substring(0, 8) + ".desc", keep: true);
         data.Descs = store;
 
         using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 16);

@@ -29,6 +29,7 @@ public static class PerfTest
     // Loading milestones (ms since the process started).
     static double? _cachedShown, _catalogLoaded, _guideLoaded;
     static int _channels, _films, _shows, _guideChannels;
+    static long _guideProgrammes;
 
     static double Now => _startOffsetMs + Clock.Elapsed.TotalMilliseconds;
 
@@ -53,7 +54,11 @@ public static class PerfTest
         };
         ds.EpgChanged += () =>
         {
-            if (ds.Epg.MatchedChannels > 0) { _guideLoaded = Now; _guideChannels = ds.Epg.MatchedChannels; }
+            if (ds.Epg.MatchedChannels > 0)
+            {
+                _guideLoaded = Now; _guideChannels = ds.Epg.MatchedChannels;
+                _guideProgrammes = ds.Epg.ByChannel.Values.Sum(l => l.Count);
+            }
         };
         DataService.TimingHook = (what, ms) =>
         {
@@ -209,7 +214,7 @@ public static class PerfTest
             await WhenIdle();
             string loadFreezes = Freezes() + GcPauses();
 
-            Line($"Playlist: {_channels:N0} channels · {_films:N0} films · {_shows:N0} shows · guide for {_guideChannels:N0} channels");
+            Line($"Playlist: {_channels:N0} channels · {_films:N0} films · {_shows:N0} shows · guide for {_guideChannels:N0} channels ({_guideProgrammes:N0} programme slots)");
             Line("");
             Line($"{"Window open",-34} {shown,8:N0} ms   (from starting Dingus) {startFreezes}");
             if (_cachedShown is double cs) Line($"{"Saved playlist on screen",-34} {cs,8:N0} ms");
