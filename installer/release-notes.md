@@ -7,8 +7,7 @@
 * **Lighter refreshes** – when the playlist Dingus downloads at start-up is the same as last time (the usual case),
   nothing is rebuilt: just the account details are updated, so there are no stalls while it checks.
 * **Smoother** – the mouse wheel glides on Home, Settings, Search, Recordings and the film and show pages; page changes
-  fade in fully; channel logos and posters load without holding up the window; and going back to Live TV keeps your
-  place in the channel list instead of rebuilding it.
+  fade in fully; and channel logos and posters load without holding up the window.
 
 ## What's new in Dingus 0.9.6
 

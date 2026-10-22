@@ -85,11 +85,7 @@ public partial class GuideView : UserControl, IPage
 
     public void ApplySearch(string query)
     {
-        query ??= "";
-        // Opening Live TV again with the same (usually empty) search: the list is already right – don't rebuild
-        // 30,000 rows, and keep your place in it.
-        // (A/B: off for one speed test) if (query == _search && _mode != "find" && _shown.Count > 0) return;
-        _search = query;
+        _search = query ?? "";
         if (_mode == "find") { BuildList(); return; } // programme search: the channel list stays as it is
         ApplyFilter();
     }
