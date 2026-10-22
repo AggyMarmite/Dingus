@@ -54,8 +54,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $v = "${{ steps.ver.outputs.version }}"
+          # Only this version's notes (the first section of the file), not the whole history.
+          $all = Get-Content installer\release-notes.md -Raw
+          $parts = $all -split '(?m)^## '
+          $mine = ($parts | Where-Object { $_.Trim() } | Select-Object -First 1)
+          $body = ($mine -replace '^[^\r\n]*\r?\n', '').Trim()
+          Set-Content -Path release-body.md -Value $body -Encoding UTF8
           gh release create "v$v" "installer\Output\Dingus-Setup-$v.exe" --repo ${{ github.repository }} `
-            --target ${{ github.sha }} --title "Dingus $v" --notes-file installer\release-notes.md
+            --target ${{ github.sha }} --title "Dingus $v" --notes-file release-body.md
 
   # The Linux AppImage, attached to the same release.
   linux:

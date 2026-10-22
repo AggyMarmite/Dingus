@@ -1,16 +1,9 @@
 ## What's new in Dingus 0.9.7
 
-* **Splash screen** – Dingus opens on its logo and name. With a playlist saved, it goes straight to Home and
-  refreshes the playlist in the background (no more loading screen – the little pill in the title bar shows progress).
-  With no playlist yet, the splash has an **Add playlist** button.
-* **Faster start-up** – the TV guide is ready far sooner when Dingus opens: it keeps its own copy of the guide already
-  matched to your channels, instead of reading the provider's whole guide file every time (with a big guide, a
-  quarter of a second instead of several). Your saved playlist is also stored in a quicker form, so it's on screen
-  sooner.
-* **Lighter refreshes** – when the playlist Dingus downloads at start-up is the same as last time (the usual case),
-  nothing is rebuilt: just the account details are updated, so there are no stalls while it checks.
-* **Smoother** – the mouse wheel glides on Home, Settings, Search, Recordings and the film and show pages; page changes
-  fade in fully; and channel logos and posters load without holding up the window.
+* New splash screen when Dingus opens.
+* Faster start-up and playlist loading.
+* Smoother scrolling and animations.
+* Bug fixes and other improvements.
 
 ## What's new in Dingus 0.9.6
 
