@@ -70,6 +70,8 @@ public sealed class DataService
     }
 
     public event Action CatalogChanged;
+    /// <summary>Only the account details changed (a refresh found the same playlist).</summary>
+    public event Action AccountChanged;
     public event Action EpgChanged;
     public event Action<bool, string> BusyChanged;
     /// <summary>True while a playlist is downloading with nothing saved to show yet (first sign-in).</summary>
@@ -217,7 +219,7 @@ public sealed class DataService
         if (p == null) return;
         var gen = _gen;
         var ct = _cts.Token;
-        bool ok = false;
+        bool ok = false, unchanged = false;
 
         // Full loading screen: nothing saved to show yet, or the refresh you get when the app opens.
         IsFirstLoad = _launchRefresh || (Catalog.Channels.Count == 0 && Catalog.Movies.Count == 0 && Catalog.Series.Count == 0);
@@ -228,13 +230,29 @@ public sealed class DataService
         {
             var data = p.Type == PlaylistType.Xtream ? await FetchXtreamAsync(p, ct) : await FetchM3uAsync(p, ct);
             if (gen != _gen) return;
-            await Task.Run(() => Time("playlist: saving a copy", () => WriteCatalog(CatalogFile(p), data)));
+            var file = CatalogFile(p);
+            bool showingSaved = Catalog.Channels.Count + Catalog.Movies.Count + Catalog.Series.Count > 0;
+            // Same as the copy on screen (the usual case when Dingus opens)? Then nothing needs rebuilding – only the
+            // account details (connections in use, expiry) are taken from the fresh download.
+            bool same = showingSaved && await Task.Run(() => Time("playlist: comparing with the saved copy", () => SameAsSaved(file, data)));
+            if (gen != _gen) return;
             p.LastRefreshUtc = DateTime.UtcNow;
             SettingsStore.Save();
-            Catalog = data;
-            Raise(CatalogChanged, "new playlist");
-            Memory.CompactSoon();
-            Message?.Invoke($"Playlist updated · {data.Channels.Count:N0} channels · {data.Movies.Count:N0} films · {data.Series.Count:N0} shows");
+            if (same)
+            {
+                unchanged = true;
+                Catalog.Account = data.Account ?? Catalog.Account;
+                AccountChanged?.Invoke();
+                Message?.Invoke($"Playlist up to date · {Catalog.Channels.Count:N0} channels · {Catalog.Movies.Count:N0} films · {Catalog.Series.Count:N0} shows");
+            }
+            else
+            {
+                await Task.Run(() => Time("playlist: saving a copy", () => WriteCatalog(file, data)));
+                Catalog = data;
+                Raise(CatalogChanged, "new playlist");
+                Memory.CompactSoon();
+                Message?.Invoke($"Playlist updated · {data.Channels.Count:N0} channels · {data.Movies.Count:N0} films · {data.Series.Count:N0} shows");
+            }
             ok = true;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
@@ -249,7 +267,7 @@ public sealed class DataService
         bool guideDue = includeGuide || !File.Exists(EpgFile(p)) ||
                         DateTime.UtcNow - p.LastEpgRefreshUtc > TimeSpan.FromHours(S.EpgRefreshHours);
         if (guideDue) await RefreshEpgAsync();
-        else await ReloadEpgAsync(); // re-match the saved guide to the updated channel list
+        else if (!unchanged) await ReloadEpgAsync(); // re-match the saved guide to the updated channel list
     }
 
     async Task<CatalogData> FetchXtreamAsync(PlaylistConfig p, CancellationToken ct)
@@ -557,5 +575,50 @@ public sealed class DataService
         var tmp = path + ".tmp";
         using (var fs = File.Create(tmp)) JsonSerializer.Serialize(fs, data, JsonOpts);
         File.Move(tmp, path, true);
+        try { File.WriteAllText(path + ".hash", Fingerprint(data)); } catch { }
+    }
+
+    /// <summary>True when a fresh download is the same playlist as the saved copy (account details aside).</summary>
+    static bool SameAsSaved(string path, CatalogData data)
+    {
+        try
+        {
+            var hashFile = path + ".hash";
+            return File.Exists(path) && File.Exists(hashFile) && File.ReadAllText(hashFile) == Fingerprint(data);
+        }
+        catch { return false; }
+    }
+
+    /// <summary>A fingerprint of everything in a playlist except the account details (which change every time).</summary>
+    static string Fingerprint(CatalogData data)
+    {
+        var copy = new CatalogData
+        {
+            LiveCategories = data.LiveCategories, VodCategories = data.VodCategories, SeriesCategories = data.SeriesCategories,
+            Channels = data.Channels, Movies = data.Movies, Series = data.Series, SourceEpgUrl = data.SourceEpgUrl,
+        };
+        using var h = new HashingStream();
+        JsonSerializer.Serialize(h, copy, JsonOpts);
+        return h.Hex();
+    }
+
+    /// <summary>A write-only stream that just hashes what's written (so nothing big is kept in memory).</summary>
+    sealed class HashingStream : Stream
+    {
+        readonly System.Security.Cryptography.IncrementalHash _h =
+            System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
+        public string Hex() => Convert.ToHexString(_h.GetHashAndReset());
+        public override void Write(byte[] buffer, int offset, int count) => _h.AppendData(buffer, offset, count);
+        public override void Write(ReadOnlySpan<byte> buffer) => _h.AppendData(buffer);
+        public override bool CanRead => false;
+        public override bool CanSeek => false;
+        public override bool CanWrite => true;
+        public override long Length => 0;
+        public override long Position { get => 0; set { } }
+        public override void Flush() { }
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) { }
+        protected override void Dispose(bool disposing) { if (disposing) _h.Dispose(); base.Dispose(disposing); }
     }
 }

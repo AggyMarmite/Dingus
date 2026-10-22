@@ -47,6 +47,7 @@ public partial class HomeView : UserControl, IPage
         _refresh.Tick += (_, _) => Build();
         _advance.Tick += (_, _) => { if (!_heroHover && IsEffectivelyVisible) Step(+1); };
         DataService.Instance.CatalogChanged += () => { if (_shown) Dispatcher.UIThread.Post(Build, DispatcherPriority.Background); };
+        DataService.Instance.AccountChanged += () => { if (_shown) UpdateAccount(); };
         DataService.Instance.EpgChanged += () => { if (_shown) Build(); };
         HistoryStore.Changed += () => { if (_shown) Build(); };
         ReminderService.Changed += () => { if (_shown) Build(); };

@@ -46,6 +46,7 @@ public partial class HomeView : UserControl, IPage
             Guide.RowsRebuilt += () => { if (_shown) Dispatcher.InvokeAsync(Build, DispatcherPriority.Background); };
         };
         DataService.Instance.EpgChanged += () => { if (_shown) Build(); };
+        DataService.Instance.AccountChanged += () => { if (_shown) UpdateAccount(); };
         HistoryStore.Changed += () => { if (_shown) Build(); };
         ReminderService.Changed += () => { if (_shown) Build(); };
     }

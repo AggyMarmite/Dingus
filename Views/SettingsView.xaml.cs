@@ -20,6 +20,7 @@ public partial class SettingsView : UserControl, IPage
     {
         InitializeComponent();
         DataService.Instance.CatalogChanged += () => { if (IsVisible) Populate(); };
+        DataService.Instance.AccountChanged += () => { if (IsVisible) Populate(); };
         PowerService.Changed += () => { if (IsVisible && S.BatteryAware) BatteryStatus.Text = PowerService.Describe(); };
         DataService.Instance.EpgChanged += () => { if (IsVisible) PopulateStatus(); };
         DataService.Instance.BusyChanged += (busy, _) => { if (!busy && IsVisible) PopulateStatus(); };
