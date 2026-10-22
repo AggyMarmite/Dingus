@@ -153,7 +153,7 @@
                 </StackPanel.Transitions>
                 <Image Source="{StaticResource DingusLogo}" Width="96" Height="96" HorizontalAlignment="Center"/>
                 <TextBlock Text="Dingus" FontSize="42" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,22,0,0"/>
-                <TextBlock x:Name="SplashSlogan" Text="All your TV, in one place" FontSize="16" Classes="muted"
+                <TextBlock x:Name="SplashSlogan" Text="All your TV in one place" FontSize="16" Classes="muted"
                            HorizontalAlignment="Center" Margin="0,8,0,0"/>
                 <StackPanel x:Name="SplashAdd" IsVisible="False" Margin="0,34,0,0">
                     <Button Classes="primary" Content="Add playlist" HorizontalAlignment="Center" Padding="28,12" Click="AddPlaylist_Click"/>
