@@ -71,9 +71,7 @@ public sealed class PlayerService
         // The build machines have no sound card: the self-test sends the sound to a file instead, so the sound
         // filters still run (and can be checked).
         if (selfTest) args.AddRange(new[] { "--aout=afile", "--audiofile-file=" + Path.Combine(Path.GetTempPath(), "dingus-selftest-audio.wav"), "--audiofile-wav" });
-        // Sound filters only take effect when the video engine starts (VLC ignores them per stream), so changing
-        // volume levelling or night mode restarts the engine – see SoundSettingsChanged.
-        _soundKey = SoundKey();
+        // How strong the sound filters are (which ones run is set on the player – see VlcSound).
         args.AddRange(SoundFilterArgs());
         Vlc = new LibVLC(selfTest, args.ToArray());
 
@@ -104,6 +102,7 @@ public sealed class PlayerService
             EnableMouseInput = false,
             EnableHardwareDecoding = SettingsStore.Current.HardwareDecoding,
         };
+        VlcSound.Apply(Player);
 
         // The play clock for live pause & rewind: runs only while the picture is actually moving.
         Player.Playing += (_, _) => { lock (_tsLock) _tsClock.Start(); };
@@ -281,41 +280,25 @@ public sealed class PlayerService
     /// <summary>The screen's shape for "Fill screen" cropping, e.g. "16:9" (set by the main window).</summary>
     public string FillRatio { get; set; } = "16:9";
 
-    readonly string _soundKey;
-
-    static string SoundKey() => $"{SettingsStore.Current.EvenVolume}|{SettingsStore.Current.NightMode}";
-
-    /// <summary>True when volume levelling or night mode has been changed since this engine started.</summary>
-    public bool SoundSettingsChanged => _soundKey != SoundKey();
-
-    /// <summary>The sound filters, for the video engine's start-up: levelling first (channels arrive at very
-    /// different volumes), then night mode.</summary>
+    /// <summary>Settings for the sound filters, for the video engine's start-up (whether each one runs is
+    /// switched on the player, live – see <see cref="VlcSound"/>).</summary>
     static IEnumerable<string> SoundFilterArgs()
     {
-        var s = SettingsStore.Current;
-        var filters = new List<string>();
-        if (s.EvenVolume) filters.Add("normvol");
-        if (s.NightMode) filters.Add("compressor");
-        if (filters.Count == 0) yield break;
-        yield return "--audio-filter=" + string.Join(":", filters);
-        if (s.EvenVolume)
-        {
-            // Gently: looks at the last ~20 blocks of sound and brings loud ones down towards the same level.
-            yield return "--norm-buff-size=20";
-            yield return "--norm-max-level=2.0";
-        }
-        if (s.NightMode)
-        {
-            // Dynamic range compression: quiet dialogue up, explosions down.
-            yield return "--compressor-rms-peak=0.2";
-            yield return "--compressor-attack=25";
-            yield return "--compressor-release=100";
-            yield return "--compressor-threshold=-20";
-            yield return "--compressor-ratio=8";
-            yield return "--compressor-knee=4.5";
-            yield return "--compressor-makeup-gain=10";
-        }
+        // Volume levelling, gently: looks at the last ~20 blocks of sound and brings loud ones down towards the same level.
+        yield return "--norm-buff-size=20";
+        yield return "--norm-max-level=2.0";
+        // Night mode – dynamic range compression: quiet dialogue up, explosions down.
+        yield return "--compressor-rms-peak=0.2";
+        yield return "--compressor-attack=25";
+        yield return "--compressor-release=100";
+        yield return "--compressor-threshold=-20";
+        yield return "--compressor-ratio=8";
+        yield return "--compressor-knee=4.5";
+        yield return "--compressor-makeup-gain=10";
     }
+
+    /// <summary>Switches volume levelling / night mode on or off to match the settings – straight away, even mid-stream.</summary>
+    public void ApplySoundFilters() => Enqueue(() => VlcSound.Apply(Player));
 
     /// <summary>Per-stream sound options: preferred audio and subtitle languages.</summary>
     static IEnumerable<string> SoundOptions()
@@ -323,20 +306,6 @@ public sealed class PlayerService
         var s = SettingsStore.Current;
         if (!string.IsNullOrEmpty(s.AudioLanguage)) yield return $":audio-language={s.AudioLanguage}";
         if (!string.IsNullOrEmpty(s.SubtitleLanguage)) yield return $":sub-language={s.SubtitleLanguage}";
-    }
-
-    /// <summary>Stops and frees this engine (a new one is replacing it). The VLC instance is kept if something
-    /// else still uses it (multi-view).</summary>
-    public void Shutdown(bool keepVlc)
-    {
-        try
-        {
-            EndTimeshift();
-            Player.Stop();
-            Player.Dispose();
-            if (!keepVlc) Vlc.Dispose();
-        }
-        catch (Exception ex) { Log.Error(ex); }
     }
 
     void ApplyPictureNow()

@@ -174,7 +174,7 @@ public static class SelfTest
         {
             string loaded;
             lock (psvc.LoadedSoundFilters) loaded = string.Join(", ", psvc.LoadedSoundFilters);
-            Note($"sound filters: {(loaded.Length > 0 ? loaded : "none reported")}{(psvc.SoundFilterProblem != null ? " · problem: " + psvc.SoundFilterProblem : "")}");
+            Note($"sound filters: {(loaded.Length > 0 ? loaded : "none reported")}{(psvc.SoundFilterProblem != null ? " · problem: " + psvc.SoundFilterProblem : "")}{(VlcSound.Problem != null ? " · " + VlcSound.Problem : "")}");
             if (psvc.SoundFilterProblem != null) Error(new Exception("A sound filter didn't load: " + psvc.SoundFilterProblem));
             else if (Services.SettingsStore.Current.EvenVolume && !loaded.Contains("normvol")) {
                 lock (psvc.SoundLog) foreach (var l in psvc.SoundLog.Take(40)) Note("  vlc: " + l);
@@ -182,24 +182,20 @@ public static class SelfTest
             }
         }
         Snap(main.SelfTestOverlay, "17-player-controls");
-        var psvcBefore = main.SelfTestPlayer;
-        // Night mode on: the engine restarts with both sound filters and the video carries on.
+        // Night mode on, mid-stream: the compressor joins the levelling straight away and the video carries on.
         {
+            var nsvc = main.SelfTestPlayer;
             Services.SettingsStore.Current.NightMode = true;
             main.ApplySoundSettings();
-            for (int i = 0; i < 40 && (main.SelfTestPlayer == null || main.SelfTestPlayer.SoundSettingsChanged || !main.SelfTestPlayer.Player.IsPlaying); i++) await Task.Delay(250);
-            await Task.Delay(1500);
-            var nsvc = main.SelfTestPlayer;
+            await Task.Delay(2500);
             string nl = "";
             if (nsvc != null) lock (nsvc.LoadedSoundFilters) nl = string.Join(", ", nsvc.LoadedSoundFilters);
-            Note($"night mode on (engine restarted): playing={nsvc?.Player.IsPlaying} · sound filters: {(nl.Length > 0 ? nl : "none reported")}");
-            if (nsvc == null || nsvc == psvcBefore) Error(new Exception("Turning night mode on didn't restart the video engine."));
-            else if (!nl.Contains("compressor") || !nl.Contains("normvol")) Error(new Exception("Night mode is on but VLC didn't load both sound filters."));
-            if (nsvc?.Player.IsPlaying != true) Error(new Exception("The video didn't carry on after the engine restarted."));
+            Note($"night mode on: playing={nsvc?.Player.IsPlaying} · sound filters: {(nl.Length > 0 ? nl : "none reported")}");
+            if (!nl.Contains("compressor")) Error(new Exception("Night mode is on but VLC didn't load its filter."));
+            if (nsvc?.Player.IsPlaying != true) Error(new Exception("The video stopped when night mode was switched on."));
             Services.SettingsStore.Current.NightMode = false;
             main.ApplySoundSettings();
-            for (int i = 0; i < 40 && (main.SelfTestPlayer == null || main.SelfTestPlayer.SoundSettingsChanged || !main.SelfTestPlayer.Player.IsPlaying); i++) await Task.Delay(250);
-            await Task.Delay(1000);
+            await Task.Delay(800);
         }
         main.SelfTestMini(true);
         await Task.Delay(3500);

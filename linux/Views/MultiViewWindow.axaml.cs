@@ -55,10 +55,21 @@ public partial class MultiViewWindow : Window
 
     public MultiViewWindow() { InitializeComponent(); }
 
+    /// <summary>Multi-view windows that are open (so sound setting changes reach their tiles too).</summary>
+    public static readonly List<MultiViewWindow> Open = new();
+
+    /// <summary>Volume levelling / night mode changed: switch each tile's sound filters.</summary>
+    public void ApplySoundFilters()
+    {
+        foreach (var t in _tiles) VlcSound.Apply(t.Player);
+    }
+
     public MultiViewWindow(LibVLC vlc, GuideView guide, GuideRow first)
     {
         _vlc = vlc;
         _guide = guide;
+        Open.Add(this);
+        Closed += (_, _) => Open.Remove(this);
         InitializeComponent();
         if (first != null) _keep.Add(first);
 
@@ -114,6 +125,7 @@ public partial class MultiViewWindow : Window
             EnableMouseInput = false,
             Mute = true,
         };
+        VlcSound.Apply(t.Player);
 
         // What sits over the video (lives in the video's own overlay window).
         var overlay = new Panel { Background = new SolidColorBrush(Color.FromArgb(1, 0, 0, 0)), Cursor = new Cursor(StandardCursorType.Hand), Focusable = true };

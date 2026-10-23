@@ -35,7 +35,7 @@
   <ItemGroup>
     <Compile Include="../Models/*.cs" LinkBase="Shared/Models" />
     <Compile Include="../Views/ViewModels.cs" LinkBase="Shared/Views" />
-    <Compile Include="../Services/ArtworkService.cs;../Services/Backup.cs;../Services/ChannelMerger.cs;../Services/EpgService.cs;../Services/JsonExt.cs;../Services/M3uParser.cs;../Services/PlayerService.cs;../Services/Timeshift.cs;../Services/XtreamClient.cs;../Services/Core.cs;../Services/DataService.cs;../Services/HistoryStore.cs;../Services/RecordingService.cs;../Services/ReminderService.cs;../Services/Genres.cs;../Services/Parental.cs;../Services/CategoryOrder.cs;../Services/Updater.cs;../Services/TsTimeline.cs;../Services/CatalogFile.cs;../Services/Trailer.cs;../Services/HomeData.cs;../Services/GuideRows.cs"
+    <Compile Include="../Services/ArtworkService.cs;../Services/Backup.cs;../Services/ChannelMerger.cs;../Services/EpgService.cs;../Services/JsonExt.cs;../Services/M3uParser.cs;../Services/PlayerService.cs;../Services/Timeshift.cs;../Services/XtreamClient.cs;../Services/Core.cs;../Services/DataService.cs;../Services/HistoryStore.cs;../Services/RecordingService.cs;../Services/ReminderService.cs;../Services/Genres.cs;../Services/Parental.cs;../Services/CategoryOrder.cs;../Services/Updater.cs;../Services/TsTimeline.cs;../Services/CatalogFile.cs;../Services/Trailer.cs;../Services/HomeData.cs;../Services/GuideRows.cs;../Services/VlcSound.cs"
              LinkBase="Shared/Services" />
   </ItemGroup>
 
