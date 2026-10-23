@@ -449,6 +449,7 @@ public partial class MainWindow
     internal Control SelfTestRoot => Root;
     internal object SelfTestPage => _page;
     internal Views.GuideView SelfTestGuide => _guide;
+    internal Views.HomeView SelfTestHome => _home;
     internal void SelfTestShortcuts(bool open) { if (open != SheetOpen) ToggleShortcutSheet(); }
     internal void SelfTestSearch(string text) => SearchBox.Text = text;
     internal void SelfTestSearchFilter(string f) => _search.SelfTestFilter(f);

@@ -110,8 +110,6 @@ public partial class GuideView : UserControl, IPage
     /// <summary>Raised after the channel rows have been rebuilt (a new playlist, channel edits…).</summary>
     public event Action RowsRebuilt;
 
-    sealed record RowSet(List<GuideRow> All, List<GuideRow> Everything, Dictionary<string, GuideRow> ById, Dictionary<string, int> Counts);
-
     int _rebuildGen;
 
     /// <summary>A new playlist: the rows are worked out in the background (tens of thousands of channels take a
@@ -119,7 +117,7 @@ public partial class GuideView : UserControl, IPage
     async void OnCatalogChanged()
     {
         int gen = ++_rebuildGen;
-        var set = await Task.Run(() => DataService.Time("Live TV: building channel rows", ComputeRows));
+        var set = await Task.Run(() => DataService.Time("Live TV: building channel rows", GuideRows.Compute));
         if (gen != _rebuildGen) return;
         DataService.Time("Live TV: showing channel rows", () => ApplyRows(set));
     }
@@ -128,56 +126,10 @@ public partial class GuideView : UserControl, IPage
     void Rebuild()
     {
         ++_rebuildGen;
-        ApplyRows(ComputeRows());
+        ApplyRows(GuideRows.Compute());
     }
 
-    /// <summary>Works out the rows: merges versions of the same channel, guide links, favourites, your names. No UI.</summary>
-    static RowSet ComputeRows()
-    {
-        var ds = DataService.Instance;
-        var data = ds.Catalog;
-        var hidden = ds.HiddenSet("live");
-        var favs = ds.FavouriteSet();
-        var epg = ds.Epg;
-        var hiddenCh = new HashSet<string>(ds.Active?.HiddenChannels ?? new List<string>());
-        var names = ds.Active?.ChannelNames ?? new Dictionary<string, string>();
-
-        var all = new List<GuideRow>(data.Channels.Count);
-        var byId = new Dictionary<string, GuideRow>(data.Channels.Count);
-        bool merge = SettingsStore.Current.MergeDuplicates;
-        var groups = new Dictionary<string, GuideRow>();
-        int i = 1;
-        foreach (var c in data.Channels)
-        {
-            if (hidden.Contains(c.CategoryId)) continue;
-            var key = merge ? ChannelMerger.Key(c) : "";
-            if (key.Length == 0 || !groups.TryGetValue(key, out var row))
-            {
-                row = new GuideRow(c, i++);
-                all.Add(row);
-                if (key.Length > 0) groups[key] = row;
-            }
-            row.AddVariant(c);
-            byId.TryAdd(c.Id, row);
-        }
-        foreach (var r in all)
-        {
-            r.IsFavourite = r.Variants.Any(v => favs.Contains(v.Id));
-            r.Logo = r.Variants.Select(v => v.Logo).FirstOrDefault(l => l != null) ?? r.Variants.Select(v => epg.Icon(v.Id)).FirstOrDefault(l => l != null);
-            r.EpgId = PickEpgId(r, epg);
-            r.CustomName = r.Variants.Select(v => names.TryGetValue(v.Id, out var n) ? n : null).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
-            r.IsHidden = hiddenCh.Count > 0 && r.Variants.Any(v => hiddenCh.Contains(v.Id));
-        }
-        var everything = all;
-        if (hiddenCh.Count > 0) all = all.Where(r => !r.IsHidden).ToList();
-
-        var counts = new Dictionary<string, int>();
-        foreach (var r in all)
-            foreach (var cid in r.CategoryIds) counts[cid] = counts.TryGetValue(cid, out var n0) ? n0 + 1 : 1;
-        return new RowSet(all, everything, byId, counts);
-    }
-
-    void ApplyRows(RowSet set)
+    void ApplyRows(GuideRows.Set set)
     {
         foreach (var r in set.Everything) r.BlockBuilder = BuildRowBlocks;
         _all = set.All;
@@ -210,8 +162,6 @@ public partial class GuideView : UserControl, IPage
         RowsRebuilt?.Invoke();
     }
 
-    static string PickEpgId(GuideRow r, EpgData epg) =>
-        r.Variants.Select(v => v.Id).FirstOrDefault(id => epg.Get(id) != null) ?? r.Channel.Id;
 
     List<GuideRow> RecentRows()
     {
@@ -234,7 +184,7 @@ public partial class GuideView : UserControl, IPage
         var epg = DataService.Instance.Epg;
         foreach (var r in _all)
         {
-            r.EpgId = PickEpgId(r, epg);
+            r.EpgId = GuideRows.PickEpgId(r, epg);
             if (r.Logo == null) r.Logo = r.Variants.Select(v => epg.Icon(v.Id)).FirstOrDefault(l => l != null);
         }
         RecomputeBlocks();

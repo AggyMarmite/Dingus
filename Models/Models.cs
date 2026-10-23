@@ -344,6 +344,8 @@ public class MediaDetails
     public string Rating { get; set; }
     public string Backdrop { get; set; }
     public string Poster { get; set; }
+    /// <summary>A YouTube link to the trailer, when the provider has one.</summary>
+    public string Trailer { get; set; }
     public List<Episode> Episodes { get; set; } = new();
 }
 

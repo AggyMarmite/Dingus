@@ -330,6 +330,16 @@ public partial class LibraryView : UserControl, IPage
         MainWindow.Instance?.ShowToast(now ? $"Added “{item.Title}” to My List" : $"Removed “{item.Title}” from My List");
     }
 
+    string _trailer;
+
+    /// <summary>The trailer opens on YouTube in your browser (the player can't play YouTube itself reliably).</summary>
+    void Trailer_Click(object sender, RoutedEventArgs e)
+    {
+        if (_trailer == null) return;
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(_trailer) { UseShellExecute = true }); }
+        catch (Exception ex) { Log.Error(ex); MainWindow.Instance?.ShowToast("Couldn't open the trailer."); }
+    }
+
     void Save_Click(object sender, RoutedEventArgs e)
     {
         if (_current != null) ToggleSaved(_current);
@@ -386,6 +396,8 @@ public partial class LibraryView : UserControl, IPage
         DetailScroll.ScrollToTop();
         if (movie) UpdateMovieButtons();
         SaveButton.Margin = new Thickness(movie ? 8 : 0, 0, 0, 0);
+        TrailerButton.Visibility = Visibility.Collapsed;
+        _trailer = null;
         UpdateSaveButton();
 
         _detailCts?.Cancel();
@@ -414,6 +426,8 @@ public partial class LibraryView : UserControl, IPage
             if (!string.IsNullOrEmpty(d.Director)) credits.Add("Director  " + d.Director);
             DetailCredits.Text = string.Join("\n", credits);
 
+            _trailer = d.Trailer;
+            TrailerButton.Visibility = d.Trailer != null ? Visibility.Visible : Visibility.Collapsed;
             if (!string.IsNullOrEmpty(d.Backdrop)) ImageLoader.SetUrl(DetailBackdrop, d.Backdrop);
             if (string.IsNullOrEmpty(item.Image) && !string.IsNullOrEmpty(d.Poster)) ImageLoader.SetUrl(DetailPoster, d.Poster);
 

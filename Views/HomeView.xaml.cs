@@ -204,11 +204,11 @@ public partial class HomeView : UserControl, IPage
         var hiddenVod = ds.HiddenSet("vod");
         var hiddenSeries = ds.HiddenSet("series");
         // Newest 20 without sorting the whole list (it can be 100,000 titles, and Home rebuilds often).
-        var newFilms = Newest(data.Movies.Where(m => !hiddenVod.Contains(m.CategoryId)), m => m.Added, 20)
+        var newFilms = HomeData.Newest(data.Movies.Where(m => !hiddenVod.Contains(m.CategoryId)), m => m.Added, 20)
             .Select(m => new HomePosterCard { Id = m.Id, IsMovie = true, Title = m.Name, Image = m.Poster, Subtitle = m.Year ?? "Film" }).ToList();
-        var newShows = Newest(data.Series.Where(x => !hiddenSeries.Contains(x.CategoryId)), x => x.Added, 20)
+        var newShows = HomeData.Newest(data.Series.Where(x => !hiddenSeries.Contains(x.CategoryId)), x => x.Added, 20)
             .Select(x => new HomePosterCard { Id = x.Id, IsMovie = false, Title = x.Name, Image = x.Cover, Subtitle = x.Year ?? "TV show" }).ToList();
-        MyListList.ItemsSource = BuildMyList(data, hiddenVod, hiddenSeries);
+        MyListList.ItemsSource = HomeData.MyList(data, hiddenVod, hiddenSeries);
         MyListSection.Visibility = ((List<HomePosterCard>)MyListList.ItemsSource).Count == 0 ? Visibility.Collapsed : Visibility.Visible;
         NewFilmsList.ItemsSource = newFilms;
         NewFilmsSection.Visibility = newFilms.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
@@ -271,9 +271,9 @@ public partial class HomeView : UserControl, IPage
         // 4. New films and shows.
         var hiddenVod = ds.HiddenSet("vod");
         var hiddenSeries = ds.HiddenSet("series");
-        foreach (var m in ds.Catalog.Movies.Where(m => !hiddenVod.Contains(m.CategoryId)).OrderByDescending(m => m.Added).Take(2))
+        foreach (var m in HomeData.Newest(ds.Catalog.Movies.Where(m => !hiddenVod.Contains(m.CategoryId)), m => m.Added, 2))
             slides.Add(FilmSlide(m));
-        foreach (var x in ds.Catalog.Series.Where(x => !hiddenSeries.Contains(x.CategoryId)).OrderByDescending(x => x.Added).Take(2))
+        foreach (var x in HomeData.Newest(ds.Catalog.Series.Where(x => !hiddenSeries.Contains(x.CategoryId)), x => x.Added, 2))
             slides.Add(ShowSlide(x));
 
         if (slides.Count == 0) slides.Add(WelcomeSlide(now));
@@ -755,44 +755,6 @@ public partial class HomeView : UserControl, IPage
             Progress = p == null ? 0 : (now - p.Start).TotalSeconds / Math.Max(1, (p.End - p.Start).TotalSeconds),
             GenreBrush = Genres.Brush(p?.Genre),
         };
-    }
-
-    /// <summary>The <paramref name="n"/> items with the biggest <paramref name="key"/>, biggest first – one pass, no full sort.
-    /// Ties keep the playlist's order, like a stable sort would.</summary>
-    static List<T> Newest<T>(IEnumerable<T> items, Func<T, long> key, int n)
-    {
-        var heap = new PriorityQueue<(T Item, int Index), (long Key, int Index)>(n + 1, Comparer<(long Key, int Index)>.Create((a, b) =>
-            a.Key != b.Key ? a.Key.CompareTo(b.Key) : b.Index.CompareTo(a.Index)));
-        int i = 0;
-        foreach (var it in items)
-        {
-            heap.Enqueue((it, i), (key(it), i));
-            if (heap.Count > n) heap.Dequeue(); // drops the oldest
-            i++;
-        }
-        var res = new List<(T Item, int Index, long Key)>(heap.Count);
-        while (heap.TryDequeue(out var e, out var pr)) res.Add((e.Item, e.Index, pr.Key));
-        res.Reverse();
-        return res.Select(x => x.Item).ToList();
-    }
-
-    /// <summary>My List: saved films and shows the playlist still has (hidden categories left out), newest first.</summary>
-    static List<HomePosterCard> BuildMyList(CatalogData data, HashSet<string> hiddenVod, HashSet<string> hiddenSeries)
-    {
-        var saved = HistoryStore.MyList;
-        if (saved.Count == 0) return new List<HomePosterCard>();
-        var films = saved.Where(x => x.Kind == "movie").Select(x => x.Id).ToHashSet();
-        var shows = saved.Where(x => x.Kind == "series").Select(x => x.Id).ToHashSet();
-        var found = new Dictionary<string, HomePosterCard>();
-        if (films.Count > 0)
-            foreach (var m in data.Movies)
-                if (films.Contains(m.Id) && !hiddenVod.Contains(m.CategoryId))
-                    found.TryAdd("movie:" + m.Id, new HomePosterCard { Id = m.Id, IsMovie = true, Title = m.Name, Image = m.Poster, Subtitle = m.Year ?? "Film" });
-        if (shows.Count > 0)
-            foreach (var x in data.Series)
-                if (shows.Contains(x.Id) && !hiddenSeries.Contains(x.CategoryId))
-                    found.TryAdd("series:" + x.Id, new HomePosterCard { Id = x.Id, IsMovie = false, Title = x.Name, Image = x.Cover, Subtitle = x.Year ?? "TV show" });
-        return saved.Select(x => found.GetValueOrDefault(x.Kind + ":" + x.Id)).Where(c => c != null).Take(20).ToList();
     }
 
     static string Left(long ms)

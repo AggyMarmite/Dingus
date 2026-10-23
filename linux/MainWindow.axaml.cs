@@ -271,6 +271,13 @@ public partial class MainWindow : Window
         (movie ? _films : _shows).OpenItem(id);
     }
 
+    /// <summary>Opens Films or TV Shows on a category (e.g. My List).</summary>
+    public void OpenLibraryCategory(bool movie, string categoryId)
+    {
+        (movie ? NavFilms : NavShows).IsChecked = true;
+        (movie ? _films : _shows).ShowCategory(categoryId);
+    }
+
     /// <summary>Opens Multi-view, starting with <paramref name="first"/> (or what's playing) in the first screen.</summary>
     public void OpenMultiView(GuideRow first)
     {

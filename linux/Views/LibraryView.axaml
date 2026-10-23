@@ -50,13 +50,20 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Button Classes="card" Width="156" Margin="8,8,8,14" Click="Poster_Click" ToolTip.Tip="{Binding Title}">
+                                    <Button Classes="card" Width="156" Margin="8,8,8,14" Click="Poster_Click" ToolTip.Tip="{Binding Title}"
+                                            PointerReleased="Poster_PointerReleased">
                                         <StackPanel>
                                             <Border Width="156" Height="234" CornerRadius="8" ClipToBounds="True" Background="{StaticResource Surface2Brush}">
                                                 <Panel>
                                                     <TextBlock Text="{Binding Title}" TextWrapping="Wrap" TextAlignment="Center" Margin="12"
                                                                VerticalAlignment="Center" Classes="muted" FontSize="12"/>
                                                     <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="240" svc:ImageLoader.Url="{Binding Image}"/>
+                                                    <!-- On My List -->
+                                                    <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0" Width="26" Height="26"
+                                                            CornerRadius="13" Background="#CC0A0D13" IsVisible="{Binding Saved}" ToolTip.Tip="On My List">
+                                                        <TextBlock Classes="icon" Text="{x:Static local:Icons.Check}" FontSize="14" Foreground="White"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
                                                     <Border VerticalAlignment="Bottom" Height="5" Background="#99000000" IsVisible="{Binding HasProgress}">
                                                         <ProgressBar Classes="thin" Value="{Binding Progress, Mode=OneWay}" Margin="8,0" VerticalAlignment="Center" Height="3"/>
                                                     </Border>
@@ -131,6 +138,19 @@
                                     <StackPanel Orientation="Horizontal" Spacing="10">
                                         <TextBlock Classes="icon" Text="{x:Static local:Icons.Refresh}"/>
                                         <TextBlock Text="Play from start" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="SaveButton" Padding="18,11" Click="Save_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <TextBlock x:Name="SaveIcon" Classes="icon" Text="{x:Static local:Icons.Plus}"/>
+                                        <TextBlock x:Name="SaveText" Text="My List" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="TrailerButton" Padding="18,11" Click="Trailer_Click" IsVisible="False"
+                                        ToolTip.Tip="Watch the trailer (opens in your browser)">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <TextBlock Classes="icon" Text="{x:Static local:Icons.Trailer}"/>
+                                        <TextBlock Text="Trailer" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
                             </StackPanel>

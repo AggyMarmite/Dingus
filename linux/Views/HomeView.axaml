@@ -101,14 +101,16 @@
         </DataTemplate>
 
         <DataTemplate x:Key="PosterCard">
-            <Button Classes="card" Width="156" Margin="8,6,8,10" Click="Poster_Click" ToolTip.Tip="{Binding Title}">
+            <Button Classes="card" Width="156" Margin="8,6,8,10" Click="Poster_Click" ToolTip.Tip="{Binding Title}"
+                    PointerReleased="Poster_PointerReleased">
                 <StackPanel>
                     <Border Width="156" Height="234" CornerRadius="8" ClipToBounds="True" Background="{StaticResource Surface2Brush}">
                         <Panel>
                             <TextBlock Text="{Binding Title}" TextWrapping="Wrap" TextAlignment="Center" Margin="12"
                                        VerticalAlignment="Center" Classes="muted" FontSize="12"/>
                             <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="240" svc:ImageLoader.Url="{Binding Image}"/>
-                            <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" Padding="7,2" CornerRadius="4" Background="{StaticResource AccentBrush}">
+                            <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" Padding="7,2" CornerRadius="4" Background="{StaticResource AccentBrush}"
+                                    IsVisible="{Binding IsNew}">
                                 <TextBlock Text="NEW" FontSize="10" FontWeight="Bold" Foreground="White"/>
                             </Border>
                         </Panel>

@@ -271,6 +271,7 @@ public class XtreamClient
             d.Rating = info.NonEmpty("rating");
             d.Poster = info.NonEmpty("movie_image") ?? info.NonEmpty("cover_big");
             d.Backdrop = info.FirstString("backdrop_path");
+            d.Trailer = Trailer.Url(info.Str("youtube_trailer")) ?? Trailer.Url(info.Str("trailer"));
         }
         return d;
     }
@@ -293,6 +294,7 @@ public class XtreamClient
             d.Rating = info.NonEmpty("rating");
             d.Poster = info.NonEmpty("cover");
             d.Backdrop = info.FirstString("backdrop_path");
+            d.Trailer = Trailer.Url(info.Str("youtube_trailer")) ?? Trailer.Url(info.Str("trailer"));
         }
 
         if (root.TryGetProperty("episodes", out var eps))

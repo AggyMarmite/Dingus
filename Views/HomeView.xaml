@@ -158,6 +158,13 @@
                         </Border>
                         <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="240" svc:ImageLoader.Url="{Binding Image}"/>
                         <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" Padding="7,2" CornerRadius="4" Background="{StaticResource AccentBrush}">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsNew}" Value="False"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
                             <TextBlock Text="NEW" FontSize="10" FontWeight="Bold" Foreground="White"/>
                         </Border>
                     </Grid>

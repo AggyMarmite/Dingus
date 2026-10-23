@@ -149,6 +149,8 @@ public class HomePosterCard
     public string Title { get; init; }
     public string Image { get; init; }
     public string Subtitle { get; init; }
+    /// <summary>The "NEW" badge (the New films / New TV shows rows – not My List).</summary>
+    public bool IsNew { get; init; } = true;
 }
 
 /// <summary>A film or episode card in "Continue watching".</summary>

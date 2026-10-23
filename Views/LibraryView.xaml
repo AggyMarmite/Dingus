@@ -184,6 +184,13 @@
                                         <TextBlock x:Name="SaveText" Text="My List"/>
                                     </StackPanel>
                                 </Button>
+                                <Button x:Name="TrailerButton" Style="{StaticResource BaseButton}" Padding="18,11" Margin="8,0,0,0" Click="Trailer_Click"
+                                        Visibility="Collapsed" ToolTip="Watch the trailer (opens in your browser)">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE714;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBlock Text="Trailer"/>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                             <ProgressBar x:Name="DetailProgress" Style="{StaticResource ThinProgress}" Maximum="1" Width="300"
                                          HorizontalAlignment="Left" Margin="0,14,0,0" Visibility="Collapsed"/>

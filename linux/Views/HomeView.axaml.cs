@@ -27,6 +27,7 @@ public partial class HomeView : UserControl, IPage
 
     /// <summary>The guide's rows (merged channels, favourites, guide data) are shared with Home.</summary>
     public GuideView Guide { get; set; }
+    bool _hooked;
     /// <summary>Kept for the main window; Home doesn't play video in the page any more (Watch opens full screen).</summary>
     public Func<bool> CanPreview { get; set; } = () => false;
     public Control PreviewSlotElement => null;
@@ -35,8 +36,8 @@ public partial class HomeView : UserControl, IPage
     readonly DispatcherTimer _refresh = new() { Interval = TimeSpan.FromMinutes(1) };
     readonly DispatcherTimer _advance = new() { Interval = TimeSpan.FromSeconds(9) };
 
-    StackPanel FavSection, ResumeSection, NextSection, SportSection, RemindSection, PicksSection, RecentSection, NewFilmsSection, NewShowsSection;
-    ItemsControl FavList, ResumeList, NextList, SportList, RemindList, PicksList, RecentList, NewFilmsList, NewShowsList;
+    StackPanel FavSection, ResumeSection, MyListSection, NextSection, SportSection, RemindSection, PicksSection, RecentSection, NewFilmsSection, NewShowsSection;
+    ItemsControl FavList, ResumeList, MyListList, NextList, SportList, RemindList, PicksList, RecentList, NewFilmsList, NewShowsList;
     TextBlock PicksHeader;
     Border FavEmpty;
 
@@ -46,7 +47,13 @@ public partial class HomeView : UserControl, IPage
         BuildRows();
         _refresh.Tick += (_, _) => Build();
         _advance.Tick += (_, _) => { if (!_heroHover && IsEffectivelyVisible) Step(+1); };
-        DataService.Instance.CatalogChanged += () => { if (_shown) Dispatcher.UIThread.Post(Build, DispatcherPriority.Background); };
+        // Rebuilt when Live TV has its new channel rows (it works them out in the background after a new playlist).
+        AttachedToVisualTree += (_, _) =>
+        {
+            if (_hooked || Guide == null) return;
+            _hooked = true;
+            Guide.RowsRebuilt += () => { if (_shown) Dispatcher.UIThread.Post(Build, DispatcherPriority.Background); };
+        };
         DataService.Instance.AccountChanged += () => { if (_shown) UpdateAccount(); };
         DataService.Instance.EpgChanged += () => { if (_shown) Build(); };
         HistoryStore.Changed += () => { if (_shown) Build(); };
@@ -69,7 +76,7 @@ public partial class HomeView : UserControl, IPage
         _shown = false;
         _refresh.Stop();
         _advance.Stop();
-        foreach (var list in new ItemsControl[] { NextList, SportList, RemindList, PicksList, ResumeList, RecentList, FavList, NewFilmsList, NewShowsList })
+        foreach (var list in new ItemsControl[] { NextList, SportList, RemindList, PicksList, ResumeList, MyListList, RecentList, FavList, NewFilmsList, NewShowsList })
             list.ItemsSource = null;
         HeroArt.Children.Clear();
         _layer = null;
@@ -203,10 +210,14 @@ public partial class HomeView : UserControl, IPage
         var data = ds.Catalog;
         var hiddenVod = ds.HiddenSet("vod");
         var hiddenSeries = ds.HiddenSet("series");
-        var newFilms = data.Movies.Where(m => !hiddenVod.Contains(m.CategoryId)).OrderByDescending(m => m.Added).Take(20)
+        // Newest 20 without sorting the whole list (it can be 100,000 titles, and Home rebuilds often).
+        var newFilms = HomeData.Newest(data.Movies.Where(m => !hiddenVod.Contains(m.CategoryId)), m => m.Added, 20)
             .Select(m => new HomePosterCard { Id = m.Id, IsMovie = true, Title = m.Name, Image = m.Poster, Subtitle = m.Year ?? "Film" }).ToList();
-        var newShows = data.Series.Where(x => !hiddenSeries.Contains(x.CategoryId)).OrderByDescending(x => x.Added).Take(20)
+        var newShows = HomeData.Newest(data.Series.Where(x => !hiddenSeries.Contains(x.CategoryId)), x => x.Added, 20)
             .Select(x => new HomePosterCard { Id = x.Id, IsMovie = false, Title = x.Name, Image = x.Cover, Subtitle = x.Year ?? "TV show" }).ToList();
+        var myList = HomeData.MyList(data, hiddenVod, hiddenSeries);
+        MyListList.ItemsSource = myList;
+        MyListSection.IsVisible = myList.Count > 0;
         NewFilmsList.ItemsSource = newFilms;
         NewFilmsSection.IsVisible = !(newFilms.Count == 0);
         NewShowsList.ItemsSource = newShows;
@@ -268,9 +279,9 @@ public partial class HomeView : UserControl, IPage
         // 4. New films and shows.
         var hiddenVod = ds.HiddenSet("vod");
         var hiddenSeries = ds.HiddenSet("series");
-        foreach (var m in ds.Catalog.Movies.Where(m => !hiddenVod.Contains(m.CategoryId)).OrderByDescending(m => m.Added).Take(2))
+        foreach (var m in HomeData.Newest(ds.Catalog.Movies.Where(m => !hiddenVod.Contains(m.CategoryId)), m => m.Added, 2))
             slides.Add(FilmSlide(m));
-        foreach (var x in ds.Catalog.Series.Where(x => !hiddenSeries.Contains(x.CategoryId)).OrderByDescending(x => x.Added).Take(2))
+        foreach (var x in HomeData.Newest(ds.Catalog.Series.Where(x => !hiddenSeries.Contains(x.CategoryId)), x => x.Added, 2))
             slides.Add(ShowSlide(x));
 
         if (slides.Count == 0) slides.Add(WelcomeSlide(now));
@@ -467,6 +478,8 @@ public partial class HomeView : UserControl, IPage
         };
         Rows.Children.Add(FavEmpty);
         (ResumeSection, ResumeList) = Row("Continue watching", null, "ResumeCard", out _);
+        (MyListSection, MyListList) = Row("My List", "mylist", "PosterCard", out _);
+        MyListSection.IsVisible = false;
         (NextSection, NextList) = Row("Coming up next", null, "ChannelCard", out _);
         (SportSection, SportList) = Row("Live sport now", null, "ChannelCard", out _);
         (RemindSection, RemindList) = Row("Your reminders", null, "ChannelCard", out _);
@@ -751,6 +764,10 @@ public partial class HomeView : UserControl, IPage
             case "recent": mw.NavGuide.IsChecked = true; Guide.ShowAndSelect(GuideView.RecentId, null); break;
             case "films": mw.NavFilms.IsChecked = true; break;
             case "shows": mw.NavShows.IsChecked = true; break;
+            case "mylist":
+                // Opens on the kind you saved most recently (films or shows).
+                mw.OpenLibraryCategory(HistoryStore.MyList.FirstOrDefault()?.Kind != "series", LibraryView.MyListId);
+                break;
         }
     }
 
@@ -850,9 +867,36 @@ public partial class HomeView : UserControl, IPage
         MainWindow.Instance?.PlayVod(item, resume: true);
     }
 
+    internal int SelfTestMyListShown => MyListSection.IsVisible ? (MyListList.ItemsSource as System.Collections.ICollection)?.Count ?? 0 : 0;
+
     void Poster_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as Control)?.DataContext is HomePosterCard c) MainWindow.Instance?.OpenLibraryItem(c.IsMovie, c.Id);
+    }
+
+    /// <summary>Right-click a film or show: add to / remove from My List.</summary>
+    void Poster_PointerReleased(object sender, PointerReleasedEventArgs e)
+    {
+        if (e.InitialPressMouseButton != MouseButton.Right || (sender as Control)?.DataContext is not HomePosterCard c) return;
+        string kind = c.IsMovie ? "movie" : "series";
+        bool saved = HistoryStore.IsSaved(kind, c.Id);
+        var menu = new ContextMenu();
+        var open = new MenuItem { Header = c.IsMovie ? "Open film" : "Open show" };
+        open.Click += (_, _) => MainWindow.Instance?.OpenLibraryItem(c.IsMovie, c.Id);
+        var save = new MenuItem
+        {
+            Header = saved ? "Remove from My List" : "Add to My List",
+            Icon = new TextBlock { Text = saved ? Dingus.Icons.Close : Dingus.Icons.Plus, Classes = { "icon" } },
+        };
+        save.Click += (_, _) =>
+        {
+            bool now = HistoryStore.ToggleSaved(kind, c.Id, c.Title, c.Image);
+            MainWindow.Instance?.ShowToast(now ? $"Added “{c.Title}” to My List" : $"Removed “{c.Title}” from My List");
+        };
+        menu.Items.Add(open);
+        menu.Items.Add(save);
+        menu.Open(sender as Control);
+        e.Handled = true;
     }
 
     /// <summary>Mouse wheel scrolls the page (not the row it's over); Shift + wheel scrolls the row sideways.</summary>

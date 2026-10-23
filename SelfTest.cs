@@ -57,10 +57,20 @@ public static class SelfTest
             await Page(main, main.NavFilms, "06-films");
             await Page(main, main.NavShows, "07-shows");
 
+            // Trailers: whatever the provider sends (a YouTube id, a link, junk) becomes a YouTube link or nothing.
+            foreach (var (raw, want) in new (string, string)[]
+            {
+                ("dQw4w9WgXcQ", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
+                ("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=3", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
+                ("https://youtu.be/dQw4w9WgXcQ", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
+                ("", null), ("0", null), ("n/a", null),
+            })
+                if (Trailer.Url(raw) != want) Error(new Exception($"Trailer link for “{raw}” came out as {Trailer.Url(raw) ?? "nothing"}, not {want ?? "nothing"}."));
+            Note("trailer links: checked");
             // My List: save two films and a show, then see them on Home, in Films and on a film's page.
             var cat = DataService.Instance.Catalog;
-            foreach (var m in cat.Movies.Take(2)) HistoryStore.ToggleSaved("movie", m.Id, m.Name, m.Poster);
-            foreach (var x in cat.Series.Take(1)) HistoryStore.ToggleSaved("series", x.Id, x.Name, x.Cover);
+            foreach (var m in cat.Movies.Take(2)) if (!HistoryStore.IsSaved("movie", m.Id)) HistoryStore.ToggleSaved("movie", m.Id, m.Name, m.Poster);
+            foreach (var x in cat.Series.Take(1)) if (!HistoryStore.IsSaved("series", x.Id)) HistoryStore.ToggleSaved("series", x.Id, x.Name, x.Cover);
             Note($"my list: {HistoryStore.MyList.Count} saved");
             await Page(main, main.NavHome, "01b-home-mylist", fullScroll: true);
             main.OpenLibraryCategory(true, LibraryView.MyListId);

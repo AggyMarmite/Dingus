@@ -14,14 +14,14 @@ public enum LibraryMode { Movies, Series }
 /// <summary>Films and TV Shows share this page: category rail, poster grid and a details view.</summary>
 public partial class LibraryView : UserControl, IPage
 {
-    const string AllId = "__all", ContinueId = "__continue";
+    public const string AllId = "__all", ContinueId = "__continue", MyListId = "__mylist";
     const double CardWidth = 172; // 156 + margins
 
     readonly LibraryMode _mode;
     List<PosterItem> _all = new();
     Dictionary<string, PosterItem> _byId = new();
     List<PosterItem> _filtered = new();
-    CategoryItem _continueCat;
+    CategoryItem _continueCat, _myListCat;
     string _cat = AllId, _search = "", _sort;
     int _cols;
     bool _suppress, _dirty = true, _shown;
@@ -35,6 +35,8 @@ public partial class LibraryView : UserControl, IPage
     public string SearchHint => _mode == LibraryMode.Movies ? "Search all films" : "Search all shows";
 
     string Kind => _mode == LibraryMode.Movies ? "movie" : "episode";
+    /// <summary>What My List calls this page's titles.</summary>
+    string SavedKind => _mode == LibraryMode.Movies ? "movie" : "series";
 
     public LibraryView(LibraryMode mode)
     {
@@ -78,7 +80,7 @@ public partial class LibraryView : UserControl, IPage
         _filtered = new List<PosterItem>();
         PosterList.ItemsSource = null;
         CategoryList.ItemsSource = null;
-        _continueCat = null;
+        _continueCat = _myListCat = null;
         _dirty = true;
         Memory.CompactSoon();
     }
@@ -115,13 +117,16 @@ public partial class LibraryView : UserControl, IPage
         _byId = new Dictionary<string, PosterItem>();
         foreach (var p in _all) _byId.TryAdd(p.Id, p);
         ApplyProgress();
+        ApplySaved();
 
         var counts = _all.GroupBy(p => p.CategoryId).ToDictionary(g => g.Key, g => g.Count());
         _continueCat = new CategoryItem { Id = ContinueId, Name = "Continue watching", Count = ContinueItems().Count };
+        _myListCat = new CategoryItem { Id = MyListId, Name = "My List", Count = MyListItems().Count };
         var items = new List<CategoryItem>
         {
             new() { Id = AllId, Name = _mode == LibraryMode.Movies ? "All films" : "All shows", Count = _all.Count },
             _continueCat,
+            _myListCat,
         };
         foreach (var c in cats)
             if (counts.TryGetValue(c.Id, out var n)) items.Add(new CategoryItem { Id = c.Id, Name = c.Name, Count = n });
@@ -160,6 +165,21 @@ public partial class LibraryView : UserControl, IPage
         return res;
     }
 
+    /// <summary>Titles on My List that this playlist still has, most recently added first.</summary>
+    List<PosterItem> MyListItems()
+    {
+        var res = new List<PosterItem>();
+        foreach (var x in HistoryStore.Saved(SavedKind))
+            if (_byId.TryGetValue(x.Id, out var p)) res.Add(p);
+        return res;
+    }
+
+    void ApplySaved()
+    {
+        var saved = HistoryStore.Saved(SavedKind).Select(x => x.Id).ToHashSet();
+        foreach (var p in _all) p.Saved = saved.Contains(p.Id);
+    }
+
     void ApplyProgress()
     {
         if (_mode != LibraryMode.Movies) return; // show posters don't carry a bar – episodes do
@@ -173,8 +193,11 @@ public partial class LibraryView : UserControl, IPage
     void OnHistoryChanged()
     {
         ApplyProgress();
+        ApplySaved();
         if (_continueCat != null) _continueCat.Count = ContinueItems().Count;
-        if (_cat == ContinueId && _search.Length == 0) ApplyFilter();
+        if (_myListCat != null) _myListCat.Count = MyListItems().Count;
+        if (_cat is ContinueId or MyListId && _search.Length == 0) ApplyFilter();
+        UpdateSaveButton();
         UpdateEpisodeProgress();
         if (_current?.Source is Movie) UpdateMovieButtons();
     }
@@ -185,6 +208,7 @@ public partial class LibraryView : UserControl, IPage
         bool keepOrder = false;
         if (_search.Length > 0) q = _all.Where(p => p.Title.Contains(_search, StringComparison.OrdinalIgnoreCase));
         else if (_cat == ContinueId) { q = ContinueItems(); keepOrder = true; }
+        else if (_cat == MyListId) { q = MyListItems(); keepOrder = _sort == "added"; }
         else if (_cat != AllId) q = _all.Where(p => p.CategoryId == _cat);
         else q = _all;
 
@@ -210,6 +234,13 @@ public partial class LibraryView : UserControl, IPage
             {
                 EmptyTitle.Text = _mode == LibraryMode.Movies ? "No films yet" : "No TV shows yet";
                 EmptyBody.Text = "Your playlist doesn't include any, or it hasn't been loaded yet.";
+            }
+            else if (_cat == MyListId && _search.Length == 0)
+            {
+                EmptyTitle.Text = "Nothing on My List yet";
+                EmptyBody.Text = _mode == LibraryMode.Movies
+                    ? "Open a film and choose “My List” (or right-click its poster) to save it for later."
+                    : "Open a show and choose “My List” (or right-click its poster) to save it for later.";
             }
             else if (_cat == ContinueId && _search.Length == 0)
             {
@@ -245,9 +276,9 @@ public partial class LibraryView : UserControl, IPage
     {
         if (e.InitialPressMouseButton != MouseButton.Right) return;
         if ((e.Source as Control)?.DataContext is not CategoryItem c) return;
-        if (c.Id is AllId or ContinueId) return;
+        if (c.Id is AllId or ContinueId or MyListId) return;
         var shown = (CategoryList.ItemsSource as IEnumerable<CategoryItem> ?? Array.Empty<CategoryItem>())
-            .Where(x => x.Id is not (AllId or ContinueId)).Select(x => x.Id).ToList();
+            .Where(x => x.Id is not (AllId or ContinueId or MyListId)).Select(x => x.Id).ToList();
         var menu = CategoryOrder.Menu(_mode == LibraryMode.Movies ? "vod" : "series", shown, c.Id, Rebuild);
         menu.Open(e.Source as Control ?? CategoryList);
         e.Handled = true;
@@ -273,6 +304,73 @@ public partial class LibraryView : UserControl, IPage
     {
         if ((sender as Control)?.DataContext is PosterItem item) OpenDetail(item);
     }
+
+    /// <summary>Right-click a poster: add to / remove from My List.</summary>
+    void Poster_PointerReleased(object sender, PointerReleasedEventArgs e)
+    {
+        if (e.InitialPressMouseButton != MouseButton.Right || (sender as Control)?.DataContext is not PosterItem item) return;
+        var menu = new ContextMenu();
+        var open = new MenuItem { Header = _mode == LibraryMode.Movies ? "Open film" : "Open show" };
+        open.Click += (_, _) => OpenDetail(item);
+        var save = new MenuItem
+        {
+            Header = item.Saved ? "Remove from My List" : "Add to My List",
+            Icon = new TextBlock { Text = item.Saved ? Dingus.Icons.Close : Dingus.Icons.Plus, Classes = { "icon" } },
+        };
+        save.Click += (_, _) => ToggleSaved(item);
+        menu.Items.Add(open);
+        menu.Items.Add(save);
+        menu.Open(sender as Control);
+        e.Handled = true;
+    }
+
+    void ToggleSaved(PosterItem item)
+    {
+        bool now = HistoryStore.ToggleSaved(SavedKind, item.Id, item.Title, item.Image);
+        item.Saved = now;
+        if (_myListCat != null) _myListCat.Count = MyListItems().Count;
+        if (_current == item) UpdateSaveButton();
+        if (_cat == MyListId && _search.Length == 0 && _current == null) ApplyFilter();
+        MainWindow.Instance?.ShowToast(now ? $"Added “{item.Title}” to My List" : $"Removed “{item.Title}” from My List");
+    }
+
+    void Save_Click(object sender, RoutedEventArgs e)
+    {
+        if (_current != null) ToggleSaved(_current);
+    }
+
+    void UpdateSaveButton()
+    {
+        if (_current == null) return;
+        bool saved = HistoryStore.IsSaved(SavedKind, _current.Id);
+        SaveIcon.Text = saved ? Dingus.Icons.Check : Dingus.Icons.Plus;
+        SaveText.Text = saved ? "On My List" : "My List";
+        ToolTip.SetTip(SaveButton, saved ? "Remove from My List" : "Save it for later – it'll be on Home and in My List");
+    }
+
+    string _trailer;
+
+    /// <summary>The trailer opens on YouTube in your browser (the player can't play YouTube itself reliably).</summary>
+    void Trailer_Click(object sender, RoutedEventArgs e)
+    {
+        if (_trailer != null) Os.Open(_trailer);
+    }
+
+    /// <summary>Shows a category (e.g. My List, from Home's "View all"). Call after the page is shown.</summary>
+    public void ShowCategory(string id)
+    {
+        if (_dirty) Rebuild();
+        if (CategoryList.ItemsSource is not IEnumerable<CategoryItem> items) return;
+        var c = items.FirstOrDefault(x => x.Id == id);
+        if (c == null) return;
+        if (_search.Length > 0) MainWindow.Instance?.ClearSearch();
+        CloseDetail();
+        CategoryList.SelectedItem = c; // selection changed does the rest
+    }
+
+    internal PosterItem SelfTestFirst => _filtered.FirstOrDefault();
+    internal void SelfTestOpen(PosterItem p) => OpenDetail(p);
+    internal void SelfTestToggleSaved(PosterItem p) => ToggleSaved(p);
 
     /// <summary>Opens a film/show's details by id (from Home). Call after the page is shown.</summary>
     public void OpenItem(string id)
@@ -303,6 +401,9 @@ public partial class LibraryView : UserControl, IPage
         _episodes = new List<EpisodeItem>();
         DetailScroll.Offset = default;
         if (movie) UpdateMovieButtons();
+        UpdateSaveButton();
+        TrailerButton.IsVisible = false;
+        _trailer = null;
 
         _detailCts?.Cancel();
         _detailCts = new CancellationTokenSource();
@@ -330,6 +431,8 @@ public partial class LibraryView : UserControl, IPage
             if (!string.IsNullOrEmpty(d.Director)) credits.Add("Director  " + d.Director);
             DetailCredits.Text = string.Join("\n", credits);
 
+            _trailer = d.Trailer;
+            TrailerButton.IsVisible = d.Trailer != null;
             if (!string.IsNullOrEmpty(d.Backdrop)) ImageLoader.SetUrl(DetailBackdrop, d.Backdrop);
             if (string.IsNullOrEmpty(item.Image) && !string.IsNullOrEmpty(d.Poster)) ImageLoader.SetUrl(DetailPoster, d.Poster);
 
