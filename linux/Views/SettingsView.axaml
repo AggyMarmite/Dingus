@@ -229,6 +229,13 @@
                         <RadioButton Classes="chip" Content="Turkish" Tag="tur" IsCheckedChanged="SubLang_Checked" Margin="0,0,8,8"/>
                         <RadioButton Classes="chip" Content="Arabic" Tag="ara" IsCheckedChanged="SubLang_Checked" Margin="0,0,8,8"/>
                     </WrapPanel>
+                    <CheckBox x:Name="EvenVolumeToggle" Classes="toggle" IsCheckedChanged="EvenVolume_Changed" Margin="0,12,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Even out volume between channels" FontWeight="SemiBold"/>
+                            <TextBlock Text="Some channels are much louder than others. This levels them, so you're not reaching for the volume every time you switch."
+                                       Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </CheckBox>
                     <CheckBox x:Name="NightToggle" Classes="toggle" IsCheckedChanged="Night_Changed" Margin="0,12,0,0">
                         <StackPanel>
                             <TextBlock Text="Night mode" FontWeight="SemiBold"/>

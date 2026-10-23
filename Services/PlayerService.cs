@@ -43,12 +43,20 @@ public sealed class PlayerService
     public bool? GpuDecoding { get; private set; }
     DateTime _playingSince;
 
+    /// <summary>Set when VLC couldn't load one of the sound filters (checked by the self-test).</summary>
+    public string SoundFilterProblem { get; private set; }
+
+    /// <summary>Sound filters VLC reported loading (only collected during the self-test).</summary>
+    public HashSet<string> LoadedSoundFilters { get; } = new();
+
     public PlayerService()
     {
         // Software decoding keeps a set of frames per decoder thread – at 4K that's ~25 MB per frame,
         // so "one thread per CPU core" can cost well over a gigabyte. A few threads decode 4K fine.
         int threads = Math.Clamp(Environment.ProcessorCount / 2, 2, 6);
-        Vlc = new LibVLC(false,
+        // The self-test asks VLC for its detailed log, to see which sound filters it loaded.
+        bool selfTest = Environment.GetCommandLineArgs().Any(a => a == "--self-test");
+        Vlc = new LibVLC(selfTest,
             "--no-video-title-show",
             "--no-snapshot-preview",
             "--no-sub-autodetect-file",
@@ -62,6 +70,12 @@ public sealed class PlayerService
             var msg = e.Message;
             if (msg != null && msg.Contains("for hardware decoding", StringComparison.OrdinalIgnoreCase))
                 GpuDecoding = true;
+            // A sound filter (volume levelling, night mode) that couldn't be loaded – VLC carries on without it.
+            if (msg != null && msg.Contains("user filter", StringComparison.OrdinalIgnoreCase))
+                SoundFilterProblem = msg;
+            if (selfTest && msg != null && msg.Contains("audio filter", StringComparison.OrdinalIgnoreCase))
+                foreach (var f in new[] { "normvol", "compressor" })
+                    if (msg.Contains(f)) lock (LoadedSoundFilters) LoadedSoundFilters.Add(f);
         };
 
         Player = new MediaPlayer(Vlc)
@@ -250,10 +264,20 @@ public sealed class PlayerService
     static IEnumerable<string> SoundOptions()
     {
         var s = SettingsStore.Current;
+        // Sound filters run in this order: levelling first (channels arrive at very different volumes), then night mode.
+        var filters = new List<string>();
+        if (s.EvenVolume) filters.Add("normvol");
+        if (s.NightMode) filters.Add("compressor");
+        if (filters.Count > 0) yield return ":audio-filter=" + string.Join(":", filters);
+        if (s.EvenVolume)
+        {
+            // Gently: looks at the last ~20 blocks of sound and brings loud ones down towards the same level.
+            yield return ":norm-buff-size=20";
+            yield return ":norm-max-level=2.0";
+        }
         if (s.NightMode)
         {
             // Dynamic range compression: quiet dialogue up, explosions down.
-            yield return ":audio-filter=compressor";
             yield return ":compressor-rms-peak=0.2";
             yield return ":compressor-attack=25";
             yield return ":compressor-release=100";

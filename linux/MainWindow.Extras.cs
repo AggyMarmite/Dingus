@@ -238,6 +238,9 @@ public partial class MainWindow
         var night = new MenuItem { Header = "Night mode – even out loud and quiet sounds", ToggleType = MenuItemToggleType.CheckBox, IsChecked = s.NightMode };
         night.Click += (_, _) => SetNightMode(!s.NightMode);
         menu.Items.Add(night);
+        var even = new MenuItem { Header = "Even out volume between channels", ToggleType = MenuItemToggleType.CheckBox, IsChecked = s.EvenVolume };
+        even.Click += (_, _) => SetEvenVolume(!s.EvenVolume);
+        menu.Items.Add(even);
         AddPictureFixMenu(menu);
         OpenMenu(menu, PictureButton);
     }
@@ -258,6 +261,17 @@ public partial class MainWindow
         double w = Video.Bounds.Width, h = Video.Bounds.Height;
         if (w < 50 || h < 50) return;
         _svc.FillRatio = $"{Math.Round(w)}:{Math.Round(h)}";
+    }
+
+    void SetEvenVolume(bool on)
+    {
+        var s = SettingsStore.Current;
+        s.EvenVolume = on;
+        SettingsStore.Save();
+        ShowToast(on ? "Volume evened out between channels" : "Volume levelling off");
+        // The sound filter is set when a stream opens, so re-open what's playing.
+        if (_nowLive) PlayVariant();
+        else if (_vod != null) { var v = _vod; PlayVod(v, resume: true); }
     }
 
     void SetNightMode(bool on)

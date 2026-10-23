@@ -440,6 +440,9 @@ public partial class MainWindow
         var night = new MenuItem { Header = "Night mode – even out loud and quiet sounds", IsCheckable = true, IsChecked = s.NightMode };
         night.Click += (_, _) => SetNightMode(!s.NightMode);
         menu.Items.Add(night);
+        var even = new MenuItem { Header = "Even out volume between channels", IsCheckable = true, IsChecked = s.EvenVolume };
+        even.Click += (_, _) => SetEvenVolume(!s.EvenVolume);
+        menu.Items.Add(even);
         AddPictureFixMenu(menu);
 
         _hideTimer.Stop();
@@ -465,6 +468,17 @@ public partial class MainWindow
         double w = Video.ActualWidth, h = Video.ActualHeight;
         if (w < 50 || h < 50) return;
         _svc.FillRatio = $"{Math.Round(w)}:{Math.Round(h)}";
+    }
+
+    void SetEvenVolume(bool on)
+    {
+        var s = Services.SettingsStore.Current;
+        s.EvenVolume = on;
+        Services.SettingsStore.Save();
+        ShowToast(on ? "Volume evened out between channels" : "Volume levelling off");
+        // The sound filter is set when a stream opens, so re-open what's playing.
+        if (_nowLive) PlayVariant();
+        else if (_vod != null) { var v = _vod; PlayVod(v, resume: true); }
     }
 
     void SetNightMode(bool on)
@@ -516,6 +530,7 @@ public partial class MainWindow
     internal void SelfTestMiniControls() { MiniChrome.Visibility = Visibility.Visible; _hideTimer.Stop(); SlideMiniVolume(open: true); UpdateMiniInfo(); }
     internal void SelfTestExitPlayer() { if (_mini) ExitMini(false); else ExitPlayer(); }
     internal bool SelfTestPlaying => _svc?.Player?.IsPlaying == true;
+    internal Services.PlayerService SelfTestPlayer => _svc;
     internal bool SelfTestFullscreen => _osFullscreen;
     internal void SelfTestGoFullscreen() { if (_playerMode && !_mini && !_osFullscreen) SetOsFullscreen(true); }
     internal bool SelfTestInPlayer => _playerMode;

@@ -29,7 +29,7 @@ public static class SelfTest
             {
                 var files = Directory.GetFiles(pp).Select(Path.GetFileName).OrderBy(n => n).ToList();
                 sb.AppendLine($"plugins: {files.Count}");
-                sb.AppendLine(string.Join(" ", files.Where(n => n.Contains("http") || n.Contains("avcodec") || n.Contains("vout") || n.Contains("auhal") || n.Contains("filesystem"))));
+                sb.AppendLine(string.Join(" ", files.Where(n => n.Contains("http") || n.Contains("normvol") || n.Contains("compressor") || n.Contains("avcodec") || n.Contains("vout") || n.Contains("auhal") || n.Contains("filesystem"))));
             }
             using var vlc = new LibVLCSharp.Shared.LibVLC(false, "--verbose=2");
             var log = new List<string>();
@@ -184,6 +184,15 @@ public static class SelfTest
                 await Task.Delay(800);
                 Note(File.Exists(snap) ? "player: frame captured" : "player: no frame captured");
                 if (!mp.IsPlaying) Error(new Exception("The test video didn't play."));
+                // Volume levelling (on by default): VLC loads its sound filter for the stream.
+                if (main.SelfTestPlayer is { } psvc)
+                {
+                    string loaded;
+                    lock (psvc.LoadedSoundFilters) loaded = string.Join(", ", psvc.LoadedSoundFilters);
+                    Note($"sound filters: {(loaded.Length > 0 ? loaded : "none reported")}{(psvc.SoundFilterProblem != null ? " · problem: " + psvc.SoundFilterProblem : "")}");
+                    if (psvc.SoundFilterProblem != null) Error(new Exception("A sound filter didn't load: " + psvc.SoundFilterProblem));
+                    else if (SettingsStore.Current.EvenVolume && !loaded.Contains("normvol")) Error(new Exception("Volume levelling is on but VLC didn't load its filter."));
+                }
                 if (main.SelfTestOverlay is { } ov) Snap(ov, "18-player-controls");
                 File.WriteAllText(Path.Combine(Dir, "player-ready.txt"), "ok"); // the build captures the screen now
                 await Task.Delay(2500);

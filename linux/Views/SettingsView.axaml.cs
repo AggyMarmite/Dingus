@@ -61,6 +61,7 @@ public partial class SettingsView : UserControl, IPage
             CheckChip(AudioLangChips, S.AudioLanguage ?? "");
             CheckChip(SubLangChips, S.SubtitleLanguage ?? "");
             NightToggle.IsChecked = S.NightMode;
+            EvenVolumeToggle.IsChecked = S.EvenVolume;
             PopulateParental();
             AutoUpdateToggle.IsChecked = S.AutoUpdate;
             CheckChip(TimeshiftChips, S.TimeshiftMinutes.ToString());
@@ -96,6 +97,13 @@ public partial class SettingsView : UserControl, IPage
     {
         if (_loading || sender is not RadioButton { IsChecked: true, Tag: string t }) return;
         S.SubtitleLanguage = t.Length == 0 ? null : t;
+        SettingsStore.Save();
+    }
+
+    void EvenVolume_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        S.EvenVolume = EvenVolumeToggle.IsChecked == true;
         SettingsStore.Save();
     }
 

@@ -169,6 +169,15 @@ public static class SelfTest
         main.SelfTestShowChrome();
         await Idle(500);
         Note($"video, full player: playing={main.SelfTestPlaying} · {Mem()}");
+        // Volume levelling (on by default): VLC loads its sound filter for the stream.
+        if (main.SelfTestPlayer is { } psvc)
+        {
+            string loaded;
+            lock (psvc.LoadedSoundFilters) loaded = string.Join(", ", psvc.LoadedSoundFilters);
+            Note($"sound filters: {(loaded.Length > 0 ? loaded : "none reported")}{(psvc.SoundFilterProblem != null ? " · problem: " + psvc.SoundFilterProblem : "")}");
+            if (psvc.SoundFilterProblem != null) Error(new Exception("A sound filter didn't load: " + psvc.SoundFilterProblem));
+            else if (Services.SettingsStore.Current.EvenVolume && !loaded.Contains("normvol")) Error(new Exception("Volume levelling is on but VLC didn't load its filter."));
+        }
         Snap(main.SelfTestOverlay, "17-player-controls");
         main.SelfTestMini(true);
         await Task.Delay(3500);

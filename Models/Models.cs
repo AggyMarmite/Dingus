@@ -117,6 +117,8 @@ public class AppSettings
     public string Crop { get; set; }
     /// <summary>Evens out loud and quiet sounds (late-night viewing).</summary>
     public bool NightMode { get; set; }
+    /// <summary>Levels the volume, so switching between a quiet channel and a loud one doesn't mean reaching for the volume.</summary>
+    public bool EvenVolume { get; set; } = true;
     /// <summary>Preferred audio / subtitle language (ISO code such as "eng"); null = the stream's default / off.</summary>
     public string AudioLanguage { get; set; }
     public string SubtitleLanguage { get; set; }
