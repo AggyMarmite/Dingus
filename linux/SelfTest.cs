@@ -191,7 +191,10 @@ public static class SelfTest
                     lock (psvc.LoadedSoundFilters) loaded = string.Join(", ", psvc.LoadedSoundFilters);
                     Note($"sound filters: {(loaded.Length > 0 ? loaded : "none reported")}{(psvc.SoundFilterProblem != null ? " · problem: " + psvc.SoundFilterProblem : "")}");
                     if (psvc.SoundFilterProblem != null) Error(new Exception("A sound filter didn't load: " + psvc.SoundFilterProblem));
-                    else if (SettingsStore.Current.EvenVolume && !loaded.Contains("normvol")) Error(new Exception("Volume levelling is on but VLC didn't load its filter."));
+                    else if (SettingsStore.Current.EvenVolume && !loaded.Contains("normvol")) {
+                        lock (psvc.SoundLog) foreach (var l in psvc.SoundLog.Take(40)) Note("  vlc: " + l);
+                        Error(new Exception("Volume levelling is on but VLC didn't load its filter."));
+                    }
                 }
                 if (main.SelfTestOverlay is { } ov) Snap(ov, "18-player-controls");
                 File.WriteAllText(Path.Combine(Dir, "player-ready.txt"), "ok"); // the build captures the screen now

@@ -49,6 +49,9 @@ public sealed class PlayerService
     /// <summary>Sound filters VLC reported loading (only collected during the self-test).</summary>
     public HashSet<string> LoadedSoundFilters { get; } = new();
 
+    /// <summary>VLC's messages about sound output and filters (only collected during the self-test).</summary>
+    public List<string> SoundLog { get; } = new();
+
     public PlayerService()
     {
         // Software decoding keeps a set of frames per decoder thread – at 4K that's ~25 MB per frame,
@@ -56,13 +59,19 @@ public sealed class PlayerService
         int threads = Math.Clamp(Environment.ProcessorCount / 2, 2, 6);
         // The self-test asks VLC for its detailed log, to see which sound filters it loaded.
         bool selfTest = Environment.GetCommandLineArgs().Any(a => a == "--self-test");
-        Vlc = new LibVLC(selfTest,
+        var args = new List<string>
+        {
             "--no-video-title-show",
             "--no-snapshot-preview",
             "--no-sub-autodetect-file",
             "--no-lua",
             "--http-reconnect",
-            $"--avcodec-threads={threads}");
+            $"--avcodec-threads={threads}",
+        };
+        // The build machines have no sound card: the self-test sends the sound to a file instead, so the sound
+        // filters still run (and can be checked).
+        if (selfTest) args.AddRange(new[] { "--aout=afile", "--audiofile-file=" + Path.Combine(Path.GetTempPath(), "dingus-selftest-audio.wav"), "--audiofile-wav" });
+        Vlc = new LibVLC(selfTest, args.ToArray());
 
         // VLC announces "Using D3D11VA (…) for hardware decoding" when the graphics card takes over.
         Vlc.Log += (_, e) =>
@@ -73,9 +82,16 @@ public sealed class PlayerService
             // A sound filter (volume levelling, night mode) that couldn't be loaded – VLC carries on without it.
             if (msg != null && msg.Contains("user filter", StringComparison.OrdinalIgnoreCase))
                 SoundFilterProblem = msg;
-            if (selfTest && msg != null && msg.Contains("audio filter", StringComparison.OrdinalIgnoreCase))
-                foreach (var f in new[] { "normvol", "compressor" })
-                    if (msg.Contains(f)) lock (LoadedSoundFilters) LoadedSoundFilters.Add(f);
+            if (selfTest && msg != null)
+            {
+                if (msg.Contains("audio filter", StringComparison.OrdinalIgnoreCase))
+                    foreach (var f in new[] { "normvol", "compressor" })
+                        if (msg.Contains(f)) lock (LoadedSoundFilters) LoadedSoundFilters.Add(f);
+                var mod = e.Module ?? "";
+                if (mod.Contains("aout") || mod.Contains("afile") || mod.Contains("normvol") || mod.Contains("compressor") ||
+                    msg.Contains("audio output", StringComparison.OrdinalIgnoreCase) || msg.Contains("filter", StringComparison.OrdinalIgnoreCase))
+                    lock (SoundLog) if (SoundLog.Count < 60) SoundLog.Add($"{e.Level} {mod}: {msg}");
+            }
         };
 
         Player = new MediaPlayer(Vlc)
