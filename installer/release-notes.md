@@ -1,3 +1,10 @@
+## What's new in Dingus 0.9.9
+
+* Watch trailers for films and shows.
+* Volume evened out between channels.
+* My List on Linux.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.9.8
 
 * Linux version brought up to date with Windows.
