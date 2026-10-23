@@ -269,9 +269,38 @@ public partial class MainWindow
         s.EvenVolume = on;
         SettingsStore.Save();
         ShowToast(on ? "Volume evened out between channels" : "Volume levelling off");
-        // The sound filter is set when a stream opens, so re-open what's playing.
-        if (_nowLive) PlayVariant();
-        else if (_vod != null) { var v = _vod; PlayVod(v, resume: true); }
+        ApplySoundSettings();
+    }
+
+    bool _engineRestarting, _multiViewOpen;
+
+    /// <summary>
+    /// Volume levelling or night mode changed: VLC only takes sound filters when its engine starts, so start a new
+    /// engine with them and carry on with what was playing (films resume where they were).
+    /// </summary>
+    public async void ApplySoundSettings()
+    {
+        if (_svc == null || _engineRestarting || !_svc.SoundSettingsChanged) return;
+        _engineRestarting = true;
+        try
+        {
+            SaveVodProgress();
+            var old = _svc;
+            bool live = _nowLive && _nowChannel != null, vod = !_nowLive && _vod != null;
+            bool keepVlc = _multiViewOpen; // multi-view shares the engine's VLC
+            Video.MediaPlayer = null;
+            _svc = null;
+            var fresh = await Task.Run(() => { old.Shutdown(keepVlc); return new PlayerService(); });
+            _svc = fresh;
+            Video.MediaPlayer = _svc.Player;
+            HookPlayerEvents();
+            UpdateFillRatio();
+            if (live) PlayVariant();
+            else if (vod) { var v = _vod; PlayVod(v, resume: true); }
+        }
+        catch (Exception ex) { Log.Error(ex); ShowToast("Couldn't restart the video engine: " + ex.Message); }
+        finally { _engineRestarting = false; }
+        if (_svc?.SoundSettingsChanged == true) ApplySoundSettings(); // changed again meanwhile
     }
 
     void SetNightMode(bool on)
@@ -280,8 +309,7 @@ public partial class MainWindow
         s.NightMode = on;
         SettingsStore.Save();
         ShowToast(on ? "Night mode on – loud and quiet sounds evened out" : "Night mode off");
-        if (_nowLive) PlayVariant();
-        else if (_vod != null) { var v = _vod; PlayVod(v, resume: true); }
+        ApplySoundSettings();
     }
 
     string PictureKey(Channel c) => c == null ? null : (_guide.RowFor(c.Id)?.Channel.Id ?? c.Id);

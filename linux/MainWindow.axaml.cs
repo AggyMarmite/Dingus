@@ -287,8 +287,10 @@ public partial class MainWindow : Window
         if (_playerMode) ExitPlayerLayout();
         StopPlayback(); // frees the connection the main player was using
         var mv = new MultiViewWindow(_svc.Vlc, _guide, first);
+        _multiViewOpen = true;
         mv.Closed += async (_, _) =>
         {
+            _multiViewOpen = false;
             Activate();
             if (mv.OpenFullScreen && mv.FocusedRow != null)
             {

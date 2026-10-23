@@ -182,6 +182,25 @@ public static class SelfTest
             }
         }
         Snap(main.SelfTestOverlay, "17-player-controls");
+        var psvcBefore = main.SelfTestPlayer;
+        // Night mode on: the engine restarts with both sound filters and the video carries on.
+        {
+            Services.SettingsStore.Current.NightMode = true;
+            main.ApplySoundSettings();
+            for (int i = 0; i < 40 && (main.SelfTestPlayer == null || main.SelfTestPlayer.SoundSettingsChanged || !main.SelfTestPlayer.Player.IsPlaying); i++) await Task.Delay(250);
+            await Task.Delay(1500);
+            var nsvc = main.SelfTestPlayer;
+            string nl = "";
+            if (nsvc != null) lock (nsvc.LoadedSoundFilters) nl = string.Join(", ", nsvc.LoadedSoundFilters);
+            Note($"night mode on (engine restarted): playing={nsvc?.Player.IsPlaying} · sound filters: {(nl.Length > 0 ? nl : "none reported")}");
+            if (nsvc == null || nsvc == psvcBefore) Error(new Exception("Turning night mode on didn't restart the video engine."));
+            else if (!nl.Contains("compressor") || !nl.Contains("normvol")) Error(new Exception("Night mode is on but VLC didn't load both sound filters."));
+            if (nsvc?.Player.IsPlaying != true) Error(new Exception("The video didn't carry on after the engine restarted."));
+            Services.SettingsStore.Current.NightMode = false;
+            main.ApplySoundSettings();
+            for (int i = 0; i < 40 && (main.SelfTestPlayer == null || main.SelfTestPlayer.SoundSettingsChanged || !main.SelfTestPlayer.Player.IsPlaying); i++) await Task.Delay(250);
+            await Task.Delay(1000);
+        }
         main.SelfTestMini(true);
         await Task.Delay(3500);
         Note($"video, picture-in-picture: playing={main.SelfTestPlaying} · {Mem()}");

@@ -105,6 +105,7 @@ public partial class SettingsView : UserControl, IPage
         if (_loading) return;
         S.EvenVolume = EvenVolumeToggle.IsChecked == true;
         SettingsStore.Save();
+        MainWindow.Instance?.ApplySoundSettings();
     }
 
     void Night_Changed(object sender, RoutedEventArgs e)
@@ -112,6 +113,7 @@ public partial class SettingsView : UserControl, IPage
         if (_loading) return;
         S.NightMode = NightToggle.IsChecked == true;
         SettingsStore.Save();
+        MainWindow.Instance?.ApplySoundSettings();
     }
 
     // ------------------------------------------------------------------ updates
