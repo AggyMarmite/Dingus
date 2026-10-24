@@ -35,6 +35,8 @@
                                 <RadioButton x:Name="NavGuide" Classes="tab" Tag="{x:Static local:Icons.LiveTv}" Content="Live TV" IsCheckedChanged="Nav_Checked"/>
                                 <RadioButton x:Name="NavFilms" Classes="tab" Tag="{x:Static local:Icons.Films}" Content="Films" IsCheckedChanged="Nav_Checked"/>
                                 <RadioButton x:Name="NavShows" Classes="tab" Tag="{x:Static local:Icons.Shows}" Content="TV Shows" IsCheckedChanged="Nav_Checked"/>
+                                <RadioButton x:Name="NavEvents" Classes="tab" Tag="{x:Static local:Icons.Events}" Content="Events"
+                                             IsCheckedChanged="Nav_Checked" ToolTip.Tip="Find a game, follow your teams"/>
                                 <RadioButton x:Name="NavRecordings" Classes="tab" Tag="{x:Static local:Icons.Recordings}" Content="Recordings"
                                              IsCheckedChanged="Nav_Checked" ToolTip.Tip="Recordings &amp; reminders"/>
                                 <RadioButton x:Name="NavSearch" Classes="tab" Tag="{x:Static local:Icons.Search}" Content="Search"

@@ -28,6 +28,7 @@ public partial class MainWindow : Window
     readonly SettingsView _settings;
     readonly SearchView _search;
     readonly RecordingsView _recordings;
+    readonly EventsView _events;
     IPage _page;
 
     // ----- what's playing
@@ -76,6 +77,10 @@ public partial class MainWindow : Window
         _settings = new SettingsView();
         _search = new SearchView { Guide = _guide };
         _recordings = new RecordingsView { Guide = _guide };
+        _events = new EventsView { Guide = _guide };
+        // Your teams' games get reminders as they appear in the guide (when that's switched on).
+        DataService.Instance.EpgChanged += () => SyncTeamReminders();
+        _guide.RowsRebuilt += () => SyncTeamReminders();
         _guide.PreviewRequested += row => PlayLive(row.Channel, false);
         ReminderService.Watch = id =>
         {
@@ -418,17 +423,17 @@ public partial class MainWindow : Window
     /// <summary>Narrow windows: drop the word mark, then the tab labels, so search always has room.</summary>
     void TitleBar_SizeChanged(double w)
     {
-        int level = w >= 1280 ? 0 : w >= 1120 ? 1 : 2;
+        int level = w >= 1360 ? 0 : w >= 1200 ? 1 : 2;
         if (level == _barLevel) return;
         _barLevel = level;
         WordMark.IsVisible = level == 0;
         PlaylistName.MaxWidth = level == 0 ? 130 : 80;
-        foreach (var tab in new[] { NavHome, NavGuide, NavFilms, NavShows, NavRecordings })
+        foreach (var tab in new[] { NavHome, NavGuide, NavFilms, NavShows, NavEvents, NavRecordings })
         {
             if (!_tabLabels.ContainsKey(tab)) _tabLabels[tab] = tab.Content;
             bool iconOnly = level == 2;
             tab.Classes.Set("compact", iconOnly);
-            ToolTip.SetTip(tab, iconOnly ? _tabLabels[tab] : (tab == NavRecordings ? "Recordings & reminders" : null));
+            ToolTip.SetTip(tab, iconOnly ? _tabLabels[tab] : (tab == NavRecordings ? "Recordings & reminders" : tab == NavEvents ? "Find a game, follow your teams" : null));
         }
     }
 
@@ -447,8 +452,9 @@ public partial class MainWindow : Window
         else if (rb == NavSettings) page = _settings;
         else if (rb == NavSearch) page = _search;
         else if (rb == NavRecordings) page = _recordings;
+        else if (rb == NavEvents) page = _events;
         // Settings sits apart from the tabs: un-check the others by hand.
-        foreach (var other in new[] { NavHome, NavGuide, NavFilms, NavShows, NavRecordings, NavSearch, NavSettings })
+        foreach (var other in new[] { NavHome, NavGuide, NavFilms, NavShows, NavEvents, NavRecordings, NavSearch, NavSettings })
             if (other != rb && other.IsChecked == true) other.IsChecked = false;
         Navigate(page);
     }
@@ -568,7 +574,7 @@ public partial class MainWindow : Window
         if (_page != _search) return;
         var back = _beforeSearch ?? _home;
         (back == _guide ? NavGuide : back == _films ? NavFilms : back == _shows ? NavShows : back == _settings ? NavSettings
-            : back == _recordings ? NavRecordings : NavHome).IsChecked = true;
+            : back == _recordings ? NavRecordings : back == _events ? NavEvents : NavHome).IsChecked = true;
     }
 
     public void OpenChannelEditor()

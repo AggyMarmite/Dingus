@@ -213,6 +213,37 @@ public class NowItem
     public GenreBrushType GenreBrush => Services.Genres.Brush(Programme?.Genre);
 }
 
+/// <summary>A game on the Events page.</summary>
+public class EventItem
+{
+    public Services.EventGame Game { get; init; }
+    /// <summary>"LIVE" or the kick-off time.</summary>
+    public string TimeText { get; init; }
+    /// <summary>"until 17:00", "Today", "Tomorrow", "Sat 25 Oct".</summary>
+    public string DayText { get; init; }
+    public string Title => Game.Title;
+    /// <summary>The competition (when the guide says), the channel, and how many other channels show it.</summary>
+    public string Detail { get; init; }
+    public bool IsLive { get; init; }
+    public bool IsUpcoming => !IsLive;
+    public bool HasReminder { get; init; }
+    public string RemindText => HasReminder ? "Reminder set" : "Remind me";
+}
+
+/// <summary>A followed team on the Events page.</summary>
+public class TeamChip
+{
+    public string Name { get; init; }
+}
+
+/// <summary>A provider's "event" channel whose name matches the search.</summary>
+public class EventChannelItem
+{
+    public GuideRow Row { get; init; }
+    public string Name => Row.DisplayName;
+    public string Now { get; init; }
+}
+
 public class PosterItem : Observable
 {
     public string Id { get; set; }

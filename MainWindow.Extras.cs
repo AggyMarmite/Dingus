@@ -534,6 +534,7 @@ public partial class MainWindow
     internal void SelfTestExitPlayer() { if (_mini) ExitMini(false); else ExitPlayer(); }
     internal bool SelfTestPlaying => _svc?.Player?.IsPlaying == true;
     internal Services.PlayerService SelfTestPlayer => _svc;
+    internal Views.EventsView SelfTestEvents => _events;
     internal bool SelfTestFullscreen => _osFullscreen;
     internal void SelfTestGoFullscreen() { if (_playerMode && !_mini && !_osFullscreen) SetOsFullscreen(true); }
     internal bool SelfTestInPlayer => _playerMode;
@@ -739,17 +740,60 @@ public partial class MainWindow
     void TitleBar_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         double w = e.NewSize.Width;
-        int level = w >= 1280 ? 0 : w >= 1120 ? 1 : 2; // 0 = full, 1 = no word mark, 2 = icons only
+        int level = w >= 1360 ? 0 : w >= 1200 ? 1 : 2; // 0 = full, 1 = no word mark, 2 = icons only
         if (level == _barLevel) return;
         _barLevel = level;
         WordMark.Visibility = level == 0 ? Visibility.Visible : Visibility.Collapsed;
         PlaylistName.MaxWidth = level == 0 ? 130 : 80;
-        foreach (var tab in new[] { NavHome, NavGuide, NavFilms, NavShows, NavRecordings })
+        foreach (var tab in new[] { NavHome, NavGuide, NavFilms, NavShows, NavEvents, NavRecordings })
         {
             if (!_tabLabels.ContainsKey(tab)) _tabLabels[tab] = tab.Content;
             bool iconOnly = level == 2;
             tab.Content = iconOnly ? null : _tabLabels[tab];
-            tab.ToolTip = iconOnly ? _tabLabels[tab] : (tab == NavRecordings ? "Recordings & reminders" : null);
+            tab.ToolTip = iconOnly ? _tabLabels[tab] : (tab == NavRecordings ? "Recordings & reminders" : tab == NavEvents ? "Find a game, follow your teams" : null);
         }
+    }
+}
+
+// Events: reminders for your teams' games.
+public partial class MainWindow
+{
+    DispatcherTimer _teamSync;
+    bool _teamSyncAnnounce;
+
+    /// <summary>
+    /// Sets reminders for your teams' new games (when "Remind me before every game" is on). Waits a moment so the
+    /// guide loading and the channel rows being rebuilt don't each start a search.
+    /// </summary>
+    public void SyncTeamReminders(bool announce = false)
+    {
+        var s = Services.SettingsStore.Current;
+        if (!s.RemindTeamGames || s.FollowedTeams == null || s.FollowedTeams.Count == 0) return;
+        _teamSyncAnnounce |= announce;
+        if (_teamSync == null)
+        {
+            _teamSync = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            _teamSync.Tick += async (_, _) =>
+            {
+                _teamSync.Stop();
+                bool say = _teamSyncAnnounce;
+                _teamSyncAnnounce = false;
+                var rows = _guide.RowsIn(Views.GuideView.AllId);
+                var epg = Services.DataService.Instance.Epg;
+                var teams = Services.SettingsStore.Current.FollowedTeams.ToList();
+                Func<Views.GuideRow, string> epgId = _guide.EpgIdOf;
+                try
+                {
+                    var games = await Task.Run(() => Services.Events.ForTeams(rows, epgId, epg, teams, DateTime.Now));
+                    int n = Services.Events.SyncTeamReminders(games);
+                    if (n > 0 || say)
+                        ShowToast(n == 1 ? "Reminder set for 1 of your teams' games" : n > 1 ? $"Reminders set for {n} of your teams' games"
+                            : "Your teams' games will get reminders as they appear in the TV guide");
+                }
+                catch (Exception ex) { Services.Log.Error(ex); }
+            };
+        }
+        _teamSync.Stop();
+        _teamSync.Start();
     }
 }

@@ -28,6 +28,7 @@ public partial class MainWindow : Window
     readonly SettingsView _settings;
     readonly SearchView _search;
     readonly RecordingsView _recordings;
+    readonly EventsView _events;
     IPage _page;
 
     // ----- what's playing
@@ -84,6 +85,10 @@ public partial class MainWindow : Window
         _settings = new SettingsView();
         _search = new SearchView { Guide = _guide };
         _recordings = new RecordingsView { Guide = _guide };
+        _events = new EventsView { Guide = _guide };
+        // Your teams' games get reminders as they appear in the guide (when that's switched on).
+        DataService.Instance.EpgChanged += () => SyncTeamReminders();
+        _guide.RowsRebuilt += () => SyncTeamReminders();
         _guide.PreviewRequested += row => PlayLive(row.Channel, false);
         _mediaKeys = new MediaKeys(this, HandleMediaKey);
         ReminderService.Watch = id =>
@@ -502,6 +507,7 @@ public partial class MainWindow : Window
         else if (sender == NavSettings) page = _settings;
         else if (sender == NavSearch) page = _search;
         else if (sender == NavRecordings) page = _recordings;
+        else if (sender == NavEvents) page = _events;
         Navigate(page);
     }
 
@@ -650,7 +656,7 @@ public partial class MainWindow : Window
         if (_page != _search) return;
         var back = _beforeSearch ?? _home;
         (back == _guide ? NavGuide : back == _films ? NavFilms : back == _shows ? NavShows : back == _settings ? NavSettings
-            : back == _recordings ? NavRecordings : NavHome).IsChecked = true;
+            : back == _recordings ? NavRecordings : back == _events ? NavEvents : NavHome).IsChecked = true;
     }
 
 

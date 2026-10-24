@@ -67,6 +67,8 @@
                                     <RadioButton x:Name="NavGuide" Style="{StaticResource TabButton}" Tag="&#xE7F4;" Content="Live TV" Checked="Nav_Checked"/>
                                     <RadioButton x:Name="NavFilms" Style="{StaticResource TabButton}" Tag="&#xE8B2;" Content="Films" Checked="Nav_Checked"/>
                                     <RadioButton x:Name="NavShows" Style="{StaticResource TabButton}" Tag="&#xE8F1;" Content="TV Shows" Checked="Nav_Checked"/>
+                                    <RadioButton x:Name="NavEvents" Style="{StaticResource TabButton}" Tag="&#xE787;" Content="Events" Checked="Nav_Checked"
+                                                 ToolTip="Find a game, follow your teams"/>
                                     <RadioButton x:Name="NavRecordings" Style="{StaticResource TabButton}" Tag="&#xE7C8;" Content="Recordings" Checked="Nav_Checked"
                                                  ToolTip="Recordings &amp; reminders"/>
                                     <!-- The Search page opens from the search bar (no tab of its own) -->

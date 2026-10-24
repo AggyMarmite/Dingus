@@ -48,6 +48,7 @@ public static class Icons
     public const string Check = "\U000F012C";
     public const string Plus = "\U000F0415";
     public const string Trailer = "\U000F1705";
+    public const string Events = "\U000F04B8";
     public const string Delete = "\U000F09E7";
     public const string Folder = "\U000F0256";
     public const string Pencil = "\U000F0CB6";

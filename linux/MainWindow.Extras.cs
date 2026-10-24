@@ -472,6 +472,7 @@ public partial class MainWindow
     internal void SelfTestSearch(string text) => SearchBox.Text = text;
     internal void SelfTestSearchFilter(string f) => _search.SelfTestFilter(f);
     internal PlayerService SelfTestPlayer => _svc;
+    internal Views.EventsView SelfTestEvents => _events;
     internal Control SelfTestOverlay => Overlay;
     internal bool SelfTestSplashShowing => SplashUp;
     internal void SelfTestMini(bool on) { if (on) EnterMini(); else ExitMini(true); }
@@ -490,4 +491,47 @@ public partial class MainWindow
 public partial class MainWindow
 {
     void MultiView_Click(object sender, RoutedEventArgs e) => OpenMultiView(null);
+}
+
+// Events: reminders for your teams' games.
+public partial class MainWindow
+{
+    DispatcherTimer _teamSync;
+    bool _teamSyncAnnounce;
+
+    /// <summary>
+    /// Sets reminders for your teams' new games (when "Remind me before every game" is on). Waits a moment so the
+    /// guide loading and the channel rows being rebuilt don't each start a search.
+    /// </summary>
+    public void SyncTeamReminders(bool announce = false)
+    {
+        var s = SettingsStore.Current;
+        if (!s.RemindTeamGames || s.FollowedTeams == null || s.FollowedTeams.Count == 0) return;
+        _teamSyncAnnounce |= announce;
+        if (_teamSync == null)
+        {
+            _teamSync = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            _teamSync.Tick += async (_, _) =>
+            {
+                _teamSync.Stop();
+                bool say = _teamSyncAnnounce;
+                _teamSyncAnnounce = false;
+                var rows = _guide.RowsIn(Views.GuideView.AllId);
+                var epg = DataService.Instance.Epg;
+                var teams = SettingsStore.Current.FollowedTeams.ToList();
+                Func<Views.GuideRow, string> epgId = _guide.EpgIdOf;
+                try
+                {
+                    var games = await Task.Run(() => Events.ForTeams(rows, epgId, epg, teams, DateTime.Now));
+                    int n = Events.SyncTeamReminders(games);
+                    if (n > 0 || say)
+                        ShowToast(n == 1 ? "Reminder set for 1 of your teams' games" : n > 1 ? $"Reminders set for {n} of your teams' games"
+                            : "Your teams' games will get reminders as they appear in the TV guide");
+                }
+                catch (Exception ex) { Log.Error(ex); }
+            };
+        }
+        _teamSync.Stop();
+        _teamSync.Start();
+    }
 }

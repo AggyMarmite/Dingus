@@ -119,6 +119,12 @@ public class AppSettings
     public bool NightMode { get; set; }
     /// <summary>Levels the volume, so switching between a quiet channel and a loud one doesn't mean reaching for the volume.</summary>
     public bool EvenVolume { get; set; } = true;
+    /// <summary>Teams you follow (Events), as you typed them.</summary>
+    public List<string> FollowedTeams { get; set; } = new();
+    /// <summary>Set reminders for your teams' games automatically.</summary>
+    public bool RemindTeamGames { get; set; }
+    /// <summary>Games already reminded automatically ("yyyyMMddHHmm|teams"), so a reminder you clear isn't put back.</summary>
+    public List<string> TeamRemindersSet { get; set; } = new();
     /// <summary>Preferred audio / subtitle language (ISO code such as "eng"); null = the stream's default / off.</summary>
     public string AudioLanguage { get; set; }
     public string SubtitleLanguage { get; set; }

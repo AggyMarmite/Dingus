@@ -1,0 +1,133 @@
+<UserControl x:Class="Dingus.Views.EventsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svc="clr-namespace:Dingus.Services">
+    <UserControl.Resources>
+        <!-- One game: kick-off (or LIVE), the teams, where it's on; Watch or Remind me -->
+        <DataTemplate x:Key="GameRow">
+            <Button Style="{StaticResource RowButton}" Click="Game_Click" MouseRightButtonUp="Game_RightClick" Margin="0,0,0,6" Padding="0">
+                <Border Background="{StaticResource SurfaceBrush}" CornerRadius="10" Padding="16,12"
+                        BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="WatchBtn" Style="{StaticResource PrimaryButton}" Margin="8,0,0,0" Click="Watch_Click" Visibility="Collapsed">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE768;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Watch"/>
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="RemindBtn" Style="{StaticResource BaseButton}" Margin="8,0,0,0" Click="Remind_Click"
+                                    ToolTip="A reminder pops up just before kick-off, with a button to watch">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock x:Name="RemindIcon" Text="&#xEA8F;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{Binding RemindText}"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                        <!-- kick-off -->
+                        <StackPanel DockPanel.Dock="Left" Width="92" VerticalAlignment="Center">
+                            <Border x:Name="LiveBadge" HorizontalAlignment="Left" CornerRadius="4" Padding="7,2" Background="#E5484D" Visibility="Collapsed">
+                                <TextBlock Text="LIVE" FontSize="11" FontWeight="Bold" Foreground="White"/>
+                            </Border>
+                            <TextBlock x:Name="TimeBlock" Text="{Binding TimeText}" FontSize="17" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding DayText}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0"/>
+                        </StackPanel>
+                        <StackPanel Margin="4,0,12,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding Detail}" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+            </Button>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsLive}" Value="True">
+                    <Setter TargetName="WatchBtn" Property="Visibility" Value="Visible"/>
+                    <Setter TargetName="RemindBtn" Property="Visibility" Value="Collapsed"/>
+                    <Setter TargetName="LiveBadge" Property="Visibility" Value="Visible"/>
+                    <Setter TargetName="TimeBlock" Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding HasReminder}" Value="True">
+                    <Setter TargetName="RemindIcon" Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" svc:SmoothScroll.Enabled="True">
+        <StackPanel Margin="36,16,36,48" MaxWidth="1000">
+
+            <TextBlock Text="Events" FontSize="24" FontWeight="SemiBold"/>
+            <TextBlock Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0" TextWrapping="Wrap"
+                       Text="Find a game in your TV guide, or follow your teams to see when they're on."/>
+
+            <!-- Find a game -->
+            <Grid Margin="0,18,0,0">
+                <TextBox x:Name="QueryBox" Tag="Find a game – e.g. Arsenal v Chelsea" FontSize="15" Padding="40,10,12,10"
+                         TextChanged="Query_TextChanged" KeyDown="Query_KeyDown"/>
+                <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="15" Margin="15,0,0,0" HorizontalAlignment="Left"
+                           VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" IsHitTestVisible="False"/>
+            </Grid>
+
+            <!-- Search results -->
+            <StackPanel x:Name="ResultsPart" Visibility="Collapsed">
+                <TextBlock x:Name="ResultsHeader" Style="{StaticResource SectionHeader}" Text="IN YOUR TV GUIDE"/>
+                <ItemsControl x:Name="ResultList" ItemTemplate="{StaticResource GameRow}"/>
+                <TextBlock x:Name="ResultsEmpty" Foreground="{StaticResource MutedBrush}" Margin="2,0,0,0" TextWrapping="Wrap" Visibility="Collapsed"/>
+                <StackPanel x:Name="ChannelsPart" Visibility="Collapsed">
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="EVENT CHANNELS"/>
+                    <ItemsControl x:Name="ChannelResults">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Style="{StaticResource RowButton}" Click="EventChannel_Click" Margin="0,0,0,2" ToolTip="Watch this channel">
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Left" Text="&#xE768;" FontFamily="{StaticResource IconFont}" FontSize="13"
+                                                   Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="4,0,12,0"/>
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding Now}" Foreground="{StaticResource MutedBrush}" FontSize="12"
+                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="360" Margin="12,0,0,0"/>
+                                        <TextBlock Text="{Binding Name}" FontSize="14" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    </DockPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Your teams -->
+            <StackPanel x:Name="TeamsPart">
+                <TextBlock Style="{StaticResource SectionHeader}" Text="YOUR TEAMS"/>
+                <ItemsControl x:Name="TeamChips">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{StaticResource Surface2Brush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
+                                    CornerRadius="16" Padding="14,5,6,5" Margin="0,0,8,8">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                    <Button Style="{StaticResource GhostButton}" Padding="6,2" Margin="6,0,0,0" Click="Unfollow_Click" ToolTip="Unfollow">
+                                        <TextBlock Text="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="10"/>
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                    <TextBox x:Name="FollowBox" Tag="Add a team – e.g. Arsenal" Width="300" KeyDown="FollowBox_KeyDown"/>
+                    <Button Style="{StaticResource PrimaryButton}" Content="Follow" Margin="8,0,0,0" Click="Follow_Click"/>
+                </StackPanel>
+                <CheckBox x:Name="RemindAllToggle" Style="{StaticResource Toggle}" Margin="0,16,0,0" Checked="RemindAll_Changed" Unchecked="RemindAll_Changed">
+                    <StackPanel>
+                        <TextBlock Text="Remind me before every game" FontWeight="SemiBold"/>
+                        <TextBlock Text="Reminders are set by themselves as your teams' games appear in the TV guide."
+                                   Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </CheckBox>
+
+                <TextBlock Style="{StaticResource SectionHeader}" Text="COMING UP FOR YOUR TEAMS"/>
+                <ItemsControl x:Name="TeamGames" ItemTemplate="{StaticResource GameRow}"/>
+                <TextBlock x:Name="TeamEmpty" Foreground="{StaticResource MutedBrush}" Margin="2,0,0,0" TextWrapping="Wrap"/>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

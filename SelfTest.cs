@@ -91,6 +91,25 @@ public static class SelfTest
                 ReminderService.Toggle(row0.Channel.Id, row0.DisplayName, new Models.Programme { Title = "Dance Off", Start = t.AddHours(-2), End = t.AddHours(-1) });
             }
             await Page(main, main.NavRecordings, "16-recordings", fullScroll: true);
+            // Events: follow a team (its games in the guide, reminders set by themselves), then search for one game.
+            SettingsStore.Current.FollowedTeams = new List<string>();
+            Events.Follow("Rovers");
+            SettingsStore.Current.RemindTeamGames = true;
+            await Page(main, main.NavEvents, "20-events", fullScroll: true);
+            var teamGames = main.SelfTestEvents.SelfTestTeamGames;
+            Note($"events: following Rovers – {teamGames} games in the guide");
+            if (teamGames == 0) Error(new Exception("Events found no games for a followed team (Rovers)."));
+            main.SyncTeamReminders();
+            await Idle(3500);
+            int teamReminders = ReminderService.Upcoming.Count(r => r.Title.Contains("Rovers"));
+            Note($"events: {teamReminders} reminders set for Rovers' games");
+            if (teamReminders == 0) Error(new Exception("“Remind me before every game” didn't set any reminders."));
+            main.SelfTestEvents.SelfTestQuery("rovers v utd");
+            await Idle(1500);
+            Note($"events: search “rovers v utd” – {main.SelfTestEvents.SelfTestResults} games");
+            Snap(main.SelfTestRoot, "20b-events-search");
+            if (main.SelfTestEvents.SelfTestResults == 0) Error(new Exception("Searching Events for “rovers v utd” found nothing."));
+            main.SelfTestEvents.SelfTestQuery("");
             main.SelfTestSearch("news"); // typing anywhere opens Search
             await Idle(1500);
             Snap(main.SelfTestRoot, "14-search");
