@@ -1,0 +1,59 @@
+window opened at 1440×826 (Normal) on a 1920×1032 screen
+splash showing as the window opened: True
+00-splash: 1440×826
+channels: 14, guide-matched: 14
+00-splash-add-playlist: 1920×1032
+title bar: every button can be clicked
+01-home: 1920×1032
+01-home-full: 1903×2440
+02-guide: 1920×1032
+03-guide-on-now: 1920×1032
+04-guide-tonight: 1920×1032
+06-films: 1920×1032
+07-shows: 1920×1032
+trailer links: checked
+my list: 3 saved
+01b-home-mylist: 1920×1032
+01b-home-mylist-full: 1903×2791
+06b-films-mylist: 1920×1032
+06c-film-details: 1920×1032
+09-settings: 1920×1032
+09-settings-full: 900×3141
+16-recordings: 1920×1032
+16-recordings-full: 1000×922
+20-events: 1920×1032
+events: following Rovers – 5 games in the guide
+events: 5 reminders set for Rovers' games
+events: search “rovers v utd” – 5 games
+20b-events-search: 1920×1032
+20c-events-channels: 1920×1032
+events: the first game is on 3 channels
+team crests: 573 clubs · sau.1: the server returned an error (404) · Man Utd → Manchester United · Spurs → Tottenham Hotspur · Rovers (several clubs) → none
+20d-events-crests: 1920×1032
+14-search: 1920×1032
+15-search-films: 1920×1032
+10-shortcuts: 1920×1032
+11-channel-editor: 964×664
+13-guide-match: 576×564
+12-reminder: 300×149
+  on top → True (fullscreen False) from MainWindow.SetOsFullscreen < MainWindow.EnterPlayer < MainWindow.PlayVod < <VideoMemory>d__10.MoveNext
+video, full player: playing=True · working set 350 MB · private 270 MB · .NET heap 22 MB
+sound filters: normvol
+17-player-controls: 1920×1080
+night mode on: playing=True · sound filters: normvol, compressor
+  on top → False (fullscreen False) from MainWindow.SetOsFullscreen < MainWindow.EnterMini < MainWindow.SelfTestMini < <VideoMemory>d__10.MoveNext
+  on top → True (fullscreen False) from MainWindow.EnterMini < MainWindow.SelfTestMini < <VideoMemory>d__10.MoveNext < App.Main
+video, picture-in-picture: playing=True · working set 272 MB · private 227 MB · .NET heap 15 MB
+18-pip-controls: 480×270
+mini player volume 80 (player 80)
+  on top → False (fullscreen False) from MainWindow.LeaveMiniWindow < MainWindow.ExitMini < MainWindow.SelfTestMini < <VideoMemory>d__10.MoveNext
+  on top → True (fullscreen False) from MainWindow.SetOsFullscreen < MainWindow.EnterPlayer < MainWindow.ExitMini < MainWindow.SelfTestMini
+video, full player again: playing=True · working set 349 MB · private 259 MB · .NET heap 25 MB
+just after going full screen: True · Normal · None · 1920×1080
+full screen: True · on top: True · still in the player: True
+  on top → False (fullscreen False) from MainWindow.SetOsFullscreen < MainWindow.ExitPlayerLayout < MainWindow.ExitPlayer < MainWindow.SelfTestExitPlayer
+video stopped: working set 116 MB · private 192 MB · .NET heap 21 MB · on top: False
+after full screen: 0 window(s) had to be taken off 'always on top'; still on top: none
+memory: 117 MB
+
+PASSED
