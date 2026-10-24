@@ -1,0 +1,40 @@
+00-splash-add-playlist: 1920×1080
+channels: 14, guide-matched: 14
+01-home: 1920×1080
+smooth scroll: 176 px after 50 ms, 300 px at the end
+02-guide: 1920×1080
+03-guide-on-now: 1920×1080
+04-guide-tonight: 1920×1080
+06-films: 1920×1080
+07-shows: 1920×1080
+trailer links: checked
+my list: 3 saved
+01b-home-mylist: 1920×1080
+home my list row: 3 titles
+06b-films-mylist: 1920×1080
+06c-film-details: 1920×1080
+09-settings: 1920×1080
+16-recordings: 1920×1080
+20-events: 1920×1080
+events: following Rovers – 5 games in the guide
+events: 5 reminders set for Rovers' games
+events: search “rovers v utd” – 5 games
+20b-events-search: 1920×1080
+20c-events-channels: 1920×1080
+events: the first game is on 3 channels
+team crests: 573 clubs · sau.1: the server returned an error (404) · Man Utd → Manchester United · Spurs → Tottenham Hotspur · Rovers (several clubs) → none
+20d-events-crests: 1920×1080
+14-search: 1920×1080
+15-search-films: 1920×1080
+10-shortcuts: 1920×1080
+11-channel-editor: 980×680
+13-guide-match: 592×580
+player: playing=True time=2151 ms length=30000 ms
+player: frame captured
+sound filters: normvol
+night mode on: playing=True · sound filters: normvol, compressor
+18-player-controls: 1920×1080
+19-mini-player: 480×270
+mini volume: player=40 mini=40
+12-reminder: 300×146
+PASSED
