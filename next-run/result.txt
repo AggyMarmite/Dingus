@@ -1,0 +1,61 @@
+Playlist: 30,000 channels · 80,000 films · 15,000 shows · guide for 6,488 channels (333,163 programme slots)
+
+Window open                             757 ms   (from starting Dingus) longest wait 0 ms
+Saved playlist on screen              1,085 ms
+Playlist loaded                       4,107 ms
+TV guide loaded                       1,482 ms
+While loading                                    longest freeze 717 ms · 3 freezes over 0.1 s (total 2.0 s) · memory clean-up paused 382 ms (5 full) · memory 419 MB
+
+Home                                      1 ms   longest wait 37 ms · memory 412 MB
+Live TV                                 260 ms   longest freeze 362 ms · 1 freeze over 0.1 s (total 0.4 s) · memory 429 MB
+Live TV: scroll 40 pages              5,091 ms   longest freeze 113 ms · 2 freezes over 0.1 s (total 0.2 s) · memory clean-up paused 172 ms (2 full) · memory 37 MB
+Live TV: On now                          69 ms   longest wait 50 ms · memory 115 MB
+Live TV: Tonight                         86 ms   longest wait 49 ms · memory 129 MB
+Live TV: back to the guide              172 ms   longest freeze 119 ms · 1 freeze over 0.1 s (total 0.1 s) · memory 146 MB
+Films                                   238 ms   longest freeze 205 ms · 1 freeze over 0.1 s (total 0.2 s) · memory clean-up paused 40 ms (0 full) · memory 237 MB
+Films: scroll 30 pages                3,173 ms   longest freeze 110 ms · 1 freeze over 0.1 s (total 0.1 s) · memory clean-up paused 40 ms (2 full) · memory 363 MB
+TV Shows                                157 ms   longest freeze 113 ms · 1 freeze over 0.1 s (total 0.1 s) · memory 372 MB
+TV Shows: scroll 30 pages             3,100 ms   longest wait 91 ms · memory clean-up paused 127 ms (4 full) · memory 15 MB
+Search everything: "the"                607 ms   longest freeze 173 ms · 1 freeze over 0.1 s (total 0.2 s) · memory 169 MB
+Search everything: "news"               604 ms   longest wait 41 ms · memory 178 MB
+Home again                              293 ms   longest freeze 281 ms · 1 freeze over 0.1 s (total 0.3 s) · memory clean-up paused 30 ms (1 full) · memory 258 MB
+Settings                                165 ms   longest freeze 149 ms · 1 freeze over 0.1 s (total 0.1 s) · memory clean-up paused 26 ms (0 full) · memory 263 MB
+Left alone for 8 s                               longest wait 28 ms · memory clean-up paused 89 ms (1 full) · memory 263 → 18 MB
+
+Memory at the end: 18 MB · memory clean-up paused the app 936 ms in all (15 full)
+
+Slowest work (over 30 ms; "window" = the window waits for it, "background" = it doesn't):
+      999 ms  background  playlist: downloading and reading vod streams  (loading)
+      993 ms  background  playlist: downloading and reading live streams  (loading)
+      514 ms  background  Live TV: building channel rows  (loading)
+      329 ms  window      job: MediaContext.RenderMessageHandler (Render)  (loading)
+      287 ms  window      job: HomeView.Build (Background)  (loading)
+      287 ms  window      Home: building the page  (loading)
+      283 ms  window      job: <>c.<.cctor>b__8_0 → AsyncTaskMethodBuilder+AsyncStateMachineBoxSystem.Threading.Tasks.VoidTaskResult],[Dingus.PerfTest+<RunAsync>d__37.MoveNext (Send)  (Live TV)
+      252 ms  window      job: MediaContext.RenderMessageHandler (Render)  (loading)
+      248 ms  background  playlist: comparing with the saved copy  (loading)
+      188 ms  background  guide: loading the saved copy  (loading)
+      176 ms  window      job: MediaContext.AnimatedRenderMessageHandler (Render)  (Home again)
+      161 ms  background  playlist: reading the saved copy  (loading)
+      139 ms  window      job: <>c.<Restart>b__21_0 → System.Windows.Threading.DispatcherTimer (ApplicationIdle)  (Live TV: scroll 40 pages)
+      138 ms  window      memory: compacting  (Live TV: scroll 40 pages)
+      137 ms  background  playlist: downloading and reading series  (loading)
+      135 ms  window      job: <>c.<.cctor>b__8_0 → AsyncTaskMethodBuilder+AsyncStateMachineBoxSystem.Threading.Tasks.VoidTaskResult],[Dingus.PerfTest+<RunAsync>d__37.MoveNext (Send)  (Films)
+      131 ms  window      job: <>c.<Restart>b__21_0 → System.Windows.Threading.DispatcherTimer (ApplicationIdle)  (TV Shows: scroll 30 pages)
+      130 ms  window      memory: compacting  (TV Shows: scroll 30 pages)
+      127 ms  window      job: <>c.<Restart>b__21_0 → System.Windows.Threading.DispatcherTimer (Background)  (Search everything: "the")
+      115 ms  window      job: MediaContext.AnimatedRenderMessageHandler (Render)  (Settings)
+      115 ms  window      job: <>c.<Restart>b__21_0 → System.Windows.Threading.DispatcherTimer (ApplicationIdle)  (left alone)
+      115 ms  window      memory: compacting  (left alone)
+      100 ms  window      job: <>c.<.cctor>b__8_0 → AsyncTaskMethodBuilder+AsyncStateMachineBoxSystem.Threading.Tasks.VoidTaskResult],[Dingus.Services.DataService+<ReloadEpgAsync>d__67.MoveNext (Send)  (loading)
+       96 ms  window      new guide → HomeView.<.ctor>b__20_3  (loading)
+       96 ms  window      Home: building the page  (loading)
+       91 ms  window      job: <>c.<.cctor>b__8_0 → AsyncTaskMethodBuilder+AsyncStateMachineBoxSystem.Threading.Tasks.VoidTaskResult],[Dingus.Services.DataService+<LoadActiveAsync>d__66.MoveNext (Send)  (loading)
+       90 ms  window      job: MediaContext.AnimatedRenderMessageHandler (Render)  (loading)
+       89 ms  window      job: <>c.<.cctor>b__8_0 → AsyncTaskMethodBuilder+AsyncStateMachineBoxSystem.Threading.Tasks.VoidTaskResult],[Dingus.PerfTest+<RunAsync>d__37.MoveNext (Send)  (Home again)
+       87 ms  window      new guide → HomeView.<.ctor>b__20_3  (loading)
+       87 ms  window      Home: building the page  (loading)
+       82 ms  window      job: MediaContext.RenderMessageHandler (Render)  (Live TV)
+       82 ms  window      Home: building the page  (Home again)
+
+PASSED
