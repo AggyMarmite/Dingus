@@ -192,27 +192,19 @@
                     MouseLeftButtonDown="SourcesCard_MouseDown">
                 <DockPanel>
                     <!-- header: the game -->
-                    <Grid DockPanel.Dock="Top" Height="140">
-                        <Grid.Clip><RectangleGeometry Rect="0,0,700,140" RadiusX="14" RadiusY="14"/></Grid.Clip>
+                    <Grid DockPanel.Dock="Top" Height="128">
+                        <Grid.Clip><RectangleGeometry Rect="0,0,700,128" RadiusX="14" RadiusY="14"/></Grid.Clip>
                         <ContentPresenter x:Name="SourcesArt" ContentTemplate="{StaticResource GameArt}"/>
-                        <Border>
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                    <GradientStop Color="#00000000" Offset="0.3"/>
-                                    <GradientStop Color="#E0000000" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
-                        </Border>
-                        <StackPanel VerticalAlignment="Bottom" Margin="20,0,60,14">
-                            <TextBlock x:Name="SourcesTitle" FontSize="20" FontWeight="SemiBold" Foreground="White" TextTrimming="CharacterEllipsis"/>
-                            <TextBlock x:Name="SourcesWhen" FontSize="13" Foreground="#D9FFFFFF" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
-                        </StackPanel>
                         <Button Style="{StaticResource GhostButton}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10" Padding="8"
                                 Click="SourcesClose_Click" ToolTip="Close (Esc)" Foreground="White">
                             <TextBlock Text="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="13"/>
                         </Button>
                     </Grid>
-                    <TextBlock x:Name="SourcesCount" DockPanel.Dock="Top" Style="{StaticResource SectionHeader}" Margin="20,16,0,8"/>
+                    <StackPanel DockPanel.Dock="Top" Margin="20,14,20,0">
+                        <TextBlock x:Name="SourcesTitle" FontSize="20" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock x:Name="SourcesWhen" FontSize="13" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                    <TextBlock x:Name="SourcesCount" DockPanel.Dock="Top" Style="{StaticResource SectionHeader}" Margin="20,14,0,8"/>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,0,0,12">
                         <ItemsControl x:Name="SourceList" Margin="12,0,12,0">
                             <ItemsControl.ItemTemplate>

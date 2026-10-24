@@ -122,14 +122,25 @@ public static class TeamCrests
         foreach (var p in e.EnumerateObject()) Collect(p.Value, res);
     }
 
+    /// <summary>
+    /// Every name a club goes by → its crest. A name that belongs to more than one club ("Rovers", "United", "City")
+    /// is left out: a guide saying just "Rovers" could mean any of them, and a wrong crest is worse than none.
+    /// </summary>
     static void Use(List<Crest> teams)
     {
         var idx = new Dictionary<string, Crest>();
+        var shared = new HashSet<string>();
         foreach (var t in teams)
-            foreach (var n in t.Names)
+            foreach (var n in t.Names.Distinct())
             {
                 var k = Events.Norm(n);
-                if (k.Trim().Length >= 3) idx.TryAdd(k, t);
+                if (k.Trim().Length < 3 || shared.Contains(k)) continue;
+                if (idx.TryGetValue(k, out var other))
+                {
+                    // The same club in two leagues' lists (a cup and its league) is fine; two different clubs isn't.
+                    if (other.Logo != t.Logo && !string.Equals(other.Name, t.Name, StringComparison.OrdinalIgnoreCase)) { idx.Remove(k); shared.Add(k); }
+                }
+                else idx[k] = t;
             }
         lock (Gate) { _index = idx; Count = teams.Count; }
     }

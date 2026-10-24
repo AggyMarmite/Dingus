@@ -168,7 +168,8 @@ public static class SelfTest
             // Crests come from ESPN's team lists (an outside service, so only noted).
             var crests = TeamCrests.EnsureLoadedAsync();
             await Task.WhenAny(crests, Task.Delay(25000));
-            Note($"team crests: {TeamCrests.Count} clubs{(TeamCrests.Problem != null ? " · " + TeamCrests.Problem : "")} · Man Utd → {TeamCrests.Find("Man Utd")?.Name ?? "not found"} · Spurs → {TeamCrests.Find("Spurs")?.Name ?? "not found"}");
+            Note($"team crests: {TeamCrests.Count} clubs{(TeamCrests.Problem != null ? " · " + TeamCrests.Problem : "")} · Man Utd → {TeamCrests.Find("Man Utd")?.Name ?? "not found"} · Spurs → {TeamCrests.Find("Spurs")?.Name ?? "not found"} · Rovers (several clubs) → {TeamCrests.Find("Rovers")?.Name ?? "none"}");
+            if (TeamCrests.Count > 0 && TeamCrests.Find("United") != null) Error(new Exception("“United” got one club's crest, but many clubs are called United."));
             main.SelfTestEvents.SelfTestQuery("Man Utd v Spurs");
             await Idle(7000); // crests load over the network
             Snap(main.SelfTestRoot, "20d-events-crests");
