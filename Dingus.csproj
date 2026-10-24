@@ -10,7 +10,7 @@
     <AssemblyName>Dingus</AssemblyName>
     <RootNamespace>Dingus</RootNamespace>
     <Product>Dingus</Product>
-    <Version>0.9.9</Version>
+    <Version>0.10.0</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\Dingus.ico</ApplicationIcon>
 

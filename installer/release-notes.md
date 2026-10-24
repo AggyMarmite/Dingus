@@ -1,3 +1,9 @@
+## What's new in Dingus 0.10.0
+
+* New Events section: find a game and follow your teams.
+* Reminders for your teams' games.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.9.9
 
 * Watch trailers for films and shows.
