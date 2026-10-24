@@ -66,6 +66,7 @@ public partial class EventsView : UserControl, IPage
         _tick.Stop();
         CloseSources();
         ResultList.ItemsSource = TeamGames.ItemsSource = ChannelResults.ItemsSource = null;
+        Events.ReleaseMemory();
     }
 
     // ------------------------------------------------------------------ building

@@ -524,6 +524,7 @@ public partial class MainWindow
                 {
                     var games = await Task.Run(() => Events.ForTeams(rows, epgId, epg, teams, DateTime.Now));
                     int n = Events.SyncTeamReminders(games);
+                    if (_page is not Views.EventsView) Services.Events.ReleaseMemory();
                     if (n > 0 || say)
                         ShowToast(n == 1 ? "Reminder set for 1 of your teams' games" : n > 1 ? $"Reminders set for {n} of your teams' games"
                             : "Your teams' games will get reminders as they appear in the TV guide");

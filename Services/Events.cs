@@ -174,6 +174,12 @@ public static class Events
     static EpgData _cacheFor;
     static readonly object CacheLock = new();
 
+    /// <summary>Lets go of the remembered descriptions (the Events page closed, or a background check finished).</summary>
+    public static void ReleaseMemory()
+    {
+        lock (CacheLock) { DescCache.Clear(); DescCache.TrimExcess(); _cacheFor = null; }
+    }
+
     static string NormDesc(Programme p, EpgData epg)
     {
         lock (CacheLock)
@@ -183,11 +189,11 @@ public static class Events
         }
         string d;
         try { d = p.Desc; } catch { d = null; }
-        if (d != null && d.Length > 400) d = d[..400];
+        if (d != null && d.Length > 200) d = d[..200]; // the teams are near the start
         var n = d == null ? null : Norm(d);
         var mu = FindMatchup(d);
         var entry = n == null ? "" : n + "\u0001" + (mu ?? "");
-        lock (CacheLock) DescCache[p] = entry;
+        lock (CacheLock) if (DescCache.Count < 20_000) DescCache[p] = entry; // a few MB at most
         return entry;
     }
 
