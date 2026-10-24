@@ -170,7 +170,7 @@ public static class SelfTest
             await Task.WhenAny(crests, Task.Delay(25000));
             Note($"team crests: {TeamCrests.Count} clubs{(TeamCrests.Problem != null ? " · " + TeamCrests.Problem : "")} · Man Utd → {TeamCrests.Find("Man Utd")?.Name ?? "not found"} · Spurs → {TeamCrests.Find("Spurs")?.Name ?? "not found"}");
             main.SelfTestEvents.SelfTestQuery("Man Utd v Spurs");
-            await Idle(2500); // crests load over the network
+            await Idle(7000); // crests load over the network
             Snap(main.SelfTestRoot, "20d-events-crests");
             main.SelfTestEvents.SelfTestQuery("");
             main.SelfTestEvents.SelfTestQuery("");

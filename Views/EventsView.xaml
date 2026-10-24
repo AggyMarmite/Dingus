@@ -16,9 +16,13 @@
                         </LinearGradientBrush>
                     </Grid.Background>
                     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
-                    <Image Width="70" Height="70" svc:ImageLoader.DecodeWidth="140" svc:ImageLoader.Url="{Binding HomeCrest}" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <Border Width="84" Height="84" CornerRadius="42" Background="#F2F4F8">
+                        <Image Width="58" Height="58" svc:ImageLoader.DecodeWidth="140" svc:ImageLoader.Url="{Binding HomeCrest}" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    </Border>
                     <TextBlock Grid.Column="1" Text="v" FontSize="18" FontWeight="SemiBold" Foreground="#99FFFFFF" VerticalAlignment="Center"/>
-                    <Image Grid.Column="2" Width="70" Height="70" svc:ImageLoader.DecodeWidth="140" svc:ImageLoader.Url="{Binding AwayCrest}" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <Border Grid.Column="2" Width="84" Height="84" CornerRadius="42" Background="#F2F4F8">
+                        <Image Width="58" Height="58" svc:ImageLoader.DecodeWidth="140" svc:ImageLoader.Url="{Binding AwayCrest}" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    </Border>
                 </Grid>
                 <!-- The guide's own artwork -->
                 <Image x:Name="Art" Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="420" svc:ImageLoader.Url="{Binding Art}" Visibility="Collapsed"/>

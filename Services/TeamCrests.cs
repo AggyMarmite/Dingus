@@ -76,7 +76,7 @@ public static class TeamCrests
             var lists = await Task.WhenAll(chunk.Select(async l =>
             {
                 try { return await FetchLeague(l); }
-                catch (Exception ex) { Interlocked.Increment(ref failed); Problem = Http.Friendly(ex); return new List<Crest>(); }
+                catch (Exception ex) { Interlocked.Increment(ref failed); Problem = $"{l}: {Http.Friendly(ex)}"; return new List<Crest>(); }
             }));
             foreach (var l in lists) all.AddRange(l);
         }
