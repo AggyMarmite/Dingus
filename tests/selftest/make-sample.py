@@ -29,7 +29,7 @@ open(os.path.join(d, 'sample.m3u'), 'w', encoding='utf-8').write('\n'.join(m3u) 
 titles = {
     'UK Entertainment': ['The Village', 'Evening Live', 'Quiz Masters', 'Sofa Critics', 'Dance Off', 'Football Highlights', 'Back Street', 'Panel of Fools'],
     'UK News': ['News Tonight', 'News at Six', 'The Briefing', 'World News Today'],
-    'UK Sport': ['Live: Rovers v United', 'Football Review', 'Live: Test Cricket – Day 2', 'Super Sunday', 'Live: Grand Prix Qualifying'],
+    'UK Sport': ['Live: Rovers v United', 'Football Review', 'Live: Test Cricket – Day 2', 'Super Sunday', 'Live: Grand Prix Qualifying', 'Live: Man Utd v Spurs'],
     'UK Films': ['The Long Journey', 'Night Shift', 'Blue Harbour', 'The Last Summer'],
     'UK Kids': ['Puppy Club', 'Little Explorers', 'Counting Friends'],
     'Adult XXX': ['Late Show'],

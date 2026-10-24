@@ -158,6 +158,21 @@ public static class SelfTest
             Note($"events: search “rovers v utd” – {main.SelfTestEvents.SelfTestResults} games");
             Snap(main.SelfTestRoot, "20b-events-search");
             if (main.SelfTestEvents.SelfTestResults == 0) Error(new Exception("Searching Events for “rovers v utd” found nothing."));
+            // Click a game: every channel showing it (the sample has the same match on three sports channels).
+            main.SelfTestEvents.SelfTestOpenFirst();
+            await Idle(800);
+            Snap(main.SelfTestRoot, "20c-events-channels");
+            Note($"events: the first game is on {main.SelfTestEvents.SelfTestSources} channels");
+            if (main.SelfTestEvents.SelfTestSources < 2) Error(new Exception("A game on three channels didn't list them all."));
+            main.SelfTestEvents.SelfTestCloseSources();
+            // Crests come from ESPN's team lists (an outside service, so only noted).
+            var crests = TeamCrests.EnsureLoadedAsync();
+            await Task.WhenAny(crests, Task.Delay(25000));
+            Note($"team crests: {TeamCrests.Count} clubs{(TeamCrests.Problem != null ? " · " + TeamCrests.Problem : "")} · Man Utd → {TeamCrests.Find("Man Utd")?.Name ?? "not found"} · Spurs → {TeamCrests.Find("Spurs")?.Name ?? "not found"}");
+            main.SelfTestEvents.SelfTestQuery("Man Utd v Spurs");
+            await Idle(2500); // crests load over the network
+            Snap(main.SelfTestRoot, "20d-events-crests");
+            main.SelfTestEvents.SelfTestQuery("");
             main.SelfTestEvents.SelfTestQuery("");
             main.SelfTestSearch("news");
             await Idle(1500);

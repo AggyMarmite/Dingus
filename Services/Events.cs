@@ -363,6 +363,37 @@ public static class Events
         return t.ToString("ddd d MMM");
     }
 
+    static readonly string[] Palette = { "#2563EB", "#DC2626", "#16A34A", "#9333EA", "#EA580C", "#0891B2", "#DB2777", "#CA8A04", "#4F46E5", "#0D9488" };
+
+    static string ColorFor(string name)
+    {
+        int h = 17;
+        foreach (var ch in Norm(name)) h = h * 31 + ch;
+        return Palette[(h & 0x7fffffff) % Palette.Length];
+    }
+
+    static string Initials(string name)
+    {
+        var words = Norm(name).Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w is not ("the" or "and" or "of" or "de" or "live")).ToList();
+        if (words.Count == 0) return "?";
+        if (words.Count == 1) return words[0].Length >= 3 ? words[0][..3].ToUpperInvariant() : words[0].ToUpperInvariant();
+        return string.Concat(words.Take(3).Select(w => char.ToUpperInvariant(w[0])));
+    }
+
+    /// <summary>The two teams of a game title ("Arsenal v Chelsea"), or the title and null when it isn't a match.</summary>
+    public static (string Home, string Away) Sides(string title)
+    {
+        var mu = FindMatchup(title);
+        if (mu != null)
+        {
+            int i = mu.IndexOf(" v ", StringComparison.Ordinal);
+            if (i > 0) return (mu[..i].Trim(), mu[(i + 3)..].Trim());
+        }
+        return (LivePrefix.Replace(title ?? "", "").Trim(), null);
+    }
+
+    /// <summary>The page's cards. Reads the guide's artwork from disk, so call it off the window's thread.</summary>
     public static List<EventItem> Items(List<EventGame> games, DateTime now) => games.Select(g =>
     {
         bool live = g.IsLiveAt(now);
@@ -371,14 +402,52 @@ public static class Events
         parts.Add(g.Row.DisplayName);
         int more = g.Showings.Count - 1;
         if (more > 0) parts.Add(more == 1 ? "+1 more channel" : $"+{more} more channels");
+        var (home, away) = Sides(g.Title);
+        var hc = TeamCrests.Find(home);
+        var ac = away == null ? null : TeamCrests.Find(away);
+        string art = null;
+        if (hc == null || ac == null)
+            foreach (var (_, p) in g.Showings.Take(4))
+            {
+                try { art = p.ImageUrl; } catch { }
+                if (!string.IsNullOrEmpty(art)) break;
+                art = null;
+            }
         return new EventItem
         {
             Game = g,
             IsLive = live,
             TimeText = live ? "LIVE" : g.Start.ToString("HH:mm"),
             DayText = live ? $"until {g.End:HH:mm}" : Day(g.Start),
+            When = live ? $"On now · until {g.End:HH:mm}" : $"{Day(g.Start)} {g.Start:HH:mm}",
             Detail = string.Join("  ·  ", parts),
+            Where = more > 0 ? $"{g.Row.DisplayName}  +{more} more" : g.Row.DisplayName,
             HasReminder = !live && HasReminder(g),
+            Home = home,
+            Away = away,
+            HomeCrest = hc?.Logo,
+            AwayCrest = ac?.Logo,
+            Art = art,
+            HomeInitials = Initials(home),
+            AwayInitials = away == null ? null : Initials(away),
+            HomeColor = hc?.Color ?? ColorFor(home),
+            AwayColor = away == null ? null : ac?.Color ?? ColorFor(away),
+        };
+    }).ToList();
+
+    /// <summary>Every channel showing the game, for the list you see when you click it.</summary>
+    public static List<EventSourceItem> Sources(EventGame g, DateTime now) => g.Showings.Select(s =>
+    {
+        var p = s.Programme;
+        bool live = p.Start <= now && p.End > now;
+        return new EventSourceItem
+        {
+            Row = s.Row,
+            Programme = p,
+            IsLive = live,
+            Line = $"{p.Title}  ·  {p.Start:HH:mm}–{p.End:HH:mm}{(live ? "  ·  on now" : "")}",
+            HasReminder = !live && ReminderService.Has(s.Row.Channel.Id, p.Start),
+            IsRecording = RecordingService.IsScheduled(s.Row.Channel.Id, p.Start),
         };
     }).ToList();
 }

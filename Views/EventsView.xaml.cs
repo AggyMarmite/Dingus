@@ -9,7 +9,8 @@ namespace Dingus.Views;
 
 /// <summary>
 /// Events: find a game in your TV guide ("Arsenal v Chelsea"), and follow your teams to see their games and get
-/// reminders. Everything comes from your own guide and channel names (see <see cref="Events"/>).
+/// reminders – a grid of games; click one for every channel showing it. Games come from your own guide and channel
+/// names (see <see cref="Events"/>); crests from ESPN's team lists (<see cref="TeamCrests"/>).
 /// </summary>
 public partial class EventsView : UserControl, IPage
 {
@@ -20,6 +21,7 @@ public partial class EventsView : UserControl, IPage
 
     bool _shown, _loading, _hooked;
     int _gen;
+    EventGame _open; // the game whose channels are showing
     readonly DispatcherTimer _queryTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
     readonly DispatcherTimer _tick = new() { Interval = TimeSpan.FromMinutes(1) };
 
@@ -29,7 +31,9 @@ public partial class EventsView : UserControl, IPage
         _queryTimer.Tick += (_, _) => { _queryTimer.Stop(); Refresh(); };
         _tick.Tick += (_, _) => Refresh(); // kick-offs turn into LIVE
         DataService.Instance.EpgChanged += () => { if (_shown) Refresh(); };
-        ReminderService.Changed += () => { if (_shown) Refresh(); };
+        ReminderService.Changed += () => { if (_shown) { Refresh(); RefreshSources(); } };
+        RecordingService.Changed += () => Dispatcher.InvokeAsync(() => { if (_shown) RefreshSources(); });
+        PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape && _open != null) { CloseSources(); e.Handled = true; } };
         Loaded += (_, _) =>
         {
             if (_hooked || Guide == null) return;
@@ -42,7 +46,7 @@ public partial class EventsView : UserControl, IPage
 
     public void ApplySearch(string query) { }
 
-    public void OnShown()
+    public async void OnShown()
     {
         _shown = true;
         _loading = true;
@@ -50,12 +54,17 @@ public partial class EventsView : UserControl, IPage
         _loading = false;
         _tick.Start();
         Refresh();
+        // Crests arrive a moment later the first time (then they're on disk).
+        bool had = TeamCrests.Count > 0;
+        await TeamCrests.EnsureLoadedAsync();
+        if (!had && TeamCrests.Count > 0 && _shown) Refresh();
     }
 
     public void OnHidden()
     {
         _shown = false;
         _tick.Stop();
+        CloseSources();
         ResultList.ItemsSource = TeamGames.ItemsSource = ChannelResults.ItemsSource = null;
     }
 
@@ -70,7 +79,7 @@ public partial class EventsView : UserControl, IPage
         int gen = ++_gen;
         var s = SettingsStore.Current;
         var teams = (s.FollowedTeams ?? new()).ToList();
-        TeamChips.ItemsSource = teams.Select(t => new TeamChip { Name = t }).ToList();
+        TeamChips.ItemsSource = teams.Select(t => new TeamChip { Name = t, Crest = TeamCrests.Find(t)?.Logo }).ToList();
 
         var q = Events.Parse(Query);
         bool searching = Query.Length >= 2;
@@ -81,24 +90,20 @@ public partial class EventsView : UserControl, IPage
         var epg = DataService.Instance.Epg;
         Func<GuideRow, string> epgId = Guide.EpgIdOf;
         var now = DateTime.Now;
-        List<EventGame> games;
+        List<EventItem> items;
         List<GuideRow> channels = null;
         try
         {
-            if (searching)
-            {
-                games = await Task.Run(() => Events.Find(rows, epgId, epg, q, now));
-                channels = Events.EventChannels(rows, q);
-            }
-            else games = await Task.Run(() => Events.ForTeams(rows, epgId, epg, teams, now));
+            items = await Task.Run(() => Events.Items(
+                searching ? Events.Find(rows, epgId, epg, q, now) : Events.ForTeams(rows, epgId, epg, teams, now), now));
+            if (searching) channels = Events.EventChannels(rows, q);
         }
         catch (Exception ex) { Log.Error(ex); return; }
         if (gen != _gen || !_shown) return;
 
-        var items = Events.Items(games, now);
         if (searching)
         {
-            ResultList.ItemsSource = items;
+            ResultList.ItemsSource = items.Take(150).ToList();
             ResultsHeader.Text = items.Count == 0 ? "IN YOUR TV GUIDE" : items.Count == 1 ? "1 GAME IN YOUR TV GUIDE" : $"{items.Count} GAMES IN YOUR TV GUIDE";
             ResultsEmpty.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             ResultsEmpty.Text = q.IsEmpty
@@ -162,7 +167,6 @@ public partial class EventsView : UserControl, IPage
 
     void Unfollow_Click(object sender, RoutedEventArgs e)
     {
-        e.Handled = true;
         if ((sender as FrameworkElement)?.DataContext is not TeamChip t) return;
         Events.Unfollow(t.Name);
         MainWindow.Instance?.ShowToast($"Stopped following {t.Name}");
@@ -177,60 +181,109 @@ public partial class EventsView : UserControl, IPage
         if (SettingsStore.Current.RemindTeamGames) MainWindow.Instance?.SyncTeamReminders(announce: true);
     }
 
-    // ------------------------------------------------------------------ games
-
-    static EventItem ItemOf(object sender) => (sender as FrameworkElement)?.DataContext as EventItem;
+    // ------------------------------------------------------------------ a game: every channel showing it
 
     void Game_Click(object sender, RoutedEventArgs e)
     {
-        if (ItemOf(sender) is not { } it) return;
-        if (it.Game.IsLiveAt(DateTime.Now)) MainWindow.Instance?.PlayLive(it.Game.Row.Channel, true);
-        else MainWindow.Instance?.ShowInGuide(it.Game.Row, it.Game.Programme);
+        if ((sender as FrameworkElement)?.DataContext is EventItem it) OpenSources(it);
     }
 
-    void Watch_Click(object sender, RoutedEventArgs e)
+    void OpenSources(EventItem it)
     {
-        e.Handled = true; // not the row's own click as well
-        if (ItemOf(sender) is { } it) MainWindow.Instance?.PlayLive(it.Game.Row.Channel, true);
+        _open = it.Game;
+        SourcesArt.Content = it;
+        SourcesTitle.Text = it.Title;
+        SourcesWhen.Text = string.IsNullOrWhiteSpace(it.Game.Subtitle) ? it.When : $"{it.When}  ·  {it.Game.Subtitle}";
+        RefreshSources();
+        SourcesPanel.Visibility = Visibility.Visible;
+        SourcesPanel.Opacity = 0;
+        SourcesPanel.BeginAnimation(OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(1, TimeSpan.FromMilliseconds(140)));
     }
 
-    void Remind_Click(object sender, RoutedEventArgs e)
+    void RefreshSources()
     {
-        e.Handled = true;
-        if (ItemOf(sender) is not { } it) return;
-        bool on = Events.ToggleReminder(it.Game);
+        if (_open == null) return;
+        var list = Events.Sources(_open, DateTime.Now);
+        SourceList.ItemsSource = list;
+        SourcesCount.Text = list.Count == 1 ? "ON 1 CHANNEL" : $"ON {list.Count} CHANNELS";
+    }
+
+    void CloseSources()
+    {
+        _open = null;
+        SourcesPanel.BeginAnimation(OpacityProperty, null);
+        SourcesPanel.Visibility = Visibility.Collapsed;
+        SourceList.ItemsSource = null;
+        SourcesArt.Content = null;
+    }
+
+    void SourcesClose_Click(object sender, RoutedEventArgs e) => CloseSources();
+    void SourcesDim_MouseDown(object sender, MouseButtonEventArgs e) => CloseSources();
+    void SourcesCard_MouseDown(object sender, MouseButtonEventArgs e) => e.Handled = true; // clicks on the card don't close it
+
+    static EventSourceItem SourceOf(object sender) => (sender as FrameworkElement)?.DataContext as EventSourceItem;
+
+    void SourceWatch_Click(object sender, RoutedEventArgs e)
+    {
+        if (SourceOf(sender) is not { } s) return;
+        CloseSources();
+        MainWindow.Instance?.PlayLive(s.Row.Channel, true);
+    }
+
+    void SourceShow_Click(object sender, RoutedEventArgs e)
+    {
+        if (SourceOf(sender) is not { } s) return;
+        CloseSources();
+        MainWindow.Instance?.ShowInGuide(s.Row, s.Programme);
+    }
+
+    void SourceRemind_Click(object sender, RoutedEventArgs e)
+    {
+        if (SourceOf(sender) is not { } s) return;
+        bool on = ReminderService.Toggle(s.Row.Channel.Id, s.Row.DisplayName, s.Programme);
         MainWindow.Instance?.ShowToast(on
-            ? $"Reminder set: {it.Game.Title}, {Events.Day(it.Game.Start).ToLowerInvariant()} at {it.Game.Start:HH:mm}"
-            : $"Reminder cleared: {it.Game.Title}");
+            ? $"Reminder set: {s.Programme.Title} on {s.Row.DisplayName}, {Events.Day(s.Programme.Start).ToLowerInvariant()} at {s.Programme.Start:HH:mm}"
+            : $"Reminder cleared: {s.Programme.Title}");
     }
 
-    /// <summary>Right-click a game: watch or find it on any of its channels, record it.</summary>
+    void SourceRecord_Click(object sender, RoutedEventArgs e)
+    {
+        if (SourceOf(sender) is not { } s) return;
+        RecordUi.ToggleProgramme(s.Row, s.Programme);
+        RefreshSources();
+    }
+
+    /// <summary>Right-click a game: the quick things, without opening its channels.</summary>
     void Game_RightClick(object sender, MouseButtonEventArgs e)
     {
-        if (ItemOf(sender) is not { } it) return;
+        if ((sender as FrameworkElement)?.DataContext is not EventItem it) return;
         var g = it.Game;
         bool live = g.IsLiveAt(DateTime.Now);
         var menu = new ContextMenu();
-        foreach (var (row, p) in g.Showings.Take(12))
+        var open = new MenuItem { Header = g.Showings.Count == 1 ? "See the channel" : $"See all {g.Showings.Count} channels" };
+        open.Click += (_, _) => OpenSources(it);
+        menu.Items.Add(open);
+        if (live)
         {
-            var mi = new MenuItem { Header = (live ? "Watch on " : "Show on ") + row.DisplayName + (live ? "" : " in Live TV") };
-            mi.Click += (_, _) =>
-            {
-                if (live) MainWindow.Instance?.PlayLive(row.Channel, true);
-                else MainWindow.Instance?.ShowInGuide(row, p);
-            };
-            menu.Items.Add(mi);
+            var watch = new MenuItem { Header = "Watch on " + g.Row.DisplayName };
+            watch.Click += (_, _) => MainWindow.Instance?.PlayLive(g.Row.Channel, true);
+            menu.Items.Add(watch);
         }
-        menu.Items.Add(new Separator());
-        if (!live)
+        else
         {
             var rem = new MenuItem { Header = it.HasReminder ? "Clear reminder" : "Remind me" };
-            rem.Click += (_, _) => Remind_Click(sender, new RoutedEventArgs());
+            rem.Click += (_, _) =>
+            {
+                bool on = Events.ToggleReminder(g);
+                MainWindow.Instance?.ShowToast(on
+                    ? $"Reminder set: {g.Title}, {Events.Day(g.Start).ToLowerInvariant()} at {g.Start:HH:mm}"
+                    : $"Reminder cleared: {g.Title}");
+            };
             menu.Items.Add(rem);
         }
-        var rec = new MenuItem { Header = RecordUi.IsRecording(g.Row, g.Programme) ? (live ? "Stop recording" : "Cancel recording") : "Record" };
-        rec.Click += (_, _) => RecordUi.ToggleProgramme(g.Row, g.Programme);
-        menu.Items.Add(rec);
+        var show = new MenuItem { Header = "Show in Live TV" };
+        show.Click += (_, _) => MainWindow.Instance?.ShowInGuide(g.Row, g.Programme);
+        menu.Items.Add(show);
         menu.PlacementTarget = sender as UIElement;
         menu.IsOpen = true;
         e.Handled = true;
@@ -246,4 +299,7 @@ public partial class EventsView : UserControl, IPage
     internal void SelfTestQuery(string q) { QueryBox.Text = q; _queryTimer.Stop(); Refresh(); }
     internal int SelfTestResults => (ResultList.ItemsSource as System.Collections.ICollection)?.Count ?? 0;
     internal int SelfTestTeamGames => (TeamGames.ItemsSource as System.Collections.ICollection)?.Count ?? 0;
+    internal void SelfTestOpenFirst() { if ((ResultList.ItemsSource as List<EventItem>)?.FirstOrDefault() is { } it) OpenSources(it); }
+    internal int SelfTestSources => (SourceList.ItemsSource as System.Collections.ICollection)?.Count ?? 0;
+    internal void SelfTestCloseSources() => CloseSources();
 }

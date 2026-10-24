@@ -228,12 +228,66 @@ public class EventItem
     public bool IsUpcoming => !IsLive;
     public bool HasReminder { get; init; }
     public string RemindText => HasReminder ? "Reminder set" : "Remind me";
+
+    // The card's picture: both teams' crests (ESPN), else the guide's artwork, else a drawn "A v B" card.
+    public string Home { get; init; }
+    public string Away { get; init; }
+    public string HomeCrest { get; init; }
+    public string AwayCrest { get; init; }
+    public string Art { get; init; }
+    public string HomeInitials { get; init; }
+    public string AwayInitials { get; init; }
+    public string HomeColor { get; init; }
+    public string AwayColor { get; init; }
+    public GenreBrushType HomeBrush => ToBrush(HomeColor);
+    public GenreBrushType AwayBrush => ToBrush(AwayColor);
+
+    static GenreBrushType ToBrush(string hex)
+    {
+        if (string.IsNullOrEmpty(hex)) return null;
+#if LINUX
+        return Avalonia.Media.Brush.Parse(hex);
+#else
+        var b = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString(hex);
+        b?.Freeze();
+        return b;
+#endif
+    }
+    public bool ShowCrests => HomeCrest != null && AwayCrest != null;
+    public bool ShowArt => !ShowCrests && Art != null;
+    public bool ShowDrawn => !ShowCrests && Art == null;
+    public bool HasAway => Away != null;
+    /// <summary>"Sky Sports Main Event" or "Sky Sports Main Event + 2 more".</summary>
+    public string Where { get; init; }
+    /// <summary>"Today 15:00", "Sat 25 Oct 17:30", "LIVE · until 17:00".</summary>
+    public string When { get; init; }
+}
+
+/// <summary>One channel showing a game (the list you get by clicking a game).</summary>
+public class EventSourceItem
+{
+    public GuideRow Row { get; init; }
+    public Models.Programme Programme { get; init; }
+    public string Name => Row.DisplayName;
+    public string Logo => Row.Logo;
+    public string Initials => Row.Initials;
+    /// <summary>The programme on that channel, with its times.</summary>
+    public string Line { get; init; }
+    public bool IsLive { get; init; }
+    public bool IsUpcoming => !IsLive;
+    public bool IsFavourite => Row.IsFavourite;
+    public bool HasReminder { get; init; }
+    public string RemindText => HasReminder ? "Reminder set" : "Remind me";
+    public bool IsRecording { get; init; }
+    public string RecordText => IsRecording ? (IsLive ? "Stop recording" : "Recording set") : "Record";
 }
 
 /// <summary>A followed team on the Events page.</summary>
 public class TeamChip
 {
     public string Name { get; init; }
+    /// <summary>The team's crest (ESPN), or null.</summary>
+    public string Crest { get; init; }
 }
 
 /// <summary>A provider's "event" channel whose name matches the search.</summary>
