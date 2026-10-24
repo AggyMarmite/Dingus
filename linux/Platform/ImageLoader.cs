@@ -13,7 +13,6 @@ namespace Dingus.Services;
 /// </summary>
 public class ImageLoader : AvaloniaObject
 {
-    static readonly SemaphoreSlim Gate = new(6);
     static readonly HashSet<string> Failed = new();
     static readonly object FailLock = new();
     static readonly Lru Cache = new(24L * 1024 * 1024);
@@ -90,25 +89,8 @@ public class ImageLoader : AvaloniaObject
 
     static async Task<Bitmap> LoadAsync(string url, int w)
     {
-        var path = Path.Combine(AppPaths.ImageCache, Hash(url));
-        if (!File.Exists(path))
-        {
-            await Gate.WaitAsync();
-            try
-            {
-                if (!File.Exists(path))
-                {
-                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-                    var bytes = await Http.Client.GetByteArrayAsync(url, cts.Token);
-                    if (bytes.Length < 32) { MarkFailed(url); return null; }
-                    var tmp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-                    await File.WriteAllBytesAsync(tmp, bytes);
-                    File.Move(tmp, path, true);
-                }
-            }
-            catch { MarkFailed(url); return null; }
-            finally { Gate.Release(); }
-        }
+        var path = await ImageFiles.EnsureAsync(url);
+        if (path == null) { MarkFailed(url); return null; }
         return await Task.Run(() => Decode(path, w, url));
     }
 
@@ -128,7 +110,6 @@ public class ImageLoader : AvaloniaObject
     }
 
     static void MarkFailed(string url) { lock (FailLock) Failed.Add(url); }
-    static string Hash(string s) => Convert.ToHexString(SHA1.HashData(Encoding.UTF8.GetBytes(s)));
 
     public static void ClearDiskCache()
     {
