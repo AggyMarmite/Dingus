@@ -238,8 +238,11 @@ public static class SelfTest
             main.SelfTestSearchFilter("films");
             await Idle(800);
             Snap(main.SelfTestRoot, "15-search-films");
+            bool openWhileSearching = main.SelfTestSearchOpen;
             main.SelfTestSearch("");
             await Page(main, main.NavGuide, null);
+            Note($"search bar: open while searching={openWhileSearching}, back to the magnifying glass after={!main.SelfTestSearchOpen}");
+            if (!openWhileSearching || main.SelfTestSearchOpen) Error(new Exception("The search bar didn't open while searching, or didn't go back to the magnifying glass."));
 
             main.SelfTestShortcuts(true);
             await Idle();

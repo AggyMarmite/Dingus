@@ -50,11 +50,21 @@
                     </StackPanel>
 
                     <!-- Search everything -->
-                    <Panel x:Name="SearchHost" Grid.Column="1" MaxWidth="420" MinWidth="150" Margin="16,0" VerticalAlignment="Center">
-                        <TextBox x:Name="SearchBox" Watermark="Search channels, programmes, films and shows" Padding="34,6,12,6"
-                                 TextChanged="SearchBox_TextChanged" KeyDown="SearchBox_KeyDown"/>
-                        <TextBlock Classes="icon muted" Text="{x:Static local:Icons.Search}" FontSize="16" Margin="11,0,0,0"
-                                   HorizontalAlignment="Left" IsHitTestVisible="False"/>
+                    <!-- Search everything: a magnifying glass that opens into the search bar -->
+                    <Panel x:Name="SearchHost" Grid.Column="1" Margin="16,0,8,0" VerticalAlignment="Center">
+                        <Button x:Name="SearchIcon" Classes="icon" Content="{x:Static local:Icons.Search}" Width="34" Height="34"
+                                HorizontalAlignment="Right" ToolTip.Tip="Search (Ctrl+F)" Click="SearchIcon_Click"/>
+                        <Panel x:Name="SearchField" HorizontalAlignment="Right" Width="34" MaxWidth="420" IsVisible="False">
+                            <Panel.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Property="Width" Duration="0:0:0.18" Easing="CubicEaseOut"/>
+                                </Transitions>
+                            </Panel.Transitions>
+                            <TextBox x:Name="SearchBox" Watermark="Search channels, programmes, films and shows" Padding="34,6,12,6"
+                                     TextChanged="SearchBox_TextChanged" KeyDown="SearchBox_KeyDown" LostFocus="SearchBox_LostFocus"/>
+                            <TextBlock Classes="icon muted" Text="{x:Static local:Icons.Search}" FontSize="16" Margin="11,0,0,0"
+                                       HorizontalAlignment="Left" IsHitTestVisible="False"/>
+                        </Panel>
                     </Panel>
                     <!-- Empty title bar space drags the window -->
                     <Border x:Name="DragArea" Grid.Column="1" Background="Transparent" ZIndex="-1"/>

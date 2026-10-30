@@ -523,6 +523,7 @@ public partial class MainWindow
     internal object SelfTestPage => _page;
     internal Views.GuideView SelfTestGuide => _guide;
     internal void SelfTestShortcuts(bool open) { if (open != SheetOpen) ToggleShortcutSheet(); }
+    internal bool SelfTestSearchOpen => _searchOpen;
     internal void SelfTestSearch(string text) => SearchBox.Text = text;
     internal void SelfTestMini(bool on) { if (on) EnterMini(); else ExitMini(true); }
     internal FrameworkElement SelfTestOverlay => Overlay;
@@ -738,10 +739,14 @@ public partial class MainWindow
     int _barLevel = -1;
     readonly Dictionary<RadioButton, object> _tabLabels = new();
 
-    void TitleBar_SizeChanged(object sender, SizeChangedEventArgs e)
+    void TitleBar_SizeChanged(object sender, SizeChangedEventArgs e) => UpdateBarLevel(e.NewSize.Width);
+
+    /// <summary>The open search bar needs more room than the magnifying glass, so the labels go sooner while it's open.</summary>
+    void UpdateBarLevel(double w)
     {
-        double w = e.NewSize.Width;
-        int level = w >= 1580 ? 0 : w >= 1420 ? 1 : 2; // 0 = full, 1 = no word mark, 2 = icons only
+        int level = _searchOpen
+            ? (w >= 1600 ? 0 : w >= 1500 ? 1 : 2)
+            : (w >= 1360 ? 0 : w >= 1260 ? 1 : 2); // 0 = full, 1 = no word mark, 2 = icons only
         if (level == _barLevel) return;
         _barLevel = level;
         WordMark.Visibility = level == 0 ? Visibility.Visible : Visibility.Collapsed;

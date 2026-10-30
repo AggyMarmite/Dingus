@@ -82,13 +82,18 @@
                             </Border>
                         </StackPanel>
 
-                        <!-- Search everything -->
-                        <Grid x:Name="SearchHost" Grid.Column="1" MaxWidth="420" MinWidth="150" Margin="16,0" VerticalAlignment="Center"
-                              WindowChrome.IsHitTestVisibleInChrome="True">
-                            <TextBox x:Name="SearchBox" Tag="Search" Padding="32,6,12,6" TextChanged="SearchBox_TextChanged"
-                                     KeyDown="SearchBox_KeyDown"/>
-                            <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="12" Margin="12,0,0,0"
-                                       Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" IsHitTestVisible="False"/>
+                        <!-- Search everything: a magnifying glass that opens into the search bar -->
+                        <Grid x:Name="SearchHost" Grid.Column="1" Margin="16,0,8,0" VerticalAlignment="Center" SizeChanged="SearchHost_SizeChanged">
+                            <Button x:Name="SearchIcon" Style="{StaticResource IconButton}" Content="&#xE721;" Width="34" Height="34" FontSize="14"
+                                    HorizontalAlignment="Right" ToolTip="Search (Ctrl+F)" Click="SearchIcon_Click"
+                                    WindowChrome.IsHitTestVisibleInChrome="True"/>
+                            <Grid x:Name="SearchField" HorizontalAlignment="Right" Width="34" MaxWidth="420" Visibility="Collapsed"
+                                  WindowChrome.IsHitTestVisibleInChrome="True">
+                                <TextBox x:Name="SearchBox" Tag="Search" Padding="32,6,12,6" TextChanged="SearchBox_TextChanged"
+                                         KeyDown="SearchBox_KeyDown" LostKeyboardFocus="SearchBox_LostFocus"/>
+                                <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="12" Margin="12,0,0,0"
+                                           Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" IsHitTestVisible="False"/>
+                            </Grid>
                         </Grid>
 
                         <!-- Playlist, lock, refresh, settings, window buttons -->

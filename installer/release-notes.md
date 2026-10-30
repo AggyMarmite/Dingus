@@ -1,3 +1,10 @@
+## What's new in Dingus 0.11.0
+
+* Stremio add-ons and Real-Debrid support.
+* Download films and shows to watch offline.
+* A tidier search bar.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.10.0
 
 * New Events section: find a game and follow your teams.

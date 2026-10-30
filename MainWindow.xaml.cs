@@ -568,6 +568,7 @@ public partial class MainWindow : Window
         _searchTimer.Stop();
         if (page != _search && SearchBox.Text.Length > 0) SearchBox.Text = ""; // leaving Search clears it
         _searchTimer.Stop();
+        if (page != _search) CollapseSearch(force: true);
         page.ApplySearch(page == _search ? SearchBox.Text.Trim() : "");
         page.OnShown();
         UpdateWelcome();
@@ -698,9 +699,46 @@ public partial class MainWindow : Window
 
     public void FocusSearch()
     {
+        ExpandSearch();
         SearchBox.Focus();
         SearchBox.SelectAll();
     }
+
+    // ------------------------------------------------------------------ the search button / bar
+
+    bool _searchOpen;
+
+    void SearchIcon_Click(object sender, RoutedEventArgs e) => FocusSearch();
+
+    /// <summary>Opens the magnifying glass into the search bar (sliding out to the left).</summary>
+    void ExpandSearch()
+    {
+        if (_searchOpen) return;
+        _searchOpen = true;
+        SearchIcon.Visibility = Visibility.Collapsed;
+        SearchField.Visibility = Visibility.Visible;
+        var grow = new System.Windows.Media.Animation.DoubleAnimation(34, 420, TimeSpan.FromMilliseconds(SelfTest.Dir != null ? 1 : 180))
+        { EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut } };
+        SearchField.BeginAnimation(WidthProperty, grow);
+        UpdateBarLevel(TitleBar.ActualWidth);
+    }
+
+    /// <summary>Back to the magnifying glass – when the bar's empty and you've clicked away (or pressed Esc).</summary>
+    void CollapseSearch(bool force = false)
+    {
+        if (!_searchOpen || SearchBox.Text.Length > 0 || (!force && SearchBox.IsKeyboardFocusWithin)) return;
+        if (SearchBox.IsKeyboardFocusWithin) Keyboard.ClearFocus();
+        _searchOpen = false;
+        SearchField.BeginAnimation(WidthProperty, null);
+        SearchField.Width = 34;
+        SearchField.Visibility = Visibility.Collapsed;
+        SearchIcon.Visibility = Visibility.Visible;
+        UpdateBarLevel(TitleBar.ActualWidth);
+    }
+
+    void SearchBox_LostFocus(object sender, KeyboardFocusChangedEventArgs e) => Dispatcher.BeginInvoke(() => CollapseSearch(), DispatcherPriority.Input);
+
+    void SearchHost_SizeChanged(object sender, SizeChangedEventArgs e) => SearchField.MaxWidth = Math.Max(34, Math.Min(420, e.NewSize.Width));
 
     /// <summary>Empties the search box without re-filtering the current page.</summary>
     public void ClearSearchBoxOnly()
@@ -712,13 +750,22 @@ public partial class MainWindow : Window
 
     void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
+        if (SearchBox.Text.Length > 0) ExpandSearch();
+        else if (!SearchBox.IsKeyboardFocusWithin) CollapseSearch();
         _searchTimer.Stop();
         _searchTimer.Start();
     }
 
     void SearchBox_KeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Escape) { LeaveSearch(); e.Handled = true; }
+        if (e.Key == Key.Escape)
+        {
+            LeaveSearch();
+            Keyboard.ClearFocus();
+            FocusManager.SetFocusedElement(this, null);
+            CollapseSearch();
+            e.Handled = true;
+        }
         else if (e.Key == Key.Enter) { _searchTimer.Stop(); RunGlobalSearch(); e.Handled = true; }
     }
 

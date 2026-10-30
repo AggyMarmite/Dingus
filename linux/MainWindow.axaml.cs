@@ -159,6 +159,7 @@ public partial class MainWindow : Window
         DragArea.PointerPressed += TitleBar_PointerPressed;
         TitleBar.PointerPressed += TitleBar_PointerPressed;
         TitleBar.PropertyChanged += (_, e) => { if (e.Property == BoundsProperty) TitleBar_SizeChanged(TitleBar.Bounds.Width); };
+        SearchHost.PropertyChanged += (_, e) => { if (e.Property == BoundsProperty) SearchField.MaxWidth = Math.Max(34, Math.Min(420, SearchHost.Bounds.Width)); };
 
         SeekSlider.AddHandler(PointerPressedEvent, (_, _) => _seeking = true, RoutingStrategies.Tunnel, true);
         SeekSlider.AddHandler(PointerReleasedEvent, (_, _) => { _svc?.SeekTo((long)SeekSlider.Value); _seeking = false; }, RoutingStrategies.Tunnel, true);
@@ -450,7 +451,8 @@ public partial class MainWindow : Window
     /// <summary>Narrow windows: drop the word mark, then the tab labels, so search always has room.</summary>
     void TitleBar_SizeChanged(double w)
     {
-        int level = w >= 1580 ? 0 : w >= 1420 ? 1 : 2;
+        // The open search bar needs more room than the magnifying glass, so the labels go sooner while it's open.
+        int level = _searchOpen ? (w >= 1600 ? 0 : w >= 1500 ? 1 : 2) : (w >= 1360 ? 0 : w >= 1260 ? 1 : 2);
         if (level == _barLevel) return;
         _barLevel = level;
         WordMark.IsVisible = level == 0;
@@ -502,6 +504,7 @@ public partial class MainWindow : Window
         _searchTimer.Stop();
         if (page != _search && (SearchBox.Text ?? "").Length > 0) SearchBox.Text = "";
         _searchTimer.Stop();
+        if (page != _search) CollapseSearch(force: true);
         page.ApplySearch(page == _search ? (SearchBox.Text ?? "").Trim() : "");
         page.OnShown();
         UpdateWelcome();
@@ -620,9 +623,45 @@ public partial class MainWindow : Window
 
     public void FocusSearch()
     {
+        ExpandSearch();
         SearchBox.Focus();
         SearchBox.SelectAll();
     }
+
+    // ------------------------------------------------------------------ the search button / bar
+
+    bool _searchOpen;
+
+    void SearchIcon_Click(object sender, RoutedEventArgs e) => FocusSearch();
+
+    /// <summary>Opens the magnifying glass into the search bar (sliding out to the left).</summary>
+    void ExpandSearch()
+    {
+        if (_searchOpen) return;
+        _searchOpen = true;
+        SearchIcon.IsVisible = false;
+        SearchField.IsVisible = true;
+        SearchField.MaxWidth = Math.Max(34, Math.Min(420, SearchHost.Bounds.Width));
+        SearchField.Width = 420;
+        TitleBar_SizeChanged(TitleBar.Bounds.Width);
+    }
+
+    /// <summary>Back to the magnifying glass – when the bar's empty and you've clicked away (or pressed Esc).</summary>
+    void CollapseSearch(bool force = false)
+    {
+        if (!_searchOpen || (SearchBox.Text ?? "").Length > 0 || (!force && SearchBox.IsKeyboardFocusWithin)) return;
+        if (SearchBox.IsKeyboardFocusWithin) FocusManager?.ClearFocus();
+        _searchOpen = false;
+        var t = SearchField.Transitions;
+        SearchField.Transitions = null;
+        SearchField.Width = 34;
+        SearchField.Transitions = t;
+        SearchField.IsVisible = false;
+        SearchIcon.IsVisible = true;
+        TitleBar_SizeChanged(TitleBar.Bounds.Width);
+    }
+
+    void SearchBox_LostFocus(object sender, RoutedEventArgs e) => Dispatcher.UIThread.Post(() => CollapseSearch(), DispatcherPriority.Input);
 
     public void ClearSearchBoxOnly()
     {
@@ -633,13 +672,21 @@ public partial class MainWindow : Window
 
     void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
+        if ((SearchBox.Text ?? "").Length > 0) ExpandSearch();
+        else if (!SearchBox.IsKeyboardFocusWithin) CollapseSearch();
         _searchTimer.Stop();
         _searchTimer.Start();
     }
 
     void SearchBox_KeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Escape) { LeaveSearch(); e.Handled = true; }
+        if (e.Key == Key.Escape)
+        {
+            LeaveSearch();
+            FocusManager?.ClearFocus();
+            CollapseSearch();
+            e.Handled = true;
+        }
         else if (e.Key == Key.Enter) { _searchTimer.Stop(); RunGlobalSearch(); e.Handled = true; }
     }
 
