@@ -473,6 +473,7 @@ public partial class MainWindow
     internal void SelfTestSearchFilter(string f) => _search.SelfTestFilter(f);
     internal PlayerService SelfTestPlayer => _svc;
     internal Views.EventsView SelfTestEvents => _events;
+    internal Views.StremioView SelfTestStremio => _stremio;
     internal Control SelfTestOverlay => Overlay;
     internal bool SelfTestSplashShowing => SplashUp;
     internal void SelfTestMini(bool on) { if (on) EnterMini(); else ExitMini(true); }

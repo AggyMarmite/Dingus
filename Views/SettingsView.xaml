@@ -1,7 +1,8 @@
 <UserControl x:Class="Dingus.Views.SettingsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:svc="clr-namespace:Dingus.Services">
+             xmlns:svc="clr-namespace:Dingus.Services"
+             xmlns:v="clr-namespace:Dingus.Views">
     <ScrollViewer VerticalScrollBarVisibility="Auto" svc:SmoothScroll.Enabled="True">
         <StackPanel Margin="36,8,36,48" MaxWidth="900">
 
@@ -270,6 +271,9 @@
             </Border>
 
             <!-- Appearance & start-up -->
+            <!-- Stremio add-ons & Real-Debrid -->
+            <v:StremioSettings x:Name="StremioPart"/>
+
             <TextBlock Style="{StaticResource SectionHeader}" Text="APPEARANCE &amp; START-UP"/>
             <Border Style="{StaticResource Card}">
                 <StackPanel>

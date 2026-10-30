@@ -282,6 +282,65 @@ public class EventSourceItem
     public string RecordText => IsRecording ? (IsLive ? "Stop recording" : "Recording set") : "Record";
 }
 
+/// <summary>An add-on in Settings.</summary>
+public class AddonItem
+{
+    public Services.StremioAddon Addon { get; init; }
+    public string Name => Addon.Name ?? Addon.TransportUrl;
+    public string Logo => Addon.Logo;
+    public bool Enabled => Addon.Enabled;
+    public string Detail { get; init; }
+}
+
+/// <summary>A catalogue in the Stremio page's list (or "Your Real-Debrid").</summary>
+public class StremioCatalogItem
+{
+    public Services.StremioAddon Addon { get; init; }
+    public Services.StremioCatalog Catalog { get; init; }
+    /// <summary>Your Real-Debrid files, not a catalogue.</summary>
+    public bool IsRealDebrid { get; init; }
+    public string Name { get; init; }
+    public string From { get; init; }
+}
+
+/// <summary>A source for a film or episode (from an add-on).</summary>
+public class StremioSourceItem : Observable
+{
+    public Services.StremioStream Stream { get; init; }
+    /// <summary>"4K", "1080p"… or the add-on's own name for it.</summary>
+    public string Quality { get; init; }
+    public string Title { get; init; }
+    public string Detail { get; init; }
+    /// <summary>"Direct", "Real-Debrid", "Torrent", "Web page".</summary>
+    public string Kind { get; init; }
+    public bool CanPlay { get; init; }
+    public string PlayText { get; init; }
+    public string Hint { get; init; }
+    bool _busy;
+    public bool Busy { get => _busy; set => Set(ref _busy, value); }
+}
+
+/// <summary>An episode on a Stremio show's page.</summary>
+public class StremioEpisodeItem
+{
+    public Services.StremioVideo Video { get; init; }
+    public string Code { get; init; }
+    public string Title { get; init; }
+    public string Aired { get; init; }
+    public string Thumbnail => Video.Thumbnail;
+    public bool Selected { get; init; }
+}
+
+/// <summary>A file in your Real-Debrid cloud.</summary>
+public class RdFileItem : Observable
+{
+    public Services.RdFile File { get; init; }
+    public string Name => File.Name;
+    public string Detail { get; init; }
+    bool _busy;
+    public bool Busy { get => _busy; set => Set(ref _busy, value); }
+}
+
 /// <summary>A followed team on the Events page.</summary>
 public class TeamChip
 {

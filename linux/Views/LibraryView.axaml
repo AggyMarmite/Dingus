@@ -146,6 +146,12 @@
                                         <TextBlock x:Name="SaveText" Text="My List" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
+                                <Button x:Name="MoreSourcesButton" Padding="18,11" Click="MoreSources_Click" ToolTip.Tip="Look for this title in your Stremio add-ons">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <TextBlock Classes="icon" Text="{x:Static local:Icons.Addons}"/>
+                                        <TextBlock x:Name="MoreSourcesText" Text="More sources" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
                                 <Button x:Name="TrailerButton" Padding="18,11" Click="Trailer_Click" IsVisible="False"
                                         ToolTip.Tip="Watch the trailer (opens in your browser)">
                                     <StackPanel Orientation="Horizontal" Spacing="10">

@@ -174,6 +174,51 @@ public static class SelfTest
             await Idle(7000); // crests load over the network
             Snap(main.SelfTestRoot, "20d-events-crests");
             main.SelfTestEvents.SelfTestQuery("");
+            // Stremio: a stand-in add-on on this computer – its catalogue, a search, a film's sources (one plays the test video),
+            // a show's episodes and their sources, and the add-ons part of Settings.
+            using (var addon = new TestAddon(Environment.GetEnvironmentVariable("DINGUS_TEST_VIDEO")))
+            {
+                foreach (var a in Stremio.Addons.ToList()) Stremio.Remove(a);
+                var installed = await Stremio.InstallAsync(addon.Url);
+                Note($"stremio: added “{installed.Name}” – {installed.Catalogs.Count} catalogues, sources: {installed.Serves("stream", "movie", "tt9000001")}");
+                await Page(main, main.NavStremio, "22-stremio");
+                var st = main.SelfTestStremio;
+                Note($"stremio: catalogue shows {st.SelfTestTitles} titles");
+                if (st.SelfTestTitles < 2) Error(new Exception("The Stremio page didn't show the test add-on's catalogue."));
+                st.SelfTestSearch("signal");
+                await Idle(1500);
+                Note($"stremio: search “signal” – {st.SelfTestTitles} titles");
+                if (st.SelfTestTitles != 1) Error(new Exception("Searching Stremio add-ons for “signal” didn't find the one test film."));
+                st.SelfTestOpenFirst();
+                await Idle(2000);
+                Snap(main.SelfTestRoot, "22b-stremio-film");
+                Note($"stremio: the film has {st.SelfTestSources} sources");
+                if (st.SelfTestSources != 3) Error(new Exception($"The test film should have 3 sources (direct, torrent, web page), not {st.SelfTestSources}."));
+                if (main.SelfTestPlayer != null && Environment.GetEnvironmentVariable("DINGUS_TEST_VIDEO") is { Length: > 0 })
+                {
+                    st.SelfTestPlayFirst();
+                    for (int i = 0; i < 40 && !main.SelfTestPlayer.Player.IsPlaying; i++) await Task.Delay(250);
+                    await Task.Delay(1500);
+                    Note($"stremio: direct source playing={main.SelfTestPlayer.Player.IsPlaying}");
+                    if (!main.SelfTestPlayer.Player.IsPlaying) Error(new Exception("A Stremio add-on's direct source didn't play."));
+                    main.SelfTestExitPlayer();
+                    await Idle(1000);
+                }
+                st.SelfTestSearch("testing");
+                await Idle(1500);
+                st.SelfTestOpenFirst();
+                await Idle(1500);
+                st.SelfTestOpenEpisode();
+                await Idle(1500);
+                Snap(main.SelfTestRoot, "22c-stremio-show");
+                Note($"stremio: the show's first season has {st.SelfTestEpisodes} episodes, the first one {st.SelfTestSources} sources");
+                if (st.SelfTestEpisodes != 3 || st.SelfTestSources != 3) Error(new Exception("The test show's episodes or their sources didn't show."));
+                st.SelfTestClose();
+                main.OpenSettingsSection("stremio");
+                await Idle(1500);
+                Snap(main.SelfTestRoot, "22d-settings-stremio");
+                foreach (var a in Stremio.Addons.ToList()) Stremio.Remove(a);
+            }
             main.SelfTestEvents.SelfTestQuery("");
             main.SelfTestSearch("news");
             await Idle(1500);

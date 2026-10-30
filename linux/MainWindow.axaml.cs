@@ -29,6 +29,7 @@ public partial class MainWindow : Window
     readonly SearchView _search;
     readonly RecordingsView _recordings;
     readonly EventsView _events;
+    readonly StremioView _stremio;
     IPage _page;
 
     // ----- what's playing
@@ -78,6 +79,7 @@ public partial class MainWindow : Window
         _search = new SearchView { Guide = _guide };
         _recordings = new RecordingsView { Guide = _guide };
         _events = new EventsView { Guide = _guide };
+        _stremio = new StremioView();
         // Your teams' games get reminders as they appear in the guide (when that's switched on).
         DataService.Instance.EpgChanged += () => SyncTeamReminders();
         _guide.RowsRebuilt += () => SyncTeamReminders();
@@ -277,6 +279,20 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Opens Films or TV Shows on a category (e.g. My List).</summary>
+    /// <summary>Opens a title's Stremio page (its add-on sources) – from "More sources" on a film or show.</summary>
+    public void OpenStremio(StremioMeta meta)
+    {
+        NavStremio.IsChecked = true;
+        _stremio.OpenMeta(meta);
+    }
+
+    /// <summary>Opens Settings at a part of it ("stremio").</summary>
+    public void OpenSettingsSection(string name)
+    {
+        NavSettings.IsChecked = true;
+        _settings.ShowSection(name);
+    }
+
     public void OpenLibraryCategory(bool movie, string categoryId)
     {
         (movie ? NavFilms : NavShows).IsChecked = true;
@@ -423,12 +439,12 @@ public partial class MainWindow : Window
     /// <summary>Narrow windows: drop the word mark, then the tab labels, so search always has room.</summary>
     void TitleBar_SizeChanged(double w)
     {
-        int level = w >= 1360 ? 0 : w >= 1200 ? 1 : 2;
+        int level = w >= 1460 ? 0 : w >= 1300 ? 1 : 2;
         if (level == _barLevel) return;
         _barLevel = level;
         WordMark.IsVisible = level == 0;
         PlaylistName.MaxWidth = level == 0 ? 130 : 80;
-        foreach (var tab in new[] { NavHome, NavGuide, NavFilms, NavShows, NavEvents, NavRecordings })
+        foreach (var tab in new[] { NavHome, NavGuide, NavFilms, NavShows, NavEvents, NavStremio, NavRecordings })
         {
             if (!_tabLabels.ContainsKey(tab)) _tabLabels[tab] = tab.Content;
             bool iconOnly = level == 2;
@@ -453,8 +469,9 @@ public partial class MainWindow : Window
         else if (rb == NavSearch) page = _search;
         else if (rb == NavRecordings) page = _recordings;
         else if (rb == NavEvents) page = _events;
+        else if (rb == NavStremio) page = _stremio;
         // Settings sits apart from the tabs: un-check the others by hand.
-        foreach (var other in new[] { NavHome, NavGuide, NavFilms, NavShows, NavEvents, NavRecordings, NavSearch, NavSettings })
+        foreach (var other in new[] { NavHome, NavGuide, NavFilms, NavShows, NavEvents, NavStremio, NavRecordings, NavSearch, NavSettings })
             if (other != rb && other.IsChecked == true) other.IsChecked = false;
         Navigate(page);
     }
@@ -574,7 +591,7 @@ public partial class MainWindow : Window
         if (_page != _search) return;
         var back = _beforeSearch ?? _home;
         (back == _guide ? NavGuide : back == _films ? NavFilms : back == _shows ? NavShows : back == _settings ? NavSettings
-            : back == _recordings ? NavRecordings : back == _events ? NavEvents : NavHome).IsChecked = true;
+            : back == _recordings ? NavRecordings : back == _events ? NavEvents : back == _stremio ? NavStremio : NavHome).IsChecked = true;
     }
 
     public void OpenChannelEditor()

@@ -1,0 +1,114 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svc="clr-namespace:Dingus.Services"
+             xmlns:local="clr-namespace:Dingus"
+             x:Class="Dingus.Views.StremioSettings">
+    <StackPanel>
+        <TextBlock Classes="section" Text="STREMIO ADD-ONS"/>
+        <Border Classes="card">
+            <StackPanel>
+                <!-- Stremio account -->
+                <StackPanel x:Name="SignedOutPart">
+                    <TextBlock Text="Sign in with Stremio" FontWeight="SemiBold"/>
+                    <TextBlock Classes="muted" FontSize="12" Margin="0,3,0,10" TextWrapping="Wrap"
+                               Text="Brings in the add-ons on your Stremio account. Your password isn't kept – only the sign-in Stremio gives back."/>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBox x:Name="EmailBox" Watermark="Email" Width="230"/>
+                        <TextBox x:Name="PasswordBox" Watermark="Password" PasswordChar="•" Width="200" KeyDown="Password_KeyDown"/>
+                        <Button x:Name="SignInButton" Classes="primary" Content="Sign in" Click="SignIn_Click"/>
+                    </StackPanel>
+                </StackPanel>
+                <DockPanel x:Name="SignedInPart" IsVisible="False">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                        <Button x:Name="RefreshAddonsButton" Content="Refresh add-ons" Click="RefreshAddons_Click"
+                                ToolTip.Tip="Bring in add-ons you've added to your Stremio account since"/>
+                        <Button Content="Sign out" Click="SignOut_Click"/>
+                    </StackPanel>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock x:Name="SignedInText" FontWeight="SemiBold"/>
+                        <TextBlock Text="Your add-ons come from your Stremio account." Classes="muted" FontSize="12" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </DockPanel>
+                <TextBlock x:Name="AccountStatus" Classes="muted" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap" IsVisible="False"/>
+
+                <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+
+                <!-- Add-ons -->
+                <TextBlock Text="Your add-ons" FontWeight="SemiBold"/>
+                <ItemsControl x:Name="AddonList" Margin="0,8,0,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <DockPanel Margin="0,0,0,10">
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                                    <CheckBox Classes="toggle" IsChecked="{Binding Enabled, Mode=OneWay}" Click="AddonToggle_Click" ToolTip.Tip="Use this add-on"/>
+                                    <Button Classes="ghost" Padding="8,4" Click="AddonRemove_Click" ToolTip.Tip="Remove">
+                                        <TextBlock Classes="icon" Text="{x:Static local:Icons.Delete}"/>
+                                    </Button>
+                                </StackPanel>
+                                <Border DockPanel.Dock="Left" Width="36" Height="36" CornerRadius="8" Background="{StaticResource Surface2Brush}" Margin="0,0,12,0">
+                                    <Panel>
+                                        <TextBlock Classes="icon muted" Text="{x:Static local:Icons.Addons}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <Image Margin="4" svc:ImageLoader.DecodeWidth="72" svc:ImageLoader.Url="{Binding Logo}"/>
+                                    </Panel>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Detail}" Classes="muted" FontSize="12" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <StackPanel Orientation="Horizontal" Margin="0,4,0,0" Spacing="8">
+                    <TextBox x:Name="AddonUrlBox" Watermark="Add-on address – https://…/manifest.json" Width="438" KeyDown="AddonUrl_KeyDown"/>
+                    <Button x:Name="AddAddonButton" Content="Add" Click="AddAddon_Click"/>
+                </StackPanel>
+                <TextBlock x:Name="AddonStatus" Classes="muted" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap" IsVisible="False"/>
+                <TextBlock Classes="muted" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap"
+                           Text="Add-ons are made by other people. Dingus plays what they point to – make sure you have the right to watch it."/>
+            </StackPanel>
+        </Border>
+
+        <TextBlock Classes="section" Text="REAL-DEBRID"/>
+        <Border Classes="card">
+            <StackPanel>
+                <StackPanel x:Name="RdOffPart">
+                    <DockPanel>
+                        <Button x:Name="RdConnectButton" DockPanel.Dock="Right" Classes="primary" Content="Connect" Click="RdConnect_Click" VerticalAlignment="Center"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Connect Real-Debrid" FontWeight="SemiBold"/>
+                            <TextBlock Classes="muted" FontSize="12" Margin="0,3,12,0" TextWrapping="Wrap"
+                                       Text="Plays add-ons' torrent sources as ordinary streams, and lists the files in your Real-Debrid cloud. Needs a Real-Debrid premium account."/>
+                        </StackPanel>
+                    </DockPanel>
+                    <Border x:Name="RdCodePart" IsVisible="False" Margin="0,14,0,0" Padding="16,12" CornerRadius="10" Background="{StaticResource AccentSoftBrush}">
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                                <Button Classes="primary" Content="Open real-debrid.com" Click="RdOpen_Click"/>
+                                <Button Content="Cancel" Click="RdCancel_Click"/>
+                            </StackPanel>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock x:Name="RdCodeHint" TextWrapping="Wrap" Text="On real-debrid.com/device, enter:"/>
+                                <TextBlock x:Name="RdCode" FontSize="24" FontWeight="Bold" Margin="0,4,0,0" FontFamily="monospace"/>
+                                <TextBlock Text="Waiting for you to confirm…" Foreground="#D9FFFFFF" FontSize="12" Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <Button Classes="ghost" Content="Use an API token instead" HorizontalAlignment="Left" Margin="-10,10,0,0" Padding="10,4" Click="RdTokenShow_Click"/>
+                    <StackPanel x:Name="RdTokenPart" Orientation="Horizontal" Margin="0,6,0,0" Spacing="8" IsVisible="False">
+                        <TextBox x:Name="RdTokenBox" PasswordChar="•" Width="330" Watermark="API token"/>
+                        <Button Content="Use token" Click="RdToken_Click" ToolTip.Tip="Your private API token from real-debrid.com/apitoken"/>
+                    </StackPanel>
+                </StackPanel>
+                <DockPanel x:Name="RdOnPart" IsVisible="False">
+                    <Button DockPanel.Dock="Right" Content="Disconnect" Click="RdDisconnect_Click" VerticalAlignment="Center"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock x:Name="RdUserText" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="RdPremiumText" Classes="muted" FontSize="12" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </DockPanel>
+                <TextBlock x:Name="RdStatus" Classes="muted" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap" IsVisible="False"/>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

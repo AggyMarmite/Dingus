@@ -535,6 +535,7 @@ public partial class MainWindow
     internal bool SelfTestPlaying => _svc?.Player?.IsPlaying == true;
     internal Services.PlayerService SelfTestPlayer => _svc;
     internal Views.EventsView SelfTestEvents => _events;
+    internal Views.StremioView SelfTestStremio => _stremio;
     internal bool SelfTestFullscreen => _osFullscreen;
     internal void SelfTestGoFullscreen() { if (_playerMode && !_mini && !_osFullscreen) SetOsFullscreen(true); }
     internal bool SelfTestInPlayer => _playerMode;
@@ -740,12 +741,12 @@ public partial class MainWindow
     void TitleBar_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         double w = e.NewSize.Width;
-        int level = w >= 1360 ? 0 : w >= 1200 ? 1 : 2; // 0 = full, 1 = no word mark, 2 = icons only
+        int level = w >= 1460 ? 0 : w >= 1300 ? 1 : 2; // 0 = full, 1 = no word mark, 2 = icons only
         if (level == _barLevel) return;
         _barLevel = level;
         WordMark.Visibility = level == 0 ? Visibility.Visible : Visibility.Collapsed;
         PlaylistName.MaxWidth = level == 0 ? 130 : 80;
-        foreach (var tab in new[] { NavHome, NavGuide, NavFilms, NavShows, NavEvents, NavRecordings })
+        foreach (var tab in new[] { NavHome, NavGuide, NavFilms, NavShows, NavEvents, NavStremio, NavRecordings })
         {
             if (!_tabLabels.ContainsKey(tab)) _tabLabels[tab] = tab.Content;
             bool iconOnly = level == 2;

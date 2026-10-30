@@ -350,6 +350,26 @@ public partial class LibraryView : UserControl, IPage
 
     string _trailer;
 
+    /// <summary>"More sources": finds this film or show in Stremio's catalogue and opens it there, with your add-ons' sources.</summary>
+    async void MoreSources_Click(object sender, RoutedEventArgs e)
+    {
+        if (_current == null) return;
+        var item = _current;
+        bool movie = _mode == LibraryMode.Movies;
+        MoreSourcesButton.IsEnabled = false;
+        MoreSourcesText.Text = "Looking…";
+        try
+        {
+            var year = movie ? (item.Source as Movie)?.Year : (item.Source as Series)?.Year;
+            var meta = await Stremio.FindAsync(movie ? "movie" : "series", item.Title, year);
+            if (_current != item) return;
+            if (meta == null) MainWindow.Instance?.ShowToast($"Couldn't find “{Stremio.CleanTitle(item.Title)}” in Stremio's catalogue.");
+            else MainWindow.Instance?.OpenStremio(meta);
+        }
+        catch (Exception ex) { Log.Error(ex); MainWindow.Instance?.ShowToast("Couldn't look it up: " + Http.Friendly(ex)); }
+        finally { MoreSourcesButton.IsEnabled = true; MoreSourcesText.Text = "More sources"; }
+    }
+
     /// <summary>The trailer opens on YouTube in your browser (the player can't play YouTube itself reliably).</summary>
     void Trailer_Click(object sender, RoutedEventArgs e)
     {

@@ -29,6 +29,7 @@ public partial class MainWindow : Window
     readonly SearchView _search;
     readonly RecordingsView _recordings;
     readonly EventsView _events;
+    readonly StremioView _stremio;
     IPage _page;
 
     // ----- what's playing
@@ -86,6 +87,7 @@ public partial class MainWindow : Window
         _search = new SearchView { Guide = _guide };
         _recordings = new RecordingsView { Guide = _guide };
         _events = new EventsView { Guide = _guide };
+        _stremio = new StremioView();
         // Your teams' games get reminders as they appear in the guide (when that's switched on).
         DataService.Instance.EpgChanged += () => SyncTeamReminders();
         _guide.RowsRebuilt += () => SyncTeamReminders();
@@ -329,6 +331,20 @@ public partial class MainWindow : Window
         (movie ? _films : _shows).OpenItem(id);
     }
 
+    /// <summary>Opens a title's Stremio page (its add-on sources) – from "More sources" on a film or show.</summary>
+    public void OpenStremio(Services.StremioMeta meta)
+    {
+        NavStremio.IsChecked = true;
+        _stremio.OpenMeta(meta);
+    }
+
+    /// <summary>Opens Settings at a part of it ("stremio").</summary>
+    public void OpenSettingsSection(string name)
+    {
+        NavSettings.IsChecked = true;
+        _settings.ShowSection(name);
+    }
+
     /// <summary>Opens Films or TV Shows on a category (e.g. My List).</summary>
     public void OpenLibraryCategory(bool movie, string categoryId)
     {
@@ -508,6 +524,7 @@ public partial class MainWindow : Window
         else if (sender == NavSearch) page = _search;
         else if (sender == NavRecordings) page = _recordings;
         else if (sender == NavEvents) page = _events;
+        else if (sender == NavStremio) page = _stremio;
         Navigate(page);
     }
 
@@ -656,7 +673,7 @@ public partial class MainWindow : Window
         if (_page != _search) return;
         var back = _beforeSearch ?? _home;
         (back == _guide ? NavGuide : back == _films ? NavFilms : back == _shows ? NavShows : back == _settings ? NavSettings
-            : back == _recordings ? NavRecordings : back == _events ? NavEvents : NavHome).IsChecked = true;
+            : back == _recordings ? NavRecordings : back == _events ? NavEvents : back == _stremio ? NavStremio : NavHome).IsChecked = true;
     }
 
 

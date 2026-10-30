@@ -692,4 +692,10 @@ public partial class SettingsView : UserControl, IPage
         value = 0;
         return (sender as FrameworkElement)?.Tag is string s && int.TryParse(s, out value);
     }
+
+    /// <summary>Scrolls to a part of Settings ("stremio").</summary>
+    public void ShowSection(string name)
+    {
+        if (name == "stremio") Dispatcher.InvokeAsync(() => StremioPart.BringIntoView(), System.Windows.Threading.DispatcherPriority.Loaded);
+    }
 }

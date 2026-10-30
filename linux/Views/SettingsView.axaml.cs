@@ -619,4 +619,10 @@ public partial class SettingsView : UserControl, IPage
         value = 0;
         return sender is RadioButton { IsChecked: true, Tag: string s } && int.TryParse(s, out value);
     }
+
+    /// <summary>Scrolls to a part of Settings ("stremio").</summary>
+    public void ShowSection(string name)
+    {
+        if (name == "stremio") Avalonia.Threading.Dispatcher.UIThread.Post(() => StremioPart.BringIntoView(), Avalonia.Threading.DispatcherPriority.Loaded);
+    }
 }
