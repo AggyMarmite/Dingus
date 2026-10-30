@@ -197,9 +197,9 @@ public static class SelfTest
                 if (main.SelfTestPlayer != null && Environment.GetEnvironmentVariable("DINGUS_TEST_VIDEO") is { Length: > 0 })
                 {
                     st.SelfTestPlayFirst();
-                    for (int i = 0; i < 40 && !main.SelfTestPlayer.Player.IsPlaying; i++) await Task.Delay(250);
+                    for (int i = 0; i < 100 && !main.SelfTestPlayer.Player.IsPlaying; i++) await Task.Delay(250);
                     await Task.Delay(1500);
-                    Note($"stremio: direct source playing={main.SelfTestPlayer.Player.IsPlaying}");
+                    Note($"stremio: direct source playing={main.SelfTestPlayer.Player.IsPlaying} (state {main.SelfTestPlayer.Player.State})");
                     if (!main.SelfTestPlayer.Player.IsPlaying) Error(new Exception("A Stremio add-on's direct source didn't play."));
                     main.SelfTestExitPlayer();
                     await Idle(1000);

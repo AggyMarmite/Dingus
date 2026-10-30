@@ -48,10 +48,21 @@ public sealed class TestAddon : IDisposable
             var path = Uri.UnescapeDataString(ctx.Request.Url!.AbsolutePath);
             if (path == "/video.mp4" && _video != null && File.Exists(_video))
             {
-                ctx.Response.ContentType = "video/mp4";
+                // Like a real file server: whole file, or the part asked for (players jump around in an mp4).
                 var bytes = File.ReadAllBytes(_video);
-                ctx.Response.ContentLength64 = bytes.Length;
-                ctx.Response.OutputStream.Write(bytes);
+                long from = 0, to = bytes.Length - 1;
+                var range = ctx.Request.Headers["Range"];
+                if (range != null && System.Text.RegularExpressions.Regex.Match(range, @"bytes=(\d*)-(\d*)") is { Success: true } m)
+                {
+                    if (m.Groups[1].Value.Length > 0) from = long.Parse(m.Groups[1].Value);
+                    if (m.Groups[2].Value.Length > 0) to = Math.Min(to, long.Parse(m.Groups[2].Value));
+                    ctx.Response.StatusCode = 206;
+                    ctx.Response.Headers["Content-Range"] = $"bytes {from}-{to}/{bytes.Length}";
+                }
+                ctx.Response.Headers["Accept-Ranges"] = "bytes";
+                ctx.Response.ContentType = "video/mp4";
+                ctx.Response.ContentLength64 = to - from + 1;
+                if (ctx.Request.HttpMethod != "HEAD") ctx.Response.OutputStream.Write(bytes, (int)from, (int)(to - from + 1));
                 ctx.Response.Close();
                 return;
             }
