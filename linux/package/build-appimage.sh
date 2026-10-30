@@ -69,6 +69,11 @@ exec "$HERE/usr/bin/dingus" "$@"
 APPRUN
 chmod +x "$APPDIR/AppRun" "$APPDIR/usr/bin/dingus"
 
+# Everyone who runs the AppImage must be able to read everything in it, and run whatever is runnable (newer
+# appimagetool refuses files that only their owner can run – .NET's publish leaves some like that).
+chmod -R a+rX "$APPDIR"
+find "$APPDIR" -type f -perm -u+x -exec chmod a+x {} +
+
 echo "== Packing the AppImage"
 AT="$WORK/appimagetool-x86_64.AppImage"
 curl -sSL -o "$AT" https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
