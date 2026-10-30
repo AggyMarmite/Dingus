@@ -53,8 +53,6 @@ public partial class RecordingsView : UserControl, IPage
         RecordingService.Changed += () => { if (IsEffectivelyVisible) Build(); };
         ReminderService.Changed += () => { if (IsEffectivelyVisible) Build(); };
         _tick.Tick += (_, _) => Build(); // recording sizes and "in 5 min" times
-        DownloadList.ItemsSource = _downloads;
-        DownloadService.Changed += () => Dispatcher.UIThread.Post(() => { if (IsEffectivelyVisible) SyncDownloads(); }, DispatcherPriority.Background);
     }
 
     public void ApplySearch(string query) { }
@@ -64,14 +62,11 @@ public partial class RecordingsView : UserControl, IPage
         _loading = true;
         var s = SettingsStore.Current;
         FolderBox.Text = RecordingService.Folder;
-        DlFolderBox.Text = DownloadService.Folder;
         Check(PadBeforeChips, s.RecordPadBefore.ToString());
         Check(PadAfterChips, s.RecordPadAfter.ToString());
         _loading = false;
         CheckFolder();
-        CheckFolder(() => DownloadService.Folder, DlFolderStatus, "a film in HD is about 2–5 GB");
         Build();
-        SyncDownloads();
         _tick.Start();
     }
 
@@ -188,99 +183,6 @@ public partial class RecordingsView : UserControl, IPage
     }
 
     static string Size(long b) => b >= 1L << 30 ? $"{b / (double)(1L << 30):0.0} GB" : $"{b / (double)(1 << 20):0} MB";
-
-    // ------------------------------------------------------------------ downloads
-
-    readonly System.Collections.ObjectModel.ObservableCollection<DownloadItem> _downloads = new();
-
-    /// <summary>Brings the Downloads list up to date – in place, so progress moves smoothly.</summary>
-    void SyncDownloads()
-    {
-        var want = DownloadService.All
-            .OrderBy(d => d.Status == DownloadStatus.Done ? 1 : 0)
-            .ThenBy(d => d.Status == DownloadStatus.Done ? -(d.FinishedUtc ?? d.AddedUtc).Ticks : d.AddedUtc.Ticks)
-            .ToList();
-        if (!want.Select(d => d.Id).SequenceEqual(_downloads.Select(x => x.Download.Id)))
-        {
-            var old = _downloads.ToDictionary(x => x.Download.Id);
-            _downloads.Clear();
-            foreach (var d in want) _downloads.Add(old.TryGetValue(d.Id, out var x) && x.Download == d ? x : new DownloadItem(d));
-        }
-        foreach (var x in _downloads) x.Refresh();
-        DownloadsEmpty.IsVisible = _downloads.Count == 0;
-    }
-
-    /// <summary>Scrolls to Downloads.</summary>
-    public void ShowDownloads() => Dispatcher.UIThread.Post(() => DownloadsHeader.BringIntoView(new Rect(0, 0, 1, 600)), DispatcherPriority.Loaded);
-
-    static Download DownloadOf(object sender) => ((sender as Control)?.DataContext as DownloadItem)?.Download;
-
-    void DlPlay_Click(object sender, RoutedEventArgs e)
-    {
-        var d = DownloadOf(sender);
-        if (d == null) return;
-        if (!File.Exists(d.FilePath)) { MainWindow.Instance?.ShowToast("That download's file can't be found."); return; }
-        MainWindow.Instance?.PlayVod(DownloadService.ToVod(d), resume: true);
-    }
-
-    void DlShow_Click(object sender, RoutedEventArgs e)
-    {
-        var d = DownloadOf(sender);
-        if (d?.FilePath == null) return;
-        Updater.OpenUrl(Path.GetDirectoryName(d.FilePath));
-    }
-
-    void DlPause_Click(object sender, RoutedEventArgs e) { if (DownloadOf(sender) is { } d) DownloadService.Pause(d); }
-    void DlResume_Click(object sender, RoutedEventArgs e) { if (DownloadOf(sender) is { } d) DownloadService.Resume(d); }
-
-    async void DlRemove_Click(object sender, RoutedEventArgs e)
-    {
-        var d = DownloadOf(sender);
-        if (d == null) return;
-        if (d.Status == DownloadStatus.Done && File.Exists(d.FilePath)
-            && !await Dialogs.Confirm(TopLevel.GetTopLevel(this) as Window, $"Delete the download “{d.Title}”?",
-                $"The file will be deleted from:\n{d.FilePath}", "Delete", danger: true))
-            return;
-        DownloadService.Remove(d);
-    }
-
-    async void DlBrowse_Click(object sender, RoutedEventArgs e)
-    {
-        var top = TopLevel.GetTopLevel(this);
-        if (top == null) return;
-        var start = Directory.Exists(DownloadService.Folder) ? await top.StorageProvider.TryGetFolderFromPathAsync(new Uri(DownloadService.Folder)) : null;
-        var picked = await top.StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions
-        {
-            Title = "Where should Dingus save downloads?", AllowMultiple = false, SuggestedStartLocation = start,
-        });
-        var path = picked.FirstOrDefault()?.TryGetLocalPath();
-        if (path != null) SetDlFolder(path);
-    }
-
-    void DlOpenFolder_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            Directory.CreateDirectory(DownloadService.Folder);
-            Updater.OpenUrl(DownloadService.Folder);
-        }
-        catch (Exception ex) { MainWindow.Instance?.ShowToast("Couldn't open the folder: " + ex.Message); }
-    }
-
-    void DlFolderBox_LostFocus(object sender, RoutedEventArgs e) => SetDlFolder(DlFolderBox.Text);
-    void DlFolderBox_KeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Enter) SetDlFolder(DlFolderBox.Text); }
-
-    void SetDlFolder(string path)
-    {
-        path = path?.Trim().Trim('"') ?? "";
-        if (path != DownloadService.Folder)
-        {
-            var err = DownloadService.SetFolder(path);
-            if (err != null) MainWindow.Instance?.ShowToast(err);
-        }
-        DlFolderBox.Text = DownloadService.Folder;
-        CheckFolder(() => DownloadService.Folder, DlFolderStatus, "a film in HD is about 2–5 GB");
-    }
 
     // ------------------------------------------------------------------ actions
 

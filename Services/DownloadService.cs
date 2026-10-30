@@ -583,8 +583,8 @@ public static class DownloadService
     public static string AddedMessage(Download d) => d.Status switch
     {
         DownloadStatus.Done => $"Already downloaded: {Label(d)}",
-        DownloadStatus.Paused => $"{Label(d)} is paused in Downloads (on the Recordings page)",
-        _ => $"Downloading {Label(d)}  ·  see Downloads on the Recordings page",
+        DownloadStatus.Paused => $"{Label(d)} is paused in Downloads",
+        _ => $"Downloading {Label(d)}  ·  see Downloads",
     };
 
     static string Label(Download d) => d.Series != null ? $"{Stremio.CleanTitle(d.Series)} S{d.Season:00}E{d.Episode:00}" : d.Title;

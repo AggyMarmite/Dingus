@@ -741,17 +741,17 @@ public partial class MainWindow
     void TitleBar_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         double w = e.NewSize.Width;
-        int level = w >= 1460 ? 0 : w >= 1300 ? 1 : 2; // 0 = full, 1 = no word mark, 2 = icons only
+        int level = w >= 1580 ? 0 : w >= 1420 ? 1 : 2; // 0 = full, 1 = no word mark, 2 = icons only
         if (level == _barLevel) return;
         _barLevel = level;
         WordMark.Visibility = level == 0 ? Visibility.Visible : Visibility.Collapsed;
         PlaylistName.MaxWidth = level == 0 ? 130 : 80;
-        foreach (var tab in new[] { NavHome, NavGuide, NavFilms, NavShows, NavEvents, NavStremio, NavRecordings })
+        foreach (var tab in new[] { NavHome, NavGuide, NavFilms, NavShows, NavEvents, NavStremio, NavRecordings, NavDownloads })
         {
             if (!_tabLabels.ContainsKey(tab)) _tabLabels[tab] = tab.Content;
             bool iconOnly = level == 2;
             tab.Content = iconOnly ? null : _tabLabels[tab];
-            tab.ToolTip = iconOnly ? _tabLabels[tab] : (tab == NavRecordings ? "Recordings & reminders" : tab == NavEvents ? "Find a game, follow your teams" : null);
+            tab.ToolTip = iconOnly ? _tabLabels[tab] : (tab == NavRecordings ? "Recordings & reminders" : tab == NavEvents ? "Find a game, follow your teams" : tab == NavDownloads ? "Films and episodes saved to watch without a connection" : null);
         }
     }
 }

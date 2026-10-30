@@ -28,6 +28,7 @@ public partial class MainWindow : Window
     readonly SettingsView _settings;
     readonly SearchView _search;
     readonly RecordingsView _recordings;
+    readonly DownloadsView _downloads;
     readonly EventsView _events;
     readonly StremioView _stremio;
     IPage _page;
@@ -78,6 +79,7 @@ public partial class MainWindow : Window
         _settings = new SettingsView();
         _search = new SearchView { Guide = _guide };
         _recordings = new RecordingsView { Guide = _guide };
+        _downloads = new DownloadsView();
         _events = new EventsView { Guide = _guide };
         _stremio = new StremioView();
         // Your teams' games get reminders as they appear in the guide (when that's switched on).
@@ -290,11 +292,10 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Opens Settings at a part of it ("stremio").</summary>
-    /// <summary>Opens Downloads (on the Recordings page).</summary>
+    /// <summary>Opens Downloads.</summary>
     public void OpenDownloads()
     {
-        NavRecordings.IsChecked = true;
-        _recordings.ShowDownloads();
+        NavDownloads.IsChecked = true;
     }
 
     public void OpenSettingsSection(string name)
@@ -449,17 +450,17 @@ public partial class MainWindow : Window
     /// <summary>Narrow windows: drop the word mark, then the tab labels, so search always has room.</summary>
     void TitleBar_SizeChanged(double w)
     {
-        int level = w >= 1460 ? 0 : w >= 1300 ? 1 : 2;
+        int level = w >= 1580 ? 0 : w >= 1420 ? 1 : 2;
         if (level == _barLevel) return;
         _barLevel = level;
         WordMark.IsVisible = level == 0;
         PlaylistName.MaxWidth = level == 0 ? 130 : 80;
-        foreach (var tab in new[] { NavHome, NavGuide, NavFilms, NavShows, NavEvents, NavStremio, NavRecordings })
+        foreach (var tab in new[] { NavHome, NavGuide, NavFilms, NavShows, NavEvents, NavStremio, NavRecordings, NavDownloads })
         {
             if (!_tabLabels.ContainsKey(tab)) _tabLabels[tab] = tab.Content;
             bool iconOnly = level == 2;
             tab.Classes.Set("compact", iconOnly);
-            ToolTip.SetTip(tab, iconOnly ? _tabLabels[tab] : (tab == NavRecordings ? "Recordings & reminders" : tab == NavEvents ? "Find a game, follow your teams" : null));
+            ToolTip.SetTip(tab, iconOnly ? _tabLabels[tab] : (tab == NavRecordings ? "Recordings & reminders" : tab == NavEvents ? "Find a game, follow your teams" : tab == NavDownloads ? "Films and episodes saved to watch without a connection" : null));
         }
     }
 
@@ -478,10 +479,11 @@ public partial class MainWindow : Window
         else if (rb == NavSettings) page = _settings;
         else if (rb == NavSearch) page = _search;
         else if (rb == NavRecordings) page = _recordings;
+        else if (rb == NavDownloads) page = _downloads;
         else if (rb == NavEvents) page = _events;
         else if (rb == NavStremio) page = _stremio;
         // Settings sits apart from the tabs: un-check the others by hand.
-        foreach (var other in new[] { NavHome, NavGuide, NavFilms, NavShows, NavEvents, NavStremio, NavRecordings, NavSearch, NavSettings })
+        foreach (var other in new[] { NavHome, NavGuide, NavFilms, NavShows, NavEvents, NavStremio, NavRecordings, NavDownloads, NavSearch, NavSettings })
             if (other != rb && other.IsChecked == true) other.IsChecked = false;
         Navigate(page);
     }
@@ -601,7 +603,7 @@ public partial class MainWindow : Window
         if (_page != _search) return;
         var back = _beforeSearch ?? _home;
         (back == _guide ? NavGuide : back == _films ? NavFilms : back == _shows ? NavShows : back == _settings ? NavSettings
-            : back == _recordings ? NavRecordings : back == _events ? NavEvents : back == _stremio ? NavStremio : NavHome).IsChecked = true;
+            : back == _recordings ? NavRecordings : back == _downloads ? NavDownloads : back == _events ? NavEvents : back == _stremio ? NavStremio : NavHome).IsChecked = true;
     }
 
     public void OpenChannelEditor()

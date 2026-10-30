@@ -1,0 +1,77 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svc="clr-namespace:Dingus.Services"
+             xmlns:local="clr-namespace:Dingus"
+             x:Class="Dingus.Views.DownloadsView">
+    <UserControl.Resources>
+        <!-- A film or episode in Downloads -->
+        <DataTemplate x:Key="DownloadRow">
+            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="10" Padding="12,10,16,10" Margin="0,0,0,6"
+                    BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Classes="primary" Content="Play" Margin="8,0,0,0" Click="DlPlay_Click" IsVisible="{Binding IsDone}"/>
+                        <Button Content="Show in folder" Margin="8,0,0,0" Click="DlShow_Click" IsVisible="{Binding IsDone}"/>
+                        <Button Content="Pause" Margin="8,0,0,0" Click="DlPause_Click" IsVisible="{Binding CanPause}"/>
+                        <Button Classes="primary" Content="Resume" Margin="8,0,0,0" Click="DlResume_Click" IsVisible="{Binding CanResume}"/>
+                        <Button Classes="ghost" Content="{Binding RemoveText}" Margin="8,0,0,0" Click="DlRemove_Click"/>
+                    </StackPanel>
+                    <Border DockPanel.Dock="Left" Width="44" Height="64" CornerRadius="5" ClipToBounds="True" Background="{StaticResource Surface2Brush}"
+                            VerticalAlignment="Center">
+                        <Panel>
+                            <TextBlock Classes="icon muted" Text="{x:Static local:Icons.Download}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="88" svc:ImageLoader.Url="{Binding Image}"/>
+                        </Panel>
+                    </Border>
+                    <StackPanel Margin="14,0,12,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding Line2}" Classes="muted" FontSize="12" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
+                        <ProgressBar Classes="thin" Value="{Binding Fraction, Mode=OneWay}" Margin="0,7,0,0" MaxWidth="420" HorizontalAlignment="Stretch"
+                                     IsVisible="{Binding ShowBar}"/>
+                        <Panel Margin="0,5,0,0">
+                            <TextBlock Text="{Binding Status}" Classes="muted" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding !Failed}"/>
+                            <TextBlock Text="{Binding Status}" Foreground="#EF4444" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding Failed}"/>
+                        </Panel>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" svc:SmoothScroll.Enabled="True">
+        <StackPanel Margin="36,16,36,48" MaxWidth="1000">
+            <StackPanel Margin="0,0,0,6">
+                <TextBlock Text="Downloads" FontSize="24" FontWeight="SemiBold"/>
+                <TextBlock Classes="muted" Margin="0,4,0,0" TextWrapping="Wrap"
+                           Text="Films and episodes saved to watch without a connection. Press Download on a film, an episode or a season in Films, TV Shows or Stremio."/>
+            </StackPanel>
+
+            <TextBlock x:Name="ActiveHeader" Classes="section" Text="DOWNLOADING"/>
+            <ItemsControl x:Name="ActiveList" ItemTemplate="{StaticResource DownloadRow}"/>
+
+            <TextBlock Classes="section" Text="DOWNLOADED"/>
+            <ItemsControl x:Name="DoneList" ItemTemplate="{StaticResource DownloadRow}"/>
+            <TextBlock x:Name="DoneEmpty" Classes="muted" Margin="2,0,0,0" TextWrapping="Wrap" Text="Nothing downloaded yet."/>
+
+            <TextBlock Classes="section" Text="DOWNLOAD SETTINGS"/>
+            <Border Classes="card">
+                <StackPanel>
+                    <TextBlock Text="Save downloads to" FontWeight="SemiBold"/>
+                    <TextBlock Classes="muted" FontSize="12" Margin="0,3,0,10" TextWrapping="Wrap"
+                               Text="Films and episodes you download. Shows get a folder each, with a folder per season."/>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Content="Browse…" Margin="8,0,0,0" Click="DlBrowse_Click"/>
+                            <Button Classes="ghost" Content="Open" Margin="4,0,0,0" Click="DlOpenFolder_Click"/>
+                        </StackPanel>
+                        <TextBox x:Name="DlFolderBox" Watermark="Folder or network path" LostFocus="DlFolderBox_LostFocus" KeyDown="DlFolderBox_KeyDown"/>
+                    </DockPanel>
+                    <TextBlock x:Name="DlFolderStatus" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"/>
+
+                    <TextBlock Classes="muted" FontSize="12" Margin="0,14,0,0" TextWrapping="Wrap"
+                               Text="Dingus needs to be open for downloads to make progress – minimised is fine. If it's closed or the connection drops, a download carries on from where it stopped. Downloads from your playlist wait while you're watching if your plan only allows one connection at a time."/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

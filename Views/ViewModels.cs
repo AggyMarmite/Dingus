@@ -436,7 +436,7 @@ public class EpisodeItem : Observable
     public bool Downloaded => _downloadText == "Downloaded";
 }
 
-/// <summary>A film or episode in Downloads (on the Recordings page). Updated in place as it makes progress.</summary>
+/// <summary>A film or episode on the Downloads page. Updated in place as it makes progress.</summary>
 public class DownloadItem : Observable
 {
     public DownloadItem(Services.Download d) { Download = d; Refresh(); }

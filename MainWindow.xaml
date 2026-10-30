@@ -73,6 +73,8 @@
                                                  ToolTip="Your Stremio add-ons and Real-Debrid"/>
                                     <RadioButton x:Name="NavRecordings" Style="{StaticResource TabButton}" Tag="&#xE7C8;" Content="Recordings" Checked="Nav_Checked"
                                                  ToolTip="Recordings &amp; reminders"/>
+                                    <RadioButton x:Name="NavDownloads" Style="{StaticResource TabButton}" Tag="&#xE896;" Content="Downloads" Checked="Nav_Checked"
+                                                 ToolTip="Films and episodes saved to watch without a connection"/>
                                     <!-- The Search page opens from the search bar (no tab of its own) -->
                                     <RadioButton x:Name="NavSearch" Style="{StaticResource TabButton}" Tag="&#xE721;" Content="Search" Checked="Nav_Checked"
                                                  Visibility="Collapsed"/>

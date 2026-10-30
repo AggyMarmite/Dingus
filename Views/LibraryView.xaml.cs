@@ -575,7 +575,7 @@ public partial class LibraryView : UserControl, IPage
             if (DownloadService.Start(item, ep.Episode.Season, ep.Episode.Number).Download != null) added++;
         }
         if (added == 0) { MainWindow.Instance?.OpenDownloads(); return; }
-        MainWindow.Instance?.ShowToast($"Downloading {added} episode{(added == 1 ? "" : "s")} of {season.Label}  ·  see Downloads on the Recordings page");
+        MainWindow.Instance?.ShowToast($"Downloading {added} episode{(added == 1 ? "" : "s")} of {season.Label}  ·  see Downloads");
     }
 
     void Back_Click(object sender, RoutedEventArgs e) => CloseDetail();
