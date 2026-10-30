@@ -127,7 +127,10 @@
                                        Margin="0,18,0,0" LineHeight="22"/>
                             <TextBlock x:Name="DetailCredits" FontSize="13" Classes="muted" TextWrapping="Wrap" MaxWidth="780"
                                        HorizontalAlignment="Left" Margin="0,14,0,0"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,24,0,0" Spacing="8">
+                            <WrapPanel Orientation="Horizontal" Margin="0,24,0,-8">
+                                <WrapPanel.Styles>
+                                    <Style Selector="WrapPanel > Button"><Setter Property="Margin" Value="0,0,8,8"/></Style>
+                                </WrapPanel.Styles>
                                 <Button x:Name="PlayButton" Classes="primary" Padding="22,11" Click="PlayMovie_Click">
                                     <StackPanel Orientation="Horizontal" Spacing="10">
                                         <TextBlock Classes="icon" Text="{x:Static local:Icons.Play}" FontSize="18"/>
@@ -138,6 +141,12 @@
                                     <StackPanel Orientation="Horizontal" Spacing="10">
                                         <TextBlock Classes="icon" Text="{x:Static local:Icons.Refresh}"/>
                                         <TextBlock Text="Play from start" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="DownloadButton" Padding="18,11" Click="DownloadMovie_Click" ToolTip.Tip="Save it to watch without a connection">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <TextBlock x:Name="DownloadIcon" Classes="icon" Text="{x:Static local:Icons.Download}"/>
+                                        <TextBlock x:Name="DownloadText" Text="Download" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
                                 <Button x:Name="SaveButton" Padding="18,11" Click="Save_Click">
@@ -159,13 +168,23 @@
                                         <TextBlock Text="Trailer" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
-                            </StackPanel>
+                            </WrapPanel>
                             <ProgressBar x:Name="DetailProgress" Classes="thin" Width="300" HorizontalAlignment="Left" Margin="0,14,0,0" IsVisible="False"/>
                             <TextBlock x:Name="DetailStatus" Classes="muted" Margin="0,16,0,0" FontSize="12"/>
                         </StackPanel>
                     </Grid>
 
-                    <StackPanel x:Name="SeriesPart" Margin="0,34,0,0" IsVisible="False">
+                    <Grid x:Name="SeriesPart" Margin="0,34,0,0" IsVisible="False">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" MaxWidth="1040"/></Grid.ColumnDefinitions>
+                        <StackPanel>
+                        <DockPanel>
+                        <Button x:Name="DownloadSeasonButton" DockPanel.Dock="Right" Padding="14,8" VerticalAlignment="Top" Click="DownloadSeason_Click"
+                                ToolTip.Tip="Download every episode in this season">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Classes="icon" Text="{x:Static local:Icons.Download}"/>
+                                <TextBlock x:Name="DownloadSeasonText" Text="Download season" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
                         <ItemsControl x:Name="SeasonList">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
@@ -176,13 +195,14 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                        </DockPanel>
 
-                        <ItemsControl x:Name="EpisodeList" Margin="-10,10,0,0" MaxWidth="1040" HorizontalAlignment="Left">
+                        <ItemsControl x:Name="EpisodeList" Margin="-10,10,0,0">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Button Classes="ghost" Click="Episode_Click" Margin="0,0,0,4" Padding="10" HorizontalContentAlignment="Stretch"
                                             HorizontalAlignment="Stretch">
-                                        <Grid ColumnDefinitions="194,*">
+                                        <Grid ColumnDefinitions="194,*,Auto">
                                             <Border Width="178" Height="100" HorizontalAlignment="Left" CornerRadius="8" ClipToBounds="True"
                                                     Background="{StaticResource Surface2Brush}">
                                                 <Panel>
@@ -206,12 +226,23 @@
                                                 <TextBlock Text="{Binding Plot}" FontSize="12" Classes="muted" Margin="0,6,0,0"
                                                            TextWrapping="Wrap" TextTrimming="WordEllipsis" MaxHeight="36"/>
                                             </StackPanel>
+                                            <Button Grid.Column="2" Classes="ghost" Margin="12,0,6,0" VerticalAlignment="Center" Click="EpisodeDownload_Click"
+                                                    ToolTip.Tip="Download this episode">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <Panel>
+                                                        <TextBlock Classes="icon" Text="{x:Static local:Icons.Download}" IsVisible="{Binding !Downloaded}"/>
+                                                        <TextBlock Classes="icon" Text="{x:Static local:Icons.Check}" Foreground="#4ADE80" IsVisible="{Binding Downloaded}"/>
+                                                    </Panel>
+                                                    <TextBlock Text="{Binding DownloadText}" FontSize="12" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
                                         </Grid>
                                     </Button>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </StackPanel>
+                        </StackPanel>
+                    </Grid>
                 </StackPanel>
             </ScrollViewer>
         </Panel>

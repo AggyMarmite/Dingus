@@ -318,6 +318,10 @@ public class StremioSourceItem : Observable
     public string Hint { get; init; }
     bool _busy;
     public bool Busy { get => _busy; set => Set(ref _busy, value); }
+    /// <summary>Direct sources, and torrents through Real-Debrid, can be downloaded (web pages can't).</summary>
+    public bool CanDownload => CanPlay && Stream?.Kind is Services.StreamKind.Direct or Services.StreamKind.Torrent;
+    bool _saving;
+    public bool Saving { get => _saving; set => Set(ref _saving, value); }
 }
 
 /// <summary>An episode on a Stremio show's page.</summary>
@@ -424,5 +428,47 @@ public class EpisodeItem : Observable
     {
         get => _watched;
         set { if (Set(ref _watched, value)) Raise(nameof(HasProgress)); }
+    }
+
+    /// <summary>"Download", "Downloading 34%", "Downloaded"… for the episode's download button.</summary>
+    string _downloadText = "Download";
+    public string DownloadText { get => _downloadText; set { if (Set(ref _downloadText, value)) Raise(nameof(Downloaded)); } }
+    public bool Downloaded => _downloadText == "Downloaded";
+}
+
+/// <summary>A film or episode in Downloads (on the Recordings page). Updated in place as it makes progress.</summary>
+public class DownloadItem : Observable
+{
+    public DownloadItem(Services.Download d) { Download = d; Refresh(); }
+    public Services.Download Download { get; }
+    public string Title => Download.Series != null ? Services.Stremio.CleanTitle(Download.Series) : Download.Title;
+    public string Line2 => Download.Subtitle;
+    public string Image => Download.Image;
+
+    string _status;
+    public string Status { get => _status; private set => Set(ref _status, value); }
+    double _fraction;
+    public double Fraction { get => _fraction; private set => Set(ref _fraction, value); }
+    bool _showBar, _done, _canPause, _canResume, _failed;
+    public bool ShowBar { get => _showBar; private set => Set(ref _showBar, value); }
+    public bool IsDone { get => _done; private set => Set(ref _done, value); }
+    public bool CanPause { get => _canPause; private set => Set(ref _canPause, value); }
+    public bool CanResume { get => _canResume; private set => Set(ref _canResume, value); }
+    public bool Failed { get => _failed; private set => Set(ref _failed, value); }
+    /// <summary>"Cancel" while it's on its way, "Delete" once it's finished or failed.</summary>
+    string _removeText;
+    public string RemoveText { get => _removeText; private set => Set(ref _removeText, value); }
+
+    public void Refresh()
+    {
+        var d = Download;
+        Status = Services.DownloadService.StatusText(d);
+        Fraction = d.Fraction;
+        IsDone = d.Status == Services.DownloadStatus.Done;
+        ShowBar = !IsDone && d.Status != Services.DownloadStatus.Failed && d.Total > 0;
+        CanPause = d.IsActive;
+        CanResume = d.Status is Services.DownloadStatus.Paused or Services.DownloadStatus.Failed;
+        Failed = d.Status == Services.DownloadStatus.Failed;
+        RemoveText = IsDone || Failed ? "Delete" : "Cancel";
     }
 }

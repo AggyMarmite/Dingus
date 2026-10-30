@@ -135,6 +135,7 @@ public class AppSettings
     // Recordings
     /// <summary>Where recordings are saved (empty = Videos\Dingus Recordings). Can be another drive or a network share.</summary>
     public string RecordingsFolder { get; set; }
+    public string DownloadsFolder { get; set; }
     /// <summary>Minutes to start early / carry on after, in case programmes start early or overrun.</summary>
     public int RecordPadBefore { get; set; } = 2;
     public int RecordPadAfter { get; set; } = 5;

@@ -95,6 +95,9 @@ public partial class MainWindow : Window
         };
         ReminderService.Start();
         RecordingService.Start();
+        // A download from your playlist waits while you watch something from it, if your plan only allows so many connections.
+        DownloadService.WatchingPlaylist = () => _currentUrl is { } u && !u.StartsWith("file:") && _vod?.Kind != "stremio";
+        DownloadService.Start();
         Parental.Changed += UpdateLockButton;
         Opened += (_, _) => UpdateLockButton();
 
@@ -287,6 +290,13 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Opens Settings at a part of it ("stremio").</summary>
+    /// <summary>Opens Downloads (on the Recordings page).</summary>
+    public void OpenDownloads()
+    {
+        NavRecordings.IsChecked = true;
+        _recordings.ShowDownloads();
+    }
+
     public void OpenSettingsSection(string name)
     {
         NavSettings.IsChecked = true;
@@ -892,6 +902,13 @@ public partial class MainWindow : Window
     {
         if (_svc == null || item?.Url == null) return;
         SaveVodProgress();
+        // Downloaded? Play the file on this computer instead (no connection needed, and it doesn't use one of your plan's).
+        if (DownloadService.LocalUrl(item.ResumeKey) is { } local && local != item.Url)
+            item = new VodItem
+            {
+                Kind = item.Kind, Title = item.Title, Subtitle = item.Subtitle, Url = local, Image = item.Image, ResumeKey = item.ResumeKey,
+                ItemId = item.ItemId, SeriesId = item.SeriesId, Next = item.Next, NextLabel = item.NextLabel, Ext = item.Ext,
+            };
         long start = 0;
         var h = resume ? HistoryStore.Get(item.ResumeKey) : null;
         if (h != null && h.CanResume) start = Math.Max(0, h.PositionMs - 3000);
@@ -925,6 +942,7 @@ public partial class MainWindow : Window
         _nowChannel = null;
         _vod = null;
         _currentUrl = null;
+        DownloadService.Nudge(); // a download waiting for the connection can carry on
         _healthTimer?.Stop();
         KeepAwake.Set(false);
         _guide?.SetPreviewPlaying(false);

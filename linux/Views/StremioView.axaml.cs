@@ -376,8 +376,13 @@ public partial class StremioView : UserControl, IPage
     void Play(string url)
     {
         if (_meta == null || url == null) return;
+        MainWindow.Instance?.PlayVod(StremioItem(url), resume: true);
+    }
+
+    VodItem StremioItem(string url, string fileName = null)
+    {
         var ep = _episode;
-        MainWindow.Instance?.PlayVod(new VodItem
+        return new VodItem
         {
             Kind = "stremio",
             Title = _meta.Name,
@@ -386,8 +391,44 @@ public partial class StremioView : UserControl, IPage
             Image = _meta.Poster,
             ResumeKey = "st:" + (ep?.Id ?? _meta.Id),
             ItemId = ep?.Id ?? _meta.Id,
-        }, resume: true);
+            Ext = string.IsNullOrEmpty(fileName) ? null : Path.GetExtension(fileName),
+        };
     }
+
+    /// <summary>Downloads a source (a torrent goes through Real-Debrid first).</summary>
+    async void SourceDownload_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is not StremioSourceItem it || it.Saving || _meta == null) return;
+        var key = "st:" + (_episode?.Id ?? _meta.Id);
+        if (DownloadService.Find(key) is { Status: not DownloadStatus.Failed }) { MainWindow.Instance?.OpenDownloads(); return; }
+        var s = it.Stream;
+        var ep = _episode;
+        it.Saving = true;
+        try
+        {
+            string url = s.Url;
+            if (s.Kind == StreamKind.Torrent)
+            {
+                var progress = new Progress<string>(msg => SourcesStatus.Text = msg);
+                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+                url = await RealDebrid.ResolveTorrentAsync(s.InfoHash, s.FileIdx, s.Filename, progress, cts.Token);
+            }
+            var (_, msg) = DownloadService.Start(StremioItem(url, s.Filename ?? ExtOf(url)), ep?.Season ?? 0, ep?.Episode ?? 0);
+            SourcesStatus.Text = msg;
+            MainWindow.Instance?.ShowToast(msg);
+        }
+        catch (RdNotReadyException ex) { SourcesStatus.Text = ex.Message; MainWindow.Instance?.ShowToast(ex.Message); }
+        catch (Exception ex)
+        {
+            Log.Error(ex);
+            var msg = ex is InvalidOperationException ? ex.Message : "Couldn't download that: " + Http.Friendly(ex);
+            SourcesStatus.Text = msg;
+            MainWindow.Instance?.ShowToast(msg);
+        }
+        finally { it.Saving = false; }
+    }
+
+    static string ExtOf(string url) { try { return Path.GetFileName(new Uri(url).AbsolutePath); } catch { return null; } }
 
     async void RdFile_Click(object sender, RoutedEventArgs e)
     {

@@ -26,10 +26,14 @@
             <Border Background="{StaticResource SurfaceBrush}" CornerRadius="10" Padding="14,10" Margin="0,0,0,6"
                     BorderBrush="{StaticResource LineBrush}" BorderThickness="1" ToolTip.Tip="{Binding Hint}">
                 <DockPanel>
-                    <Panel DockPanel.Dock="Right" Margin="12,0,0,0" VerticalAlignment="Center">
+                    <Panel DockPanel.Dock="Right" Margin="8,0,0,0" VerticalAlignment="Center">
                         <Button Classes="primary" Click="Source_Click" Content="{Binding PlayText}" IsVisible="{Binding CanPlay}" IsEnabled="{Binding !Busy}"/>
                         <Button Content="{Binding PlayText}" IsVisible="{Binding !CanPlay}" IsEnabled="False"/>
                     </Panel>
+                    <Button DockPanel.Dock="Right" Classes="ghost" Margin="12,0,0,0" VerticalAlignment="Center" Click="SourceDownload_Click"
+                            ToolTip.Tip="Download this source to watch without a connection" IsVisible="{Binding CanDownload}" IsEnabled="{Binding !Saving}">
+                        <TextBlock Classes="icon" Text="{x:Static local:Icons.Download}" FontSize="16"/>
+                    </Button>
                     <Border DockPanel.Dock="Left" MinWidth="64" Height="30" CornerRadius="6" Background="{StaticResource Surface3Brush}" Padding="8,0"
                             Margin="0,0,14,0" VerticalAlignment="Center">
                         <TextBlock Text="{Binding Quality}" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>

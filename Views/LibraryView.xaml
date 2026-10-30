@@ -164,7 +164,7 @@
                                        Margin="0,18,0,0" LineHeight="22"/>
                             <TextBlock x:Name="DetailCredits" FontSize="13" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap"
                                        MaxWidth="780" HorizontalAlignment="Left" Margin="0,14,0,0"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,24,0,0">
+                            <WrapPanel Orientation="Horizontal" Margin="0,24,0,0">
                                 <Button x:Name="PlayButton" Style="{StaticResource PrimaryButton}" Padding="22,11" Click="PlayMovie_Click">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xE768;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,10,0"/>
@@ -176,6 +176,13 @@
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xE72C;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                         <TextBlock Text="Play from start"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="DownloadButton" Style="{StaticResource BaseButton}" Padding="18,11" Margin="8,0,0,0" Click="DownloadMovie_Click"
+                                        ToolTip="Save it to watch without a connection">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock x:Name="DownloadIcon" Text="&#xE896;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBlock x:Name="DownloadText" Text="Download"/>
                                     </StackPanel>
                                 </Button>
                                 <Button x:Name="SaveButton" Style="{StaticResource BaseButton}" Padding="18,11" Margin="8,0,0,0" Click="Save_Click">
@@ -198,14 +205,24 @@
                                         <TextBlock Text="Trailer"/>
                                     </StackPanel>
                                 </Button>
-                            </StackPanel>
+                            </WrapPanel>
                             <ProgressBar x:Name="DetailProgress" Style="{StaticResource ThinProgress}" Maximum="1" Width="300"
                                          HorizontalAlignment="Left" Margin="0,14,0,0" Visibility="Collapsed"/>
                             <TextBlock x:Name="DetailStatus" Foreground="{StaticResource MutedBrush}" Margin="0,16,0,0" FontSize="12"/>
                         </StackPanel>
                     </Grid>
 
-                    <StackPanel x:Name="SeriesPart" Margin="0,34,0,0" Visibility="Collapsed">
+                    <Grid x:Name="SeriesPart" Margin="0,34,0,0" Visibility="Collapsed">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" MaxWidth="1040"/></Grid.ColumnDefinitions>
+                        <StackPanel>
+                        <DockPanel>
+                        <Button x:Name="DownloadSeasonButton" DockPanel.Dock="Right" Style="{StaticResource BaseButton}" Padding="14,8" VerticalAlignment="Top"
+                                Click="DownloadSeason_Click" ToolTip="Download every episode in this season">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE896;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock x:Name="DownloadSeasonText" Text="Download season"/>
+                            </StackPanel>
+                        </Button>
                         <ListBox x:Name="SeasonList" Style="{StaticResource CleanList}" ItemContainerStyle="{StaticResource ChipItem}"
                                  SelectionChanged="SeasonList_SelectionChanged" ScrollViewer.VerticalScrollBarVisibility="Disabled">
                             <ListBox.ItemsPanel>
@@ -219,8 +236,9 @@
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
+                        </DockPanel>
 
-                        <ItemsControl x:Name="EpisodeList" Margin="-10,10,0,0" MaxWidth="1040" HorizontalAlignment="Left">
+                        <ItemsControl x:Name="EpisodeList" Margin="-10,10,0,0">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Button Style="{StaticResource RowButton}" Click="Episode_Click" Margin="0,0,0,4">
@@ -228,6 +246,7 @@
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="194"/>
                                                 <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <Grid Width="178" Height="100" HorizontalAlignment="Left">
                                                 <Grid.Clip>
@@ -257,6 +276,13 @@
                                                 <TextBlock Text="{Binding Plot}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0"
                                                            TextWrapping="Wrap" TextTrimming="WordEllipsis" MaxHeight="36"/>
                                             </StackPanel>
+                                            <Button x:Name="EpDownload" Grid.Column="2" Style="{StaticResource GhostButton}" Margin="12,0,6,0" VerticalAlignment="Center"
+                                                    Click="EpisodeDownload_Click" ToolTip="Download this episode">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock x:Name="EpDlIcon" Text="&#xE896;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                    <TextBlock Text="{Binding DownloadText}" FontSize="12"/>
+                                                </StackPanel>
+                                            </Button>
                                         </Grid>
                                     </Button>
                                     <DataTemplate.Triggers>
@@ -266,11 +292,16 @@
                                         <DataTrigger Binding="{Binding Watched}" Value="True">
                                             <Setter TargetName="EpWatched" Property="Visibility" Value="Visible"/>
                                         </DataTrigger>
+                                        <DataTrigger Binding="{Binding Downloaded}" Value="True">
+                                            <Setter TargetName="EpDlIcon" Property="Text" Value="&#xE73E;"/>
+                                            <Setter TargetName="EpDlIcon" Property="Foreground" Value="#4ADE80"/>
+                                        </DataTrigger>
                                     </DataTemplate.Triggers>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </StackPanel>
+                        </StackPanel>
+                    </Grid>
                 </StackPanel>
             </ScrollViewer>
         </Grid>

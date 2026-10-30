@@ -82,6 +82,12 @@ public static class SelfTest
                 await Idle(1500);
                 Snap(main.SelfTestRoot, "06c-film-details");
             }
+            if (cat.Series.Count > 0)
+            {
+                main.OpenLibraryItem(false, cat.Series[0].Id);
+                await Idle(2500);
+                Snap(main.SelfTestRoot, "07b-show-details");
+            }
             await Page(main, main.NavSettings, "09-settings", fullScroll: true);
             var row0 = main.SelfTestGuide.SelfTestFirstRow;
             if (row0 != null)
@@ -170,6 +176,12 @@ public static class SelfTest
                 Snap(main.SelfTestRoot, "22d-settings-stremio");
                 foreach (var a in Stremio.Addons.ToList()) Stremio.Remove(a);
             }
+            // Downloads: a whole film, a half-finished episode carrying on, a link that's gone – then the Downloads list.
+            await TestAddon.CheckDownloadsAsync(Note, Error);
+            main.OpenDownloads();
+            await Idle(2000);
+            Snap(main.SelfTestRoot, "23-downloads");
+            TestAddon.CleanUpDownloads();
             main.SelfTestEvents.SelfTestQuery("");
             main.SelfTestSearch("news"); // typing anywhere opens Search
             await Idle(1500);

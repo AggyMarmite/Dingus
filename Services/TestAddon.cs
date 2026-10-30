@@ -146,4 +146,83 @@ public sealed class TestAddon : IDisposable
             };
         return null;
     }
+
+    /// <summary>
+    /// The self-test's downloads check (both apps): downloads a film from a stand-in server into a scratch folder, picks up a
+    /// half-finished one where it stopped, checks both files match the original byte for byte and that the player would use
+    /// the file, then removes them. Returns the scratch folder's download (still there) for the page's screenshot.
+    /// </summary>
+    public static async Task CheckDownloadsAsync(Action<string> note, Action<Exception> error)
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "dingus-selftest-downloads");
+        try { if (Directory.Exists(dir)) Directory.Delete(dir, true); } catch { }
+        Directory.CreateDirectory(dir);
+        var src = Path.Combine(dir, "source.mp4");
+        var bytes = new byte[3 * 1024 * 1024 + 12345];
+        new Random(7).NextBytes(bytes);
+        File.WriteAllBytes(src, bytes);
+        var oldFolder = SettingsStore.Current.DownloadsFolder;
+        foreach (var old in DownloadService.All.Where(d => d.ResumeKey is "st:tt9000001" or "st:tt9000010:1:2").ToList()) DownloadService.Remove(old);
+        DownloadService.SetFolder(Path.Combine(dir, "out"));
+        using var server = new TestAddon(src);
+        var video = server.Url.Replace("/manifest.json", "/video.mp4");
+        try
+        {
+            static async Task<bool> WaitDone(Download d)
+            {
+                for (int i = 0; i < 120 && d.Status is not (DownloadStatus.Done or DownloadStatus.Failed); i++) await Task.Delay(250);
+                return d.Status == DownloadStatus.Done;
+            }
+
+            // 1. A film, start to finish.
+            var film = DownloadService.Add(new Models.VodItem
+            {
+                Kind = "stremio", Title = "The Test Pattern", Subtitle = "2021", Url = video, ResumeKey = "st:tt9000001", ItemId = "tt9000001", Ext = ".mp4",
+            }, null);
+            bool ok = await WaitDone(film);
+            bool same = ok && File.ReadAllBytes(film.FilePath).AsSpan().SequenceEqual(bytes);
+            note($"downloads: film {film.Status} → {Path.GetRelativePath(dir, film.FilePath ?? "")} · {film.Bytes} bytes · matches={same}{(film.Error != null ? " · " + film.Error : "")}");
+            if (!same) error(new Exception("Downloading a film didn't give a complete copy of the file: " + (film.Error ?? film.Status.ToString())));
+            if (DownloadService.LocalUrl("st:tt9000001") is not { } local || !local.StartsWith("file:"))
+                error(new Exception("A downloaded film wouldn't play from its file."));
+
+            // 2. An episode that had stopped half way: it carries on from there (and goes in the show's season folder).
+            var ep = DownloadService.Add(new Models.VodItem
+            {
+                Kind = "stremio", Title = "Testing Times", Subtitle = "S01E02  ·  Episode 2", Url = video, ResumeKey = "st:tt9000010:1:2", ItemId = "tt9000010:1:2", Ext = "mp4",
+            }, null, "Testing Times", 1, 2, paused: true);
+            Directory.CreateDirectory(Path.GetDirectoryName(ep.PartPath)!);
+            File.WriteAllBytes(ep.PartPath, bytes.AsSpan(0, bytes.Length / 2).ToArray());
+            DownloadService.Resume(ep);
+            ok = await WaitDone(ep);
+            same = ok && File.ReadAllBytes(ep.FilePath).AsSpan().SequenceEqual(bytes);
+            var rel = Path.GetRelativePath(dir, ep.FilePath ?? "");
+            note($"downloads: half-done episode {ep.Status} → {rel} · matches={same}{(ep.Error != null ? " · " + ep.Error : "")}");
+            if (!same) error(new Exception("A half-finished download didn't carry on correctly: " + (ep.Error ?? ep.Status.ToString())));
+            if (!rel.Replace('\\', '/').Contains("Testing Times/Season 1/")) error(new Exception("An episode download didn't go in its show's season folder: " + rel));
+
+            // 3. A link that's gone: it says so rather than trying for ever.
+            var gone = DownloadService.Add(new Models.VodItem
+            {
+                Kind = "stremio", Title = "Gone", Url = server.Url.Replace("/manifest.json", "/nothing-here.mp4"), ResumeKey = "st:selftest-gone", ItemId = "gone",
+            }, null);
+            await WaitDone(gone);
+            note($"downloads: missing link → {gone.Status} · {gone.Error}");
+            if (gone.Status != DownloadStatus.Failed) error(new Exception("A download from a link that's gone didn't say it failed."));
+            DownloadService.Remove(gone);
+        }
+        catch (Exception ex) { error(ex); }
+        finally
+        {
+            SettingsStore.Current.DownloadsFolder = oldFolder;
+            SettingsStore.Save();
+        }
+    }
+
+    /// <summary>Removes the self-test's downloads and their scratch folder.</summary>
+    public static void CleanUpDownloads()
+    {
+        foreach (var d in DownloadService.All.Where(d => d.ResumeKey is "st:tt9000001" or "st:tt9000010:1:2").ToList()) DownloadService.Remove(d);
+        try { Directory.Delete(Path.Combine(Path.GetTempPath(), "dingus-selftest-downloads"), true); } catch { }
+    }
 }

@@ -51,6 +51,8 @@ public partial class RecordingsView : UserControl, IPage
         RecordingService.Changed += () => { if (IsVisible) Build(); };
         ReminderService.Changed += () => { if (IsVisible) Build(); };
         _tick.Tick += (_, _) => Build(); // recording sizes and "in 5 min" times
+        DownloadList.ItemsSource = _downloads;
+        DownloadService.Changed += () => Dispatcher.BeginInvoke(() => { if (IsVisible) SyncDownloads(); }, DispatcherPriority.Background);
     }
 
     public void ApplySearch(string query) { }
@@ -60,11 +62,14 @@ public partial class RecordingsView : UserControl, IPage
         _loading = true;
         var s = SettingsStore.Current;
         FolderBox.Text = RecordingService.Folder;
+        DlFolderBox.Text = DownloadService.Folder;
         Check(PadBeforeChips, s.RecordPadBefore.ToString());
         Check(PadAfterChips, s.RecordPadAfter.ToString());
         _loading = false;
         CheckFolder();
+        CheckFolder(() => DownloadService.Folder, DlFolderStatus, "a film in HD is about 2–5 GB");
         Build();
+        SyncDownloads();
         _tick.Start();
     }
 
@@ -182,6 +187,102 @@ public partial class RecordingsView : UserControl, IPage
 
     static string Size(long b) => b >= 1L << 30 ? $"{b / (double)(1L << 30):0.0} GB" : $"{b / (double)(1 << 20):0} MB";
 
+    // ------------------------------------------------------------------ downloads
+
+    readonly System.Collections.ObjectModel.ObservableCollection<DownloadItem> _downloads = new();
+
+    /// <summary>Brings the Downloads list up to date – in place, so progress moves smoothly.</summary>
+    void SyncDownloads()
+    {
+        var want = DownloadService.All
+            .OrderBy(d => d.Status == DownloadStatus.Done ? 1 : 0)
+            .ThenBy(d => d.Status == DownloadStatus.Done ? -(d.FinishedUtc ?? d.AddedUtc).Ticks : d.AddedUtc.Ticks)
+            .ToList();
+        if (!want.Select(d => d.Id).SequenceEqual(_downloads.Select(x => x.Download.Id)))
+        {
+            var old = _downloads.ToDictionary(x => x.Download.Id);
+            _downloads.Clear();
+            foreach (var d in want) _downloads.Add(old.TryGetValue(d.Id, out var x) && x.Download == d ? x : new DownloadItem(d));
+        }
+        foreach (var x in _downloads) x.Refresh();
+        DownloadsEmpty.Visibility = _downloads.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>Scrolls to Downloads.</summary>
+    public void ShowDownloads() => Dispatcher.BeginInvoke(() => DownloadsHeader.BringIntoView(new Rect(0, 0, 1, 600)), DispatcherPriority.Loaded);
+
+    static Download DownloadOf(object sender) => ((sender as FrameworkElement)?.DataContext as DownloadItem)?.Download;
+
+    void DlPlay_Click(object sender, RoutedEventArgs e)
+    {
+        var d = DownloadOf(sender);
+        if (d == null) return;
+        if (!File.Exists(d.FilePath)) { MainWindow.Instance?.ShowToast("That download's file can't be found."); return; }
+        MainWindow.Instance?.PlayVod(DownloadService.ToVod(d), resume: true);
+    }
+
+    void DlShow_Click(object sender, RoutedEventArgs e)
+    {
+        var d = DownloadOf(sender);
+        if (d?.FilePath == null) return;
+        try { Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{d.FilePath}\"") { UseShellExecute = true }); } catch { }
+    }
+
+    void DlPause_Click(object sender, RoutedEventArgs e) { if (DownloadOf(sender) is { } d) DownloadService.Pause(d); }
+    void DlResume_Click(object sender, RoutedEventArgs e) { if (DownloadOf(sender) is { } d) DownloadService.Resume(d); }
+
+    void DlRemove_Click(object sender, RoutedEventArgs e)
+    {
+        var d = DownloadOf(sender);
+        if (d == null) return;
+        if (d.Status == DownloadStatus.Done && File.Exists(d.FilePath))
+        {
+            var answer = MessageBox.Show(Window.GetWindow(this),
+                $"Delete the download “{d.Title}”?\n\nThe file will be deleted from:\n{d.FilePath}",
+                "Delete download", MessageBoxButton.OKCancel, MessageBoxImage.Question);
+            if (answer != MessageBoxResult.OK) return;
+        }
+        DownloadService.Remove(d);
+    }
+
+    void DlBrowse_Click(object sender, RoutedEventArgs e)
+    {
+        using var dlg = new System.Windows.Forms.FolderBrowserDialog
+        {
+            Description = "Where should Dingus save downloads?",
+            UseDescriptionForTitle = true,
+            ShowNewFolderButton = true,
+            SelectedPath = Directory.Exists(DownloadService.Folder) ? DownloadService.Folder : "",
+        };
+        if (dlg.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+        SetDlFolder(dlg.SelectedPath);
+    }
+
+    void DlOpenFolder_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Directory.CreateDirectory(DownloadService.Folder);
+            Process.Start(new ProcessStartInfo(DownloadService.Folder) { UseShellExecute = true });
+        }
+        catch (Exception ex) { MainWindow.Instance?.ShowToast("Couldn't open the folder: " + ex.Message); }
+    }
+
+    void DlFolderBox_LostFocus(object sender, RoutedEventArgs e) => SetDlFolder(DlFolderBox.Text);
+    void DlFolderBox_KeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Enter) SetDlFolder(DlFolderBox.Text); }
+
+    void SetDlFolder(string path)
+    {
+        path = path?.Trim().Trim('"') ?? "";
+        if (path != DownloadService.Folder)
+        {
+            var err = DownloadService.SetFolder(path);
+            if (err != null) MainWindow.Instance?.ShowToast(err);
+        }
+        DlFolderBox.Text = DownloadService.Folder;
+        CheckFolder(() => DownloadService.Folder, DlFolderStatus, "a film in HD is about 2–5 GB");
+    }
+
     // ------------------------------------------------------------------ actions
 
     static ScheduleItem ItemOf(object sender) => (sender as FrameworkElement)?.DataContext as ScheduleItem;
@@ -256,15 +357,18 @@ public partial class RecordingsView : UserControl, IPage
         SettingsStore.Current.RecordingsFolder = path;
         SettingsStore.Save();
         FolderBox.Text = RecordingService.Folder;
+        DlFolderBox.Text = DownloadService.Folder;
         CheckFolder();
     }
 
+    void CheckFolder() => CheckFolder(() => RecordingService.Folder, FolderStatus, "an HD hour is about 2–4 GB");
+
     /// <summary>Tries writing to the folder (network shares can be slow, so off the UI thread).</summary>
-    async void CheckFolder()
+    async void CheckFolder(Func<string> current, TextBlock status, string sizeHint)
     {
-        var folder = RecordingService.Folder;
-        FolderStatus.Text = "Checking…";
-        FolderStatus.Foreground = Muted;
+        var folder = current();
+        status.Text = "Checking…";
+        status.Foreground = Muted;
         var check = Task.Run(() =>
         {
             Directory.CreateDirectory(folder);
@@ -281,12 +385,12 @@ public partial class RecordingsView : UserControl, IPage
         else
         {
             long free = check.Result;
-            msg = free >= 0 ? $"✓ Ready  ·  {free / (double)(1L << 30):0} GB free (an HD hour is about 2–4 GB)" : "✓ Ready";
+            msg = free >= 0 ? $"✓ Ready  ·  {free / (double)(1L << 30):0} GB free ({sizeHint})" : "✓ Ready";
             brush = OkBrush;
         }
-        if (folder != RecordingService.Folder) return;
-        FolderStatus.Text = msg;
-        FolderStatus.Foreground = brush;
+        if (folder != current()) return;
+        status.Text = msg;
+        status.Foreground = brush;
     }
 
     void PadBefore_Checked(object sender, RoutedEventArgs e)

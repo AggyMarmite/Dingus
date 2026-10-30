@@ -48,6 +48,7 @@ public partial class LibraryView : UserControl, IPage
         // so they don't sit in memory while you're in the guide.
         DataService.Instance.CatalogChanged += () => { if (_shown) Rebuild(); else _dirty = true; };
         HistoryStore.Changed += OnHistoryChanged;
+        DownloadService.Changed += () => Dispatcher.BeginInvoke(() => { if (_current != null) UpdateDownloads(); }, System.Windows.Threading.DispatcherPriority.Background);
         PosterList.SizeChanged += (_, _) => Regroup(false);
     }
 
@@ -415,7 +416,9 @@ public partial class LibraryView : UserControl, IPage
         _episodes = new List<EpisodeItem>();
         DetailScroll.ScrollToTop();
         if (movie) UpdateMovieButtons();
+        DownloadButton.Visibility = movie ? Visibility.Visible : Visibility.Collapsed;
         SaveButton.Margin = new Thickness(movie ? 8 : 0, 0, 0, 0);
+        UpdateDownloads();
         TrailerButton.Visibility = Visibility.Collapsed;
         _trailer = null;
         UpdateSaveButton();
@@ -520,6 +523,59 @@ public partial class LibraryView : UserControl, IPage
     void SeasonList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         EpisodeList.ItemsSource = (SeasonList.SelectedItem as SeasonItem)?.Episodes;
+        UpdateDownloads();
+    }
+
+    // ------------------------------------------------------------------ downloads
+
+    void UpdateDownloads()
+    {
+        if (_current?.Source is Movie m)
+        {
+            var text = DownloadService.ButtonText("m:" + m.Id);
+            DownloadText.Text = text;
+            DownloadIcon.Text = text == "Downloaded" ? "\uE73E" : "\uE896";
+        }
+        foreach (var ep in _episodes) ep.DownloadText = DownloadService.ButtonText("e:" + ep.Episode.Id);
+        if (SeasonList.SelectedItem is SeasonItem season)
+            DownloadSeasonText.Text = DownloadService.SeasonText(season.Episodes.Select(x => "e:" + x.Episode.Id).ToList());
+    }
+
+    void DownloadMovie_Click(object sender, RoutedEventArgs e)
+    {
+        if (_current?.Source is not Movie m) return;
+        if (DownloadService.Find("m:" + m.Id) is { Status: not DownloadStatus.Failed }) { MainWindow.Instance?.OpenDownloads(); return; }
+        var url = DataService.Instance.MovieUrl(m);
+        if (url == null) return;
+        var (_, msg) = DownloadService.Start(new VodItem
+        {
+            Kind = "movie", Ext = m.Ext, Title = m.Name, Subtitle = DetailMeta.Text, Url = url, Image = m.Poster, ResumeKey = "m:" + m.Id, ItemId = m.Id,
+        });
+        MainWindow.Instance?.ShowToast(msg);
+    }
+
+    void EpisodeDownload_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true; // not the row's own click (which plays it)
+        if ((sender as FrameworkElement)?.DataContext is not EpisodeItem ep) return;
+        if (DownloadService.Find("e:" + ep.Episode.Id) is { Status: not DownloadStatus.Failed }) { MainWindow.Instance?.OpenDownloads(); return; }
+        var item = BuildEpisode(ep.Index);
+        if (item != null) MainWindow.Instance?.ShowToast(DownloadService.Start(item, ep.Episode.Season, ep.Episode.Number).Message);
+    }
+
+    void DownloadSeason_Click(object sender, RoutedEventArgs e)
+    {
+        if (SeasonList.SelectedItem is not SeasonItem season) return;
+        int added = 0;
+        foreach (var ep in season.Episodes)
+        {
+            if (DownloadService.Find("e:" + ep.Episode.Id) is { Status: not DownloadStatus.Failed }) continue;
+            var item = BuildEpisode(ep.Index);
+            if (item == null) continue;
+            if (DownloadService.Start(item, ep.Episode.Season, ep.Episode.Number).Download != null) added++;
+        }
+        if (added == 0) { MainWindow.Instance?.OpenDownloads(); return; }
+        MainWindow.Instance?.ShowToast($"Downloading {added} episode{(added == 1 ? "" : "s")} of {season.Label}  ·  see Downloads on the Recordings page");
     }
 
     void Back_Click(object sender, RoutedEventArgs e) => CloseDetail();
