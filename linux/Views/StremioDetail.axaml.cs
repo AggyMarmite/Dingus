@@ -113,7 +113,8 @@ public partial class StremioDetail : UserControl
         ShowEpisodes(ep.Video.Season);
         Sources.IsVisible = true;
         Sources.Show(_meta, ep.Video, ep.Code + "  ·  " + ep.Title);
-        Dispatcher.UIThread.Post(() => Sources.BringIntoView(), DispatcherPriority.Loaded);
+        // Once the first answers are in, so there's something to show (it starts empty).
+        DispatcherTimer.RunOnce(() => Sources.BringIntoView(), TimeSpan.FromMilliseconds(450));
     }
 
     void Back_Click(object sender, RoutedEventArgs e) => Closed?.Invoke();

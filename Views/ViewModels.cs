@@ -54,7 +54,7 @@ public class GuideRow : Observable
         @"^\s*(?:\[[^\]]{1,6}\]|\|[^|]{1,6}\||[A-Za-z]{2,3}\s*[:|]|[A-Z]{2,3}\s+-\s+)\s*",
         System.Text.RegularExpressions.RegexOptions.Compiled);
 
-    static string CleanName(string n)
+    public static string CleanName(string n)
     {
         if (string.IsNullOrWhiteSpace(n)) return n;
         var c = TagRx.Replace(n, "").Trim();

@@ -85,7 +85,7 @@ public static class DownloadService
         {
             var f = SettingsStore.Current.DownloadsFolder;
             return string.IsNullOrWhiteSpace(f)
-                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "Dingus Downloads")
+                ? Path.Combine(AppPaths.Videos, "Dingus Downloads")
                 : f;
         }
     }

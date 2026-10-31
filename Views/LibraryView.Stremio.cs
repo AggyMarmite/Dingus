@@ -266,7 +266,10 @@ public partial class LibraryView
         };
         EpisodeSources.Visibility = Visibility.Visible;
         EpisodeSources.Show(_stShow, v, $"S{ep.Episode.Season:00}E{ep.Episode.Number:00}");
-        Dispatcher.InvokeAsync(() => EpisodeSources.BringIntoView(), System.Windows.Threading.DispatcherPriority.Loaded);
+        // Once the first answers are in, so there's something to show (it starts empty).
+        var later = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
+        later.Tick += (_, _) => { later.Stop(); EpisodeSources.BringIntoView(); };
+        later.Start();
     }
 
     void ClearMoreSources()

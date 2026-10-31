@@ -44,6 +44,9 @@ public partial class StremioSettings : UserControl
 
     // ------------------------------------------------------------------ Stremio account
 
+    void PasswordBox_PasswordChanged(object sender, RoutedEventArgs e) =>
+        PasswordHint.Visibility = PasswordBox.Password.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+
     void Password_KeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Enter) { SignIn_Click(null, null); e.Handled = true; } }
 
     async void SignIn_Click(object sender, RoutedEventArgs e)

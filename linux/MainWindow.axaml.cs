@@ -1550,7 +1550,7 @@ public partial class MainWindow : Window
         if (url == null || _svc == null) return;
         if (_nowLive && _reconnects >= 1 && _variantIdx + 1 < _variants.Count)
         {
-            var name = _nowChannel?.Name ?? "This channel";
+            var name = GuideRow.CleanName(_nowChannel?.Name) ?? "This channel";
             var next = _variants[_variantIdx + 1];
             _reconnecting = false;
             SwitchVariant(_variantIdx + 1, $"{name}: that version stopped working – switched to {ChannelMerger.Label(next)}.");

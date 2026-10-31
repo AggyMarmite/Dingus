@@ -29,7 +29,7 @@
                             <Border Background="{StaticResource Surface2Brush}"/>
                             <Image x:Name="DetailPoster" Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="300"/>
                         </Grid>
-                        <StackPanel Margin="32,4,0,0">
+                        <StackPanel Grid.Column="1" Margin="32,4,0,0">
                             <TextBlock x:Name="DetailTitle" FontSize="32" FontWeight="SemiBold" TextWrapping="Wrap"/>
                             <TextBlock x:Name="DetailMeta" FontSize="14" Foreground="{StaticResource MutedBrush}" Margin="0,10,0,0" TextWrapping="Wrap"/>
                             <TextBlock x:Name="DetailPlot" FontSize="14" TextWrapping="Wrap" MaxWidth="780" HorizontalAlignment="Left" Margin="0,16,0,0" LineHeight="22"/>

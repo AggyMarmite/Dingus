@@ -322,7 +322,7 @@
                                             <Button x:Name="EpSources" Style="{StaticResource GhostButton}" Margin="12,0,0,0" VerticalAlignment="Center"
                                                     Click="EpisodeSources_Click" ToolTip="Sources for this episode from your Stremio add-ons" Visibility="Collapsed">
                                                 <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="&#xE71D;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                    <TextBlock Text="&#xEA86;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                                     <TextBlock Text="More sources" FontSize="12"/>
                                                 </StackPanel>
                                             </Button>

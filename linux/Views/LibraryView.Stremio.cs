@@ -268,7 +268,8 @@ public partial class LibraryView
         };
         EpisodeSources.IsVisible = true;
         EpisodeSources.Show(_stShow, v, $"S{ep.Episode.Season:00}E{ep.Episode.Number:00}");
-        Dispatcher.UIThread.Post(() => EpisodeSources.BringIntoView(), DispatcherPriority.Loaded);
+        // Once the first answers are in, so there's something to show (it starts empty).
+        DispatcherTimer.RunOnce(() => EpisodeSources.BringIntoView(), TimeSpan.FromMilliseconds(450));
     }
 
     void ClearMoreSources()

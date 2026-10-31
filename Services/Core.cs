@@ -17,6 +17,20 @@ public static class AppPaths
 {
     public static readonly string Root = MakeRoot();
 
+    /// <summary>
+    /// The Videos folder (recordings and downloads go in it by default). On a fresh Linux install ~/Videos may not exist
+    /// yet, and asking for it then gives nothing – which would have meant saving into wherever Dingus was started from.
+    /// </summary>
+    public static string Videos
+    {
+        get
+        {
+            var v = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos, Environment.SpecialFolderOption.DoNotVerify);
+            if (string.IsNullOrEmpty(v)) v = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Videos");
+            return v;
+        }
+    }
+
     static string MakeRoot()
     {
         var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);

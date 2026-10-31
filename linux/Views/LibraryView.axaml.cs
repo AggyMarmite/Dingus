@@ -400,8 +400,8 @@ public partial class LibraryView : UserControl, IPage
         _current = item;
         bool movie = _mode == LibraryMode.Movies;
         DetailPane.IsVisible = true;
-        BackText.Text = movie ? "Films" : "TV Shows";
-        DetailTitle.Text = item.Title;
+        BackText.Text = _search.Length > 0 ? "Results" : _stCat?.Name ?? (CategoryList.SelectedItem as CategoryItem)?.Name ?? (movie ? "Films" : "TV Shows"); // back to where you came from
+        DetailTitle.Text = Stremio.CleanTitle(item.Title); // "EN | The Long Journey (2021) 4K" → "The Long Journey" (the year is underneath)
         DetailMeta.Text = item.Subtitle;
         DetailPlot.Text = "";
         DetailCredits.Text = "";

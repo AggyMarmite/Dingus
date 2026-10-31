@@ -71,7 +71,7 @@ public static class RecordingService
         {
             var f = SettingsStore.Current.RecordingsFolder;
             return string.IsNullOrWhiteSpace(f)
-                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "Dingus Recordings")
+                ? Path.Combine(AppPaths.Videos, "Dingus Recordings")
                 : f;
         }
     }

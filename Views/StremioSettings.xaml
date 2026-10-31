@@ -13,7 +13,11 @@
                                Text="Brings in the add-ons on your Stremio account. Your password isn't kept – only the sign-in Stremio gives back."/>
                     <StackPanel Orientation="Horizontal">
                         <TextBox x:Name="EmailBox" Tag="Email" Width="230"/>
-                        <PasswordBox x:Name="PasswordBox" Width="200" Margin="8,0,0,0" KeyDown="Password_KeyDown"/>
+                        <Grid Width="200" Margin="8,0,0,0">
+                            <PasswordBox x:Name="PasswordBox" KeyDown="Password_KeyDown" PasswordChanged="PasswordBox_PasswordChanged"/>
+                            <TextBlock x:Name="PasswordHint" Text="Password" Foreground="{StaticResource MutedBrush}" IsHitTestVisible="False"
+                                       VerticalAlignment="Center" Margin="13,0,0,0"/>
+                        </Grid>
                         <Button x:Name="SignInButton" Style="{StaticResource PrimaryButton}" Content="Sign in" Margin="8,0,0,0" Click="SignIn_Click"/>
                     </StackPanel>
                 </StackPanel>
