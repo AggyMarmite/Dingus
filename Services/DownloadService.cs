@@ -252,17 +252,25 @@ public static class DownloadService
     }
 
     /// <summary>Stops a download and removes it, with whatever was saved so far (or the finished file, when <paramref name="deleteFile"/>).</summary>
-    public static void Remove(Download d, bool deleteFile = true)
+    /// <returns>A message when the file couldn't be deleted (it's playing, say), otherwise null.</returns>
+    public static string Remove(Download d, bool deleteFile = true)
     {
+        if (deleteFile && d.Status == DownloadStatus.Done && File.Exists(d.FilePath))
+        {
+            try { File.Delete(d.FilePath); }
+            catch (Exception ex)
+            {
+                Log.Error(ex);
+                return "Couldn't delete the file – if it's playing, stop it first. (" + ex.Message + ")";
+            }
+        }
         lock (Gate) _items.Remove(d);
         if (_running == d) _current?.Cancel();
         if (deleteFile)
-        {
-            try { if (File.Exists(d.PartPath)) File.Delete(d.PartPath); } catch (Exception ex) { Log.Error(ex); }
-            try { if (d.Status == DownloadStatus.Done && File.Exists(d.FilePath)) File.Delete(d.FilePath); } catch (Exception ex) { Log.Error(ex); }
-        }
+            try { if (File.Exists(d.PartPath)) File.Delete(d.PartPath); } catch (Exception ex) { Log.Error(ex); } // or once it's closed (see RunAsync)
         Save();
         Raise();
+        return null;
     }
 
     /// <summary>Changes where new downloads go (ones already saved stay where they are).</summary>
@@ -279,17 +287,41 @@ public static class DownloadService
 
     // ------------------------------------------------------------------ the work
 
+    static DateTime _holdUntilUtc;
+
+    /// <summary>
+    /// Called just before something from your playlist starts playing: if a playlist download would leave no connection
+    /// free for it, the download steps aside first (and carries on afterwards), so the provider doesn't refuse what you're watching.
+    /// </summary>
+    public static void MakeRoomToWatch(bool forRecording = false)
+    {
+        int max = RecordingService.MaxConnections;
+        if (max <= 0) return;
+        var d = _running;
+        if (d?.PlaylistId == null || d.Status != DownloadStatus.Downloading) return;
+        // Recordings running (this one included, when it's for a recording), what you're watching, and the download.
+        int used = RecordingService.ActiveCount + (forRecording ? (WatchingPlaylist() ? 1 : 0) : 1) + 1;
+        if (used <= max) return;
+        _holdUntilUtc = DateTime.UtcNow.AddSeconds(8); // until the player has said what it's playing
+        d.Status = DownloadStatus.Waiting;
+        d.WaitReason = Reason(max);
+        _current?.Cancel();
+        Raise();
+    }
+
+    static string Reason(int max) => max == 1
+        ? "Waiting – your plan allows one connection at a time, so it carries on when you stop watching."
+        : $"Waiting – your plan allows {max} connections at a time, and they're in use.";
+
     /// <summary>How many connections a playlist download would need right now, against the plan's limit.</summary>
     static string ConnectionLimitReason(Download d)
     {
         if (d.PlaylistId == null) return null;
         int max = RecordingService.MaxConnections;
         if (max <= 0) return null;
+        if (DateTime.UtcNow < _holdUntilUtc) return Reason(max);
         int used = RecordingService.ActiveCount + (WatchingPlaylist() ? 1 : 0) + 1;
-        return used > max
-            ? max == 1 ? "Waiting – your plan allows one connection at a time, so it carries on when you stop watching."
-                       : $"Waiting – your plan allows {max} connections at a time, and they're in use."
-            : null;
+        return used > max ? Reason(max) : null;
     }
 
     static async Task WorkerAsync()
@@ -407,10 +439,14 @@ public static class DownloadService
         if (have > 0) req.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(have, null);
         using var resp = await Client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
 
-        if (resp.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable && have > 0 && d.Total > 0 && have >= d.Total)
+        if (resp.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable && have > 0)
         {
-            Finish(d);
-            return;
+            // Asked for the part after the end: it's all there already – or the file changed, so start it again.
+            long size = resp.Content.Headers.ContentRange?.Length ?? d.Total;
+            if (size > 0 && have >= size) { d.Total = size; Finish(d); return; }
+            File.Delete(d.PartPath);
+            d.Bytes = 0;
+            throw new IOException("the file on the server changed – starting again");
         }
         if (resp.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound or HttpStatusCode.Gone or HttpStatusCode.Unauthorized)
             throw new FatalDownloadException(d.PlaylistId != null
@@ -421,7 +457,9 @@ public static class DownloadService
         resp.EnsureSuccessStatusCode();
 
         var type = resp.Content.Headers.ContentType?.MediaType ?? "";
-        if (type.StartsWith("text/") || type.Contains("json"))
+        // An error page instead of the video (some servers label videos oddly, so only when it's small too).
+        var bodyLength = resp.Content.Headers.ContentLength ?? 0;
+        if ((type.StartsWith("text/html") || type.Contains("json")) && bodyLength < 2 * 1024 * 1024)
             throw new FatalDownloadException("That address gives a web page, not a video – it can't be downloaded.");
 
         bool partial = resp.StatusCode == HttpStatusCode.PartialContent;
@@ -432,10 +470,9 @@ public static class DownloadService
         // Room on the disk for the rest (and a little to spare).
         try
         {
-            var root = Path.GetPathRoot(Path.GetFullPath(d.FilePath));
-            if (!string.IsNullOrEmpty(root) && !root.StartsWith(@"\\"))
+            long free = FolderCheck.FreeSpace(Path.GetDirectoryName(d.FilePath)!);
+            if (free >= 0)
             {
-                var free = new DriveInfo(root).AvailableFreeSpace;
                 if (d.Total > 0 && free < d.Total - have + 200L * 1024 * 1024)
                     throw new FatalDownloadException($"Not enough space – it needs {Stremio.Size(d.Total - have)} and there's {Stremio.Size(free)} free in {Path.GetDirectoryName(d.FilePath)}.");
             }

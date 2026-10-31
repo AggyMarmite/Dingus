@@ -272,6 +272,7 @@ public static class RecordingService
                 var left = r.RecordUntil - DateTime.Now;
                 if (left <= TimeSpan.Zero) break;
                 until.CancelAfter(left);
+                DownloadService.MakeRoomToWatch(forRecording: true); // a download steps aside if the plan would have no connection left
                 using var resp = await Client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, until.Token);
                 if (resp.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.ServiceUnavailable or (HttpStatusCode)458)
                     throw new IOException("the provider refused the connection – your plan's connection limit may be reached");

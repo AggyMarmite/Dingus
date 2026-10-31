@@ -1,3 +1,9 @@
+## What's new in Dingus 0.11.1
+
+* More reliable downloads.
+* Fix for Real-Debrid sometimes playing the wrong episode.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.11.0
 
 * Stremio add-ons and Real-Debrid support.

@@ -95,7 +95,7 @@ public partial class DownloadsView : UserControl, IPage
                 "Delete download", MessageBoxButton.OKCancel, MessageBoxImage.Question);
             if (answer != MessageBoxResult.OK) return;
         }
-        DownloadService.Remove(d);
+        if (DownloadService.Remove(d) is { } problem) MainWindow.Instance?.ShowToast(problem);
     }
 
     void DlBrowse_Click(object sender, RoutedEventArgs e)

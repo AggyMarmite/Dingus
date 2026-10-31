@@ -302,11 +302,12 @@ public static class RealDebrid
     {
         infoHash = infoHash.ToLowerInvariant();
         string id = null;
+        bool reused = false;
         var mine = await CallAsync(HttpMethod.Get, "torrents?limit=100", ct: ct);
         if (mine.ValueKind == JsonValueKind.Array)
             foreach (var t in mine.EnumerateArray())
                 if (string.Equals(t.Str("hash"), infoHash, StringComparison.OrdinalIgnoreCase) && t.Str("status") is "downloaded" or "downloading" or "queued" or "waiting_files_selection")
-                { id = t.Str("id"); break; }
+                { id = t.Str("id"); reused = true; break; }
         if (id == null)
         {
             progress?.Report("Adding it to Real-Debrid…");
@@ -333,6 +334,16 @@ public static class RealDebrid
                     }
                 case "downloaded":
                     {
+                        // One you'd added before, but for another file in it (another episode of a season pack): add it again
+                        // so Real-Debrid fetches the one wanted, rather than playing the wrong episode.
+                        if (reused && WantedButNotSelected(info, fileIdx, fileName))
+                        {
+                            progress?.Report("Adding it to Real-Debrid…");
+                            var again = await CallAsync(HttpMethod.Post, "torrents/addMagnet", new() { ["magnet"] = "magnet:?xt=urn:btih:" + infoHash }, ct);
+                            id = again.Str("id") ?? throw new InvalidOperationException("Real-Debrid didn't take the torrent.");
+                            reused = false;
+                            break;
+                        }
                         var links = info.TryGetProperty("links", out var l) && l.ValueKind == JsonValueKind.Array
                             ? l.EnumerateArray().Select(x => x.GetString()).ToList() : new();
                         var link = PickLink(info, links, fileIdx, fileName) ?? throw new InvalidOperationException("Real-Debrid has no file to play.");
@@ -375,6 +386,17 @@ public static class RealDebrid
             return byIdx.Id.ToString();
         if (videos.Count == 0) return null;
         return videos.OrderByDescending(f => f.Bytes).First().Id.ToString();
+    }
+
+    /// <summary>True when the add-on named a file that's in the torrent but wasn't chosen last time.</summary>
+    static bool WantedButNotSelected(JsonElement info, int? fileIdx, string fileName)
+    {
+        var files = Files(info);
+        var wanted = fileName != null
+            ? files.FirstOrDefault(f => f.Path.EndsWith("/" + fileName, StringComparison.OrdinalIgnoreCase) || f.Path == fileName)
+            : default;
+        if (wanted.Path == null && fileIdx is int ix) wanted = files.FirstOrDefault(f => f.Id == ix + 1);
+        return wanted.Path != null && !wanted.Selected;
     }
 
     /// <summary>Links come one per selected file, in file order – find the one for the wanted file.</summary>

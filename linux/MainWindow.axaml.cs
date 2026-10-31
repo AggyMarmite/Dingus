@@ -916,6 +916,7 @@ public partial class MainWindow : Window
             return true;
         }
         _startArchiveAtUtc = null;
+        DownloadService.MakeRoomToWatch(); // a download steps aside if your plan would have no connection left
         try { _svc.Play(url, true, 0, PictureFor(_variants[_variantIdx])); }
         catch (Exception ex) { ShowToast(ex.Message); return false; }
         _currentUrl = url;
@@ -961,6 +962,7 @@ public partial class MainWindow : Window
         long start = 0;
         var h = resume ? HistoryStore.Get(item.ResumeKey) : null;
         if (h != null && h.CanResume) start = Math.Max(0, h.PositionMs - 3000);
+        if (!item.Url.StartsWith("file:") && item.Kind != "stremio") DownloadService.MakeRoomToWatch();
         try { _svc.Play(item.Url, false, start); }
         catch (Exception ex) { ShowToast(ex.Message); return; }
         _previewActive = false;
@@ -1569,6 +1571,7 @@ public partial class MainWindow : Window
         if (_currentUrl != url) return;
         long resumeAt = _nowLive ? 0 : Math.Max(0, _lastVodTime - 2000);
         if (_nowLive && _svc.Source == LiveSource.Archive) { SeekLiveTo(LivePositionUtc); _lastProgressUtc = DateTime.UtcNow; return; }
+        if (_vod?.Kind != "stremio" && !url.StartsWith("file:")) DownloadService.MakeRoomToWatch();
         try { _svc.Play(url, _nowLive, resumeAt, _nowLive ? PictureFor(_variants.Count > _variantIdx ? _variants[_variantIdx] : _nowChannel) : null); }
         catch (Exception ex) { Log.Error(ex); }
         _lastProgressUtc = DateTime.UtcNow;

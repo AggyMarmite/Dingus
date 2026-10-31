@@ -93,7 +93,7 @@ public partial class DownloadsView : UserControl, IPage
             && !await Dialogs.Confirm(TopLevel.GetTopLevel(this) as Window, $"Delete the download “{d.Title}”?",
                 $"The file will be deleted from:\n{d.FilePath}", "Delete", danger: true))
             return;
-        DownloadService.Remove(d);
+        if (DownloadService.Remove(d) is { } problem) MainWindow.Instance?.ShowToast(problem);
     }
 
     async void DlBrowse_Click(object sender, RoutedEventArgs e)

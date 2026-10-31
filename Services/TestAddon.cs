@@ -201,6 +201,24 @@ public sealed class TestAddon : IDisposable
             if (!same) error(new Exception("A half-finished download didn't carry on correctly: " + (ep.Error ?? ep.Status.ToString())));
             if (!rel.Replace('\\', '/').Contains("Testing Times/Season 1/")) error(new Exception("An episode download didn't go in its show's season folder: " + rel));
 
+            // 3. One that had all arrived but not been tidied away (Dingus closed at just the wrong moment): it finishes.
+            DownloadService.Remove(ep);
+            var whole = DownloadService.Add(new Models.VodItem
+            {
+                Kind = "stremio", Title = "Testing Times", Subtitle = "S01E02  ·  Episode 2", Url = video, ResumeKey = "st:tt9000010:1:2", ItemId = "tt9000010:1:2", Ext = "mp4",
+            }, null, "Testing Times", 1, 2, paused: true);
+            Directory.CreateDirectory(Path.GetDirectoryName(whole.PartPath)!);
+            File.WriteAllBytes(whole.PartPath, bytes);
+            DownloadService.Resume(whole);
+            ok = await WaitDone(whole);
+            same = ok && File.ReadAllBytes(whole.FilePath).AsSpan().SequenceEqual(bytes);
+            note($"downloads: fully arrived but unfinished → {whole.Status} · matches={same}{(whole.Error != null ? " · " + whole.Error : "")}");
+            if (!same) error(new Exception("A download that had all arrived didn't finish: " + (whole.Error ?? whole.Status.ToString())));
+
+            long free = FolderCheck.FreeSpace(dir);
+            note($"downloads: free space where they're saved {(free >= 0 ? Stremio.Size(free) : "unknown")}");
+            if (free <= 0) error(new Exception("Couldn't tell how much space is free where downloads are saved."));
+
             // 3. A link that's gone: it says so rather than trying for ever.
             var gone = DownloadService.Add(new Models.VodItem
             {

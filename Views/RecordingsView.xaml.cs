@@ -267,25 +267,8 @@ public partial class RecordingsView : UserControl, IPage
         var folder = current();
         status.Text = "Checking…";
         status.Foreground = Muted;
-        var check = Task.Run(() =>
-        {
-            Directory.CreateDirectory(folder);
-            var test = Path.Combine(folder, ".dingus-write-test");
-            File.WriteAllText(test, "ok");
-            File.Delete(test);
-            var root = Path.GetPathRoot(Path.GetFullPath(folder));
-            try { return new DriveInfo(root!).AvailableFreeSpace; } catch { return -1L; }
-        });
-        string msg;
-        Brush brush;
-        if (await Task.WhenAny(check, Task.Delay(8000)) != check) { msg = "This folder isn't answering – if it's on a NAS, check it's switched on and connected."; brush = WarnBrush; }
-        else if (check.IsFaulted) { msg = "Dingus can't save here: " + (check.Exception?.InnerException?.Message ?? "unknown error"); brush = RecBrush; }
-        else
-        {
-            long free = check.Result;
-            msg = free >= 0 ? $"✓ Ready  ·  {free / (double)(1L << 30):0} GB free ({sizeHint})" : "✓ Ready";
-            brush = OkBrush;
-        }
+        var (msg, level) = await FolderCheck.RunAsync(folder, sizeHint);
+        Brush brush = level == 0 ? OkBrush : level == 1 ? WarnBrush : RecBrush;
         if (folder != current()) return;
         status.Text = msg;
         status.Foreground = brush;
