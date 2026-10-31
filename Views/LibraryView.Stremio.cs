@@ -293,7 +293,7 @@ public partial class LibraryView
     internal void SelfTestEpisodeMoreSources()
     {
         if ((EpisodeList.ItemsSource as List<EpisodeItem>)?.FirstOrDefault() is { } ep)
-            EpisodeSources_Click(new Button { DataContext = ep }, new RoutedEventArgs());
+            EpisodeSources_Click(new Button { DataContext = ep }, new RoutedEventArgs(Button.ClickEvent));
     }
     internal void SelfTestCloseStremio() => CloseStremioDetail();
 }
