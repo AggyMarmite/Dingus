@@ -1,3 +1,10 @@
+## What's new in Dingus 0.12.0
+
+* Stremio now lives in Films and TV Shows.
+* Add Stremio when adding a playlist.
+* Interface polish.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.11.1
 
 * More reliable downloads.
