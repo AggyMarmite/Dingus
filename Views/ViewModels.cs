@@ -151,6 +151,8 @@ public class HomePosterCard
     public string Subtitle { get; init; }
     /// <summary>The "NEW" badge (the New films / New TV shows rows – not My List).</summary>
     public bool IsNew { get; init; } = true;
+    /// <summary>A title from Stremio (opens its Stremio page), rather than your playlist's.</summary>
+    public Services.StremioMeta Stremio { get; init; }
 }
 
 /// <summary>A film or episode card in "Continue watching".</summary>
@@ -429,6 +431,10 @@ public class EpisodeItem : Observable
         get => _watched;
         set { if (Set(ref _watched, value)) Raise(nameof(HasProgress)); }
     }
+
+    /// <summary>Your Stremio add-ons can be asked for this episode's sources (shows a "More sources" button).</summary>
+    bool _hasMoreSources;
+    public bool HasMoreSources { get => _hasMoreSources; set => Set(ref _hasMoreSources, value); }
 
     /// <summary>"Download", "Downloading 34%", "Downloaded"… for the episode's download button.</summary>
     string _downloadText = "Download";

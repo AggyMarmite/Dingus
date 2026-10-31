@@ -438,6 +438,7 @@ public partial class SettingsView : UserControl, IPage
     {
         var dlg = new PlaylistDialog(null);
         await dlg.ShowDialog(Owner);
+        if (dlg.AddedStremio) { MainWindow.Instance?.OnStremioAdded(dlg.StremioMessage); Populate(); return; }
         if (dlg.Result == null) return;
         S.Playlists.Add(dlg.Result);
         S.ActivePlaylistId = dlg.Result.Id;

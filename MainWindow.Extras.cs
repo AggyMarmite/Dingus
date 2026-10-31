@@ -536,11 +536,13 @@ public partial class MainWindow
     internal bool SelfTestPlaying => _svc?.Player?.IsPlaying == true;
     internal Services.PlayerService SelfTestPlayer => _svc;
     internal Views.EventsView SelfTestEvents => _events;
-    internal Views.StremioView SelfTestStremio => _stremio;
     internal bool SelfTestFullscreen => _osFullscreen;
     internal void SelfTestGoFullscreen() { if (_playerMode && !_mini && !_osFullscreen) SetOsFullscreen(true); }
     internal bool SelfTestInPlayer => _playerMode;
     internal void SelfTestSearchFilter(string f) => _search.SelfTestFilter(f);
+    internal Views.LibraryView SelfTestFilms => _films;
+    internal Views.LibraryView SelfTestShows => _shows;
+    internal int SelfTestSearchStremio => _search.SelfTestStremioResults;
 }
 
 // Per-channel picture fixes (picture & sound menu → "Picture fix for this channel").
@@ -751,7 +753,7 @@ public partial class MainWindow
         _barLevel = level;
         WordMark.Visibility = level == 0 ? Visibility.Visible : Visibility.Collapsed;
         PlaylistName.MaxWidth = level == 0 ? 130 : 80;
-        foreach (var tab in new[] { NavHome, NavGuide, NavFilms, NavShows, NavEvents, NavStremio, NavRecordings, NavDownloads })
+        foreach (var tab in new[] { NavHome, NavGuide, NavFilms, NavShows, NavEvents, NavRecordings, NavDownloads })
         {
             if (!_tabLabels.ContainsKey(tab)) _tabLabels[tab] = tab.Content;
             bool iconOnly = level == 2;

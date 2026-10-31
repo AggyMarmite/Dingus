@@ -472,9 +472,11 @@ public partial class MainWindow
     internal bool SelfTestSearchOpen => _searchOpen;
     internal void SelfTestSearch(string text) => SearchBox.Text = text;
     internal void SelfTestSearchFilter(string f) => _search.SelfTestFilter(f);
+    internal Views.LibraryView SelfTestFilms => _films;
+    internal Views.LibraryView SelfTestShows => _shows;
+    internal int SelfTestSearchStremio => _search.SelfTestStremioResults;
     internal PlayerService SelfTestPlayer => _svc;
     internal Views.EventsView SelfTestEvents => _events;
-    internal Views.StremioView SelfTestStremio => _stremio;
     internal Control SelfTestOverlay => Overlay;
     internal bool SelfTestSplashShowing => SplashUp;
     internal void SelfTestMini(bool on) { if (on) EnterMini(); else ExitMini(true); }

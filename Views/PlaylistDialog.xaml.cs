@@ -9,6 +9,9 @@ public partial class PlaylistDialog : Window
 {
     readonly PlaylistConfig _existing;
     public PlaylistConfig Result { get; private set; }
+    /// <summary>Stremio was set up instead of a playlist (<see cref="Result"/> is null then).</summary>
+    public bool AddedStremio { get; private set; }
+    public string StremioMessage { get; private set; }
 
     public PlaylistDialog(PlaylistConfig existing)
     {
@@ -26,6 +29,7 @@ public partial class PlaylistDialog : Window
             M3uBox.Text = existing.M3uUrl;
             EpgBox.Text = existing.EpgUrl;
             (existing.Type == PlaylistType.M3U ? TypeM3u : TypeXtream).IsChecked = true;
+            TypeStremio.Visibility = Visibility.Collapsed; // Stremio isn't a playlist to edit – it's in Settings
         }
         else
         {
@@ -35,12 +39,16 @@ public partial class PlaylistDialog : Window
     }
 
     bool IsXtream => TypeXtream.IsChecked == true;
+    bool IsStremio => TypeStremio.IsChecked == true;
 
     void Type_Checked(object sender, RoutedEventArgs e)
     {
-        if (XtreamPanel == null || M3uPanel == null) return; // during InitializeComponent
+        if (XtreamPanel == null || M3uPanel == null || StremioPanel == null || EpgPanel == null) return; // during InitializeComponent
         XtreamPanel.Visibility = IsXtream ? Visibility.Visible : Visibility.Collapsed;
-        M3uPanel.Visibility = IsXtream ? Visibility.Collapsed : Visibility.Visible;
+        M3uPanel.Visibility = TypeM3u.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        StremioPanel.Visibility = IsStremio ? Visibility.Visible : Visibility.Collapsed;
+        NamePanel.Visibility = EpgPanel.Visibility = IsStremio ? Visibility.Collapsed : Visibility.Visible;
+        SaveButton.Content = IsStremio ? "Add Stremio" : "Save";
     }
 
     void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -59,6 +67,26 @@ public partial class PlaylistDialog : Window
         var pass = PassBox.Password.Trim();
         var m3u = M3uBox.Text.Trim();
         var epg = EpgBox.Text.Trim();
+
+        if (IsStremio)
+        {
+            SaveButton.IsEnabled = false;
+            SaveButton.Content = "Signing in…";
+            try
+            {
+                StremioMessage = await Stremio.SetUpAsync(StremioEmailBox.Text, StremioPassBox.Password, StremioUrlBox.Text);
+                StremioPassBox.Clear();
+                AddedStremio = true;
+                DialogResult = true;
+            }
+            catch (Exception ex)
+            {
+                ShowError(ex is InvalidOperationException ? ex.Message : "Couldn't set up Stremio: " + Http.Friendly(ex) + ".");
+                SaveButton.IsEnabled = true;
+                SaveButton.Content = "Add Stremio";
+            }
+            return;
+        }
 
         if (name.Length == 0) { ShowError("Give the playlist a name."); return; }
 

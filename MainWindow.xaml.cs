@@ -30,7 +30,6 @@ public partial class MainWindow : Window
     readonly RecordingsView _recordings;
     readonly DownloadsView _downloads;
     readonly EventsView _events;
-    readonly StremioView _stremio;
     IPage _page;
 
     // ----- what's playing
@@ -89,7 +88,6 @@ public partial class MainWindow : Window
         _recordings = new RecordingsView { Guide = _guide };
         _downloads = new DownloadsView();
         _events = new EventsView { Guide = _guide };
-        _stremio = new StremioView();
         // Your teams' games get reminders as they appear in the guide (when that's switched on).
         DataService.Instance.EpgChanged += () => SyncTeamReminders();
         _guide.RowsRebuilt += () => SyncTeamReminders();
@@ -339,8 +337,10 @@ public partial class MainWindow : Window
     /// <summary>Opens a title's Stremio page (its add-on sources) – from "More sources" on a film or show.</summary>
     public void OpenStremio(Services.StremioMeta meta)
     {
-        NavStremio.IsChecked = true;
-        _stremio.OpenMeta(meta);
+        // Stremio lives in Films / TV Shows now.
+        bool movie = meta.Type != "series";
+        (movie ? NavFilms : NavShows).IsChecked = true;
+        (movie ? _films : _shows).OpenStremio(meta);
     }
 
     /// <summary>Opens Downloads.</summary>
@@ -536,7 +536,6 @@ public partial class MainWindow : Window
         else if (sender == NavRecordings) page = _recordings;
         else if (sender == NavDownloads) page = _downloads;
         else if (sender == NavEvents) page = _events;
-        else if (sender == NavStremio) page = _stremio;
         Navigate(page);
     }
 
@@ -584,9 +583,17 @@ public partial class MainWindow : Window
     {
         Welcome.Visibility = Visibility.Collapsed; // the splash does this job now
         if (Splash == null) return;
-        bool none = SettingsStore.Current.Playlists.Count == 0;
+        bool none = SettingsStore.Current.Playlists.Count == 0 && !Stremio.IsSetUp; // Stremio on its own is enough for Films / TV Shows
         if (none && _page != _settings) ShowSplash(withAdd: true);
         else if (none || SplashAdd.Visibility == Visibility.Visible) HideSplash(now: true); // Settings opened, or a playlist was just added
+    }
+
+    /// <summary>Stremio set up from "Add playlist": its titles are in Films and TV Shows.</summary>
+    public void OnStremioAdded(string message)
+    {
+        UpdateWelcome();
+        if (SettingsStore.Current.Playlists.Count == 0 && _page != _settings) NavFilms.IsChecked = true;
+        ShowToast((message ?? "Stremio added") + "  ·  its films and shows are in Films and TV Shows");
     }
 
     // ------------------------------------------------------------------ splash
@@ -686,7 +693,7 @@ public partial class MainWindow : Window
         if (_page != _search) return;
         var back = _beforeSearch ?? _home;
         (back == _guide ? NavGuide : back == _films ? NavFilms : back == _shows ? NavShows : back == _settings ? NavSettings
-            : back == _recordings ? NavRecordings : back == _downloads ? NavDownloads : back == _events ? NavEvents : back == _stremio ? NavStremio : NavHome).IsChecked = true;
+            : back == _recordings ? NavRecordings : back == _downloads ? NavDownloads : back == _events ? NavEvents : NavHome).IsChecked = true;
     }
 
 
@@ -810,6 +817,7 @@ public partial class MainWindow : Window
     {
         var dlg = new PlaylistDialog(null) { Owner = this };
         if (dlg.ShowDialog() != true) return;
+        if (dlg.AddedStremio) { OnStremioAdded(dlg.StremioMessage); return; }
         SettingsStore.Current.Playlists.Add(dlg.Result);
         SettingsStore.Current.ActivePlaylistId = dlg.Result.Id;
         SettingsStore.Save();

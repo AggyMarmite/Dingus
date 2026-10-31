@@ -33,7 +33,8 @@ public partial class SearchView : UserControl, IPage
     /// <summary>Results can hold lots of posters – let them go when you leave.</summary>
     public void OnHidden()
     {
-        ChannelResults.ItemsSource = ProgResults.ItemsSource = FilmResults.ItemsSource = ShowResults.ItemsSource = null;
+        _stCts?.Cancel();
+        ChannelResults.ItemsSource = ProgResults.ItemsSource = FilmResults.ItemsSource = ShowResults.ItemsSource = StremioResults.ItemsSource = null;
     }
 
     string _filter = "all";
@@ -58,7 +59,8 @@ public partial class SearchView : UserControl, IPage
         var q = _query;
         if (q.Length < 2 || Guide == null)
         {
-            foreach (var s in new[] { ChannelSection, ProgSection, FilmSection, ShowSection }) s.Visibility = Visibility.Collapsed;
+            _stCts?.Cancel();
+            foreach (var s in new[] { ChannelSection, ProgSection, FilmSection, ShowSection, StremioSection }) s.Visibility = Visibility.Collapsed;
             Filters.Visibility = Visibility.Collapsed;
             EmptyTitle.Text = "Search everything";
             EmptyBody.Text = "Channels, programmes in the TV guide, films and TV shows – all at once. Type at least two letters in the search bar at the top (Ctrl+F from anywhere).";
@@ -138,6 +140,7 @@ public partial class SearchView : UserControl, IPage
             .Select(s => new HomePosterCard { Id = s.Id, IsMovie = false, Title = s.Name, Image = s.Cover, Subtitle = s.Year ?? "TV show" }).ToList();
         any |= Show(ShowSection, ShowHeader, ShowMore, ShowResults, showCards, "TV SHOWS", shows.Count, all);
 
+        SearchStremio(q, films, shows, any);
         EmptyState.Visibility = any ? Visibility.Collapsed : Visibility.Visible;
         if (!any)
         {
@@ -146,6 +149,40 @@ public partial class SearchView : UserControl, IPage
         }
         Scroller.ScrollToTop();
     }
+
+    System.Threading.CancellationTokenSource _stCts;
+
+    /// <summary>Your Stremio add-ons' films and shows for the search (the ones your playlist hasn't got), when they answer.</summary>
+    async void SearchStremio(string q, List<Movie> films, List<Series> shows, bool anyElse)
+    {
+        _stCts?.Cancel();
+        StremioSection.Visibility = Visibility.Collapsed;
+        StremioResults.ItemsSource = null;
+        if (_filter is not ("all" or "films" or "shows") || !Stremio.IsSetUp) return;
+        var cts = _stCts = new System.Threading.CancellationTokenSource();
+        var have = films.Select(m => "movie:" + Events.Norm(Stremio.CleanTitle(m.Name)))
+            .Concat(shows.Select(x => "series:" + Events.Norm(Stremio.CleanTitle(x.Name)))).ToHashSet();
+        try
+        {
+            var found = await Stremio.SearchTitlesAsync(q, have, cts.Token);
+            if (cts.IsCancellationRequested || q != _query) return;
+            if (_filter == "films") found = found.Where(m => m.Type == "movie").ToList();
+            if (_filter == "shows") found = found.Where(m => m.Type == "series").ToList();
+            var cards = found.Take(_filter == "all" ? 14 : 100).Select(m => new HomePosterCard
+            {
+                Id = m.Id, IsMovie = m.Type != "series", Title = m.Name, Image = m.Poster, Stremio = m,
+                Subtitle = string.Join("  ·  ", new[] { m.ReleaseInfo, m.Type == "series" ? "TV show" : null }.Where(x => !string.IsNullOrEmpty(x))),
+            }).ToList();
+            StremioResults.ItemsSource = cards;
+            StremioSection.Visibility = cards.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            StremioHeader.Text = $"FROM STREMIO  ·  {Count(found.Count)}";
+            if (cards.Count > 0) EmptyState.Visibility = Visibility.Collapsed;
+        }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested) { }
+        catch (Exception ex) { Log.Error(ex); }
+    }
+
+    internal int SelfTestStremioResults => (StremioResults.ItemsSource as System.Collections.ICollection)?.Count ?? 0;
 
     static string Count(int n, bool capped = false) => capped ? $"{n:N0}+" : n.ToString("N0");
 
@@ -213,6 +250,8 @@ public partial class SearchView : UserControl, IPage
 
     void Poster_Click(object sender, RoutedEventArgs e)
     {
-        if ((sender as FrameworkElement)?.DataContext is HomePosterCard c) MainWindow.Instance?.OpenLibraryItem(c.IsMovie, c.Id);
+        if ((sender as FrameworkElement)?.DataContext is not HomePosterCard c) return;
+        if (c.Stremio != null) MainWindow.Instance?.OpenStremio(c.Stremio);
+        else MainWindow.Instance?.OpenLibraryItem(c.IsMovie, c.Id);
     }
 }

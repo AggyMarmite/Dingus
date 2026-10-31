@@ -69,8 +69,6 @@
                                     <RadioButton x:Name="NavShows" Style="{StaticResource TabButton}" Tag="&#xE8F1;" Content="TV Shows" Checked="Nav_Checked"/>
                                     <RadioButton x:Name="NavEvents" Style="{StaticResource TabButton}" Tag="&#xE787;" Content="Events" Checked="Nav_Checked"
                                                  ToolTip="Find a game, follow your teams"/>
-                                    <RadioButton x:Name="NavStremio" Style="{StaticResource TabButton}" Tag="&#xE71D;" Content="Stremio" Checked="Nav_Checked"
-                                                 ToolTip="Your Stremio add-ons and Real-Debrid"/>
                                     <RadioButton x:Name="NavRecordings" Style="{StaticResource TabButton}" Tag="&#xE7C8;" Content="Recordings" Checked="Nav_Checked"
                                                  ToolTip="Recordings &amp; reminders"/>
                                     <RadioButton x:Name="NavDownloads" Style="{StaticResource TabButton}" Tag="&#xE896;" Content="Downloads" Checked="Nav_Checked"

@@ -81,6 +81,13 @@ public sealed class TestAddon : IDisposable
     {
         ("tt9000001", "The Test Pattern", "2021"),
         ("tt9000002", "Signal and Noise", "2019"),
+        ("tt9000003", "The Long Journey", "2021"), // also in the sample playlist: its page shows these as "More sources"
+    };
+
+    static readonly (string Id, string Name)[] Shows =
+    {
+        ("tt9000010", "Testing Times"),
+        ("tt9000011", "Office Life"), // also in the sample playlist
     };
 
     static object Answer(string path, string host)
@@ -113,8 +120,11 @@ public sealed class TestAddon : IDisposable
         if (path.StartsWith("/catalog/series/test"))
         {
             var q = path.Contains("search=") ? path[(path.IndexOf("search=") + 7)..].Replace(".json", "") : null;
-            var shows = new[] { new { id = "tt9000010", type = "series", name = "Testing Times", releaseInfo = "2020–" } };
-            return new { metas = shows.Where(x => q == null || x.name.Contains(q, StringComparison.OrdinalIgnoreCase)) };
+            return new
+            {
+                metas = Shows.Where(x => q == null || x.Name.Contains(q, StringComparison.OrdinalIgnoreCase))
+                    .Select(x => new { id = x.Id, type = "series", name = x.Name, releaseInfo = "2020–" }),
+            };
         }
         if (path.StartsWith("/meta/movie/"))
         {
@@ -122,18 +132,23 @@ public sealed class TestAddon : IDisposable
             var f = Films.FirstOrDefault(x => x.Id == id);
             return f.Id == null ? null : new { meta = new { id = f.Id, type = "movie", name = f.Name, releaseInfo = f.Year, runtime = "94 min", genres = new[] { "Drama" }, description = "A film made for testing." } };
         }
-        if (path.StartsWith("/meta/series/tt9000010"))
+        if (path.StartsWith("/meta/series/"))
+        {
+            var id = path["/meta/series/".Length..].Replace(".json", "");
+            var show = Shows.FirstOrDefault(x => x.Id == id);
+            if (show.Id == null) return null;
             return new
             {
                 meta = new
                 {
-                    id = "tt9000010", type = "series", name = "Testing Times", releaseInfo = "2020–", description = "A show made for testing.",
+                    id = show.Id, type = "series", name = show.Name, releaseInfo = "2020–", description = "A show made for testing.",
                     videos = Enumerable.Range(1, 2).SelectMany(s => Enumerable.Range(1, 3).Select(e => new
                     {
-                        id = $"tt9000010:{s}:{e}", title = $"Episode {e}", season = s, episode = e, released = $"2020-0{s}-0{e}T00:00:00.000Z",
+                        id = $"{show.Id}:{s}:{e}", title = $"Episode {e}", season = s, episode = e, released = $"2020-0{s}-0{e}T00:00:00.000Z",
                     })),
                 },
             };
+        }
         if (path.StartsWith("/stream/"))
             return new
             {

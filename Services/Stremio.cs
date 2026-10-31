@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using Dingus.Models;
 
 namespace Dingus.Services;
 
@@ -623,6 +624,97 @@ public static class Stremio
     static int QualityRank(string q) => q switch { "4K" => 0, "1440p" => 1, "1080p" => 2, "720p" => 3, "576p" or "480p" => 4, "SD" => 5, _ => 6 };
 
     /// <summary>The sources, as rows: best first – ones that play now, then by picture quality, in each add-on's order.</summary>
+    /// <summary>
+    /// "Add playlist" → Stremio: signs in (bringing in your account's add-ons) and/or adds an add-on by its address.
+    /// Returns what happened, for the dialog; throws with a message to show when neither worked.
+    /// </summary>
+    public static async Task<string> SetUpAsync(string email, string password, string addonUrl)
+    {
+        email = (email ?? "").Trim();
+        addonUrl = (addonUrl ?? "").Trim();
+        if (email.Length == 0 && addonUrl.Length == 0)
+            throw new InvalidOperationException("Sign in with your Stremio email and password, or paste an add-on's address.");
+        if (email.Length > 0 && string.IsNullOrEmpty(password)) throw new InvalidOperationException("Type your Stremio password too.");
+        var done = new List<string>();
+        if (email.Length > 0)
+        {
+            try { int n = await SignInAsync(email, password); done.Add(n == 1 ? "signed in, 1 add-on" : $"signed in, {n} add-ons"); }
+            catch (Exception ex) when (ex is not InvalidOperationException) { throw new InvalidOperationException("Couldn't sign in to Stremio: " + Http.Friendly(ex) + "."); }
+        }
+        if (addonUrl.Length > 0)
+        {
+            try { var a = await InstallAsync(addonUrl); done.Add($"added {a.Name}"); }
+            catch (Exception ex) { throw new InvalidOperationException((done.Count > 0 ? "Signed in, but couldn't add that add-on: " : "Couldn't add that add-on: ") + (ex is InvalidOperationException ? ex.Message : Http.Friendly(ex)) + "."); }
+        }
+        return "Stremio: " + string.Join(", ", done);
+    }
+
+    /// <summary>
+    /// For the Search page: films and shows from your add-ons' searches (films first), leaving out ones your playlist
+    /// already has (<paramref name="have"/>: normalised names). Nothing when Stremio isn't set up.
+    /// </summary>
+    public static async Task<List<StremioMeta>> SearchTitlesAsync(string q, ISet<string> have, CancellationToken ct = default)
+    {
+        if (!IsSetUp || q.Length < 2) return new();
+        var found = await SearchAsync(q, ct);
+        var seen = new HashSet<string>();
+        var res = new List<StremioMeta>();
+        foreach (var (_, c, list) in found.Where(r => r.Catalog.Type is "movie" or "series").OrderBy(r => r.Catalog.Type == "movie" ? 0 : 1))
+            foreach (var m in list)
+                if (seen.Add(m.Type + ":" + m.Id) && !have.Contains(m.Type + ":" + Events.Norm(m.Name))) res.Add(m);
+        return res;
+    }
+
+    /// <summary>The "Continue watching" key for a Stremio film or episode.</summary>
+    public static string ResumeKey(StremioMeta meta, StremioVideo episode) => "st:" + (episode?.Id ?? meta.Id);
+
+    /// <summary>The player item for a Stremio film or episode at a source's address.</summary>
+    public static VodItem ToVod(StremioMeta meta, StremioVideo ep, string url, string fileName = null)
+    {
+        string ext = null;
+        if (!string.IsNullOrEmpty(fileName)) ext = Path.GetExtension(fileName);
+        if (string.IsNullOrEmpty(ext)) try { ext = Path.GetExtension(new Uri(url).AbsolutePath); } catch { }
+        return new VodItem
+        {
+            Kind = "stremio",
+            Title = meta.Name,
+            Subtitle = ep == null ? meta.ReleaseInfo : $"S{ep.Season:00}E{ep.Episode:00}  ·  {ep.Title}",
+            Url = url,
+            Image = meta.Poster,
+            ResumeKey = ResumeKey(meta, ep),
+            ItemId = ep?.Id ?? meta.Id,
+            Ext = string.IsNullOrEmpty(ext) ? null : ext,
+        };
+    }
+
+    /// <summary>The line under "Sources": how many, who's still answering, and what's needed for torrents.</summary>
+    public static string SourcesStatus(List<StremioStream> streams, int asked, int answered, List<string> errors)
+    {
+        int n = streams.Count;
+        var parts = new List<string> { n == 0 ? (answered < asked ? "Nothing yet" : "No sources found") : n == 1 ? "1 source" : $"{n} sources" };
+        if (answered < asked) parts.Add($"still asking {asked - answered} add-on{(asked - answered == 1 ? "" : "s")}…");
+        if (errors.Count > 0 && answered >= asked) parts.Add("didn't answer: " + string.Join(", ", errors.Select(e => e.Split(':')[0])));
+        if (n > 0 && streams.Any(s => s.Kind == StreamKind.Torrent) && !RealDebrid.Connected) parts.Add("torrent sources need Real-Debrid (Settings)");
+        return string.Join("  ·  ", parts);
+    }
+
+    /// <summary>A catalogue's name for the Films / TV Shows list: "Popular", "Top", "Trending"… (the page says what they are).</summary>
+    public static string CatalogName(StremioCatalog c, StremioAddon a)
+    {
+        var name = string.IsNullOrWhiteSpace(c.Name) ? "Catalogue" : c.Name.Trim();
+        return Enabled.Count(x => x.Catalogs.Any(k => k.Type == c.Type)) > 1 ? $"{name} · {a.Name}" : name;
+    }
+
+    /// <summary>The catalogues of one kind ("movie" or "series") from your switched-on add-ons, for Films / TV Shows.</summary>
+    public static List<(StremioAddon Addon, StremioCatalog Catalog)> CatalogsOf(string type) =>
+        Enabled.SelectMany(a => a.Catalogs.Where(c => c.Type == type && !c.NeedsInput).Select(c => (a, c))).ToList();
+
+    /// <summary>
+    /// Set up enough to show in Films / TV Shows: signed in, or an add-on with sources (Stremio's own catalogue alone
+    /// has titles but nothing to play).
+    /// </summary>
+    public static bool IsSetUp => SignedIn || Addons.Any(a => a.Enabled && a.TransportUrl != CinemetaUrl);
+
     public static List<Views.StremioSourceItem> Items(IEnumerable<StremioStream> streams, bool rdConnected) => streams
         .Select((s, i) =>
         {
