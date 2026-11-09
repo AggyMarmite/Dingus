@@ -180,90 +180,12 @@ public static class SelfTest
             await Idle(7000); // crests load over the network
             Snap(main.SelfTestRoot, "20d-events-crests");
             main.SelfTestEvents.SelfTestQuery("");
-            // Stremio, inside Films / TV Shows: set up from "Add playlist" (a stand-in add-on on this computer), its catalogue in
-            // the list, a film's page and sources (one plays the test video), a show's episodes and their sources, "More sources"
-            // under the playlist's own film and episode, Stremio titles on the Search page, and the add-ons part of Settings.
-            using (var addon = new TestAddon(Environment.GetEnvironmentVariable("DINGUS_TEST_VIDEO")))
-            {
-                foreach (var a in Stremio.Addons.ToList()) Stremio.Remove(a);
-                var setUp = await Stremio.SetUpAsync("", null, addon.Url);
-                Note($"stremio: Add playlist → Stremio: {setUp} · set up={Stremio.IsSetUp}");
-                if (!Stremio.IsSetUp) Error(new Exception("Adding Stremio from “Add playlist” didn't set it up."));
-                var films = main.SelfTestFilms;
-                await Page(main, main.NavFilms, null);
-                await Idle(800);
-                Note($"stremio: Films lists {films.SelfTestStremioCatalogues} Stremio catalogue(s)");
-                if (films.SelfTestStremioCatalogues < 1) Error(new Exception("Films didn't list the Stremio add-on's catalogue."));
-                films.SelfTestStremioCatalogue(0);
-                await Idle(2000);
-                Snap(main.SelfTestRoot, "22-films-stremio");
-                Note($"stremio: the catalogue shows {films.SelfTestTitles} films");
-                if (films.SelfTestTitles != 3) Error(new Exception($"The Stremio catalogue in Films should show 3 films, not {films.SelfTestTitles}."));
-                films.SelfTestOpenFirst();
-                await Idle(2000);
-                Snap(main.SelfTestRoot, "22b-stremio-film");
-                var det = films.SelfTestStremioDetail;
-                Note($"stremio: the film has {det.SelfTestSources} sources");
-                if (det.SelfTestSources != 3) Error(new Exception($"The test film should have 3 sources (direct, torrent, web page), not {det.SelfTestSources}."));
-                if (main.SelfTestPlayer != null && Environment.GetEnvironmentVariable("DINGUS_TEST_VIDEO") is { Length: > 0 })
-                {
-                    det.SelfTestPlayFirst();
-                    for (int i = 0; i < 100 && !main.SelfTestPlayer.Player.IsPlaying; i++) await Task.Delay(250);
-                    await Task.Delay(1500);
-                    Note($"stremio: direct source playing={main.SelfTestPlayer.Player.IsPlaying} (state {main.SelfTestPlayer.Player.State})");
-                    if (!main.SelfTestPlayer.Player.IsPlaying) Error(new Exception("A Stremio add-on's direct source didn't play."));
-                    main.SelfTestExitPlayer();
-                    await Idle(1000);
-                }
-                films.SelfTestCloseStremio();
-                if (DataService.Instance.Catalog.Movies.FirstOrDefault(m => m.Name.Contains("Long Journey")) is { } lj)
-                {
-                    main.OpenLibraryItem(true, lj.Id);
-                    await Idle(3000);
-                    Snap(main.SelfTestRoot, "22e-film-more-sources");
-                    Note($"stremio: the playlist's “{lj.Name}” has {films.SelfTestMoreSources} more sources");
-                    if (films.SelfTestMoreSources != 3) Error(new Exception("A playlist film's page didn't show the Stremio add-on's sources under it."));
-                }
-                var shows = main.SelfTestShows;
-                await Page(main, main.NavShows, null);
-                await Idle(800);
-                shows.SelfTestStremioCatalogue(0);
-                await Idle(2000);
-                shows.SelfTestOpenFirst();
-                await Idle(1500);
-                var sdet = shows.SelfTestStremioDetail;
-                sdet.SelfTestOpenEpisode();
-                await Idle(1500);
-                Snap(main.SelfTestRoot, "22c-stremio-show");
-                Note($"stremio: the show's first season has {sdet.SelfTestEpisodes} episodes, the first one {sdet.SelfTestSources} sources");
-                if (sdet.SelfTestEpisodes != 3 || sdet.SelfTestSources != 3) Error(new Exception("The test show's episodes or their sources didn't show."));
-                shows.SelfTestCloseStremio();
-                if (DataService.Instance.Catalog.Series.FirstOrDefault(x => x.Name.Contains("Office Life")) is { } ol)
-                {
-                    main.OpenLibraryItem(false, ol.Id);
-                    await Idle(3000);
-                    shows.SelfTestEpisodeMoreSources();
-                    await Idle(1500);
-                    Snap(main.SelfTestRoot, "22f-episode-more-sources");
-                    Note($"stremio: the playlist's “{ol.Name}” first episode has {shows.SelfTestEpisodeSources} more sources");
-                    if (shows.SelfTestEpisodeSources != 3) Error(new Exception("A playlist episode's “More sources” didn't show the Stremio add-on's sources."));
-                }
-                main.SelfTestSearch("signal");
-                await Idle(3500);
-                Note($"stremio: Search “signal” – {main.SelfTestSearchStremio} from Stremio");
-                if (main.SelfTestSearchStremio != 1) Error(new Exception("The Search page didn't show the Stremio film for “signal”."));
-                main.SelfTestSearch("");
-                main.OpenSettingsSection("stremio");
-                await Idle(1500);
-                Snap(main.SelfTestRoot, "22d-settings-stremio");
-                foreach (var a in Stremio.Addons.ToList()) Stremio.Remove(a);
-            }
             // Downloads: a whole film, a half-finished episode carrying on, a link that's gone – then the Downloads list.
-            await TestAddon.CheckDownloadsAsync(Note, Error);
+            await TestServer.CheckDownloadsAsync(Note, Error);
             main.OpenDownloads();
             await Idle(2000);
             Snap(main.SelfTestRoot, "23-downloads");
-            TestAddon.CleanUpDownloads();
+            TestServer.CleanUpDownloads();
             main.SelfTestEvents.SelfTestQuery("");
             main.SelfTestSearch("news");
             await Idle(1500);

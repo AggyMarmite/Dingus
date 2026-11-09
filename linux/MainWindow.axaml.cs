@@ -96,8 +96,9 @@ public partial class MainWindow : Window
         ReminderService.Start();
         RecordingService.Start();
         // A download from your playlist waits while you watch something from it, if your plan only allows so many connections.
-        DownloadService.WatchingPlaylist = () => _currentUrl is { } u && !u.StartsWith("file:") && _vod?.Kind != "stremio";
+        DownloadService.WatchingPlaylist = () => _currentUrl is { } u && !u.StartsWith("file:");
         DownloadService.Start();
+        Titles.RemoveRetiredFiles();
         Parental.Changed += UpdateLockButton;
         Opened += (_, _) => UpdateLockButton();
 
@@ -282,29 +283,13 @@ public partial class MainWindow : Window
         (movie ? _films : _shows).OpenItem(id);
     }
 
-    /// <summary>Opens Films or TV Shows on a category (e.g. My List).</summary>
-    /// <summary>Opens a title's Stremio page (its add-on sources) – from "More sources" on a film or show.</summary>
-    public void OpenStremio(StremioMeta meta)
-    {
-        // Stremio lives in Films / TV Shows now.
-        bool movie = meta.Type != "series";
-        (movie ? NavFilms : NavShows).IsChecked = true;
-        (movie ? _films : _shows).OpenStremio(meta);
-    }
-
-    /// <summary>Opens Settings at a part of it ("stremio").</summary>
     /// <summary>Opens Downloads.</summary>
     public void OpenDownloads()
     {
         NavDownloads.IsChecked = true;
     }
 
-    public void OpenSettingsSection(string name)
-    {
-        NavSettings.IsChecked = true;
-        _settings.ShowSection(name);
-    }
-
+    /// <summary>Opens Films or TV Shows on a category (e.g. My List).</summary>
     public void OpenLibraryCategory(bool movie, string categoryId)
     {
         (movie ? NavFilms : NavShows).IsChecked = true;
@@ -514,19 +499,11 @@ public partial class MainWindow : Window
     }
 
     /// <summary>No playlist yet: the splash stays up with "Add playlist" (Settings can still be opened over it).</summary>
-    /// <summary>Stremio set up from "Add playlist": its titles are in Films and TV Shows.</summary>
-    public void OnStremioAdded(string message)
-    {
-        UpdateWelcome();
-        if (SettingsStore.Current.Playlists.Count == 0 && _page != _settings) NavFilms.IsChecked = true;
-        ShowToast((message ?? "Stremio added") + "  ·  its films and shows are in Films and TV Shows");
-    }
-
     void UpdateWelcome()
     {
         Welcome.IsVisible = false; // the splash does this job now
         if (Splash == null) return;
-        bool none = SettingsStore.Current.Playlists.Count == 0 && !Stremio.IsSetUp; // Stremio on its own is enough for Films / TV Shows
+        bool none = SettingsStore.Current.Playlists.Count == 0;
         if (none && _page != _settings) ShowSplash(withAdd: true);
         else if (none || SplashAdd.IsVisible) HideSplash(now: true); // Settings opened, or a playlist was just added
     }
@@ -741,7 +718,6 @@ public partial class MainWindow : Window
     {
         var dlg = new PlaylistDialog(null);
         await dlg.ShowDialog(this);
-        if (dlg.AddedStremio) { OnStremioAdded(dlg.StremioMessage); return; }
         if (dlg.Result == null) return;
         SettingsStore.Current.Playlists.Add(dlg.Result);
         SettingsStore.Current.ActivePlaylistId = dlg.Result.Id;
@@ -970,7 +946,7 @@ public partial class MainWindow : Window
         long start = 0;
         var h = resume ? HistoryStore.Get(item.ResumeKey) : null;
         if (h != null && h.CanResume) start = Math.Max(0, h.PositionMs - 3000);
-        if (!item.Url.StartsWith("file:") && item.Kind != "stremio") DownloadService.MakeRoomToWatch();
+        if (!item.Url.StartsWith("file:")) DownloadService.MakeRoomToWatch();
         try { _svc.Play(item.Url, false, start); }
         catch (Exception ex) { ShowToast(ex.Message); return; }
         _previewActive = false;
@@ -1579,7 +1555,7 @@ public partial class MainWindow : Window
         if (_currentUrl != url) return;
         long resumeAt = _nowLive ? 0 : Math.Max(0, _lastVodTime - 2000);
         if (_nowLive && _svc.Source == LiveSource.Archive) { SeekLiveTo(LivePositionUtc); _lastProgressUtc = DateTime.UtcNow; return; }
-        if (_vod?.Kind != "stremio" && !url.StartsWith("file:")) DownloadService.MakeRoomToWatch();
+        if (!url.StartsWith("file:")) DownloadService.MakeRoomToWatch();
         try { _svc.Play(url, _nowLive, resumeAt, _nowLive ? PictureFor(_variants.Count > _variantIdx ? _variants[_variantIdx] : _nowChannel) : null); }
         catch (Exception ex) { Log.Error(ex); }
         _lastProgressUtc = DateTime.UtcNow;

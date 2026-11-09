@@ -14,19 +14,6 @@
             <DockPanel>
                 <TextBlock DockPanel.Dock="Top" Text="CATEGORIES" Margin="20,18,0,8" FontSize="11" FontWeight="SemiBold"
                            Foreground="{StaticResource MutedBrush}"/>
-                <!-- Stremio's catalogues (your add-ons) – the same kind of titles, from Stremio -->
-                <StackPanel x:Name="StremioRail" DockPanel.Dock="Bottom" Visibility="Collapsed">
-                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="16,4,16,0"/>
-                    <TextBlock Text="STREMIO" Margin="20,14,0,8" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}"/>
-                    <ListBox x:Name="StremioCatList" Style="{StaticResource CleanList}" ItemContainerStyle="{StaticResource CategoryItem}"
-                             SelectionChanged="StremioCatList_SelectionChanged" MaxHeight="260" Padding="0,0,0,8">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" ToolTip="{Binding From}"/>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </StackPanel>
                 <ListBox x:Name="CategoryList" Style="{StaticResource CleanList}" ItemContainerStyle="{StaticResource CategoryItem}"
                          VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
                          SelectionChanged="CategoryList_SelectionChanged" Padding="0,0,0,12"
@@ -122,41 +109,10 @@
                 </ListBox.ItemTemplate>
             </ListBox>
 
-            <!-- your Real-Debrid files -->
-            <ScrollViewer x:Name="RdPane" Grid.Row="1" VerticalScrollBarVisibility="Auto" svc:SmoothScroll.Enabled="True" Visibility="Collapsed">
-                <ItemsControl x:Name="RdList" Margin="28,4,28,24" MaxWidth="1000" HorizontalAlignment="Left">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="10" Padding="14,10" Margin="0,0,0,6"
-                                    BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
-                                <DockPanel>
-                                    <Button x:Name="PlayBtn" DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}" Content="Play" Margin="12,0,0,0"
-                                            VerticalAlignment="Center" Click="RdFile_Click"/>
-                                    <TextBlock DockPanel.Dock="Left" Text="&#xE8B2;" FontFamily="{StaticResource IconFont}" FontSize="18" Margin="0,0,14,0"
-                                               VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}"/>
-                                    <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="{Binding Detail}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0"/>
-                                    </StackPanel>
-                                </DockPanel>
-                            </Border>
-                            <DataTemplate.Triggers>
-                                <DataTrigger Binding="{Binding Busy}" Value="True">
-                                    <Setter TargetName="PlayBtn" Property="IsEnabled" Value="False"/>
-                                    <Setter TargetName="PlayBtn" Property="Content" Value="Starting…"/>
-                                </DataTrigger>
-                            </DataTemplate.Triggers>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
-
             <StackPanel x:Name="EmptyState" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed" MaxWidth="520">
                 <TextBlock x:Name="EmptyTitle" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
                 <TextBlock x:Name="EmptyBody" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0" HorizontalAlignment="Center" TextWrapping="Wrap"
                            TextAlignment="Center"/>
-                <Button x:Name="EmptyButton" Style="{StaticResource PrimaryButton}" Content="Add-ons &amp; Real-Debrid" HorizontalAlignment="Center"
-                        Margin="0,16,0,0" Click="ManageStremio_Click" Visibility="Collapsed"/>
             </StackPanel>
         </Grid>
 
@@ -251,9 +207,6 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- Stremio's sources for this film (your add-ons), under the playlist's own -->
-                    <local:StremioSources x:Name="MoreSources" Heading="MORE SOURCES" Margin="0,34,0,0" Visibility="Collapsed"/>
-
                     <Grid x:Name="SeriesPart" Margin="0,34,0,0" Visibility="Collapsed">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" MaxWidth="1040"/></Grid.ColumnDefinitions>
                         <StackPanel>
@@ -319,13 +272,6 @@
                                                            TextWrapping="Wrap" TextTrimming="WordEllipsis" MaxHeight="36"/>
                                             </StackPanel>
                                             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Button x:Name="EpSources" Style="{StaticResource GhostButton}" Margin="12,0,0,0" VerticalAlignment="Center"
-                                                    Click="EpisodeSources_Click" ToolTip="Sources for this episode from your Stremio add-ons" Visibility="Collapsed">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="&#xEA86;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                    <TextBlock Text="More sources" FontSize="12"/>
-                                                </StackPanel>
-                                            </Button>
                                             <Button x:Name="EpDownload" Style="{StaticResource GhostButton}" Margin="12,0,6,0" VerticalAlignment="Center"
                                                     Click="EpisodeDownload_Click" ToolTip="Download this episode">
                                                 <StackPanel Orientation="Horizontal">
@@ -343,9 +289,6 @@
                                         <DataTrigger Binding="{Binding Watched}" Value="True">
                                             <Setter TargetName="EpWatched" Property="Visibility" Value="Visible"/>
                                         </DataTrigger>
-                                        <DataTrigger Binding="{Binding HasMoreSources}" Value="True">
-                                            <Setter TargetName="EpSources" Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
                                         <DataTrigger Binding="{Binding Downloaded}" Value="True">
                                             <Setter TargetName="EpDlIcon" Property="Text" Value="&#xE73E;"/>
                                             <Setter TargetName="EpDlIcon" Property="Foreground" Value="#4ADE80"/>
@@ -357,13 +300,9 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- Stremio's sources for the episode you picked -->
-                    <local:StremioSources x:Name="EpisodeSources" Heading="MORE SOURCES" Margin="0,26,0,0" Visibility="Collapsed"/>
                 </StackPanel>
             </ScrollViewer>
         </Grid>
 
-        <!-- ===== A title from Stremio ===== -->
-        <local:StremioDetail x:Name="StDetail" Grid.Column="1" Visibility="Collapsed"/>
     </Grid>
 </UserControl>

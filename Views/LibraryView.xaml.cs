@@ -39,7 +39,6 @@ public partial class LibraryView : UserControl, IPage
     {
         _mode = mode;
         InitializeComponent();
-        InitStremio();
         _sort = mode == LibraryMode.Movies ? "added" : "name";
         _suppress = true;
         (mode == LibraryMode.Movies ? SortAdded : SortName).IsChecked = true;
@@ -58,7 +57,7 @@ public partial class LibraryView : UserControl, IPage
     public void ApplySearch(string query)
     {
         _search = query ?? "";
-        if (_search.Length > 0) { CloseDetail(); CloseStremioDetail(); if (_stCat != null) { LeaveStremio(); SelectPlaylistCategory(); return; } }
+        if (_search.Length > 0) CloseDetail();
         ApplyFilter();
     }
 
@@ -72,8 +71,6 @@ public partial class LibraryView : UserControl, IPage
     {
         _shown = false;
         CloseDetail();
-        CloseStremioDetail();
-        _stCts?.Cancel();
         _all = new List<PosterItem>();
         _byId = new Dictionary<string, PosterItem>();
         _filtered = new List<PosterItem>();
@@ -134,12 +131,10 @@ public partial class LibraryView : UserControl, IPage
         CategoryList.ItemsSource = items;
         var sel = items.FirstOrDefault(i => i.Id == _cat) ?? items[0];
         _cat = sel.Id;
-        CategoryList.SelectedItem = _stCat == null ? sel : null;
+        CategoryList.SelectedItem = sel;
         _suppress = false;
 
-        BuildStremioRail();
-        if (_stCat == null) ApplyFilter();
-        else LoadStremio(reset: true);
+        ApplyFilter();
     }
 
     static string Meta(string year, double rating)
@@ -205,8 +200,6 @@ public partial class LibraryView : UserControl, IPage
 
     void ApplyFilter()
     {
-        if (_stCat != null) return; // a Stremio catalogue is showing (LoadStremio fills the grid)
-        EmptyButton.Visibility = Visibility.Collapsed;
         IEnumerable<PosterItem> q;
         bool keepOrder = false;
         if (_search.Length > 0) q = _all.Where(p => p.Title.Contains(_search, StringComparison.OrdinalIgnoreCase));
@@ -291,9 +284,7 @@ public partial class LibraryView : UserControl, IPage
     {
         if (_suppress || CategoryList.SelectedItem is not CategoryItem c) return;
         _cat = c.Id;
-        if (_stCat != null) LeaveStremio();
         CloseDetail();
-        CloseStremioDetail();
         if (_search.Length > 0) MainWindow.Instance?.ClearSearch();
         else ApplyFilter();
     }
@@ -308,15 +299,13 @@ public partial class LibraryView : UserControl, IPage
     void Poster_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is not PosterItem item) return;
-        if (item.Source is StremioMeta m) OpenStremio(m);
-        else OpenDetail(item);
+        OpenDetail(item);
     }
 
     /// <summary>Right-click a poster: add to / remove from My List.</summary>
     void Poster_RightUp(object sender, MouseButtonEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is not PosterItem item) return;
-        if (item.Source is StremioMeta) { e.Handled = true; return; } // Stremio titles open with a click (My List is for your playlist's)
         var menu = new ContextMenu();
         var open = new MenuItem { Header = _mode == LibraryMode.Movies ? "Open film" : "Open show" };
         open.Click += (_, _) => OpenDetail(item);
@@ -371,8 +360,6 @@ public partial class LibraryView : UserControl, IPage
     public void ShowCategory(string id)
     {
         if (_dirty) Rebuild();
-        if (_stCat != null) { LeaveStremio(); _cat = AllId; }
-        CloseStremioDetail();
         if (CategoryList.ItemsSource is not IEnumerable<CategoryItem> items) return;
         var c = items.FirstOrDefault(x => x.Id == id);
         if (c == null) return;
@@ -385,7 +372,6 @@ public partial class LibraryView : UserControl, IPage
     public void OpenItem(string id)
     {
         if (_dirty) Rebuild();
-        CloseStremioDetail();
         if (id != null && _byId.TryGetValue(id, out var item)) OpenDetail(item);
     }
 
@@ -394,8 +380,8 @@ public partial class LibraryView : UserControl, IPage
         _current = item;
         bool movie = _mode == LibraryMode.Movies;
         DetailPane.Visibility = Visibility.Visible;
-        BackText.Text = _search.Length > 0 ? "Results" : _stCat?.Name ?? (CategoryList.SelectedItem as CategoryItem)?.Name ?? (movie ? "Films" : "TV Shows"); // back to where you came from
-        DetailTitle.Text = Stremio.CleanTitle(item.Title); // "EN | The Long Journey (2021) 4K" → "The Long Journey" (the year is underneath)
+        BackText.Text = _search.Length > 0 ? "Results" : (CategoryList.SelectedItem as CategoryItem)?.Name ?? (movie ? "Films" : "TV Shows"); // back to where you came from
+        DetailTitle.Text = Titles.Clean(item.Title); // "EN | The Long Journey (2021) 4K" → "The Long Journey" (the year is underneath)
         DetailMeta.Text = item.Subtitle;
         DetailPlot.Text = "";
         DetailCredits.Text = "";
@@ -450,7 +436,6 @@ public partial class LibraryView : UserControl, IPage
             if (string.IsNullOrEmpty(item.Image) && !string.IsNullOrEmpty(d.Poster)) ImageLoader.SetUrl(DetailPoster, d.Poster);
 
             if (!movie) ShowEpisodes(d.Episodes);
-            FindMoreSources(item, d.Year);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -581,7 +566,6 @@ public partial class LibraryView : UserControl, IPage
         _detailCts?.Cancel();
         _current = null;
         _episodes = new List<EpisodeItem>();
-        ClearMoreSources();
         DetailPane.Visibility = Visibility.Collapsed;
         ImageLoader.SetUrl(DetailBackdrop, null);
     }

@@ -10,18 +10,6 @@
         <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,1,0">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Top" Text="CATEGORIES" Margin="20,18,0,8" FontSize="11" FontWeight="SemiBold" Classes="muted"/>
-                <!-- Stremio's catalogues (your add-ons) – the same kind of titles, from Stremio -->
-                <StackPanel x:Name="StremioRail" DockPanel.Dock="Bottom" IsVisible="False">
-                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="16,4,16,0"/>
-                    <TextBlock Text="STREMIO" Margin="20,14,0,8" FontSize="11" FontWeight="SemiBold" Classes="muted"/>
-                    <ListBox x:Name="StremioCatList" Classes="clean categories" SelectionChanged="StremioCatList_SelectionChanged" MaxHeight="260" Padding="0,0,0,8">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding From}"/>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </StackPanel>
                 <ListBox x:Name="CategoryList" Classes="clean categories" SelectionChanged="CategoryList_SelectionChanged" Padding="0,0,0,12">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
@@ -94,34 +82,9 @@
                 </ListBox.ItemTemplate>
             </ListBox>
 
-            <!-- your Real-Debrid files -->
-            <ScrollViewer x:Name="RdPane" Grid.Row="1" VerticalScrollBarVisibility="Auto" svc:SmoothScroll.Enabled="True" IsVisible="False">
-                <ItemsControl x:Name="RdList" Margin="28,4,28,24" MaxWidth="1000" HorizontalAlignment="Left">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="10" Padding="14,10" Margin="0,0,0,6"
-                                    BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
-                                <DockPanel>
-                                    <Button DockPanel.Dock="Right" Classes="primary" Content="Play" Margin="12,0,0,0" VerticalAlignment="Center"
-                                            Click="RdFile_Click" IsEnabled="{Binding !Busy}"/>
-                                    <TextBlock DockPanel.Dock="Left" Classes="icon muted" Text="{x:Static local:Icons.FileVideo}" FontSize="20" Margin="0,0,14,0"
-                                               VerticalAlignment="Center"/>
-                                    <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="{Binding Detail}" FontSize="12" Classes="muted" Margin="0,3,0,0"/>
-                                    </StackPanel>
-                                </DockPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
-
             <StackPanel x:Name="EmptyState" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" IsVisible="False" MaxWidth="520">
                 <TextBlock x:Name="EmptyTitle" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
                 <TextBlock x:Name="EmptyBody" Classes="muted" Margin="0,6,0,0" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
-                <Button x:Name="EmptyButton" Classes="primary" Content="Add-ons &amp; Real-Debrid" HorizontalAlignment="Center" Margin="0,16,0,0"
-                        Click="ManageStremio_Click" IsVisible="False"/>
             </StackPanel>
         </Grid>
 
@@ -206,9 +169,6 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- Stremio's sources for this film (your add-ons), under the playlist's own -->
-                    <views:StremioSources x:Name="MoreSources" Heading="MORE SOURCES" Margin="0,34,0,0" IsVisible="False"/>
-
                     <Grid x:Name="SeriesPart" Margin="0,34,0,0" IsVisible="False">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" MaxWidth="1040"/></Grid.ColumnDefinitions>
                         <StackPanel>
@@ -262,13 +222,6 @@
                                                            TextWrapping="Wrap" TextTrimming="WordEllipsis" MaxHeight="36"/>
                                             </StackPanel>
                                             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Button Classes="ghost" Margin="12,0,0,0" VerticalAlignment="Center" Click="EpisodeSources_Click"
-                                                    ToolTip.Tip="Sources for this episode from your Stremio add-ons" IsVisible="{Binding HasMoreSources}">
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <TextBlock Classes="icon" Text="{x:Static local:Icons.Addons}"/>
-                                                    <TextBlock Text="More sources" FontSize="12" VerticalAlignment="Center"/>
-                                                </StackPanel>
-                                            </Button>
                                             <Button Classes="ghost" Margin="4,0,6,0" VerticalAlignment="Center" Click="EpisodeDownload_Click"
                                                     ToolTip.Tip="Download this episode">
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
@@ -288,13 +241,9 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- Stremio's sources for the episode you picked -->
-                    <views:StremioSources x:Name="EpisodeSources" Heading="MORE SOURCES" Margin="0,26,0,0" IsVisible="False"/>
                 </StackPanel>
             </ScrollViewer>
         </Panel>
 
-        <!-- ===== A title from Stremio ===== -->
-        <views:StremioDetail x:Name="StDetail" Grid.Column="1" IsVisible="False"/>
     </Grid>
 </UserControl>

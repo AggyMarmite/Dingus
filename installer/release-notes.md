@@ -1,19 +1,21 @@
+## What's new in Dingus 0.13.0
+
+* Streamlined Films and TV Shows.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.12.0
 
-* Stremio now lives in Films and TV Shows.
-* Add Stremio when adding a playlist.
+* Films and TV Shows improvements.
 * Interface polish.
 * Bug fixes and other improvements.
 
 ## What's new in Dingus 0.11.1
 
 * More reliable downloads.
-* Fix for Real-Debrid sometimes playing the wrong episode.
 * Bug fixes and other improvements.
 
 ## What's new in Dingus 0.11.0
 
-* Stremio add-ons and Real-Debrid support.
 * Download films and shows to watch offline.
 * A tidier search bar.
 * Bug fixes and other improvements.

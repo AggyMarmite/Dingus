@@ -271,8 +271,6 @@
             </Border>
 
             <!-- Appearance & start-up -->
-            <!-- Stremio add-ons & Real-Debrid -->
-            <v:StremioSettings x:Name="StremioPart"/>
 
             <TextBlock Style="{StaticResource SectionHeader}" Text="APPEARANCE &amp; START-UP"/>
             <Border Style="{StaticResource Card}">

@@ -116,11 +116,6 @@
                     </DockPanel>
                     <ItemsControl x:Name="ShowResults" ItemsPanel="{StaticResource Row}" ItemTemplate="{StaticResource SearchPoster}"/>
                 </StackPanel>
-                <!-- From your Stremio add-ons (titles your playlist doesn't have) -->
-                <StackPanel x:Name="StremioSection" IsVisible="False">
-                    <TextBlock x:Name="StremioHeader" Classes="section" Margin="8,22,0,8"/>
-                    <ItemsControl x:Name="StremioResults" ItemsPanel="{StaticResource Row}" ItemTemplate="{StaticResource SearchPoster}"/>
-                </StackPanel>
             </StackPanel>
         </ScrollViewer>
 

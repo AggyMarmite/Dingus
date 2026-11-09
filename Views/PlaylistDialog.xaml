@@ -18,7 +18,6 @@
         <StackPanel Orientation="Horizontal">
             <RadioButton x:Name="TypeXtream" Style="{StaticResource Chip}" Content="Xtream Codes login" Checked="Type_Checked"/>
             <RadioButton x:Name="TypeM3u" Style="{StaticResource Chip}" Content="M3U link or file" Checked="Type_Checked"/>
-            <RadioButton x:Name="TypeStremio" Style="{StaticResource Chip}" Content="Stremio" Checked="Type_Checked"/>
         </StackPanel>
 
         <StackPanel x:Name="NamePanel">
@@ -49,30 +48,6 @@
         <StackPanel x:Name="M3uPanel" Visibility="Collapsed">
             <TextBlock Style="{StaticResource FieldLabel}" Text="M3U address (or a file path on this PC)"/>
             <TextBox x:Name="M3uBox" Tag="http://provider.example/get.php?username=…&amp;type=m3u_plus"/>
-        </StackPanel>
-
-        <StackPanel x:Name="StremioPanel" Visibility="Collapsed">
-            <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,14,0,0" TextWrapping="Wrap"
-                       Text="Your Stremio add-ons' films and shows appear in Films and TV Shows, and their sources under your playlist's titles too."/>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="12"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <StackPanel>
-                    <TextBlock Style="{StaticResource FieldLabel}" Text="Stremio email"/>
-                    <TextBox x:Name="StremioEmailBox"/>
-                </StackPanel>
-                <StackPanel Grid.Column="2">
-                    <TextBlock Style="{StaticResource FieldLabel}" Text="Password"/>
-                    <PasswordBox x:Name="StremioPassBox"/>
-                </StackPanel>
-            </Grid>
-            <TextBlock Style="{StaticResource FieldLabel}" Text="…or an add-on's address (optional)"/>
-            <TextBox x:Name="StremioUrlBox" Tag="https://…/manifest.json or stremio://…"/>
-            <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap"
-                       Text="Your password is only used to sign in – Dingus doesn't keep it. Connect Real-Debrid afterwards in Settings to play torrent sources."/>
         </StackPanel>
 
         <StackPanel x:Name="EpgPanel">

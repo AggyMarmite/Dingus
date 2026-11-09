@@ -1,30 +1,29 @@
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using System.Text.Json;
 
 namespace Dingus.Services;
 
 /// <summary>
-/// A stand-in Stremio add-on for the self-tests (both apps): a small web server on this computer offering two films,
-/// a show with episodes, and sources of each kind – one plays the test video, one is a torrent, one opens a web page.
-/// Never used outside the self-test.
+/// A small web server on this computer for the self-tests (both apps): serves a video file the way a provider would
+/// (whole, or the part asked for). Never used outside the self-test.
 /// </summary>
-public sealed class TestAddon : IDisposable
+public sealed class TestServer : IDisposable
 {
     readonly HttpListener _http = new();
     readonly string _video;
-    public string Url { get; }
+    /// <summary>"http://127.0.0.1:port/"</summary>
+    public string Base { get; }
+    public string VideoUrl => Base + "video.mp4";
 
-    public TestAddon(string videoPath)
+    public TestServer(string videoPath)
     {
         _video = videoPath;
         var l = new TcpListener(IPAddress.Loopback, 0);
         l.Start();
         int port = ((IPEndPoint)l.LocalEndpoint).Port;
         l.Stop();
-        Url = $"http://127.0.0.1:{port}/manifest.json";
-        _http.Prefixes.Add($"http://127.0.0.1:{port}/");
+        Base = $"http://127.0.0.1:{port}/";
+        _http.Prefixes.Add(Base);
         _http.Start();
         _ = Task.Run(Loop);
     }
@@ -48,7 +47,7 @@ public sealed class TestAddon : IDisposable
             var path = Uri.UnescapeDataString(ctx.Request.Url!.AbsolutePath);
             if (path == "/video.mp4" && _video != null && File.Exists(_video))
             {
-                // Like a real file server: whole file, or the part asked for (players jump around in an mp4).
+                // Like a real file server: whole file, or the part asked for.
                 var bytes = File.ReadAllBytes(_video);
                 long from = 0, to = bytes.Length - 1;
                 var range = ctx.Request.Headers["Range"];
@@ -61,105 +60,15 @@ public sealed class TestAddon : IDisposable
                 }
                 ctx.Response.Headers["Accept-Ranges"] = "bytes";
                 ctx.Response.ContentType = "video/mp4";
-                ctx.Response.ContentLength64 = to - from + 1;
-                if (ctx.Request.HttpMethod != "HEAD") ctx.Response.OutputStream.Write(bytes, (int)from, (int)(to - from + 1));
+                ctx.Response.ContentLength64 = Math.Max(0, to - from + 1);
+                if (ctx.Request.HttpMethod != "HEAD" && to >= from) ctx.Response.OutputStream.Write(bytes, (int)from, (int)(to - from + 1));
                 ctx.Response.Close();
                 return;
             }
-            object body = Answer(path, $"http://127.0.0.1:{ctx.Request.Url.Port}");
-            if (body == null) { ctx.Response.StatusCode = 404; ctx.Response.Close(); return; }
-            var json = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(body));
-            ctx.Response.ContentType = "application/json";
-            ctx.Response.ContentLength64 = json.Length;
-            ctx.Response.OutputStream.Write(json);
+            ctx.Response.StatusCode = 404;
             ctx.Response.Close();
         }
         catch { try { ctx.Response.Abort(); } catch { } }
-    }
-
-    static readonly (string Id, string Name, string Year)[] Films =
-    {
-        ("tt9000001", "The Test Pattern", "2021"),
-        ("tt9000002", "Signal and Noise", "2019"),
-        ("tt9000003", "The Long Journey", "2021"), // also in the sample playlist: its page shows these as "More sources"
-    };
-
-    static readonly (string Id, string Name)[] Shows =
-    {
-        ("tt9000010", "Testing Times"),
-        ("tt9000011", "Office Life"), // also in the sample playlist
-    };
-
-    static object Answer(string path, string host)
-    {
-        if (path == "/manifest.json")
-            return new
-            {
-                id = "dingus.selftest",
-                version = "1.0.0",
-                name = "Test add-on",
-                description = "A stand-in add-on for Dingus's self-test",
-                types = new[] { "movie", "series" },
-                idPrefixes = new[] { "tt9" },
-                resources = new object[] { "catalog", "meta", "stream" },
-                catalogs = new object[]
-                {
-                    new { type = "movie", id = "test", name = "Test films", extra = new object[] { new { name = "search" }, new { name = "skip" } } },
-                    new { type = "series", id = "test", name = "Test shows", extra = new object[] { new { name = "search" } } },
-                },
-            };
-        if (path.StartsWith("/catalog/movie/test"))
-        {
-            var q = path.Contains("search=") ? path[(path.IndexOf("search=") + 7)..].Replace(".json", "") : null;
-            return new
-            {
-                metas = Films.Where(f => q == null || f.Name.Contains(q, StringComparison.OrdinalIgnoreCase))
-                    .Select(f => new { id = f.Id, type = "movie", name = f.Name, releaseInfo = f.Year, description = "A film made for testing." }),
-            };
-        }
-        if (path.StartsWith("/catalog/series/test"))
-        {
-            var q = path.Contains("search=") ? path[(path.IndexOf("search=") + 7)..].Replace(".json", "") : null;
-            return new
-            {
-                metas = Shows.Where(x => q == null || x.Name.Contains(q, StringComparison.OrdinalIgnoreCase))
-                    .Select(x => new { id = x.Id, type = "series", name = x.Name, releaseInfo = "2020–" }),
-            };
-        }
-        if (path.StartsWith("/meta/movie/"))
-        {
-            var id = path["/meta/movie/".Length..].Replace(".json", "");
-            var f = Films.FirstOrDefault(x => x.Id == id);
-            return f.Id == null ? null : new { meta = new { id = f.Id, type = "movie", name = f.Name, releaseInfo = f.Year, runtime = "94 min", genres = new[] { "Drama" }, description = "A film made for testing." } };
-        }
-        if (path.StartsWith("/meta/series/"))
-        {
-            var id = path["/meta/series/".Length..].Replace(".json", "");
-            var show = Shows.FirstOrDefault(x => x.Id == id);
-            if (show.Id == null) return null;
-            return new
-            {
-                meta = new
-                {
-                    id = show.Id, type = "series", name = show.Name, releaseInfo = "2020–", description = "A show made for testing.",
-                    videos = Enumerable.Range(1, 2).SelectMany(s => Enumerable.Range(1, 3).Select(e => new
-                    {
-                        id = $"{show.Id}:{s}:{e}", title = $"Episode {e}", season = s, episode = e, released = $"2020-0{s}-0{e}T00:00:00.000Z",
-                    })),
-                },
-            };
-        }
-        if (path.StartsWith("/stream/"))
-            return new
-            {
-                streams = new object[]
-                {
-                    new { name = "Test\n1080p", title = "The.Test.Pattern.1080p.mp4\n💾 1.2 GB", url = host + "/video.mp4" },
-                    new { name = "Test\n4K", title = "The.Test.Pattern.2160p.mkv\n💾 14.8 GB 👤 52", infoHash = "0123456789abcdef0123456789abcdef01234567", fileIdx = 0 },
-                    new { name = "Test", title = "Trailer", externalUrl = "https://example.com/trailer" },
-                },
-            };
-        return null;
     }
 
     /// <summary>
@@ -177,10 +86,10 @@ public sealed class TestAddon : IDisposable
         new Random(7).NextBytes(bytes);
         File.WriteAllBytes(src, bytes);
         var oldFolder = SettingsStore.Current.DownloadsFolder;
-        foreach (var old in DownloadService.All.Where(d => d.ResumeKey is "st:tt9000001" or "st:tt9000010:1:2").ToList()) DownloadService.Remove(old);
+        foreach (var old in DownloadService.All.Where(d => d.ResumeKey is "m:selftest-1" or "e:selftest-2").ToList()) DownloadService.Remove(old);
         DownloadService.SetFolder(Path.Combine(dir, "out"));
-        using var server = new TestAddon(src);
-        var video = server.Url.Replace("/manifest.json", "/video.mp4");
+        using var server = new TestServer(src);
+        var video = server.VideoUrl;
         try
         {
             static async Task<bool> WaitDone(Download d)
@@ -192,19 +101,19 @@ public sealed class TestAddon : IDisposable
             // 1. A film, start to finish.
             var film = DownloadService.Add(new Models.VodItem
             {
-                Kind = "stremio", Title = "The Test Pattern", Subtitle = "2021", Url = video, ResumeKey = "st:tt9000001", ItemId = "tt9000001", Ext = ".mp4",
+                Kind = "movie", Title = "The Test Pattern", Subtitle = "2021", Url = video, ResumeKey = "m:selftest-1", ItemId = "selftest-1", Ext = ".mp4",
             }, null);
             bool ok = await WaitDone(film);
             bool same = ok && File.ReadAllBytes(film.FilePath).AsSpan().SequenceEqual(bytes);
             note($"downloads: film {film.Status} → {Path.GetRelativePath(dir, film.FilePath ?? "")} · {film.Bytes} bytes · matches={same}{(film.Error != null ? " · " + film.Error : "")}");
             if (!same) error(new Exception("Downloading a film didn't give a complete copy of the file: " + (film.Error ?? film.Status.ToString())));
-            if (DownloadService.LocalUrl("st:tt9000001") is not { } local || !local.StartsWith("file:"))
+            if (DownloadService.LocalUrl("m:selftest-1") is not { } local || !local.StartsWith("file:"))
                 error(new Exception("A downloaded film wouldn't play from its file."));
 
             // 2. An episode that had stopped half way: it carries on from there (and goes in the show's season folder).
             var ep = DownloadService.Add(new Models.VodItem
             {
-                Kind = "stremio", Title = "Testing Times", Subtitle = "S01E02  ·  Episode 2", Url = video, ResumeKey = "st:tt9000010:1:2", ItemId = "tt9000010:1:2", Ext = "mp4",
+                Kind = "episode", Title = "Testing Times", Subtitle = "S01E02  ·  Episode 2", Url = video, ResumeKey = "e:selftest-2", ItemId = "selftest-2", Ext = "mp4",
             }, null, "Testing Times", 1, 2, paused: true);
             Directory.CreateDirectory(Path.GetDirectoryName(ep.PartPath)!);
             File.WriteAllBytes(ep.PartPath, bytes.AsSpan(0, bytes.Length / 2).ToArray());
@@ -220,7 +129,7 @@ public sealed class TestAddon : IDisposable
             DownloadService.Remove(ep);
             var whole = DownloadService.Add(new Models.VodItem
             {
-                Kind = "stremio", Title = "Testing Times", Subtitle = "S01E02  ·  Episode 2", Url = video, ResumeKey = "st:tt9000010:1:2", ItemId = "tt9000010:1:2", Ext = "mp4",
+                Kind = "episode", Title = "Testing Times", Subtitle = "S01E02  ·  Episode 2", Url = video, ResumeKey = "e:selftest-2", ItemId = "selftest-2", Ext = "mp4",
             }, null, "Testing Times", 1, 2, paused: true);
             Directory.CreateDirectory(Path.GetDirectoryName(whole.PartPath)!);
             File.WriteAllBytes(whole.PartPath, bytes);
@@ -231,13 +140,13 @@ public sealed class TestAddon : IDisposable
             if (!same) error(new Exception("A download that had all arrived didn't finish: " + (whole.Error ?? whole.Status.ToString())));
 
             long free = FolderCheck.FreeSpace(dir);
-            note($"downloads: free space where they're saved {(free >= 0 ? Stremio.Size(free) : "unknown")}");
+            note($"downloads: free space where they're saved {(free >= 0 ? Titles.Size(free) : "unknown")}");
             if (free <= 0) error(new Exception("Couldn't tell how much space is free where downloads are saved."));
 
             // 3. A link that's gone: it says so rather than trying for ever.
             var gone = DownloadService.Add(new Models.VodItem
             {
-                Kind = "stremio", Title = "Gone", Url = server.Url.Replace("/manifest.json", "/nothing-here.mp4"), ResumeKey = "st:selftest-gone", ItemId = "gone",
+                Kind = "movie", Title = "Gone", Url = server.Base + "nothing-here.mp4", ResumeKey = "m:selftest-gone", ItemId = "gone",
             }, null);
             await WaitDone(gone);
             note($"downloads: missing link → {gone.Status} · {gone.Error}");
@@ -255,7 +164,7 @@ public sealed class TestAddon : IDisposable
     /// <summary>Removes the self-test's downloads and their scratch folder.</summary>
     public static void CleanUpDownloads()
     {
-        foreach (var d in DownloadService.All.Where(d => d.ResumeKey is "st:tt9000001" or "st:tt9000010:1:2").ToList()) DownloadService.Remove(d);
+        foreach (var d in DownloadService.All.Where(d => d.ResumeKey is "m:selftest-1" or "e:selftest-2").ToList()) DownloadService.Remove(d);
         try { Directory.Delete(Path.Combine(Path.GetTempPath(), "dingus-selftest-downloads"), true); } catch { }
     }
 }

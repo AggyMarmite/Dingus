@@ -13,7 +13,7 @@ public enum DownloadStatus { Queued, Downloading, Waiting, Paused, Done, Failed 
 public sealed class Download
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N")[..10];
-    /// <summary>movie | episode | stremio</summary>
+    /// <summary>movie | episode</summary>
     public string Kind { get; set; }
     public string Title { get; set; }
     public string Subtitle { get; set; }
@@ -29,7 +29,7 @@ public sealed class Download
     public string Ext { get; set; }
     /// <summary>The address (it can hold your playlist login, so it's kept encrypted).</summary>
     public string UrlProtected { get; set; }
-    /// <summary>From your playlist (counts towards its connection limit), or from Stremio / Real-Debrid.</summary>
+    /// <summary>The playlist it came from (counts towards its connection limit).</summary>
     public string PlaylistId { get; set; }
     public string FilePath { get; set; }
     public long Bytes { get; set; }
@@ -47,7 +47,7 @@ public sealed class Download
 }
 
 /// <summary>
-/// Downloads films and episodes (from your playlist, or Stremio / Real-Debrid sources) to watch offline. One at a time,
+/// Downloads films and episodes from your playlist to watch offline. One at a time,
 /// in the order you asked; each picks up where it stopped (after a dropped connection, a pause, or closing Dingus),
 /// retries on its own when the server hiccups, checks there's room on the disk first, and waits while you're watching
 /// if your plan only allows so many connections at once. Shared by the Windows and Linux apps.
@@ -211,12 +211,12 @@ public static class DownloadService
         var ext = d.Ext ?? "mkv";
         if (d.Series != null && d.Season >= 0 && d.Episode > 0)
         {
-            var show = Safe(Stremio.CleanTitle(d.Series));
+            var show = Safe(Titles.Clean(d.Series));
             var epTitle = d.Subtitle != null && d.Subtitle.Contains("·") ? d.Subtitle[(d.Subtitle.LastIndexOf('·') + 1)..] : d.Subtitle;
             var name = $"{show} – S{d.Season:00}E{d.Episode:00}" + (string.IsNullOrWhiteSpace(epTitle) ? "" : " – " + Safe(epTitle));
             return Path.Combine(Folder, show, d.Season == 0 ? "Specials" : $"Season {d.Season}", Safe(name) + "." + ext);
         }
-        return Path.Combine(Folder, Safe(Stremio.CleanTitle(d.Title)) + "." + ext);
+        return Path.Combine(Folder, Safe(Titles.Clean(d.Title)) + "." + ext);
     }
 
     static string UniquePath(string path)
@@ -332,7 +332,7 @@ public static class DownloadService
             lock (Gate) waiting = _items.Where(d => d.Status is DownloadStatus.Queued or DownloadStatus.Waiting).ToList();
             if (waiting.Count == 0) { await Wake.WaitAsync(TimeSpan.FromSeconds(30)); continue; }
 
-            // The first one that can go now (one from Stremio / Real-Debrid needn't wait for your playlist's connections).
+            // The first one that can go now.
             Download next = null;
             bool changed = false;
             foreach (var d in waiting)
@@ -474,7 +474,7 @@ public static class DownloadService
             if (free >= 0)
             {
                 if (d.Total > 0 && free < d.Total - have + 200L * 1024 * 1024)
-                    throw new FatalDownloadException($"Not enough space – it needs {Stremio.Size(d.Total - have)} and there's {Stremio.Size(free)} free in {Path.GetDirectoryName(d.FilePath)}.");
+                    throw new FatalDownloadException($"Not enough space – it needs {Titles.Size(d.Total - have)} and there's {Titles.Size(free)} free in {Path.GetDirectoryName(d.FilePath)}.");
             }
         }
         catch (FatalDownloadException) { throw; }
@@ -521,7 +521,7 @@ public static class DownloadService
         }
         await dst.FlushAsync(ct);
         dst.Close();
-        if (d.Total > 0 && d.Bytes < d.Total) throw new IOException($"the connection closed early ({Stremio.Size(d.Bytes)} of {Stremio.Size(d.Total)})");
+        if (d.Total > 0 && d.Bytes < d.Total) throw new IOException($"the connection closed early ({Titles.Size(d.Bytes)} of {Titles.Size(d.Total)})");
         Finish(d);
     }
 
@@ -537,13 +537,13 @@ public static class DownloadService
 
     public static string StatusText(Download d) => d.Status switch
     {
-        DownloadStatus.Done => $"Downloaded  ·  {Stremio.Size(d.Bytes)}",
+        DownloadStatus.Done => $"Downloaded  ·  {Titles.Size(d.Bytes)}",
         DownloadStatus.Downloading when d.Error != null => d.Error,
         DownloadStatus.Downloading => d.Total > 0
-            ? $"{d.Fraction:P0}  ·  {Stremio.Size(d.Bytes)} of {Stremio.Size(d.Total)}" + (d.BytesPerSecond > 1024 ? $"  ·  {Speed(d.BytesPerSecond)}" + Eta(d) : "")
-            : $"{Stremio.Size(d.Bytes)}" + (d.BytesPerSecond > 1024 ? $"  ·  {Speed(d.BytesPerSecond)}" : ""),
+            ? $"{d.Fraction:P0}  ·  {Titles.Size(d.Bytes)} of {Titles.Size(d.Total)}" + (d.BytesPerSecond > 1024 ? $"  ·  {Speed(d.BytesPerSecond)}" + Eta(d) : "")
+            : $"{Titles.Size(d.Bytes)}" + (d.BytesPerSecond > 1024 ? $"  ·  {Speed(d.BytesPerSecond)}" : ""),
         DownloadStatus.Waiting => d.WaitReason ?? "Waiting…",
-        DownloadStatus.Queued => d.Bytes > 0 ? $"Queued  ·  {Stremio.Size(d.Bytes)} so far" : "Queued",
+        DownloadStatus.Queued => d.Bytes > 0 ? $"Queued  ·  {Titles.Size(d.Bytes)} so far" : "Queued",
         DownloadStatus.Paused => d.Total > 0 ? $"Paused at {d.Fraction:P0}" : "Paused",
         DownloadStatus.Failed => d.Error ?? "Didn't finish",
         _ => "",
@@ -588,13 +588,13 @@ public static class DownloadService
 
     /// <summary>
     /// The Download buttons: adds a film or episode (an episode when <paramref name="episode"/> is set) and says what happened.
-    /// Titles from your playlist count towards its connection limit; Stremio / Real-Debrid ones don't.
+    /// Titles from your playlist count towards its connection limit.
     /// </summary>
     public static (Download Download, string Message) Start(VodItem item, int season = 0, int episode = 0)
     {
         try
         {
-            var playlist = item.Kind == "stremio" ? null : DataService.Instance.Active?.Id ?? "playlist";
+            var playlist = DataService.Instance.Active?.Id ?? "playlist";
             var d = Add(item, playlist, episode > 0 ? item.Title : null, season, episode);
             return (d, AddedMessage(d));
         }
@@ -624,7 +624,7 @@ public static class DownloadService
         _ => $"Downloading {Label(d)}  ·  see Downloads",
     };
 
-    static string Label(Download d) => d.Series != null ? $"{Stremio.CleanTitle(d.Series)} S{d.Season:00}E{d.Episode:00}" : d.Title;
+    static string Label(Download d) => d.Series != null ? $"{Titles.Clean(d.Series)} S{d.Season:00}E{d.Episode:00}" : d.Title;
 
     /// <summary>Signals the worker to look again (watching stopped, so a waiting download can carry on).</summary>
     public static void Nudge() => Wake.Release();

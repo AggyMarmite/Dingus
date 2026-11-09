@@ -250,8 +250,6 @@
             </Border>
 
             <!-- Appearance & start-up -->
-            <!-- Stremio add-ons & Real-Debrid -->
-            <v:StremioSettings x:Name="StremioPart"/>
 
             <TextBlock Classes="section" Text="APPEARANCE &amp; START-UP"/>
             <Border Classes="card">

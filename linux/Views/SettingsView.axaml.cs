@@ -438,7 +438,6 @@ public partial class SettingsView : UserControl, IPage
     {
         var dlg = new PlaylistDialog(null);
         await dlg.ShowDialog(Owner);
-        if (dlg.AddedStremio) { MainWindow.Instance?.OnStremioAdded(dlg.StremioMessage); Populate(); return; }
         if (dlg.Result == null) return;
         S.Playlists.Add(dlg.Result);
         S.ActivePlaylistId = dlg.Result.Id;
@@ -619,11 +618,5 @@ public partial class SettingsView : UserControl, IPage
     {
         value = 0;
         return sender is RadioButton { IsChecked: true, Tag: string s } && int.TryParse(s, out value);
-    }
-
-    /// <summary>Scrolls to a part of Settings ("stremio").</summary>
-    public void ShowSection(string name)
-    {
-        if (name == "stremio") Avalonia.Threading.Dispatcher.UIThread.Post(() => StremioPart.BringIntoView(), Avalonia.Threading.DispatcherPriority.Loaded);
     }
 }

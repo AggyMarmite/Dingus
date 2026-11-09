@@ -17,7 +17,6 @@
             <StackPanel Orientation="Horizontal">
                 <RadioButton x:Name="TypeXtream" Classes="chip" GroupName="PlType" Content="Xtream Codes login" IsCheckedChanged="Type_Checked"/>
                 <RadioButton x:Name="TypeM3u" Classes="chip" GroupName="PlType" Content="M3U link or file" IsCheckedChanged="Type_Checked"/>
-                <RadioButton x:Name="TypeStremio" Classes="chip" GroupName="PlType" Content="Stremio" IsCheckedChanged="Type_Checked"/>
             </StackPanel>
 
             <StackPanel x:Name="NamePanel">
@@ -46,25 +45,6 @@
                     <Button DockPanel.Dock="Right" Content="Browse…" Margin="8,0,0,0" Click="Browse_Click"/>
                     <TextBox x:Name="M3uBox" Watermark="http://provider.example/get.php?username=…&amp;type=m3u_plus"/>
                 </DockPanel>
-            </StackPanel>
-
-            <StackPanel x:Name="StremioPanel" IsVisible="False">
-                <TextBlock Classes="muted" FontSize="12" Margin="0,14,0,0" TextWrapping="Wrap"
-                           Text="Your Stremio add-ons' films and shows appear in Films and TV Shows, and their sources under your playlist's titles too."/>
-                <Grid ColumnDefinitions="*,12,*">
-                    <StackPanel>
-                        <TextBlock Classes="field" Text="Stremio email" Margin="0,14,0,6"/>
-                        <TextBox x:Name="StremioEmailBox"/>
-                    </StackPanel>
-                    <StackPanel Grid.Column="2">
-                        <TextBlock Classes="field" Text="Password" Margin="0,14,0,6"/>
-                        <TextBox x:Name="StremioPassBox" PasswordChar="•" RevealPassword="False"/>
-                    </StackPanel>
-                </Grid>
-                <TextBlock Classes="field" Text="…or an add-on's address (optional)" Margin="0,14,0,6"/>
-                <TextBox x:Name="StremioUrlBox" Watermark="https://…/manifest.json or stremio://…"/>
-                <TextBlock Classes="muted" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap"
-                           Text="Your password is only used to sign in – Dingus doesn't keep it. Connect Real-Debrid afterwards in Settings to play torrent sources."/>
             </StackPanel>
 
             <StackPanel x:Name="EpgPanel">

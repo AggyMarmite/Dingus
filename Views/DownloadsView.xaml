@@ -58,7 +58,7 @@
             <StackPanel Margin="0,0,0,6">
                 <TextBlock Text="Downloads" FontSize="24" FontWeight="SemiBold"/>
                 <TextBlock Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0" TextWrapping="Wrap"
-                           Text="Films and episodes saved to watch without a connection. Press Download on a film, an episode or a season in Films, TV Shows or Stremio."/>
+                           Text="Films and episodes saved to watch without a connection. Press Download on a film, an episode or a season in Films or TV Shows."/>
             </StackPanel>
 
             <TextBlock x:Name="ActiveHeader" Style="{StaticResource SectionHeader}" Text="DOWNLOADING"/>

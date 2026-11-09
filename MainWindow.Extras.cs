@@ -542,7 +542,6 @@ public partial class MainWindow
     internal void SelfTestSearchFilter(string f) => _search.SelfTestFilter(f);
     internal Views.LibraryView SelfTestFilms => _films;
     internal Views.LibraryView SelfTestShows => _shows;
-    internal int SelfTestSearchStremio => _search.SelfTestStremioResults;
 }
 
 // Per-channel picture fixes (picture & sound menu → "Picture fix for this channel").
