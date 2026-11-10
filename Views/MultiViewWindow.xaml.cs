@@ -101,6 +101,9 @@ public partial class MultiViewWindow : Window
         Closed += (_, _) => ComponentDispatcher.ThreadPreprocessMessage -= OnThreadMessage;
         Closing += (_, _) => Shutdown();
 
+        _suppressShare = true;
+        ShareToggle.IsChecked = SettingsStore.Current.ShareConnection;
+        _suppressShare = false;
         int layout = SettingsStore.Current.MultiViewLayout;
         (layout == 8 ? L8 : layout == 6 ? L6 : L4).IsChecked = true; // builds the tiles
     }
@@ -244,6 +247,13 @@ public partial class MultiViewWindow : Window
     {
         if (t.VariantIdx >= t.Variants.Count) return;
         var url = DataService.Instance.StreamUrl(t.Variants[t.VariantIdx]);
+        // Sharing one connection: the tile plays its channel from Dingus, which takes it in turns with the others.
+        if (url != null && SettingsStore.Current.ShareConnection && ConnectionShare.CanShare(url))
+        {
+            _share ??= MakeShare();
+            url = _share.Add(ShareKey(t), url);
+        }
+        else _share?.Remove(ShareKey(t));
         if (url == null || !Uri.TryCreate(url, UriKind.Absolute, out var uri)) { ShowStatus(t, "This channel can't be played."); return; }
         ShowStatus(t, "Tuning…");
         var cache = Math.Clamp(SettingsStore.Current.NetworkCachingMs, 300, 10000);
@@ -302,6 +312,7 @@ public partial class MultiViewWindow : Window
 
     void Clear(Tile t)
     {
+        _share?.Remove(ShareKey(t));
         t.Row = null;
         t.Variants.Clear();
         var player = t.Player;
@@ -342,6 +353,32 @@ public partial class MultiViewWindow : Window
         Close();
     }
 
+    // ------------------------------------------------------------------ sharing one connection (experimental)
+
+    ConnectionShare _share;
+    string _shareProblem;
+    bool _suppressShare;
+
+    static string ShareKey(Tile t) => "tile" + t.Index;
+
+    ConnectionShare MakeShare()
+    {
+        var share = new ConnectionShare();
+        share.Problem += (_, msg) => Dispatcher.BeginInvoke(() => { if (_share == share) { _shareProblem = msg; UpdateWarning(); } });
+        return share;
+    }
+
+    void Share_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_suppressShare) return;
+        SettingsStore.Current.ShareConnection = ShareToggle.IsChecked == true;
+        SettingsStore.Save();
+        _shareProblem = null;
+        if (!SettingsStore.Current.ShareConnection) { _share?.Dispose(); _share = null; }
+        foreach (var t in _tiles.Where(x => x.Row != null)) { t.Failed = false; PlayTile(t); } // start them again, shared or not
+        UpdateWarning();
+    }
+
     // ------------------------------------------------------------------ connections warning
 
     void UpdateWarning()
@@ -352,7 +389,12 @@ public partial class MultiViewWindow : Window
         string msg = null;
         bool severe = false;
 
-        if (max > 0 && active > max)
+        if (SettingsStore.Current.ShareConnection)
+        {
+            msg = _shareProblem ?? "Sharing one connection: the channels take turns on it, so each may pause now and then if your provider or line can't keep up.";
+            severe = _shareProblem != null;
+        }
+        else if (max > 0 && active > max)
         {
             msg = $"{active} channels are playing but your plan allows {max} stream{(max == 1 ? "" : "s")} at once – some tiles won't play.";
             severe = true;
@@ -408,6 +450,8 @@ public partial class MultiViewWindow : Window
         _closing = true;
         FocusedRow ??= _focused?.Row;
         ReleaseTiles();
+        _share?.Dispose();
+        _share = null;
     }
 
     /// <summary>Stops and frees every tile's player (off the UI thread so closing never stalls).</summary>

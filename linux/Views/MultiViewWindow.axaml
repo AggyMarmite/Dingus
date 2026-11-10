@@ -25,6 +25,10 @@
                     <RadioButton x:Name="L4" Classes="chip" GroupName="MvLayout" Content="4 screens" Tag="4" IsCheckedChanged="Layout_Checked"/>
                     <RadioButton x:Name="L6" Classes="chip" GroupName="MvLayout" Content="6 screens" Tag="6" IsCheckedChanged="Layout_Checked"/>
                     <RadioButton x:Name="L8" Classes="chip" GroupName="MvLayout" Content="8 screens" Tag="8" IsCheckedChanged="Layout_Checked"/>
+                    <CheckBox x:Name="ShareToggle" Classes="toggle" Margin="16,0,0,0" VerticalAlignment="Center" IsCheckedChanged="Share_Changed"
+                              ToolTip.Tip="Experimental. The channels take turns on one connection to your provider, each collecting a head start of a few seconds. Needs a provider that sends that head start, and a line fast enough for all the channels together. Not for HLS channels.">
+                        <TextBlock Text="Share one connection (experimental)" FontSize="12" VerticalAlignment="Center"/>
+                    </CheckBox>
                     <Border x:Name="WarnPill" CornerRadius="14" Padding="12,5" Margin="14,0,0,0" Background="#3A2A0A" IsVisible="False">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{x:Static local:Icons.Alert}" Classes="icon" FontSize="12" Foreground="#FBBF24"

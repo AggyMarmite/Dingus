@@ -76,6 +76,8 @@ public class AppSettings
     public bool AdaptiveFrameRate { get; set; } = true;
     /// <summary>Show "Channel One", "Channel One HD", "Channel One FHD" … as one channel with automatic fallback.</summary>
     public bool MergeDuplicates { get; set; } = true;
+    /// <summary>Multi-view: channels take turns on one connection (experimental, off unless you turn it on).</summary>
+    public bool ShareConnection { get; set; }
     /// <summary>Highest quality to pick for merged channels: best | 1080 | 720.</summary>
     public string PreferredQuality { get; set; } = "best";
     /// <summary>Dedicated graphics on mains power, built-in graphics (and lighter settings) on battery.</summary>

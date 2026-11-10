@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
 
 namespace Dingus.Services;
@@ -65,10 +66,156 @@ public sealed class TestServer : IDisposable
                 ctx.Response.Close();
                 return;
             }
+            if (path.StartsWith("/live/") && path.EndsWith(".ts") && int.TryParse(path[6..^3], out var ch))
+            {
+                ServeLive(ctx, ch);
+                return;
+            }
             ctx.Response.StatusCode = 404;
             ctx.Response.Close();
         }
         catch { try { ctx.Response.Abort(); } catch { } }
+    }
+
+    // ------------------------------------------------------------------ a stand-in live provider (one connection allowed)
+
+    const int LiveRate = 1330; // packets a second (about 2 Mbit/s)
+    readonly System.Diagnostics.Stopwatch _clock = System.Diagnostics.Stopwatch.StartNew();
+    int _liveOpen;
+    /// <summary>Live connections refused because one was already open (the plan allows one).</summary>
+    public int LiveRefused;
+    /// <summary>The most live connections open at once.</summary>
+    public int LivePeak;
+
+    /// <summary>
+    /// Like a live IPTV server on a one-connection plan: a second connection at the same time is refused; a new one gets a
+    /// head start of the last 20 seconds straight away, then real time. Each packet carries its number, so the self-test can
+    /// check that a tile's channel arrived complete and in order.
+    /// </summary>
+    void ServeLive(HttpListenerContext ctx, int ch)
+    {
+        if (Interlocked.Increment(ref _liveOpen) > 1)
+        {
+            Interlocked.Decrement(ref _liveOpen);
+            Interlocked.Increment(ref LiveRefused);
+            ctx.Response.StatusCode = 403;
+            ctx.Response.Close();
+            return;
+        }
+        LivePeak = Math.Max(LivePeak, _liveOpen);
+        try
+        {
+            ctx.Response.ContentType = "video/mp2t";
+            ctx.Response.SendChunked = true;
+            var o = ctx.Response.OutputStream;
+            long now() => (long)((_clock.Elapsed.TotalSeconds + 60) * LiveRate); // the channel has been on for a while
+            long next = Math.Max(0, now() - 20 * LiveRate);
+            var pkt = new byte[188];
+            while (true)
+            {
+                long upTo = now();
+                var batch = new MemoryStream();
+                for (; next < upTo; next++) { MakePacket(pkt, ch, next); batch.Write(pkt); }
+                if (batch.Length > 0) o.Write(batch.GetBuffer(), 0, (int)batch.Length);
+                Thread.Sleep(40);
+            }
+        }
+        catch { try { ctx.Response.Abort(); } catch { } }
+        finally { Thread.Sleep(100); Interlocked.Decrement(ref _liveOpen); } // providers take a moment to free the slot
+    }
+
+    /// <summary>A transport stream packet: every 10th carries the stream's clock; all carry their number (and the channel).</summary>
+    static void MakePacket(byte[] p, int ch, long n)
+    {
+        Array.Clear(p);
+        p[0] = 0x47; p[1] = 0x01; p[2] = 0x00; // PID 0x100
+        if (n % 10 == 0)
+        {
+            p[3] = 0x20; p[4] = 183; p[5] = 0x10;
+            long pcr = (long)(n * 27_000_000.0 / LiveRate);
+            long b = pcr / 300; int ext = (int)(pcr % 300);
+            p[6] = (byte)(b >> 25); p[7] = (byte)(b >> 17); p[8] = (byte)(b >> 9); p[9] = (byte)(b >> 1);
+            p[10] = (byte)(((b & 1) << 7) | 0x7E | ((ext >> 8) & 1)); p[11] = (byte)ext;
+            BitConverter.TryWriteBytes(p.AsSpan(12), n);
+            p[20] = (byte)ch;
+        }
+        else
+        {
+            p[3] = 0x10;
+            BitConverter.TryWriteBytes(p.AsSpan(4), n);
+            p[12] = (byte)ch;
+        }
+    }
+
+    static (long N, int Ch) ReadPacket(ReadOnlySpan<byte> p) =>
+        (p[3] & 0x20) != 0 ? (BitConverter.ToInt64(p[12..20]), p[20]) : (BitConverter.ToInt64(p[4..12]), p[12]);
+
+    /// <summary>
+    /// The self-test's "Share one connection" check (both apps): two live channels from a stand-in provider that allows one
+    /// connection, each read at real time like a player would. Both must arrive complete and in order, with never more than
+    /// one connection open.
+    /// </summary>
+    public static async Task CheckSharedConnectionAsync(Action<string> note, Action<Exception> error, int seconds = 16)
+    {
+        using var server = new TestServer(null);
+        using var share = new ConnectionShare();
+        string problem = null;
+        share.Problem += (_, m) => problem = m;
+        var a = share.Add("a", server.Base + "live/1.ts");
+        var b = share.Add("b", server.Base + "live/2.ts");
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(seconds));
+        async Task<(long got, long gaps, long repeats, bool wrongChannel, double stalls)> Watch(string url, int ch)
+        {
+            long got = 0, gaps = 0, repeats = 0, last = -1;
+            bool wrong = false;
+            double stalled = 0;
+            using var http = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
+            try
+            {
+                await using var st = await http.GetStreamAsync(url, cts.Token);
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                var buf = new byte[188 * 64];
+                int have = 0;
+                double started = -1;
+                while (!cts.IsCancellationRequested)
+                {
+                    // Like a player: take what's there, but no faster than real time once it's playing (a 2-second buffer).
+                    if (started >= 0 && got > (sw.Elapsed.TotalSeconds - started + 2) * LiveRate) { await Task.Delay(50, cts.Token); continue; }
+                    var t0 = sw.Elapsed;
+                    int n = await st.ReadAsync(buf.AsMemory(have), cts.Token);
+                    if (n == 0) break;
+                    if (started >= 0 && (sw.Elapsed - t0).TotalSeconds > 0.25) stalled += (sw.Elapsed - t0).TotalSeconds;
+                    have += n;
+                    int whole = have / 188 * 188;
+                    for (int i = 0; i < whole; i += 188)
+                    {
+                        var (num, c) = ReadPacket(buf.AsSpan(i, 188));
+                        if (c != ch) wrong = true;
+                        if (last >= 0 && num <= last) repeats++;
+                        else if (last >= 0 && num > last + 1) gaps++;
+                        last = Math.Max(last, num);
+                        got++;
+                        if (started < 0) started = sw.Elapsed.TotalSeconds;
+                    }
+                    Buffer.BlockCopy(buf, whole, buf, 0, have - whole);
+                    have -= whole;
+                }
+            }
+            catch (OperationCanceledException) { }
+            return (got, gaps, repeats, wrong, stalled);
+        }
+        var ra = Watch(a, 1);
+        var rb = Watch(b, 2);
+        await Task.WhenAll(ra, rb);
+        foreach (var (name, r) in new[] { ("first", ra.Result), ("second", rb.Result) })
+        {
+            double secs = r.got / (double)LiveRate;
+            note($"shared connection: {name} channel {secs:0.0}s received · gaps {r.gaps} · repeats {r.repeats} · waited {r.stalls:0.0}s");
+            if (r.wrongChannel || r.repeats > 0 || r.gaps > 0 || secs < seconds * 0.6)
+                error(new Exception($"Sharing one connection didn't deliver the {name} channel complete and in order ({secs:0.0}s, {r.gaps} gaps, {r.repeats} repeats{(r.wrongChannel ? ", mixed up with the other" : "")})."));
+        }
+        note($"shared connection: most connections open at once {server.LivePeak} (Dingus's count {share.PeakConnections}) · refused {server.LiveRefused}{(problem != null ? " · " + problem : "")}");
+        if (server.LivePeak > 1 || share.PeakConnections > 1) error(new Exception("Sharing one connection opened more than one."));
     }
 
     /// <summary>
