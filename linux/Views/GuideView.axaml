@@ -35,11 +35,24 @@
                     <RadioButton x:Name="ModeTonight" Classes="chip" GroupName="GuideMode" Content="Tonight" Tag="tonight"
                                  IsCheckedChanged="Mode_Checked" ToolTip.Tip="What's on this evening"/>
                 </WrapPanel>
-                <TextBlock DockPanel.Dock="Top" Text="CATEGORIES" Margin="20,12,0,8" FontSize="11" FontWeight="SemiBold" Classes="muted"/>
+                <DockPanel DockPanel.Dock="Top" Margin="20,8,10,4">
+                    <Button x:Name="ReorderButton" DockPanel.Dock="Right" Classes="ghost" Content="Reorder" FontSize="11" Padding="8,3"
+                            Click="Reorder_Click" ToolTip.Tip="Change the order of the categories (you can also right-click one)"/>
+                    <TextBlock Text="CATEGORIES" FontSize="11" FontWeight="SemiBold" Classes="muted" VerticalAlignment="Center"/>
+                </DockPanel>
                 <ListBox x:Name="CategoryList" Classes="clean categories" SelectionChanged="CategoryList_SelectionChanged" Padding="0,0,0,12">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis"/>
+                            <DockPanel>
+                                <!-- Reorder mode: move this category up or down -->
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" IsVisible="{Binding ShowArrows}" Margin="6,-5,-10,-5">
+                                    <Button Classes="icon" Content="{x:Static local:Icons.ChevronUp}" Width="26" Height="26" FontSize="16"
+                                            Click="CatUp_Click" ToolTip.Tip="Move up"/>
+                                    <Button Classes="icon" Content="{x:Static local:Icons.ChevronDown}" Width="26" Height="26" FontSize="16"
+                                            Click="CatDown_Click" ToolTip.Tip="Move down"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis"/>
+                            </DockPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>

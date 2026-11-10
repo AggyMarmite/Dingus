@@ -75,6 +75,8 @@ public partial class LibraryView : UserControl, IPage
     public void OnHidden()
     {
         _shown = false;
+        _reordering = false;
+        ReorderButton.Content = "Reorder";
         CloseDetail();
         _all = new List<PosterItem>();
         _byId = new Dictionary<string, PosterItem>();
@@ -130,7 +132,7 @@ public partial class LibraryView : UserControl, IPage
             _myListCat,
         };
         foreach (var c in cats)
-            if (counts.TryGetValue(c.Id, out var n)) items.Add(new CategoryItem { Id = c.Id, Name = c.Name, Count = n });
+            if (counts.TryGetValue(c.Id, out var n)) items.Add(new CategoryItem { Id = c.Id, Name = c.Name, Count = n, CanMove = true, Reordering = _reordering });
 
         _suppress = true;
         CategoryList.ItemsSource = items;
@@ -270,6 +272,40 @@ public partial class LibraryView : UserControl, IPage
         PosterList.ItemsSource = rows;
         if (force && rows.Count > 0) PosterList.ScrollIntoView(0);
     }
+
+
+    // ------------------------------------------------------------------ reordering categories
+
+    bool _reordering;
+
+    /// <summary>"Reorder" ↔ "Done": arrows on each category to move it; the list (and the guide) follow your order.</summary>
+    void Reorder_Click(object sender, RoutedEventArgs e) => SetReordering(!_reordering);
+
+    void SetReordering(bool on)
+    {
+        if (_reordering == on) return;
+        _reordering = on;
+        ReorderButton.Content = on ? "Done" : "Reorder";
+        foreach (var c in CurrentCategories) c.Reordering = on;
+        if (!on) Rebuild();
+    }
+
+    void CatUp_Click(object sender, RoutedEventArgs e) => MoveCategory(sender, -1);
+    void CatDown_Click(object sender, RoutedEventArgs e) => MoveCategory(sender, 1);
+
+    void MoveCategory(object sender, int delta)
+    {
+        if ((sender as Control)?.DataContext is not CategoryItem c) return;
+        var list = CategoryOrder.Reordered(_mode == LibraryMode.Movies ? "vod" : "series", CurrentCategories, c, delta);
+        var sel = CategoryList.SelectedItem;
+        _suppress = true;
+        CategoryList.ItemsSource = list;
+        CategoryList.SelectedItem = sel;
+        _suppress = false;
+        CategoryList.ScrollIntoView(c);
+    }
+
+    IReadOnlyList<CategoryItem> CurrentCategories => CategoryList.ItemsSource as IReadOnlyList<CategoryItem> ?? Array.Empty<CategoryItem>();
 
     // ------------------------------------------------------------------ interaction
 

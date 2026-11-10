@@ -25,7 +25,7 @@ public static class GuideRows
         bool merge = SettingsStore.Current.MergeDuplicates;
         var groups = new Dictionary<string, GuideRow>();
         int i = 1;
-        foreach (var c in data.Channels)
+        foreach (var c in InCategoryOrder(data))
         {
             if (hidden.Contains(c.CategoryId)) continue;
             var key = merge ? ChannelMerger.Key(c) : "";
@@ -53,6 +53,22 @@ public static class GuideRows
         foreach (var r in all)
             foreach (var cid in r.CategoryIds) counts[cid] = counts.TryGetValue(cid, out var n0) ? n0 + 1 : 1;
         return new Set(all, everything, byId, counts);
+    }
+
+    /// <summary>
+    /// The channels with categories in your order (Live TV's right-click / drag order), so "All channels" in the guide follows
+    /// it too; channels keep the provider's order within a category. Unchanged when you haven't reordered anything.
+    /// </summary>
+    static IEnumerable<Channel> InCategoryOrder(CatalogData data)
+    {
+        if (!CategoryOrder.HasOrder("live")) return data.Channels;
+        var rank = new Dictionary<string, int>();
+        int n = 0;
+        foreach (var c in CategoryOrder.Apply("live", data.LiveCategories)) rank.TryAdd(c.Id, n++);
+        return data.Channels.Select((c, idx) => (c, idx))
+            .OrderBy(x => x.c.CategoryId != null && rank.TryGetValue(x.c.CategoryId, out var r) ? r : int.MaxValue)
+            .ThenBy(x => x.idx)
+            .Select(x => x.c);
     }
 
     /// <summary>The variant whose id the guide has programmes for (else the first).</summary>

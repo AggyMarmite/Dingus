@@ -24,6 +24,13 @@ public class CategoryItem : Observable
     public string Name { get; set; }
     int _count;
     public int Count { get => _count; set => Set(ref _count, value); }
+
+    /// <summary>One of the playlist's categories (not "All", "Favourites" and the like, which stay at the top).</summary>
+    public bool CanMove { get; set; }
+    bool _reordering;
+    /// <summary>The list is in "Reorder" mode: movable categories show up / down arrows.</summary>
+    public bool Reordering { get => _reordering; set { if (Set(ref _reordering, value)) Raise(nameof(ShowArrows)); } }
+    public bool ShowArrows => _reordering && CanMove;
 }
 
 public class GuideRow : Observable

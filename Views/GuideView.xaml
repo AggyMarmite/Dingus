@@ -19,8 +19,11 @@
                     <RadioButton Style="{StaticResource Chip}" GroupName="GuideMode" Content="Tonight" Tag="tonight"
                                  Checked="Mode_Checked" ToolTip="What's on this evening"/>
                 </WrapPanel>
-                <TextBlock DockPanel.Dock="Top" Text="CATEGORIES" Margin="20,12,0,8" FontSize="11" FontWeight="SemiBold"
-                           Foreground="{StaticResource MutedBrush}"/>
+                <DockPanel DockPanel.Dock="Top" Margin="20,8,10,4">
+                    <Button x:Name="ReorderButton" DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Content="Reorder" FontSize="11"
+                            Padding="8,3" Click="Reorder_Click" ToolTip="Change the order of the categories (you can also right-click one)"/>
+                    <TextBlock Text="CATEGORIES" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                </DockPanel>
                 <ListBox x:Name="CategoryList" Style="{StaticResource CleanList}" ItemContainerStyle="{StaticResource CategoryItem}"
                          VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
                          SelectionChanged="CategoryList_SelectionChanged" Padding="0,0,0,12"
@@ -28,8 +31,20 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <DockPanel>
+                                <!-- Reorder mode: move this category up or down -->
+                                <StackPanel x:Name="Arrows" DockPanel.Dock="Right" Orientation="Horizontal" Visibility="Collapsed" Margin="6,-5,-10,-5">
+                                    <Button Style="{StaticResource IconButton}" Content="&#xE70E;" Width="26" Height="26" FontSize="10"
+                                            Click="CatUp_Click" ToolTip="Move up"/>
+                                    <Button Style="{StaticResource IconButton}" Content="&#xE70D;" Width="26" Height="26" FontSize="10"
+                                            Click="CatDown_Click" ToolTip="Move down"/>
+                                </StackPanel>
                                 <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis"/>
                             </DockPanel>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding ShowArrows}" Value="True">
+                                    <Setter TargetName="Arrows" Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>

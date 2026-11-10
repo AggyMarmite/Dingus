@@ -25,6 +25,9 @@ public static class CategoryOrder
                    .OrderBy(x => x.k).Select(x => x.c).ToList();
     }
 
+    /// <summary>True when you've put this kind's categories in your own order.</summary>
+    public static bool HasOrder(string kind) => Store is { } s && s.TryGetValue(kind, out var ids) && ids.Count > 0;
+
     public const int Top = int.MinValue, Bottom = int.MaxValue;
 
     /// <summary>Moves a category within the order you see (<paramref name="shown"/>): -1 up, +1 down, Top, Bottom.</summary>
@@ -43,6 +46,22 @@ public static class CategoryOrder
         if (s.TryGetValue(kind, out var old)) order.AddRange(old.Where(x => !order.Contains(x)));
         s[kind] = order;
         SettingsStore.Save();
+    }
+
+    /// <summary>
+    /// "Reorder" mode's arrows: moves a category one place (<paramref name="delta"/> -1 up, +1 down) and returns the list
+    /// in its new order – the fixed ones ("All", "Favourites"…) stay first. Saved straight away.
+    /// </summary>
+    public static List<Views.CategoryItem> Reordered(string kind, IReadOnlyList<Views.CategoryItem> current, Views.CategoryItem item, int delta)
+    {
+        var movable = current.Where(c => c.CanMove).ToList();
+        Move(kind, movable.Select(c => c.Id).ToList(), item.Id, delta);
+        var ids = Store != null && Store.TryGetValue(kind, out var o) ? o : new List<string>();
+        var rank = new Dictionary<string, int>();
+        for (int i = 0; i < ids.Count; i++) rank.TryAdd(ids[i], i);
+        return current.Where(c => !c.CanMove)
+            .Concat(movable.Select((c, i) => (c, k: rank.TryGetValue(c.Id, out var r) ? r : ids.Count + i)).OrderBy(x => x.k).Select(x => x.c))
+            .ToList();
     }
 
     public static void Reset(string kind)

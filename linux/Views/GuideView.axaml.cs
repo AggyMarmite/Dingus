@@ -96,7 +96,7 @@ public partial class GuideView : UserControl, IPage
     }
 
     public void OnShown() => RecomputeBlocks();
-    public void OnHidden() { }
+    public void OnHidden() => SetReordering(false);
 
     public void SetPreviewPlaying(bool playing) =>
         PreviewPlaceholder.IsVisible = !(playing);
@@ -154,7 +154,7 @@ public partial class GuideView : UserControl, IPage
         };
         foreach (var c in CategoryOrder.Apply("live", data.LiveCategories))
             if (!hidden.Contains(c.Id) && counts.TryGetValue(c.Id, out var n))
-                cats.Add(new CategoryItem { Id = c.Id, Name = c.Name, Count = n });
+                cats.Add(new CategoryItem { Id = c.Id, Name = c.Name, Count = n, CanMove = true, Reordering = _reordering });
 
         _suppressCat = true;
         CategoryList.ItemsSource = cats;
@@ -450,6 +450,54 @@ public partial class GuideView : UserControl, IPage
         FavGlyph.Text = fav ? Icons.Star : Icons.StarOutline;
         FavText.Text = fav ? "Favourite" : "Add to favourites";
     }
+
+
+    // ------------------------------------------------------------------ reordering categories
+
+    bool _reordering;
+
+    /// <summary>"Reorder" ↔ "Done": arrows on each category to move it; the list (and the guide) follow your order.</summary>
+    void Reorder_Click(object sender, RoutedEventArgs e) => SetReordering(!_reordering);
+
+    void SetReordering(bool on)
+    {
+        if (_reordering == on) return;
+        _reordering = on;
+        ReorderButton.Content = on ? "Done" : "Reorder";
+        foreach (var c in CurrentCategories) c.Reordering = on;
+        if (!on) Rebuild(); // the guide's rows follow the new order
+    }
+
+    void CatUp_Click(object sender, RoutedEventArgs e) => MoveCategory(sender, -1);
+    void CatDown_Click(object sender, RoutedEventArgs e) => MoveCategory(sender, 1);
+
+    void MoveCategory(object sender, int delta)
+    {
+        if ((sender as Control)?.DataContext is not CategoryItem c) return;
+        var list = CategoryOrder.Reordered("live", CurrentCategories, c, delta);
+        var sel = CategoryList.SelectedItem;
+        _suppressCat = true;
+        CategoryList.ItemsSource = list;
+        CategoryList.SelectedItem = sel;
+        _suppressCat = false;
+        CategoryList.ScrollIntoView(c);
+    }
+
+    IReadOnlyList<CategoryItem> CurrentCategories => CategoryList.ItemsSource as IReadOnlyList<CategoryItem> ?? Array.Empty<CategoryItem>();
+
+
+    // ------------------------------------------------------------------ self-test: reordering
+    internal void SelfTestSetReordering(bool on) => SetReordering(on);
+    internal string SelfTestFirstMovable => CurrentCategories.FirstOrDefault(c => c.CanMove)?.Id;
+    /// <summary>Moves the second of the playlist's categories up one; returns its id.</summary>
+    internal string SelfTestMoveSecondUp()
+    {
+        var c = CurrentCategories.Where(x => x.CanMove).Skip(1).FirstOrDefault();
+        if (c != null) MoveCategory(new Button { DataContext = c }, -1);
+        return c?.Id;
+    }
+    internal string SelfTestFirstRowCategory => _all.FirstOrDefault()?.Channel.CategoryId;
+    internal void SelfTestResetOrder() { CategoryOrder.Reset("live"); Rebuild(); }
 
     // ------------------------------------------------------------------ interaction
 

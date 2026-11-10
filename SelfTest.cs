@@ -51,6 +51,23 @@ public static class SelfTest
             CheckTitleBarClickable(main);
             await Page(main, main.NavHome, "01-home", fullScroll: true);
             await Page(main, main.NavGuide, "02-guide");
+            // Categories in your own order: Reorder, move the second one up, Done – the list and the guide's rows follow it.
+            {
+                var g = main.SelfTestGuide;
+                g.SelfTestSetReordering(true);
+                await Idle(400);
+                var moved = g.SelfTestMoveSecondUp();
+                await Idle(400);
+                Snap(main.SelfTestRoot, "03b-guide-reorder");
+                bool listOk = moved != null && g.SelfTestFirstMovable == moved;
+                g.SelfTestSetReordering(false);
+                await Idle(800);
+                bool rowsOk = moved != null && g.SelfTestFirstRowCategory == moved;
+                Note($"categories: moved {moved} up · first in the list={listOk} · first in the guide={rowsOk}");
+                if (!listOk || !rowsOk) Error(new Exception("Moving a category up didn't change the order of the list or the guide."));
+                g.SelfTestResetOrder();
+                await Idle(500);
+            }
             await GuideMode(main, "now", "03-guide-on-now");
             await GuideMode(main, "tonight", "04-guide-tonight");
             await GuideMode(main, "grid", null);
