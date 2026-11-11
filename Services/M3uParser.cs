@@ -33,7 +33,7 @@ public static class M3uParser
             {
                 var a = ParseAttrs(line);
                 var epg = Get(a, "url-tvg") ?? Get(a, "x-tvg-url");
-                if (epg != null) data.SourceEpgUrl = epg.Split(',')[0].Trim();
+                if (epg != null) data.SourceEpgUrl = epg.Trim(); // may list several guides, comma-separated
                 continue;
             }
             if (line.StartsWith("#EXTINF", StringComparison.OrdinalIgnoreCase))

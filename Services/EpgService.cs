@@ -171,6 +171,113 @@ public static class EpgService
         File.Move(tmp, dest, true);
     }
 
+    /// <summary>Guide addresses from a box that may hold several (one per line, or separated by commas/spaces).</summary>
+    public static List<string> SplitUrls(string s)
+    {
+        var list = new List<string>();
+        if (string.IsNullOrWhiteSpace(s)) return list;
+        foreach (var part in Regex.Split(s, @"[\s,;|]+(?=https?://|[a-zA-Z]:\\|/)|[\r\n]+"))
+        {
+            var u = part.Trim().TrimEnd(',', ';', '|').Trim();
+            if (u.Length > 0) list.Add(u);
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// Downloads every guide and combines them into one file, in order: a guide channel that an earlier guide
+    /// already has is skipped in later ones, so the first guide wins and later ones only fill in what it lacks.
+    /// A guide that fails to download is skipped (the others still work); it fails only if none download.
+    /// </summary>
+    public static Task DownloadAllAsync(IReadOnlyList<string> urls, string dest, CancellationToken ct)
+    {
+        if (urls.Count == 1) return DownloadAsync(urls[0], dest, ct);
+        return Task.Run(() => DataService.TimeAsync("guide: downloading", async () =>
+        {
+            var parts = new List<string>();
+            Exception first = null;
+            try
+            {
+                for (int i = 0; i < urls.Count; i++)
+                {
+                    var part = dest + ".src" + i;
+                    try { await DownloadCoreAsync(urls[i], part, ct); parts.Add(part); }
+                    catch (Exception ex) when (!ct.IsCancellationRequested) { Log.Error(ex); first ??= ex; }
+                }
+                if (parts.Count == 0) throw first ?? new InvalidOperationException("no guide could be downloaded");
+                if (parts.Count == 1) File.Move(parts[0], dest, true);
+                else Merge(parts, dest);
+            }
+            finally { foreach (var p in parts) try { File.Delete(p); } catch { } }
+            return 0;
+        }), ct);
+    }
+
+    static Stream OpenGuide(string path)
+    {
+        var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 16);
+        int b1 = fs.ReadByte(), b2 = fs.ReadByte();
+        fs.Position = 0;
+        return (b1 == 0x1f && b2 == 0x8b) ? new GZipStream(fs, CompressionMode.Decompress) : fs;
+    }
+
+    static readonly XmlReaderSettings ReadSettings = new()
+    {
+        DtdProcessing = DtdProcessing.Ignore, XmlResolver = null, IgnoreWhitespace = true,
+        IgnoreComments = true, IgnoreProcessingInstructions = true, CheckCharacters = false,
+    };
+
+    /// <summary>Combines several XMLTV guides into one: all channels first (the matching needs them up front), then programmes.</summary>
+    internal static void Merge(IReadOnlyList<string> parts, string dest)
+    {
+        var tmp = dest + ".part";
+        var owner = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase); // guide channel id → which guide has it
+        using (var outFs = File.Create(tmp))
+        using (var w = XmlWriter.Create(outFs, new XmlWriterSettings { Indent = false, CheckCharacters = false }))
+        {
+            w.WriteStartDocument();
+            w.WriteStartElement("tv");
+            w.WriteAttributeString("generator-info-name", "Dingus");
+            for (int pass = 0; pass < 2; pass++)
+                for (int i = 0; i < parts.Count; i++)
+                {
+                    try
+                    {
+                        using var s = OpenGuide(parts[i]);
+                        using var r = XmlReader.Create(s, ReadSettings);
+                        r.MoveToContent();
+                        while (!r.EOF)
+                        {
+                            if (r.NodeType != XmlNodeType.Element) { r.Read(); continue; }
+                            if (r.LocalName == "channel")
+                            {
+                                if (pass == 1) { r.Skip(); continue; }
+                                var id = r.GetAttribute("id");
+                                if (string.IsNullOrWhiteSpace(id) || (owner.TryGetValue(id, out var o) && o != i)) { r.Skip(); continue; }
+                                owner[id] = i;
+                                XNode.ReadFrom(r).WriteTo(w);
+                                continue;
+                            }
+                            if (r.LocalName == "programme")
+                            {
+                                if (pass == 0) { r.Skip(); continue; }
+                                var cid = r.GetAttribute("channel");
+                                if (cid == null || (owner.TryGetValue(cid, out var o) && o != i)) { r.Skip(); continue; }
+                                XNode.ReadFrom(r).WriteTo(w);
+                                continue;
+                            }
+                            r.Read();
+                        }
+                    }
+                    catch (XmlException ex) { Log.Error(ex); }        // a broken guide: keep what was read
+                    catch (InvalidDataException ex) { Log.Error(ex); }
+                }
+            w.WriteEndElement();
+            w.WriteEndDocument();
+        }
+        File.Move(tmp, dest, true);
+    }
+
     // ---------------------------------------------------------------- the saved, matched guide
 
     /// <summary>
@@ -191,7 +298,7 @@ public static class EpgService
         return data;
     }
 
-    const string CacheMagic = "DingusGuide2";
+    const string CacheMagic = "DingusGuide3"; // 3: smarter matching (re-match guides saved by older versions)
 
     static string CacheKey(string path, IReadOnlyList<Channel> channels, int shiftMinutes, IReadOnlyDictionary<string, string> overrides)
     {
@@ -339,6 +446,7 @@ public static class EpgService
         var xmlNames = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         var xmlIcons = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         Dictionary<string, List<Channel>> map = null;
+        Dictionary<string, int> shifts = null;
         var now = DateTime.Now;
         var minT = now.AddHours(-6);
         var maxT = now.AddHours(FutureHours);
@@ -372,7 +480,7 @@ public static class EpgService
                     }
                     if (reader.LocalName == "programme")
                     {
-                        map ??= BuildMap(xmlNames, channels, overrides);
+                        map ??= BuildMap(xmlNames, channels, overrides, out shifts);
                         var cid = reader.GetAttribute("channel");
                         if (cid == null) { reader.Skip(); continue; }
                         if (!map.TryGetValue(cid, out var targets))
@@ -420,7 +528,8 @@ public static class EpgService
                         foreach (var ch in targets)
                         {
                             if (!data.ByChannel.TryGetValue(ch.Id, out var list)) data.ByChannel[ch.Id] = list = new List<Programme>();
-                            list.Add(p);
+                            // "+1" channel using the main channel's guide: the same programme, an hour later.
+                            list.Add(shifts.TryGetValue(ch.Id, out var sh) ? Shifted(p, sh) : p);
                         }
                         if (p.Start <= now && p.End > now) data.NowTitles.TryAdd(cid, p.Title);
                         continue;
@@ -432,7 +541,7 @@ public static class EpgService
         catch (XmlException ex) { Log.Error(ex); } // truncated/odd file – keep what was read
         catch (InvalidDataException ex) { Log.Error(ex); } // broken gzip
 
-        map ??= BuildMap(xmlNames, channels, overrides);
+        map ??= BuildMap(xmlNames, channels, overrides, out shifts);
 
         foreach (var list in data.ByChannel.Values)
         {
@@ -456,6 +565,12 @@ public static class EpgService
         store.Seal();
         return data;
     }
+
+    static Programme Shifted(Programme p, int minutes) => new()
+    {
+        Start = p.Start.AddMinutes(minutes), End = p.End.AddMinutes(minutes), Title = p.Title, Genre = p.Genre,
+        Store = p.Store, DescOffset = p.DescOffset, DescLength = p.DescLength,
+    };
 
     static string Pool(Dictionary<string, string> pool, string s)
     {
@@ -481,22 +596,52 @@ public static class EpgService
         return false;
     }
 
+    // ---------------------------------------------------------------- matching channels to the guide
+    //
+    // Tried in order, stopping at the first that finds something:
+    //  1. your own match (from "pick guide channel")
+    //  2. the playlist's guide id (tvg-id / epg_channel_id)
+    //  3. the cleaned-up name ("UK: Channel One HD" = "Channel One")
+    //  4. a looser name (also ignores "TV", "the", country words, and treats "One" as "1")
+    //  5. a close-enough name (small spelling differences), only when it's clearly the best fit and the
+    //     numbers in the name agree, so "Sports 1" never lands on "Sports 2"
+    //  6. "+1" channels with no guide of their own: the main channel's guide, an hour later
+    // When several guide channels share a name (e.g. a UK and an Irish feed), the one from the playlist
+    // channel's country ("UK: …") is picked.
+
     static Dictionary<string, List<Channel>> BuildMap(Dictionary<string, List<string>> xmlNames, IReadOnlyList<Channel> channels,
-                                                      IReadOnlyDictionary<string, string> overrides)
+                                                      IReadOnlyDictionary<string, string> overrides) =>
+        BuildMap(xmlNames, channels, overrides, out _);
+
+    internal static Dictionary<string, List<Channel>> BuildMap(Dictionary<string, List<string>> xmlNames, IReadOnlyList<Channel> channels,
+                                                      IReadOnlyDictionary<string, string> overrides, out Dictionary<string, int> shifts)
     {
-        var byName = new Dictionary<string, string>();
-        var byLoose = new Dictionary<string, string>();
+        shifts = new Dictionary<string, int>();
+        var byName = new Dictionary<string, List<string>>();
+        var byLoose = new Dictionary<string, List<string>>();
+        var fuzzy = new FuzzyIndex();
         foreach (var (id, names) in xmlNames)
         {
             foreach (var n in names)
             {
                 AddKey(byName, Norm(n), id);
                 AddKey(byLoose, Loose(n), id);
+                fuzzy.Add(id, n);
             }
             AddKey(byName, Norm(IdSuffixRx.Replace(id, "")), id);
         }
 
+        string ByName(string name, string cc) =>
+            Find(byName, Norm(name), cc) ?? Find(byLoose, Loose(name), cc);
+
         var map = new Dictionary<string, List<Channel>>(StringComparer.OrdinalIgnoreCase);
+        var unmatched = new List<Channel>();
+        void Put(Channel ch, string x)
+        {
+            if (!map.TryGetValue(x, out var list)) map[x] = list = new List<Channel>();
+            list.Add(ch);
+        }
+
         foreach (var ch in channels)
         {
             string x = null;
@@ -505,26 +650,86 @@ public static class EpgService
                 if (forced.Length == 0) continue;                 // you said "no guide for this channel"
                 if (xmlNames.ContainsKey(forced)) x = forced;     // your match (if the guide still has it)
             }
+            var cc = Country(ch.Name);
             if (x == null && !string.IsNullOrWhiteSpace(ch.EpgId))
             {
                 if (xmlNames.ContainsKey(ch.EpgId)) x = ch.EpgId;
-                else x = Find(byName, Norm(IdSuffixRx.Replace(ch.EpgId, "")));
+                else x = Find(byName, Norm(IdSuffixRx.Replace(ch.EpgId, "")), cc ?? IdCountry(ch.EpgId));
             }
-            x ??= Find(byName, Norm(ch.Name)) ?? Find(byLoose, Loose(ch.Name));
+            x ??= ByName(ch.Name, cc);
+            if (x != null) Put(ch, x); else unmatched.Add(ch);
+        }
+
+        foreach (var ch in unmatched)
+        {
+            var cc = Country(ch.Name);
+            var x = fuzzy.Best(ch.Name, cc);
+            int shift = 0;
+            if (x == null && TimeshiftOf(ch.Name, out var hours, out var baseName))
+            {
+                x = ByName(baseName, cc) ?? fuzzy.Best(baseName, cc);
+                if (x != null) shift = hours * 60;
+            }
             if (x == null) continue;
-            if (!map.TryGetValue(x, out var list)) map[x] = list = new List<Channel>();
-            list.Add(ch);
+            Put(ch, x);
+            if (shift != 0) shifts[ch.Id] = shift;
         }
         return map;
     }
 
-    static void AddKey(Dictionary<string, string> d, string key, string id)
+    static void AddKey(Dictionary<string, List<string>> d, string key, string id)
     {
-        if (key.Length > 0) d.TryAdd(key, id);
+        if (key.Length == 0) return;
+        if (!d.TryGetValue(key, out var l)) d[key] = l = new List<string>(1);
+        if (!l.Contains(id)) l.Add(id);
     }
 
-    static string Find(Dictionary<string, string> d, string key) =>
-        key.Length > 0 && d.TryGetValue(key, out var v) ? v : null;
+    static string Find(Dictionary<string, List<string>> d, string key, string cc)
+    {
+        if (key.Length == 0 || !d.TryGetValue(key, out var l)) return null;
+        if (cc != null && l.Count > 1)
+            foreach (var id in l)
+                if (IdCountry(id) == cc) return id;
+        return l[0];
+    }
+
+    static readonly Regex CountryRx = new(@"^\s*[\[\(|]?\s*([a-z]{2,3})\s*(?:[\]\)|:]|\s-\s)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    static readonly Regex TimeshiftRx = new(@"(?:\+\s*([1-9])|\bplus\s*([1-9]))(?!\d)(?:\s*(?:h|hr|hrs|hour|hours)\b)?",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    static readonly Regex NumberWordRx = new(@"\b(?:one|two|three|four|five|six|seven|eight|nine|ten)\b",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    static readonly string[] NumberWords = { "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten" };
+
+    /// <summary>The country a playlist channel is labelled with ("UK: …", "[IE] …", "US | …"), as a guide id would end (".uk").</summary>
+    internal static string Country(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return null;
+        var m = CountryRx.Match(name);
+        if (!m.Success) return null;
+        var c = m.Groups[1].Value.ToLowerInvariant();
+        return c switch { "gb" => "uk", "usa" => "us", "eng" => "uk", _ => c.Length == 2 ? c : null };
+    }
+
+    /// <summary>"Channel1.uk" → "uk".</summary>
+    static string IdCountry(string id)
+    {
+        var m = IdSuffixRx.Match(id ?? "");
+        if (!m.Success) return null;
+        var c = m.Value.Substring(1).ToLowerInvariant();
+        return c == "gb" ? "uk" : c;
+    }
+
+    /// <summary>"Channel Four +1" → 1 hour, "Channel Four".</summary>
+    internal static bool TimeshiftOf(string name, out int hours, out string baseName)
+    {
+        hours = 0; baseName = null;
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        var m = TimeshiftRx.Match(name);
+        if (!m.Success) return false;
+        hours = int.Parse(m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value);
+        baseName = (name.Substring(0, m.Index) + " " + name.Substring(m.Index + m.Length)).Trim();
+        return baseName.Length > 0;
+    }
 
     /// <summary>"UK: Channel One HD" → "channelone"; "Sports Main+1" → "sportsmainplus1".</summary>
     public static string Norm(string s)
@@ -537,14 +742,101 @@ public static class EpgService
         return NonAlnumRx.Replace(s, "");
     }
 
-    static string Loose(string s)
+    static string Loose(string s) => string.Concat(Words(s));
+
+    /// <summary>The words of a name with prefixes, quality tags and filler words removed, numbers as digits.</summary>
+    internal static string[] Words(string s)
     {
-        if (string.IsNullOrWhiteSpace(s)) return "";
+        if (string.IsNullOrWhiteSpace(s)) return Array.Empty<string>();
+        s = PrefixRx.Replace(s, "");
         s = PrefixRx.Replace(s, "");
         s = s.Replace("&", " and ").Replace("+1", " plus1 ");
         s = QualityRx.Replace(s.ToLowerInvariant(), " ");
         s = LooseRx.Replace(s, " ");
-        return NonAlnumRx.Replace(s, "");
+        s = NumberWordRx.Replace(s, m => (Array.IndexOf(NumberWords, m.Value.ToLowerInvariant()) + 1).ToString());
+        return NonAlnumRx.Split(s).Where(w => w.Length > 0).ToArray();
+    }
+
+    /// <summary>Finds the guide channel whose name is closest to a playlist channel's (for small spelling differences).</summary>
+    sealed class FuzzyIndex
+    {
+        const double MinScore = 0.80, MinLead = 0.04;
+        const int CommonWord = 300; // words shared by this many guide channels ("sports", "news") don't pick candidates
+
+        readonly List<(string Id, string Key, string Digits, string Country)> _entries = new();
+        readonly Dictionary<string, List<int>> _byWord = new();
+        readonly HashSet<string> _seen = new();
+
+        public void Add(string id, string name)
+        {
+            var words = Words(name);
+            var key = string.Concat(words);
+            if (key.Length < 3 || !_seen.Add(id + "\n" + key)) return;
+            int i = _entries.Count;
+            _entries.Add((id, key, Digits(key), IdCountry(id)));
+            foreach (var w in words.Distinct())
+            {
+                if (!_byWord.TryGetValue(w, out var l)) _byWord[w] = l = new List<int>();
+                l.Add(i);
+            }
+        }
+
+        public string Best(string name, string cc)
+        {
+            var words = Words(name);
+            var key = string.Concat(words);
+            if (key.Length < 3) return null;
+            var digits = Digits(key);
+            var grams = Bigrams(key);
+            var tried = new HashSet<int>();
+            string best = null, second = null;
+            double bestScore = 0, secondScore = 0;
+            foreach (var w in words.Distinct())
+            {
+                if (!_byWord.TryGetValue(w, out var l) || l.Count > CommonWord) continue;
+                foreach (var i in l)
+                {
+                    if (!tried.Add(i)) continue;
+                    var e = _entries[i];
+                    if (e.Digits != digits) continue;             // "Sports 1" ≠ "Sports 2"
+                    double score = Dice(grams, Bigrams(e.Key));
+                    if (cc != null && e.Country == cc) score += 0.03;
+                    if (score > bestScore)
+                    {
+                        if (best != null && best != e.Id) { second = best; secondScore = bestScore; }
+                        best = e.Id; bestScore = score;
+                    }
+                    else if (e.Id != best && score > secondScore) { second = e.Id; secondScore = score; }
+                }
+            }
+            if (best == null || bestScore < MinScore) return null;
+            if (second != null && bestScore - secondScore < MinLead) return null; // two equally good fits: don't guess
+            return best;
+        }
+
+        static string Digits(string key) => new(key.Where(char.IsDigit).ToArray());
+
+        static Dictionary<int, int> Bigrams(string s)
+        {
+            var d = new Dictionary<int, int>(s.Length);
+            for (int i = 0; i + 1 < s.Length; i++)
+            {
+                int g = (s[i] << 16) | s[i + 1];
+                d[g] = d.TryGetValue(g, out var n) ? n + 1 : 1;
+            }
+            return d;
+        }
+
+        static double Dice(Dictionary<int, int> a, Dictionary<int, int> b)
+        {
+            int total = 0, common = 0;
+            foreach (var n in a.Values) total += n;
+            foreach (var n in b.Values) total += n;
+            if (total == 0) return 0;
+            foreach (var (g, n) in a)
+                if (b.TryGetValue(g, out var m)) common += Math.Min(n, m);
+            return 2.0 * common / total;
+        }
     }
 
     /// <summary>XMLTV time: "20261015200000 +0100".</summary>

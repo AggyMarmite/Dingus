@@ -336,15 +336,15 @@ public sealed class DataService
         if (p == null) return;
         var gen = _gen;
         var ct = _cts.Token;
-        var url = EpgUrlFor(p);
-        if (string.IsNullOrWhiteSpace(url)) return;
+        var urls = EpgUrlsFor(p);
+        if (urls.Count == 0) return;
 
         IsFirstLoad = false;
         BusyIsGuide = true;
         SetBusy(true, "Downloading TV guide…");
         try
         {
-            await EpgService.DownloadAsync(url, EpgFile(p), ct);
+            await EpgService.DownloadAllAsync(urls, EpgFile(p), ct);
             if (gen != _gen) return;
             SetBusy(true, "Matching TV guide…");
             var channels = GuideChannels();
@@ -369,11 +369,22 @@ public sealed class DataService
         finally { SetBusy(false, null); }
     }
 
-    public string EpgUrlFor(PlaylistConfig p)
+    /// <summary>
+    /// Every guide to use, best first: the guide address(es) you typed, then the provider's own guide. Channels are
+    /// matched to the first guide that has them, so your guide wins and the provider's fills in whatever it lacks.
+    /// </summary>
+    public List<string> EpgUrlsFor(PlaylistConfig p)
     {
-        if (!string.IsNullOrWhiteSpace(p.EpgUrl)) return p.EpgUrl.Trim();
-        if (p.Type == PlaylistType.Xtream) return new XtreamClient(p).EpgUrl;
-        return Catalog.SourceEpgUrl;
+        var list = new List<string>();
+        void Add(string s)
+        {
+            foreach (var u in EpgService.SplitUrls(s))
+                if (!list.Contains(u, StringComparer.OrdinalIgnoreCase)) list.Add(u);
+        }
+        Add(p.EpgUrl);
+        if (p.Type == PlaylistType.Xtream) Add(new XtreamClient(p).EpgUrl);
+        else Add(Catalog.SourceEpgUrl);
+        return list;
     }
 
     // ---------------------------------------------------------------- urls & details

@@ -52,7 +52,7 @@
 
         <StackPanel x:Name="EpgPanel">
             <TextBlock Style="{StaticResource FieldLabel}" Text="TV guide address (optional)"/>
-            <TextBox x:Name="EpgBox" Tag="Leave empty to use the provider's guide"/>
+            <TextBox x:Name="EpgBox" Tag="Optional – used first, with the provider's guide filling any gaps"/>
         </StackPanel>
 
         <TextBlock x:Name="ErrorText" Foreground="#FCA5A5" TextWrapping="Wrap" Margin="0,14,0,0" Visibility="Collapsed"/>

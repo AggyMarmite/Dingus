@@ -83,7 +83,7 @@
             <Border Classes="card">
                 <StackPanel>
                     <TextBlock Text="Guide (EPG) address" FontWeight="SemiBold"/>
-                    <TextBlock Text="Leave empty to use your provider's guide. Channels are matched automatically by id and name."
+                    <TextBlock Text="Leave empty to use your provider's guide. You can add more than one, separated by commas – the first guide wins and your provider's guide fills in any channels the others miss. Channels are matched automatically by id and name."
                                Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,10" TextWrapping="Wrap"/>
                     <DockPanel>
                         <Button DockPanel.Dock="Right" Content="Save" Margin="8,0,0,0" Click="SaveEpgUrl_Click"/>
