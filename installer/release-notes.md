@@ -1,3 +1,10 @@
+## What's new in Dingus 0.14.0
+
+* Reorder and hide categories.
+* Multi-view can share one connection (experimental).
+* Lower processor use when idle.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.13.0
 
 * Streamlined Films and TV Shows.
