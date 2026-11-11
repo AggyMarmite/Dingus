@@ -73,9 +73,18 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - name: Install VLC
+        timeout-minutes: 15
         run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q --no-install-recommends vlc-bin vlc-plugin-base vlc-plugin-video-output libvlc-dev libvlccore-dev libfuse2 > /dev/null
+          # The package mirrors sometimes stall or can't be reached: retry, switching mirror after the first try.
+          opts="-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30"
+          for try in 1 2 3; do
+            timeout 300 sudo apt-get $opts update -q && \
+            timeout 420 sudo apt-get $opts install -y -q --no-install-recommends vlc-bin vlc-plugin-base vlc-plugin-video-output libvlc-dev libvlccore-dev libfuse2 > /dev/null && break
+            echo "package install attempt $try didn't finish – trying again"; sleep 10
+            # Ubuntu's own mirror for these machines is sometimes unreachable: use another one for the next try.
+            sudo sed -i -E 's#mirror\+file:/etc/apt/apt-mirrors.txt|https?://(azure\.)?archive\.ubuntu\.com/ubuntu/?|https?://security\.ubuntu\.com/ubuntu/?#http://mirrors.edge.kernel.org/ubuntu/#g' /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null || true
+            [ $try = 3 ] && exit 1
+          done
       - name: Build and attach the AppImage
         env:
           GH_TOKEN: ${{ github.token }}
