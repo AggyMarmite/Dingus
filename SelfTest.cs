@@ -67,6 +67,16 @@ public static class SelfTest
                 if (!listOk || !rowsOk) Error(new Exception("Moving a category up didn't change the order of the list or the guide."));
                 g.SelfTestResetOrder();
                 await Idle(500);
+                // Right-click → Hide this category: it leaves the list (and comes back when shown again).
+                int before = g.SelfTestCategoryCount;
+                var hidden = g.SelfTestHideFirst();
+                await Idle(1500);
+                int after = g.SelfTestCategoryCount;
+                DataService.Instance.SetHidden("live", hidden, false);
+                await Idle(1500);
+                Note($"categories: hid {hidden} – {before} → {after}, back to {g.SelfTestCategoryCount}");
+                if (hidden == null || after != before - 1 || g.SelfTestCategoryCount != before)
+                    Error(new Exception("Hiding a category from its right-click menu didn't take it out of the list (or showing it again didn't bring it back)."));
             }
             await GuideMode(main, "now", "03-guide-on-now");
             await GuideMode(main, "tonight", "04-guide-tonight");

@@ -498,6 +498,17 @@ public partial class GuideView : UserControl, IPage
     }
     internal string SelfTestFirstRowCategory => _all.FirstOrDefault()?.Channel.CategoryId;
     internal void SelfTestResetOrder() { CategoryOrder.Reset("live"); Rebuild(); }
+    internal int SelfTestCategoryCount => CurrentCategories.Count(c => c.CanMove);
+    /// <summary>Right-click → "Hide this category" on the first of the playlist's categories; returns its id.</summary>
+    internal string SelfTestHideFirst()
+    {
+        var shown = CurrentCategories.Where(c => c.CanMove).Select(c => c.Id).ToList();
+        if (shown.Count == 0) return null;
+        var menu = CategoryOrder.Menu("live", shown, shown[0], Rebuild);
+        var hide = menu.Items.OfType<MenuItem>().First(i => (i.Header as string) == "Hide this category");
+        hide.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        return shown[0];
+    }
 
     // ------------------------------------------------------------------ interaction
 

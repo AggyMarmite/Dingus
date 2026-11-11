@@ -88,6 +88,15 @@ public static class CategoryOrder
         var reset = new MenuItem { Header = "Reset to the provider's order", IsEnabled = Store?.ContainsKey(kind) == true };
         reset.Click += (_, _) => { Reset(kind); changed(); };
         m.Items.Add(reset);
+        m.Items.Add(new Separator());
+        // Hidden categories stay out of the lists, the guide and search; they're ticked back on in Settings → Categories.
+        var hide = new MenuItem { Header = "Hide this category" };
+        hide.Click += (_, _) =>
+        {
+            DataService.Instance.SetHidden(kind, id, true);
+            MainWindow.Instance?.ShowToast("Category hidden  ·  show it again in Settings → Categories");
+        };
+        m.Items.Add(hide);
         return m;
     }
 }
