@@ -205,10 +205,17 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - name: Install VLC and a virtual screen
+        timeout-minutes: 15
         run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q --no-install-recommends vlc-bin vlc-plugin-base vlc-plugin-video-output libvlc-dev libvlccore-dev \
-            xvfb openbox xcompmgr ffmpeg imagemagick libfuse2 fonts-dejavu-core > /dev/null
+          # The package mirrors sometimes stall: give up on a slow download quickly and try again (up to 3 times).
+          opts="-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30"
+          for try in 1 2 3; do
+            timeout 300 sudo apt-get $opts update -q && \
+            timeout 420 sudo apt-get $opts install -y -q --no-install-recommends vlc-bin vlc-plugin-base vlc-plugin-video-output libvlc-dev libvlccore-dev \
+              xvfb openbox xcompmgr ffmpeg imagemagick libfuse2 fonts-dejavu-core > /dev/null && break
+            echo "package install attempt $try didn't finish – trying again"; sleep 10
+            [ $try = 3 ] && exit 1
+          done
       - name: Recording timeline fix (a recording with jumps in its time marks comes out the right length)
         run: |
           d=$RUNNER_TEMP/ts; mkdir -p $d
