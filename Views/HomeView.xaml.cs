@@ -37,7 +37,9 @@ public partial class HomeView : UserControl, IPage
     {
         InitializeComponent();
         _refresh.Tick += (_, _) => Build();
-        _advance.Tick += (_, _) => { if (!_heroHover && IsVisible) Step(+1); };
+        // The slideshow moves on while someone's around; after a couple of minutes with nobody using the window it rests
+        // on its picture, so Dingus left on Home uses next to no processor.
+        _advance.Tick += (_, _) => { if (!_heroHover && IsVisible && Memory.SinceActivity < TimeSpan.FromMinutes(2)) Step(+1); };
         // Rebuilt when Live TV has its new channel rows (it works them out in the background after a new playlist).
         Loaded += (_, _) =>
         {

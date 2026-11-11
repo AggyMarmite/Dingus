@@ -244,7 +244,15 @@ public static class Memory
     static readonly TimeSpan Quiet = TimeSpan.FromSeconds(4);
 
     /// <summary>Called on every key press, click and mouse wheel (and by the speed test's pretend clicks).</summary>
-    public static void NoteInput() => _lastInput = DateTime.UtcNow;
+    public static void NoteInput() => _lastInput = _lastActivity = DateTime.UtcNow;
+
+    static DateTime _lastActivity = DateTime.UtcNow;
+
+    /// <summary>Called when the mouse moves over the window too (someone's there, even without clicking).</summary>
+    public static void NoteActivity() => _lastActivity = DateTime.UtcNow;
+
+    /// <summary>How long since anyone used the window – Home's slideshow stops once nobody's around, so Dingus sits idle.</summary>
+    public static TimeSpan SinceActivity => DateTime.UtcNow - _lastActivity;
 
     /// <summary>Compacts soon – a couple of seconds from now, once the window is quiet (several calls collapse into one).</summary>
     public static void CompactSoon()

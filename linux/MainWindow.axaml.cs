@@ -142,6 +142,11 @@ public partial class MainWindow : Window
             if (e.Property == WindowStateProperty) UpdateWindowFrame();
         };
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
+        // Memory is tidied up once you've left the window alone, and Home's slideshow stops when nobody's around.
+        AddHandler(KeyDownEvent, (_, _) => Memory.NoteInput(), RoutingStrategies.Tunnel, true);
+        AddHandler(PointerPressedEvent, (_, _) => Memory.NoteInput(), RoutingStrategies.Tunnel, true);
+        AddHandler(PointerWheelChangedEvent, (_, _) => Memory.NoteInput(), RoutingStrategies.Tunnel, true);
+        AddHandler(PointerMovedEvent, (_, _) => Memory.NoteActivity(), RoutingStrategies.Tunnel, true);
         Root.LayoutUpdated += (_, _) => { if (_previewActive && !_playerMode) PositionPreview(); };
         Video.PropertyChanged += (_, e) =>
         {

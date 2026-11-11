@@ -85,6 +85,7 @@ public partial class App : Application
         {
             if (a.StagingItem.Input is System.Windows.Input.KeyEventArgs or System.Windows.Input.MouseButtonEventArgs
                 or System.Windows.Input.MouseWheelEventArgs) Memory.NoteInput();
+            else if (a.StagingItem.Input is System.Windows.Input.MouseEventArgs) Memory.NoteActivity();
         };
         if (PerfTest.On) main.Loaded += async (_, _) => await PerfTest.RunAsync(main);
         else if (SelfTest.Dir != null) main.Loaded += async (_, _) => await SelfTest.RunAsync(main);
