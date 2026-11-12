@@ -71,7 +71,7 @@ class BrowseActivity : BaseActivity() {
         if (cont.isNotEmpty()) out.add(Row("Continue watching", cont.take(20)))
         if (l.newest.isNotEmpty()) out.add(Row("Recently added", l.newest.take(30).map { Card.Title(kind, it) } +
             Card.SeeAll(kind, Vod.RECENT, "Recently added")))
-        for (c in l.categories) {
+        for (c in Store.ordered(kind, l.categories) { it.id }) {
             if (Store.isHidden("$kind:${c.id}")) continue
             val items = l.byCategory[c.id] ?: continue
             if (items.isEmpty()) continue

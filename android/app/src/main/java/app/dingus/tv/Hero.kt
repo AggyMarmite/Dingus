@@ -21,6 +21,16 @@ class Hero(private val a: Activity, private val scope: CoroutineScope) {
     private var showing: Card? = null
     private val artH = a.resources.displayMetrics.heightPixels / 2
 
+    init {
+        // Fades the artwork into the background colour (left and bottom), drawn in code so it suits every theme.
+        val bg = Themes.color(a, R.attr.dBg)
+        val clear = bg and 0x00FFFFFF
+        val half = (bg and 0x00FFFFFF) or (0x99 shl 24)
+        val left = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT, intArrayOf(bg, half, clear))
+        val bottom = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(bg, clear, clear))
+        a.findViewById<android.view.View>(R.id.heroShade).background = android.graphics.drawable.LayerDrawable(arrayOf(left, bottom))
+    }
+
     fun show(card: Card) {
         showing = card
         handler.removeCallbacksAndMessages(null)

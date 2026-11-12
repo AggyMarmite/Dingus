@@ -32,6 +32,21 @@ object Dialogs {
         }
     }
 
+    /** ≡ on a category: move it up or down, or hide it. [visible] is the list as shown (ids). */
+    fun categoryOptions(a: Activity, kind: String, visible: List<String>, id: String, name: String, done: () -> Unit) {
+        val i = visible.indexOf(id)
+        val opts = listOfNotNull(if (i > 0) "Move up" else null, if (i >= 0 && i < visible.size - 1) "Move down" else null, "Hide")
+        builder(a).setTitle(name)
+            .setItems(opts.toTypedArray()) { _, k ->
+                when (opts[k]) {
+                    "Move up" -> { Store.moveCategory(kind, visible, id, -1); done() }
+                    "Move down" -> { Store.moveCategory(kind, visible, id, 1); done() }
+                    "Hide" -> hideCategory(a, "$kind:$id", name, done)
+                }
+            }
+            .show()
+    }
+
     /** "Hide <category>?" – special categories (Favourites etc.) can't be hidden. */
     fun hideCategory(a: Activity, key: String, name: String, done: () -> Unit) {
         builder(a)

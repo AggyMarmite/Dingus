@@ -41,6 +41,13 @@ class SettingsActivity : BaseActivity() {
             { Store.mergeChannels }) { Store.mergeChannels = it; Repo.reapply() }
         row("Edit channels", { "Rename, renumber or hide channels" }) { startActivity(Intent(this, ChannelEditorActivity::class.java)) }
         row("Hidden categories", { hiddenSummary() }) { unhide() }
+        row("Category order", {
+            if (listOf("live", "movies", "series").any { Store.categoryOrder(it).isNotEmpty() }) "Your own order  ·  press OK to go back to the playlist's"
+            else "The playlist's order  ·  press ≡ on a category to move it"
+        }) {
+            listOf("live", "movies", "series").forEach { Store.setCategoryOrder(it, emptyList()) }
+            Repo.reapply(); update()
+        }
 
         header("Playback")
         toggle("Pause & rewind live TV", "Keeps the last 15 minutes while you watch (MPEG-TS channels)", { Store.timeshift }) { Store.timeshift = it }

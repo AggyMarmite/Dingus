@@ -564,10 +564,12 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
                 val p = h.bindingAdapterPosition
                 if (ev.action == KeyEvent.ACTION_UP && p >= 0 && !items[p].id.startsWith("\u0001")) {
                     val c = items[p]
-                    Dialogs.hideCategory(this@MainActivity, "live:${c.id}", c.name) {
-                        if (current == c.id) showCategory(Repo.ALL, null)
+                    Dialogs.categoryOptions(this@MainActivity, "live", items.map { it.id }.filter { !it.startsWith("\u0001") }, c.id, c.name) {
+                        if (Store.isHidden("live:${c.id}") && current == c.id) showCategory(Repo.ALL, null)
                         set(Repo.sideCategories()); selected(current)
-                        categories.post { categories.getChildAt(0)?.requestFocus() }
+                        val i = items.indexOfFirst { it.id == c.id }.takeIf { it >= 0 } ?: 0
+                        categories.scrollToPosition(i)
+                        categories.post { categories.findViewHolderForAdapterPosition(i)?.itemView?.requestFocus() }
                     }
                 }
                 true

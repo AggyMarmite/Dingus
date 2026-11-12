@@ -54,7 +54,12 @@ class LibraryActivity : BaseActivity() {
             onShow = { show(it.id) },
             onPick = { show(it.id); focusGrid() },
             onMenu = { c ->
-                if (!c.id.startsWith("\u0001")) Dialogs.hideCategory(this, "$kind:${c.id}", c.name) { setCategories() }
+                if (!c.id.startsWith("\u0001")) Dialogs.categoryOptions(this, kind, cats.items.map { it.id }.filter { !it.startsWith("\u0001") }, c.id, c.name) {
+                    setCategories()
+                    val i = cats.indexOf(c.id).coerceAtLeast(0)
+                    categories.scrollToPosition(i)
+                    categories.post { categories.findViewHolderForAdapterPosition(i)?.itemView?.requestFocus() }
+                }
             },
         )
         categories.layoutManager = LinearLayoutManager(this)

@@ -174,6 +174,29 @@ object Store {
         get() = prefs.getString(k("channelEdits"), "{}")!!
         set(v) = prefs.edit().putString(k("channelEdits"), v).apply()
 
+    /** Your order for categories ("live", "movies", "series"): ids, first first. */
+    fun categoryOrder(kind: String): List<String> =
+        prefs.getString(k("order_$kind"), "")!!.split('\n').filter { it.isNotEmpty() }
+    fun setCategoryOrder(kind: String, ids: List<String>) = prefs.edit().putString(k("order_$kind"), ids.joinToString("\n")).apply()
+
+    /** Categories in your order (ones you haven't moved keep the playlist's order, after the moved ones' places). */
+    fun <T> ordered(kind: String, list: List<T>, id: (T) -> String): List<T> {
+        val order = categoryOrder(kind)
+        if (order.isEmpty()) return list
+        val rank = HashMap<String, Int>(order.size * 2).apply { order.forEachIndexed { i, s -> put(s, i) } }
+        return list.withIndex().sortedWith(compareBy({ rank[id(it.value)] ?: (order.size + it.index) }, { it.index })).map { it.value }
+    }
+
+    /** Move a category one place up or down among [visible] (the list as shown). */
+    fun moveCategory(kind: String, visible: List<String>, id: String, by: Int) {
+        val l = visible.toMutableList()
+        val i = l.indexOf(id)
+        val j = i + by
+        if (i < 0 || j < 0 || j >= l.size) return
+        l.add(j, l.removeAt(i))
+        setCategoryOrder(kind, l)
+    }
+
     /** Play the highlighted channel in the small window above the guide. */
     var preview: Boolean
         get() = prefs.getBoolean("preview", true)

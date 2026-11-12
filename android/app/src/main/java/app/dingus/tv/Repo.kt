@@ -61,7 +61,7 @@ object Repo {
         out.add(Category(ALL, "All channels"))
         if (Store.favourites.any { byId.containsKey(it) }) out.add(Category(FAV, "Favourites"))
         if (Store.recent.any { byId.containsKey(it) }) out.add(Category(RECENT, "Recently watched"))
-        out.addAll(categories.filter { byCategory[it.id]?.isNotEmpty() == true && !Store.isHidden("live:${it.id}") })
+        out.addAll(Store.ordered("live", categories.filter { byCategory[it.id]?.isNotEmpty() == true && !Store.isHidden("live:${it.id}") }) { it.id })
         return out
     }
 

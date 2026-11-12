@@ -102,7 +102,7 @@ object Vod {
         if (continueList(kind, lib).isNotEmpty()) out.add(Category(CONTINUE, "Continue watching"))
         out.add(Category(RECENT, "Recently added"))
         out.add(Category(ALL, if (kind == MOVIES) "All films" else "All shows"))
-        out.addAll(lib.categories.filter { lib.byCategory[it.id]?.isNotEmpty() == true && !Store.isHidden("$kind:${it.id}") })
+        out.addAll(Store.ordered(kind, lib.categories.filter { lib.byCategory[it.id]?.isNotEmpty() == true && !Store.isHidden("$kind:${it.id}") }) { it.id })
         return out
     }
 
