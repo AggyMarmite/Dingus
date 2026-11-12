@@ -12,6 +12,8 @@ class Channel(
     val logo: String?,
     val epgId: String?,
     val url: String,
+    /** Days of catch-up the provider keeps for this channel (0 = none). */
+    val archiveDays: Int = 0,
 ) {
     /** The key its programmes are filed under in the guide (set once the guide's loaded). */
     @Volatile var guideKey: String? = null

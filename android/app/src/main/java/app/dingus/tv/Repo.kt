@@ -106,7 +106,7 @@ object Repo {
     suspend fun refreshGuide() = withContext(Dispatchers.IO) {
         val url = guideUrl ?: return@withContext
         val chans = channels
-        val parsed = Net.open(url, 30_000).use { Guide.parse(it, chans) }
+        val parsed = Net.open(url, 30_000).use { Guide.parse(it, chans, hoursBack = backHours) }
         for (c in chans) c.guideKey = parsed.keysByChannelId[c.id]
         guide = parsed.programmes
         Store.guideLoadedAt = System.currentTimeMillis()
@@ -115,6 +115,22 @@ object Repo {
     }
 
     val guideChannels: Int get() = guide.size
+
+    /** How far back the guide keeps programmes: a day when any channel has catch-up, otherwise an hour. */
+    val backHours: Int get() = if (channels.any { it.archiveDays > 0 }) 24 else 1
+
+    /** Can [p] on [c] be watched again now (catch-up)? */
+    fun canCatchUp(c: Channel, p: Programme, now: Long = System.currentTimeMillis()): Boolean =
+        c.archiveDays > 0 && p.stop <= now && p.start >= now - c.archiveDays * 86_400_000L && Store.playlist?.type == "xtream"
+
+    /** The address of a past programme on a catch-up channel (the provider expects its own time zone). */
+    fun catchUpUrl(c: Channel, p: Programme): String? {
+        val pl = Store.playlist ?: return null
+        val tz = Store.serverTimeZone?.let { java.util.TimeZone.getTimeZone(it) } ?: java.util.TimeZone.getDefault()
+        val f = java.text.SimpleDateFormat("yyyy-MM-dd:HH-mm", java.util.Locale.US).apply { timeZone = tz }
+        val mins = ((p.stop - p.start) / 60_000).coerceAtLeast(1)
+        return "${Sources.xtreamBase(pl.server)}/timeshift/${Sources.enc(pl.user)}/${Sources.enc(pl.pass)}/$mins/${f.format(java.util.Date(p.start))}/${c.id}.ts"
+    }
 
     fun clear() {
         set(emptyList(), emptyList(), null)
@@ -133,14 +149,14 @@ object Repo {
 
     private fun writeChannels() {
         out("channels.bin").use { o ->
-            o.writeInt(2)
+            o.writeInt(3)
             o.str(guideUrl)
             o.writeInt(categories.size)
             for (c in categories) { o.writeUTF(c.id); o.writeUTF(c.name) }
             o.writeInt(channels.size)
             for (c in channels) {
                 o.writeUTF(c.id); o.writeUTF(c.name); o.writeInt(c.number); o.writeUTF(c.categoryId)
-                o.str(c.logo); o.str(c.epgId); o.writeUTF(c.url); o.str(c.guideKey)
+                o.str(c.logo); o.str(c.epgId); o.writeUTF(c.url); o.str(c.guideKey); o.writeShort(c.archiveDays)
             }
         }
         commit("channels.bin")
@@ -150,11 +166,16 @@ object Repo {
         val f = File(dir, "channels.bin")
         if (!f.exists()) return false
         DataInputStream(BufferedInputStream(FileInputStream(f), 1 shl 16)).use { i ->
-            if (i.readInt() != 2) return false
+            val version = i.readInt()
+            if (version != 2 && version != 3) return false
             val url = i.str()
             val cats = List(i.readInt()) { Category(i.readUTF(), i.readUTF()) }
             val chans = List(i.readInt()) {
-                Channel(i.readUTF(), i.readUTF(), i.readInt(), i.readUTF(), i.str(), i.str(), i.readUTF()).also { it.guideKey = i.str() }
+                Channel(i.readUTF(), i.readUTF(), i.readInt(), i.readUTF(), i.str(), i.str(), i.readUTF()).let { c ->
+                    val key = i.str()
+                    val days = if (version >= 3) i.readShort().toInt() else 0
+                    (if (days > 0) Channel(c.id, c.name, c.number, c.categoryId, c.logo, c.epgId, c.url, days) else c).also { it.guideKey = key }
+                }
             }
             set(cats, chans, url)
         }
@@ -177,7 +198,7 @@ object Repo {
     private fun readGuide() {
         val f = File(dir, "guide.bin")
         if (!f.exists()) return
-        val cutoff = System.currentTimeMillis() - 60 * 60_000L
+        val cutoff = System.currentTimeMillis() - backHours * 60 * 60_000L
         val g = HashMap<String, Array<Programme>>()
         DataInputStream(BufferedInputStream(FileInputStream(f), 1 shl 16)).use { i ->
             if (i.readInt() != 1) return

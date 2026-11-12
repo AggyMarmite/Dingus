@@ -33,6 +33,13 @@ object Sources {
                 r.beginObject()
                 while (r.hasNext()) {
                     when (r.nextName()) {
+                        "server_info" -> {
+                            r.beginObject()
+                            while (r.hasNext()) {
+                                if (r.nextName() == "timezone") str(r).takeIf { it.isNotBlank() }?.let { Store.serverTimeZone = it } else r.skipValue()
+                            }
+                            r.endObject()
+                        }
                         "user_info" -> {
                             r.beginObject()
                             while (r.hasNext()) {
@@ -69,7 +76,7 @@ object Sources {
             r.beginArray()
             var i = 0
             while (r.hasNext()) {
-                var id = ""; var name = ""; var cat = ""; var logo = ""; var epg = ""; var num = 0
+                var id = ""; var name = ""; var cat = ""; var logo = ""; var epg = ""; var num = 0; var archive = false; var days = 0
                 r.beginObject()
                 while (r.hasNext()) when (r.nextName()) {
                     "stream_id" -> id = str(r)
@@ -78,13 +85,15 @@ object Sources {
                     "stream_icon" -> logo = str(r)
                     "epg_channel_id" -> epg = str(r)
                     "num" -> num = str(r).toIntOrNull() ?: 0
+                    "tv_archive" -> archive = str(r).let { it == "1" || it == "true" }
+                    "tv_archive_duration" -> days = str(r).toIntOrNull() ?: 0
                     else -> r.skipValue()
                 }
                 r.endObject()
                 i++
                 if (id.isEmpty()) continue
                 chans.add(Channel(id, name.trim(), if (num > 0) num else i, cat, logo.ifBlank { null }, epg.ifBlank { null },
-                    "$base/live/${enc(p.user)}/${enc(p.pass)}/$id.ts"))
+                    "$base/live/${enc(p.user)}/${enc(p.pass)}/$id.ts", if (archive) days.coerceIn(1, 14) else 0))
             }
             r.endArray()
         }

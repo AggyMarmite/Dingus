@@ -64,6 +64,11 @@ object Store {
         get() = prefs.getLong("guideLoadedAt", 0)
         set(v) = prefs.edit().putLong("guideLoadedAt", v).apply()
 
+    /** The provider's time zone (Xtream catch-up addresses use it). */
+    var serverTimeZone: String?
+        get() = prefs.getString("serverTz", null)
+        set(v) = prefs.edit().putString("serverTz", v).apply()
+
     /** Play the highlighted channel in the small window above the guide. */
     var preview: Boolean
         get() = prefs.getBoolean("preview", true)

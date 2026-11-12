@@ -22,9 +22,9 @@ object Guide {
         return s.filter { it.isLetterOrDigit() }
     }
 
-    fun parse(input: InputStream, channels: List<Channel>, hoursAhead: Int = 14): Parsed {
+    fun parse(input: InputStream, channels: List<Channel>, hoursAhead: Int = 14, hoursBack: Int = 1): Parsed {
         val now = System.currentTimeMillis()
-        val from = now - 60 * 60_000L
+        val from = now - hoursBack * 60 * 60_000L
         val until = now + hoursAhead * 60 * 60_000L
 
         // What we're looking for: guide ids from the playlist, and names for channels without one.
