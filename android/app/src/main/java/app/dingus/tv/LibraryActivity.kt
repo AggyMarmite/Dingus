@@ -20,7 +20,11 @@ import kotlinx.coroutines.launch
 
 /** Films or TV shows: categories down the left, posters on the right. */
 class LibraryActivity : BaseActivity() {
-    companion object { const val KIND = "kind" }
+    companion object {
+        const val KIND = "kind"
+        /** Open on this category. */
+        const val CATEGORY = "category"
+    }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var kind: String
@@ -64,7 +68,7 @@ class LibraryActivity : BaseActivity() {
         grid.setHasFixedSize(true)
         grid.setItemViewCacheSize(cols * 3)
 
-        current = getPreferences(MODE_PRIVATE).getString("cat", Vod.RECENT) ?: Vod.RECENT
+        current = intent.getStringExtra(CATEGORY) ?: getPreferences(MODE_PRIVATE).getString("cat", Vod.RECENT) ?: Vod.RECENT
         load()
     }
 

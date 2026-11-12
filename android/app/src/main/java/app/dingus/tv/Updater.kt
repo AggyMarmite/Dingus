@@ -102,7 +102,7 @@ object Updater {
             if (auto) { download(act, r); return@launch }
             val notes = r.notes.lines().map { it.trim() }.filter { it.startsWith("-") || it.startsWith("*") }
                 .joinToString("\n") { "•  " + it.trimStart('-', '*', ' ') }.take(600)
-            AlertDialog.Builder(act, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            Dialogs.builder(act)
                 .setTitle("Dingus ${r.version} is available")
                 .setMessage((if (notes.isNotEmpty()) "$notes\n\n" else "") + "You have version ${BuildConfig.VERSION_NAME}. Your playlist and favourites are kept.")
                 .setPositiveButton("Update now") { _, _ -> download(act, r) }
@@ -117,7 +117,7 @@ object Updater {
         val bar = view.findViewById<ProgressBar>(R.id.bar)
         val text = view.findViewById<TextView>(R.id.text)
         var job: Job? = null
-        val dlg = AlertDialog.Builder(act, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        val dlg = Dialogs.builder(act)
             .setTitle("Downloading Dingus ${r.version}")
             .setView(view)
             .setCancelable(false)
@@ -160,7 +160,7 @@ object Updater {
                 dlg.dismiss()
                 if (e.message == "Cancelled" || e is kotlinx.coroutines.CancellationException) return@launch
                 Ui.test("update-failed ${e.message}")
-                AlertDialog.Builder(act, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                Dialogs.builder(act)
                     .setTitle("The update didn't download")
                     .setMessage(Net.friendly(e))
                     .setPositiveButton("OK", null)
@@ -176,7 +176,7 @@ object Updater {
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
         if (Build.VERSION.SDK_INT >= 26 && !act.packageManager.canRequestPackageInstalls()) {
             // Android asks once for permission to install updates; Fire TV keeps this under Developer options.
-            AlertDialog.Builder(act, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            Dialogs.builder(act)
                 .setTitle("One-time permission")
                 .setMessage("To install updates, allow Dingus to install apps.\n\nOn a Fire TV: Settings → My Fire TV → Developer options → Install unknown apps → Dingus → On. Then choose Check for updates again.")
                 .setPositiveButton("Open settings") { _, _ ->

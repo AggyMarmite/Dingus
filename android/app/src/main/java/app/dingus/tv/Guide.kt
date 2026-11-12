@@ -26,6 +26,8 @@ object Guide {
         val now = System.currentTimeMillis()
         val from = now - hoursBack * 60 * 60_000L
         val until = now + hoursAhead * 60 * 60_000L
+        val descFrom = now - 3 * 60 * 60_000L
+        val descUntil = now + 12 * 60 * 60_000L
 
         // What we're looking for: guide ids from the playlist, and names for channels without one.
         val byId = HashMap<String, MutableList<Channel>>()
@@ -78,7 +80,8 @@ object Guide {
                             while (inside(p, "programme")) {
                                 if (p.eventType == XmlPullParser.START_TAG) when (p.name) {
                                     "title" -> if (title.isEmpty()) title = p.nextText().trim()
-                                    "desc" -> if (desc == null) desc = p.nextText().trim().take(400)
+                                    // Descriptions are most of a guide's size: kept only near "now", and kept short.
+                                    "desc" -> if (desc == null) { val t = p.nextText(); if (start < descUntil && stop > descFrom) desc = t.trim().take(240) }
                                     "category" -> if (genre == Genres.NONE) genre = Genres.of(p.nextText())
                                 }
                             }

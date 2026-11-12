@@ -137,8 +137,22 @@ adb shell am start -n $PKG/.MainActivity --es dingus_test_search test
 check "search \"test\" [1-9]" 30 "search finds channels, films and shows"
 sleep 2; shot 15-search
 
+# ---- Home
+fresh
+adb shell am start -n $PKG/.HomeActivity
+check "home rows [1-9]" 30 "Home shows its rows"
+sleep 4; shot 16-home
+key KEYCODE_DPAD_DOWN 3; shot 17-home-row2
+fresh
+key KEYCODE_DPAD_UP 1; key KEYCODE_DPAD_UP 1; key KEYCODE_DPAD_UP 1
+key KEYCODE_DPAD_RIGHT 0.5; key KEYCODE_DPAD_RIGHT 0.5; key KEYCODE_DPAD_CENTER 3   # tab: Films
+check "library movies 3" 30 "Films opens from Home"
+sleep 3; shot 18-films-rows
+key KEYCODE_DPAD_DOWN 3; shot 19-films-rows-2
+
 adb shell dumpsys meminfo $PKG | grep -E "TOTAL( PSS)?:" | head -1 | sed 's/^/memory: /' | tee -a "$OUT/result.txt"
 adb logcat -d -s DINGUS-TEST:I AndroidRuntime:E > "$OUT/log.txt"
+adb logcat -d -v brief '*:W' | grep -v "com.android.tv\|AsyncDvr" | tail -1500 > "$OUT/log-warnings.txt"
 kill %1 2>/dev/null
 if grep -A1 "FATAL EXCEPTION" "$OUT/log-all.txt" | grep -q "Process: $PKG"; then echo "::error title=android self-test::app crashed"; fail=1; fi
 [ $fail = 0 ] && echo PASSED >> "$OUT/result.txt" || echo FAILED >> "$OUT/result.txt"

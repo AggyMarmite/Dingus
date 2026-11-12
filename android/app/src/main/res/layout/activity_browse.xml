@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Films or TV shows, Netflix-style: a banner for the highlighted title, then a row per category. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="?attr/dBg">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
+            android:gravity="center_vertical" android:paddingStart="42dp" android:paddingEnd="48dp" android:paddingTop="18dp">
+            <TextView android:id="@+id/heading" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="6dp" android:layout_marginEnd="22dp" android:textSize="24sp" android:textStyle="bold"
+                android:textColor="?attr/dText" />
+            <TextView android:id="@+id/search" style="@style/Tab" android:text="Search" />
+            <TextView android:id="@+id/allCategories" style="@style/Tab" android:text="Categories" />
+            <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+            <TextView android:id="@+id/count" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textSize="15sp" android:textColor="?attr/dMuted" />
+        </LinearLayout>
+        <include layout="@layout/hero" />
+        <androidx.recyclerview.widget.RecyclerView android:id="@+id/rows" android:layout_width="match_parent"
+            android:layout_height="0dp" android:layout_weight="1" android:clipToPadding="false" android:paddingBottom="60dp"
+            android:scrollbars="none" android:descendantFocusability="afterDescendants" />
+    </LinearLayout>
+    <TextView android:id="@+id/empty" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_gravity="center" android:gravity="center" android:textSize="18sp"
+        android:textColor="?attr/dMuted" android:visibility="gone" />
+</FrameLayout>

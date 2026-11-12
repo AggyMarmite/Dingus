@@ -75,14 +75,18 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         // Going to another screen closes the menu, so you come back to the guide.
         fun go(i: Intent) { closeMenu(toGuide = true); startActivity(i) }
         findViewById<View>(R.id.navGuide).setOnClickListener { closeMenu(toGuide = true) }
+        findViewById<View>(R.id.navHome).setOnClickListener {
+            closeMenu(toGuide = true)
+            startActivity(Intent(this, HomeActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+        }
         findViewById<View>(R.id.navPlaylist).setOnClickListener { switchPlaylist() }
         findViewById<View>(R.id.settings).setOnClickListener { go(Intent(this, SettingsActivity::class.java)) }
         findViewById<View>(R.id.navSearch).setOnClickListener { go(Intent(this, SearchActivity::class.java)) }
         findViewById<View>(R.id.navFilms).setOnClickListener {
-            go(Intent(this, LibraryActivity::class.java).putExtra(LibraryActivity.KIND, Vod.MOVIES))
+            go(Intent(this, BrowseActivity::class.java).putExtra(BrowseActivity.KIND, Vod.MOVIES))
         }
         findViewById<View>(R.id.navShows).setOnClickListener {
-            go(Intent(this, LibraryActivity::class.java).putExtra(LibraryActivity.KIND, Vod.SERIES))
+            go(Intent(this, BrowseActivity::class.java).putExtra(BrowseActivity.KIND, Vod.SERIES))
         }
 
         current = Store.lastCategory ?: Repo.ALL

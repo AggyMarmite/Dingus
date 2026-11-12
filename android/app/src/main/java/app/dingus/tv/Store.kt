@@ -77,11 +77,25 @@ object Store {
     /** Settings that belong to one playlist (favourites, history…) are stored under its id. */
     private fun k(name: String) = "${name}_$activeId"
 
-    var favourites: List<String>
-        get() = prefs.getString(k("favourites"), "")!!.split('\n').filter { it.isNotEmpty() }
-        set(v) = prefs.edit().putString(k("favourites"), v.joinToString("\n")).apply()
+    // Read often (the guide draws a star per row), so kept in memory.
+    @Volatile private var favCache: List<String>? = null
+    @Volatile private var favSet: Set<String> = emptySet()
+    @Volatile private var favFor = ""
 
-    fun isFavourite(id: String) = favourites.contains(id)
+    var favourites: List<String>
+        get() {
+            val id = activeId
+            favCache?.let { if (favFor == id) return it }
+            val list = prefs.getString(k("favourites"), "")!!.split('\n').filter { it.isNotEmpty() }
+            favCache = list; favSet = list.toHashSet(); favFor = id
+            return list
+        }
+        set(v) {
+            prefs.edit().putString(k("favourites"), v.joinToString("\n")).apply()
+            favCache = v; favSet = v.toHashSet(); favFor = activeId
+        }
+
+    fun isFavourite(id: String): Boolean { favourites; return favSet.contains(id) }
 
     /** Adds or removes a favourite; true when it's now a favourite. */
     fun toggleFavourite(id: String): Boolean {
@@ -174,7 +188,7 @@ object Store {
         get() = prefs.getStringSet(k("hidden"), emptySet())!!.toSet()
         set(v) { prefs.edit().putStringSet(k("hidden"), HashSet(v)).apply(); cachedHidden = null }
     /** Forget per-playlist caches (after switching playlist). */
-    fun switched() { cachedHidden = null }
+    fun switched() { cachedHidden = null; favCache = null }
     fun isHidden(key: String) = hiddenCache().contains(key)
     fun setHidden(key: String, on: Boolean) { hidden = if (on) hidden + key else hidden - key; cachedHidden = null }
     @Volatile private var cachedHidden: Set<String>? = null

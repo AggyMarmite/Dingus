@@ -16,7 +16,7 @@
                     android:gravity="center" android:padding="16dp" android:textSize="16sp" android:textColor="?attr/dMuted" />
                 <androidx.media3.ui.PlayerView android:id="@+id/preview"
                     android:layout_width="match_parent" android:layout_height="match_parent"
-                    app:use_controller="false" app:resize_mode="fit" app:surface_type="texture_view"
+                    app:use_controller="false" app:resize_mode="fit" app:surface_type="surface_view"
                     app:shutter_background_color="@android:color/transparent" />
             </FrameLayout>
 
@@ -94,8 +94,9 @@
                 android:textColor="?attr/dText" />
         </LinearLayout>
 
-        <TextView android:id="@+id/navGuide" style="@style/NavRow" android:layout_marginTop="18dp" android:text="TV Guide"
-            android:nextFocusUp="@id/navGuide" android:nextFocusLeft="@id/navGuide" />
+        <TextView android:id="@+id/navHome" style="@style/NavRow" android:layout_marginTop="18dp" android:text="Home"
+            android:nextFocusUp="@id/navHome" android:nextFocusLeft="@id/navHome" />
+        <TextView android:id="@+id/navGuide" style="@style/NavRow" android:text="TV Guide" android:nextFocusLeft="@id/navGuide" />
         <TextView android:id="@+id/navSearch" style="@style/NavRow" android:text="Search" />
         <TextView android:id="@+id/navFilms" style="@style/NavRow" android:text="Films" />
         <TextView android:id="@+id/navShows" style="@style/NavRow" android:text="TV Shows" />

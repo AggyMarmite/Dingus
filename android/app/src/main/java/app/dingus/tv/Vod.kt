@@ -214,8 +214,18 @@ object Vod {
     private val yearRx = Regex("""(19|20)\d\d""")
     private fun yearOf(s: String) = yearRx.find(s)?.value?.toIntOrNull() ?: 0
 
+    private val detailsCache = android.util.LruCache<String, Details>(60)
+
+    /** Details already fetched (for the banner on Home and in Films / TV Shows). */
+    fun cachedDetails(kind: String, id: String): Details? = detailsCache.get("$kind:$id")
+
     /** Plot, cast and (for shows) the episodes. */
     suspend fun details(kind: String, item: VodItem): Details = withContext(Dispatchers.IO) {
+        detailsCache.get("$kind:${item.id}")?.takeIf { kind == MOVIES }?.let { return@withContext it }
+        fetchDetails(kind, item).also { detailsCache.put("$kind:${item.id}", it) }
+    }
+
+    private fun fetchDetails(kind: String, item: VodItem): Details {
         val p = Store.playlist ?: throw IllegalStateException("No playlist")
         val auth = "username=${Sources.enc(p.user)}&password=${Sources.enc(p.pass)}"
         val url = "${base(p)}/player_api.php?$auth&action=" +
@@ -238,7 +248,7 @@ object Vod {
             }
         }
         eps.sortWith(compareBy({ it.season }, { it.number }))
-        Details(
+        return Details(
             title = s("name", "title"), plot = s("plot", "description"), cast = s("cast", "actors"),
             director = s("director"), genre = s("genre"),
             year = yearOf(s("releasedate", "releaseDate", "release_date") ?: "").takeIf { it > 0 } ?: item.year,
