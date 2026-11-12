@@ -4,3 +4,7 @@ publish/
 installer/Output/
 *.user
 .vs/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties

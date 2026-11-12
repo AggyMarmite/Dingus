@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg"
+    android:fillViewport="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:gravity="center_horizontal" android:paddingTop="40dp" android:paddingBottom="40dp">
+        <LinearLayout android:layout_width="760dp" android:layout_height="wrap_content" android:orientation="vertical">
+
+            <TextView android:id="@+id/heading" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Add your playlist" android:textSize="30sp" android:textStyle="bold" android:textColor="@color/text" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp"
+                android:text="Xtream Codes logins and M3U links are both supported." android:textSize="16sp"
+                android:textColor="@color/muted" />
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="24dp" android:orientation="horizontal">
+                <TextView android:id="@+id/typeXtream" style="@style/Choice" android:text="Xtream Codes login" />
+                <TextView android:id="@+id/typeM3u" style="@style/Choice" android:layout_marginStart="12dp" android:text="M3U link" />
+            </LinearLayout>
+
+            <TextView style="@style/Label" android:text="Name" />
+            <EditText android:id="@+id/name" style="@style/Field" android:hint="e.g. Home" android:inputType="text" />
+
+            <LinearLayout android:id="@+id/xtream" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical">
+                <TextView style="@style/Label" android:text="Server address" />
+                <EditText android:id="@+id/server" style="@style/Field" android:hint="http://provider.example:8080" android:inputType="textUri" />
+                <TextView style="@style/Label" android:text="Username" />
+                <EditText android:id="@+id/user" style="@style/Field" android:inputType="text" />
+                <TextView style="@style/Label" android:text="Password" />
+                <EditText android:id="@+id/pass" style="@style/Field" android:inputType="textPassword" />
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/m3u" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:visibility="gone">
+                <TextView style="@style/Label" android:text="M3U address" />
+                <EditText android:id="@+id/m3uUrl" style="@style/Field" android:hint="http://provider.example/get.php?…" android:inputType="textUri" />
+            </LinearLayout>
+
+            <TextView style="@style/Label" android:text="TV guide address (optional)" />
+            <EditText android:id="@+id/epg" style="@style/Field" android:hint="Leave empty to use the provider's guide" android:inputType="textUri" />
+
+            <TextView android:id="@+id/error" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="16dp" android:textSize="16sp" android:textColor="#FCA5A5" android:visibility="gone" />
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="26dp" android:orientation="horizontal">
+                <TextView android:id="@+id/save" style="@style/Choice" android:text="Save" android:minWidth="180dp" />
+                <TextView android:id="@+id/remove" style="@style/Choice" android:layout_marginStart="12dp"
+                    android:text="Remove playlist" android:visibility="gone" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

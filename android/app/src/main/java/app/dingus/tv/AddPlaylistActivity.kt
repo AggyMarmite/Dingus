@@ -1,0 +1,104 @@
+package app.dingus.tv
+
+import android.app.Activity
+import android.os.Bundle
+import android.view.View
+import android.widget.EditText
+import android.widget.TextView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/** Add (or change) the playlist: an Xtream Codes login or an M3U link. It's checked before it's saved. */
+class AddPlaylistActivity : Activity() {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var type = "xtream"
+    private var busy = false
+
+    private val name by lazy { findViewById<EditText>(R.id.name) }
+    private val server by lazy { findViewById<EditText>(R.id.server) }
+    private val user by lazy { findViewById<EditText>(R.id.user) }
+    private val pass by lazy { findViewById<EditText>(R.id.pass) }
+    private val m3uUrl by lazy { findViewById<EditText>(R.id.m3uUrl) }
+    private val epg by lazy { findViewById<EditText>(R.id.epg) }
+    private val error by lazy { findViewById<TextView>(R.id.error) }
+    private val save by lazy { findViewById<TextView>(R.id.save) }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_add_playlist)
+
+        findViewById<View>(R.id.typeXtream).setOnClickListener { setType("xtream") }
+        findViewById<View>(R.id.typeM3u).setOnClickListener { setType("m3u") }
+        save.setOnClickListener { trySave() }
+
+        val existing = Store.playlist
+        if (existing != null) {
+            findViewById<TextView>(R.id.heading).text = "Your playlist"
+            name.setText(existing.name)
+            server.setText(existing.server); user.setText(existing.user); pass.setText(existing.pass)
+            m3uUrl.setText(existing.m3uUrl); epg.setText(existing.epgUrl)
+            setType(existing.type)
+            findViewById<View>(R.id.remove).apply {
+                visibility = View.VISIBLE
+                setOnClickListener {
+                    Store.playlist = null
+                    Repo.clear()
+                    recreate()
+                }
+            }
+        } else setType("xtream")
+        findViewById<View>(if (type == "xtream") R.id.typeXtream else R.id.typeM3u).requestFocus()
+    }
+
+    private fun setType(t: String) {
+        type = if (t == "m3u") "m3u" else "xtream"
+        findViewById<View>(R.id.xtream).visibility = if (type == "xtream") View.VISIBLE else View.GONE
+        findViewById<View>(R.id.m3u).visibility = if (type == "m3u") View.VISIBLE else View.GONE
+        findViewById<View>(R.id.typeXtream).isActivated = type == "xtream"
+        findViewById<View>(R.id.typeM3u).isActivated = type == "m3u"
+    }
+
+    private fun showError(s: String?) {
+        error.text = s ?: ""
+        error.visibility = if (s.isNullOrEmpty()) View.GONE else View.VISIBLE
+    }
+
+    private fun trySave() {
+        if (busy) return
+        val p = Playlist(
+            name = name.text.toString().trim().ifEmpty { "My playlist" },
+            type = type,
+            server = server.text.toString().trim(),
+            user = user.text.toString().trim(),
+            pass = pass.text.toString(),
+            m3uUrl = m3uUrl.text.toString().trim(),
+            epgUrl = epg.text.toString().trim(),
+        )
+        if (type == "xtream" && (p.server.isEmpty() || p.user.isEmpty())) return showError("Enter the server address, username and password.")
+        if (type == "m3u" && p.m3uUrl.isEmpty()) return showError("Enter the M3U address.")
+        showError(null)
+        busy = true
+        save.text = "Checking…"
+        scope.launch {
+            try {
+                val r = withContext(Dispatchers.IO) { Sources.load(p) }
+                if (r.channels.isEmpty()) { showError("That worked, but there are no live channels in it."); return@launch }
+                Store.playlist = p
+                Repo.clear()
+                Repo.refreshChannels(p, r)
+                finish()
+            } catch (e: Exception) {
+                showError(Net.friendly(e))
+            } finally {
+                busy = false
+                save.text = "Save"
+            }
+        }
+    }
+
+    override fun onDestroy() { scope.cancel(); super.onDestroy() }
+}

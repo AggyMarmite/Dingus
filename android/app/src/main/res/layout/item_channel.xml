@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A channel: logo, number, name, what's on now (with how far through it is) and what's next. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:layout_marginBottom="4dp" android:background="@drawable/row_bg"
+    android:focusable="true" android:clickable="true" android:orientation="horizontal"
+    android:gravity="center_vertical" android:padding="12dp">
+
+    <FrameLayout android:layout_width="104dp" android:layout_height="60dp" android:background="@drawable/logo_bg">
+        <TextView android:id="@+id/initials" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:gravity="center" android:textSize="20sp" android:textStyle="bold" android:textColor="@color/muted" />
+        <ImageView android:id="@+id/logo" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:padding="6dp" android:scaleType="fitCenter" android:contentDescription="@null" />
+    </FrameLayout>
+
+    <TextView android:id="@+id/number" android:layout_width="64dp" android:layout_height="wrap_content"
+        android:gravity="center" android:textSize="17sp" android:textColor="@color/muted" />
+
+    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+        android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <TextView android:id="@+id/name" android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:maxLines="1" android:ellipsize="end" android:textSize="20sp"
+                android:textStyle="bold" android:textColor="@color/text" />
+            <TextView android:id="@+id/fav" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="10dp" android:text="★" android:textSize="18sp" android:textColor="#FBBF24"
+                android:visibility="gone" />
+        </LinearLayout>
+        <TextView android:id="@+id/now" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="2dp" android:maxLines="1" android:ellipsize="end" android:textSize="16sp"
+            android:textColor="@color/text" />
+        <ProgressBar android:id="@+id/progress" style="@android:style/Widget.ProgressBar.Horizontal"
+            android:layout_width="match_parent" android:layout_height="4dp" android:layout_marginTop="6dp"
+            android:max="1000" android:progressDrawable="@drawable/progress_track" />
+        <TextView android:id="@+id/next" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="5dp" android:maxLines="1" android:ellipsize="end" android:textSize="14sp"
+            android:textColor="@color/muted" />
+    </LinearLayout>
+</LinearLayout>
