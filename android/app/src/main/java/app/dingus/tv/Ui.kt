@@ -20,6 +20,8 @@ object Ui {
         if (d == today) return ""
         c.add(java.util.Calendar.DAY_OF_YEAR, -1)
         if ((c.get(java.util.Calendar.DAY_OF_YEAR) to c.get(java.util.Calendar.YEAR)) == today) return "Tomorrow   "
+        c.add(java.util.Calendar.DAY_OF_YEAR, 2)
+        if ((c.get(java.util.Calendar.DAY_OF_YEAR) to c.get(java.util.Calendar.YEAR)) == today) return "Yesterday   "
         return synchronized(wd) { wd.format(Date(ms)) } + "   "
     }
 

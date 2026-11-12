@@ -94,11 +94,13 @@
                 android:textColor="@color/text" />
         </LinearLayout>
 
-        <TextView android:id="@+id/navGuide" style="@style/NavRow" android:layout_marginTop="18dp" android:text="TV Guide" />
+        <TextView android:id="@+id/navGuide" style="@style/NavRow" android:layout_marginTop="18dp" android:text="TV Guide"
+            android:nextFocusUp="@id/navGuide" android:nextFocusLeft="@id/navGuide" />
         <TextView android:id="@+id/navSearch" style="@style/NavRow" android:text="Search" />
         <TextView android:id="@+id/navFilms" style="@style/NavRow" android:text="Films" />
         <TextView android:id="@+id/navShows" style="@style/NavRow" android:text="TV Shows" />
-        <TextView android:id="@+id/settings" style="@style/NavRow" android:text="Settings" />
+        <TextView android:id="@+id/settings" style="@style/NavRow" android:text="Settings"
+            android:nextFocusDown="@id/settings" android:nextFocusLeft="@id/settings" />
 
         <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
 

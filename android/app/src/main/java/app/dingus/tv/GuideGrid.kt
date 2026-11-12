@@ -23,7 +23,7 @@ import androidx.core.content.ContextCompat
 class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
     interface Listener {
         fun onSelected(c: Channel, p: Programme?)
-        fun onPlay(c: Channel)
+        fun onPlay(c: Channel, p: Programme?)
         fun onLeftEdge()
         fun onFavourite(c: Channel)
     }
@@ -60,6 +60,7 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
     private val cAccentSoft = col(R.color.accent_soft)
     private val cLive = col(R.color.live)
     private val cAiring = 0xFF1A2130.toInt()
+    private val cPast = 0xFF10141C.toInt()
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val titleP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 16 * d; typeface = Typeface.DEFAULT_BOLD; color = cText }
@@ -102,11 +103,15 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
 
     /** Called every minute (and when the guide's been read again): move on with the clock. */
     fun refresh() {
-        val minStart = floor30(now())
-        if (start < minStart) start = minStart
-        if (anchor < now()) anchor = now()
+        // Move on with the clock – unless you're looking back at earlier programmes (catch-up).
+        val past = sel?.let { it.stop <= now() } == true
+        if (!past) {
+            val minStart = floor30(now())
+            if (start < minStart) start = minStart
+            if (anchor < now()) anchor = now()
+        }
         val s = sel
-        if (s == null || s.stop <= now() || selIdx < 0) pick() else {
+        if (s == null || (!past && s.stop <= now()) || selIdx < 0) pick() else {
             // The guide may have been replaced: find the same programme again.
             val list = current?.let { Repo.programmes(it) } ?: emptyArray()
             if (list.getOrNull(selIdx) !== s) pick()
@@ -138,7 +143,7 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
     private fun ensureVisible(p: Programme) {
         val end = start + spanMin * 60_000L
         if (p.start >= end - 30 * 60_000L) start = floor30(p.start) - 30 * 60_000L
-        else if (p.start < start) start = maxOf(floor30(now()), floor30(p.start))
+        else if (p.start < start) start = if (p.stop <= now()) floor30(p.start) else maxOf(floor30(now()), floor30(p.start))
         if (end <= start) start = floor30(now())
     }
 
@@ -180,14 +185,14 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
                 if (c == null) { listener?.onLeftEdge(); return true }
                 val list = Repo.programmes(c)
                 val prev = list.getOrNull(selIdx - 1)
-                val s = sel
-                if (s == null || s.start <= now() || prev == null || prev.stop <= now()) { listener?.onLeftEdge(); return true }
-                selIdx--; sel = prev; anchor = maxOf(prev.start, now())
+                // Back in time only as far as catch-up allows; past that, LEFT shows the categories.
+                if (sel == null || prev == null || (prev.stop <= now() && !Repo.canCatchUp(c, prev))) { listener?.onLeftEdge(); return true }
+                selIdx--; sel = prev; anchor = if (prev.stop <= now()) prev.start else maxOf(prev.start, now())
                 ensureVisible(prev); invalidate(); listener?.onSelected(c, prev)
                 return true
             }
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                c?.let { listener?.onPlay(it) }; return true
+                c?.let { listener?.onPlay(it, sel) }; return true
             }
             KeyEvent.KEYCODE_MENU -> { c?.let { listener?.onFavourite(it); invalidate() }; return true }
         }
@@ -272,26 +277,28 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         while (i < list.size && list[i].start < end) {
             val p = list[i]
             val x0 = maxOf(chanW, xOf(p.start)); val x1 = minOf(w, xOf(p.stop))
-            block(canvas, x0, x1, y0, y1, p.title, p, selected && p === sel, p.start <= now && now < p.stop)
+            block(canvas, x0, x1, y0, y1, p.title, p, selected && p === sel, p.start <= now && now < p.stop,
+                past = p.stop <= now, catchUp = p.stop <= now && Repo.canCatchUp(c, p, now))
             i++
         }
     }
 
-    private fun block(canvas: Canvas, x0: Float, x1: Float, y0: Float, y1: Float, text: String, p: Programme?, on: Boolean, airing: Boolean) {
+    private fun block(canvas: Canvas, x0: Float, x1: Float, y0: Float, y1: Float, text: String, p: Programme?, on: Boolean, airing: Boolean,
+                      past: Boolean = false, catchUp: Boolean = false) {
         if (x1 - x0 < 3 * d) return
-        fill.color = when { on -> cAccent; airing -> cAiring; else -> cSurface }
+        fill.color = when { on -> cAccent; airing -> cAiring; past -> cPast; else -> cSurface }
         r.set(x0 + gap, y0, x1 - gap, y1)
         canvas.drawRoundRect(r, 6 * d, 6 * d, fill)
         val avail = x1 - x0 - 2 * pad
         if (avail < 12 * d || text.isEmpty()) return
-        titleP.color = cText
+        titleP.color = if (past && !on && !catchUp) cMuted else cText
         if (p == null) {
             canvas.drawText(TextUtils.ellipsize(text, subP, avail, TextUtils.TruncateAt.END).toString(), x0 + pad, (y0 + y1) / 2 + 5 * d, subP)
             return
         }
         canvas.drawText(TextUtils.ellipsize(text, titleP, avail, TextUtils.TruncateAt.END).toString(), x0 + pad, y0 + 22 * d, titleP)
         subP.color = if (on) 0xDDFFFFFF.toInt() else cMuted
-        canvas.drawText(TextUtils.ellipsize(Ui.span(p), subP, avail, TextUtils.TruncateAt.END).toString(), x0 + pad, y0 + 40 * d, subP)
+        canvas.drawText(TextUtils.ellipsize((if (catchUp) "↺  " else "") + Ui.span(p), subP, avail, TextUtils.TruncateAt.END).toString(), x0 + pad, y0 + 40 * d, subP)
         subP.color = cMuted
     }
 }

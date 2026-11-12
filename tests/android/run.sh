@@ -72,6 +72,14 @@ check "channels 3 categories 2" 60 "Xtream login: live channels loaded"
 check "guide 3" 60 "Xtream login: guide read"
 sleep 3
 fresh
+key KEYCODE_DPAD_LEFT 2
+shot 08b-catchup-guide
+key KEYCODE_DPAD_CENTER 3
+check "catchup Test 1 HD" 10 "LEFT into earlier programmes and OK starts catch-up"
+check "vod-playing" 40 "the catch-up programme plays"
+sleep 2; shot 08c-catchup-playing
+key KEYCODE_BACK 3
+fresh
 key KEYCODE_BACK 1
 check "categories-open" 5 "BACK shows the categories"
 key KEYCODE_DPAD_LEFT 2

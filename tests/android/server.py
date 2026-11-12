@@ -12,7 +12,7 @@ def guide():
     for n in range(1, 4):
         out.append(f'<channel id="test{n}.uk"><display-name>Test {n}</display-name></channel>')
     for n in range(1, 4):
-        for k in range(-1, 10):
+        for k in range(-6, 10):
             s = now + k * 1800
             out.append(f'<programme start="{t(s)}" stop="{t(s+1800)}" channel="test{n}.uk">'
                        f'<title>Programme {k+2} on Test {n}</title><desc>A made-up programme for the test.</desc></programme>')
@@ -35,10 +35,10 @@ def xtream(q):
     """A stand-in Xtream Codes panel: 3 live channels, 3 films, 2 shows."""
     a = q.get("action", [""])[0]
     if not a:
-        return {"user_info": {"auth": 1, "username": "test", "status": "Active"}, "server_info": {}}
+        return {"user_info": {"auth": 1, "username": "test", "status": "Active"}, "server_info": {"timezone": "Europe/London"}}
     if a == "get_live_categories": return [{"category_id": "1", "category_name": "UK: Entertainment"}, {"category_id": "2", "category_name": "Sport"}]
     if a == "get_live_streams":
-        return [{"num": 101, "name": "Test 1 HD", "stream_id": 1, "category_id": "1", "epg_channel_id": "test1.uk", "stream_icon": ""},
+        return [{"num": 101, "name": "Test 1 HD", "stream_id": 1, "category_id": "1", "epg_channel_id": "test1.uk", "stream_icon": "", "tv_archive": 1, "tv_archive_duration": "3"},
                 {"num": 102, "name": "Test 2", "stream_id": 2, "category_id": "1", "epg_channel_id": "test2.uk", "stream_icon": ""},
                 {"num": 201, "name": "Test 3 Sport", "stream_id": 3, "category_id": "2", "epg_channel_id": "test3.uk", "stream_icon": ""}]
     if a == "get_vod_categories": return [{"category_id": "10", "category_name": "Action"}, {"category_id": "11", "category_name": "Comedy"}]
@@ -70,6 +70,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         if u.path == "/player_api.php": return self.send(json.dumps(xtream(urllib.parse.parse_qs(u.query))).encode(), "application/json")
         if u.path == "/xmltv.php": return self.send(guide(), "application/xml")
         if u.path.startswith("/live/") and u.path.count("/") >= 4: self.path = "/test.ts"; return super().do_GET()
+        if u.path.startswith("/timeshift/"): self.path = "/test.ts"; return super().do_GET()
         if u.path.startswith("/movie/") or u.path.startswith("/series/"): self.path = "/test.mp4"; return super().do_GET()
         if self.path.startswith("/release.json"):
             body = ('{"tag_name":"v99.0.0","body":"- Test update\\n- Another line","assets":[{"name":"Dingus.apk",'

@@ -27,6 +27,9 @@ class VodPlayerActivity : Activity() {
     class Entry(val id: String, val title: String, val url: String)
 
     companion object {
+        /** A past TV programme (catch-up): plays like a film, but nothing is remembered. */
+        const val CATCHUP = "catchup"
+
         fun intent(ctx: Context, kind: String, showId: String?, entries: List<Entry>, index: Int, fromStart: Boolean): Intent =
             Intent(ctx, VodPlayerActivity::class.java)
                 .putExtra("kind", kind).putExtra("show", showId)
@@ -126,6 +129,7 @@ class VodPlayerActivity : Activity() {
     }
 
     private fun savePosition() {
+        if (kind == CATCHUP) return
         val p = player ?: return
         val len = p.duration
         if (len == C.TIME_UNSET || len <= 0) return
@@ -134,7 +138,7 @@ class VodPlayerActivity : Activity() {
 
     /** End of a film or episode: next episode if there is one, otherwise back to the details. */
     private fun finishedOne() {
-        player?.let { if (it.duration > 0) Vod.savePosition(ids[index], it.duration, it.duration, kind, showId) }
+        if (kind != CATCHUP) player?.let { if (it.duration > 0) Vod.savePosition(ids[index], it.duration, it.duration, kind, showId) }
         if (kind == Vod.SERIES && index + 1 < ids.size) {
             index++
             resumeAt = -1

@@ -125,7 +125,7 @@ class SearchActivity : Activity() {
     private inner class ResultAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         var rows: List<Row> = emptyList()
         fun set(list: List<Row>) { rows = list; notifyDataSetChanged() }
-        private val logoH = (50 * resources.displayMetrics.density).toInt()
+        private val logoH by lazy { (50 * resources.displayMetrics.density).toInt() }
 
         inner class H(v: View) : RecyclerView.ViewHolder(v) {
             val image: ImageView = v.findViewById(R.id.image)

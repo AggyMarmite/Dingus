@@ -231,6 +231,8 @@ class MainActivity : Activity(), GuideGrid.Listener {
         val airing = p.start <= now && now < p.stop
         time.text = when {
             airing -> "${Ui.span(p)}   ·   ${(p.stop - now + 59_999) / 60_000} min left"
+            p.stop <= now && c != null && Repo.canCatchUp(c, p) -> "${Ui.day(p.start)}${Ui.span(p)}   ·   ↺ Catch up: press OK to watch"
+            p.stop <= now -> "${Ui.day(p.start)}${Ui.span(p)}   ·   Ended"
             else -> "${Ui.day(p.start)}${Ui.span(p)}   ·   $mins min"
         }
         prog.visibility = if (airing) View.VISIBLE else View.GONE
@@ -279,8 +281,16 @@ class MainActivity : Activity(), GuideGrid.Listener {
 
     // ------------------------------------------------------------------ actions
 
-    override fun onPlay(c: Channel) {
+    override fun onPlay(c: Channel, p: Programme?) {
         stopPreview() // one connection at a time: the full-screen player takes over
+        // A programme that's finished, on a channel with catch-up: watch it from the start, with pause and skip.
+        if (p != null && Repo.canCatchUp(c, p)) {
+            val url = Repo.catchUpUrl(c, p) ?: return
+            Ui.test("catchup ${c.name} ${p.title}")
+            startActivity(VodPlayerActivity.intent(this, VodPlayerActivity.CATCHUP, null,
+                listOf(VodPlayerActivity.Entry("cu:${c.id}:${p.start}", "${c.name}  ·  ${p.title}", url)), 0, true))
+            return
+        }
         startActivity(Intent(this, PlayerActivity::class.java)
             .putExtra(PlayerActivity.CHANNEL, c.id)
             .putExtra(PlayerActivity.CATEGORY, current))
@@ -364,7 +374,7 @@ class MainActivity : Activity(), GuideGrid.Listener {
     private fun maybeAutoPlay() {
         if (!BuildConfig.DEBUG || !intent.getBooleanExtra("dingus_test_play", false)) return
         intent.removeExtra("dingus_test_play")
-        grid.current?.let { onPlay(it) }
+        grid.current?.let { onPlay(it, null) }
     }
 
     private val tick = object : Runnable {

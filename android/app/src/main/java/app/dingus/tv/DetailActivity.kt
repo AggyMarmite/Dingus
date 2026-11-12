@@ -207,7 +207,7 @@ class DetailActivity : Activity() {
     private inner class EpisodeAdapter : RecyclerView.Adapter<EpisodeAdapter.H>() {
         var items: List<Episode> = emptyList()
         fun set(list: List<Episode>) { items = list; notifyDataSetChanged() }
-        private val h = (81 * resources.displayMetrics.density).toInt()
+        private val h by lazy { (81 * resources.displayMetrics.density).toInt() }
 
         inner class H(v: View) : RecyclerView.ViewHolder(v) {
             val num: TextView = v.findViewById(R.id.num)

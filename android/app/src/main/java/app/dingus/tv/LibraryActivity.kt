@@ -139,7 +139,7 @@ class LibraryActivity : Activity() {
     private inner class PosterAdapter : RecyclerView.Adapter<PosterAdapter.H>() {
         var items: List<VodItem> = emptyList()
         fun set(list: List<VodItem>) { items = list; notifyDataSetChanged() }
-        private val h = (189 * resources.displayMetrics.density).toInt()
+        private val h by lazy { (189 * resources.displayMetrics.density).toInt() }
 
         inner class H(v: View) : RecyclerView.ViewHolder(v) {
             val poster: ImageView = v.findViewById(R.id.poster)
