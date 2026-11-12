@@ -55,6 +55,10 @@ object Repo {
         else -> byCategory[categoryId] ?: emptyList()
     }
 
+    /** Every programme known for a channel, in time order. */
+    fun programmes(c: Channel): Array<Programme> = c.guideKey?.let { guide[it] } ?: NONE
+    private val NONE = emptyArray<Programme>()
+
     /** What's on now and next on a channel (either can be null). */
     fun nowNext(c: Channel, at: Long = System.currentTimeMillis()): Pair<Programme?, Programme?> {
         val list = c.guideKey?.let { guide[it] } ?: return null to null

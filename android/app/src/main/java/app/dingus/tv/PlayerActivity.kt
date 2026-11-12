@@ -1,7 +1,6 @@
 package app.dingus.tv
 
 import android.app.Activity
-import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -12,16 +11,10 @@ import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.annotation.OptIn
-import androidx.media3.common.C
-import androidx.media3.common.MediaItem
-import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.DefaultHttpDataSource
-import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 
 /** Full-screen live TV. Up/down change channel, OK shows the info bar, MENU favourites, BACK returns. */
@@ -78,21 +71,7 @@ class PlayerActivity : Activity() {
 
     private fun makePlayer() {
         if (player != null) return
-        val http = DefaultHttpDataSource.Factory()
-            .setUserAgent(Net.USER_AGENT)
-            .setAllowCrossProtocolRedirects(true)
-            .setConnectTimeoutMs(12_000)
-            .setReadTimeoutMs(15_000)
-        // Modest buffers: quick to start, and kind to the Fire Stick's memory.
-        val load = DefaultLoadControl.Builder()
-            .setBufferDurationsMs(8_000, 30_000, 1_200, 2_500)
-            .setPrioritizeTimeOverSizeThresholds(true)
-            .build()
-        val p = ExoPlayer.Builder(this)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(http))
-            .setLoadControl(load)
-            .build()
-        p.setVideoScalingMode(C.VIDEO_SCALING_MODE_SCALE_TO_FIT)
+        val p = Players.create(this)
         p.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 when (state) {
@@ -142,9 +121,7 @@ class PlayerActivity : Activity() {
         val p = player ?: return
         val c = list[index]
         message.text = ""
-        val item = MediaItem.Builder().setUri(Uri.parse(c.url))
-        if (c.url.contains(".m3u8", ignoreCase = true)) item.setMimeType(MimeTypes.APPLICATION_M3U8)
-        p.setMediaItem(item.build())
+        p.setMediaItem(Players.item(c))
         p.prepare()
         p.playWhenReady = true
         Store.noteWatched(c.id)

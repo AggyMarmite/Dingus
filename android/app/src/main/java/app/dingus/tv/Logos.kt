@@ -27,6 +27,21 @@ object Logos {
 
     fun init(ctx: Context) { dir = File(ctx.cacheDir, "logos").apply { mkdirs() } }
 
+    private val loading = HashSet<String>()
+
+    /** For views that draw logos themselves: the logo if it's ready, otherwise starts fetching it and calls [ready]. */
+    fun get(url: String?, heightPx: Int, ready: () -> Unit): Bitmap? {
+        if (url.isNullOrBlank()) return null
+        cache.get(url)?.let { return it }
+        synchronized(failed) { if (url in failed || !loading.add(url)) return null }
+        pool.execute {
+            val bmp = try { fetch(url, heightPx) } catch (e: Exception) { null }
+            synchronized(failed) { loading.remove(url); if (bmp == null) failed.add(url) }
+            if (bmp != null) { cache.put(url, bmp); main.post(ready) }
+        }
+        return null
+    }
+
     /** Shows the logo in [view]; [fallback] (e.g. the channel's initials) is shown only while there's no logo. */
     fun load(view: ImageView, url: String?, heightPx: Int, fallback: View? = null) {
         view.tag = url

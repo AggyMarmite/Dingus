@@ -10,6 +10,19 @@ import java.util.Locale
 object Ui {
     private val hm = SimpleDateFormat("HH:mm", Locale.UK)
     fun time(ms: Long): String = synchronized(hm) { hm.format(Date(ms)) }
+    private val wd = SimpleDateFormat("EEE d MMM", Locale.UK)
+    /** "" for today, otherwise "Tomorrow" or the date, ready to go in front of a time. */
+    fun day(ms: Long): String {
+        val c = java.util.Calendar.getInstance()
+        val today = c.get(java.util.Calendar.DAY_OF_YEAR) to c.get(java.util.Calendar.YEAR)
+        c.timeInMillis = ms
+        val d = c.get(java.util.Calendar.DAY_OF_YEAR) to c.get(java.util.Calendar.YEAR)
+        if (d == today) return ""
+        c.add(java.util.Calendar.DAY_OF_YEAR, -1)
+        if ((c.get(java.util.Calendar.DAY_OF_YEAR) to c.get(java.util.Calendar.YEAR)) == today) return "Tomorrow   "
+        return synchronized(wd) { wd.format(Date(ms)) } + "   "
+    }
+
     fun span(p: Programme) = "${time(p.start)} – ${time(p.stop)}"
 
     fun progress(p: Programme, now: Long = System.currentTimeMillis()): Int {

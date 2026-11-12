@@ -34,6 +34,10 @@ class H(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith("/playlist.m3u"): return self.send(playlist(), "audio/x-mpegurl")
         if self.path.startswith("/guide.xml"): return self.send(guide(), "application/xml")
+        if self.path.startswith("/release.json"):
+            body = ('{"tag_name":"v99.0.0","body":"- Test update\\n- Another line","assets":[{"name":"Dingus.apk",'
+                    f'"browser_download_url":"{HOST}/Dingus.apk"' + '}]}').encode()
+            return self.send(body, "application/json")
         if self.path.startswith("/live/"): self.path = "/test.ts"
         return super().do_GET()
     def send(self, body, ctype):

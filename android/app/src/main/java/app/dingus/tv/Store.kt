@@ -63,4 +63,13 @@ object Store {
     var guideLoadedAt: Long
         get() = prefs.getLong("guideLoadedAt", 0)
         set(v) = prefs.edit().putLong("guideLoadedAt", v).apply()
+
+    /** Play the highlighted channel in the small window above the guide. */
+    var preview: Boolean
+        get() = prefs.getBoolean("preview", true)
+        set(v) = prefs.edit().putBoolean("preview", v).apply()
+
+    var updateCheckedAt: Long
+        get() = prefs.getLong("updateCheckedAt", 0)
+        set(v) = prefs.edit().putLong("updateCheckedAt", v).apply()
 }

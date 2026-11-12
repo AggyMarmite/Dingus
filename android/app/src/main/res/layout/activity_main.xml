@@ -1,28 +1,87 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Browse: categories down the left, channels with what's on now and next on the right. -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:orientation="horizontal" android:background="@color/bg">
+<!-- The guide: what's highlighted (with a live preview) on top, the programme grid below,
+     and the categories menu that slides in from the left. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg">
 
-    <LinearLayout android:id="@+id/rail"
-        android:layout_width="340dp" android:layout_height="match_parent"
-        android:orientation="vertical" android:background="@color/surface"
-        android:paddingStart="40dp" android:paddingEnd="18dp" android:paddingTop="30dp" android:paddingBottom="26dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="230dp" android:orientation="horizontal"
+            android:paddingStart="40dp" android:paddingEnd="40dp" android:paddingTop="24dp" android:paddingBottom="10dp">
+
+            <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+                android:orientation="vertical" android:paddingEnd="30dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical">
+                    <TextView android:id="@+id/infoChannel" android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:maxLines="1" android:ellipsize="end" android:textSize="16sp"
+                        android:textColor="@color/muted" />
+                    <TextView android:id="@+id/clock" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:textSize="16sp" android:textColor="@color/muted" />
+                </LinearLayout>
+                <TextView android:id="@+id/infoTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp" android:maxLines="1" android:ellipsize="end" android:textSize="28sp"
+                    android:textStyle="bold" android:textColor="@color/text" />
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp" android:orientation="horizontal" android:gravity="center_vertical">
+                    <TextView android:id="@+id/infoTime" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:textSize="16sp" android:textColor="@color/text" />
+                    <ProgressBar android:id="@+id/infoProgress" style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="160dp" android:layout_height="4dp" android:layout_marginStart="14dp"
+                        android:max="1000" android:progressDrawable="@drawable/progress_track" />
+                    <TextView android:id="@+id/infoLive" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp" android:text="ON NOW" android:textSize="12sp" android:textStyle="bold"
+                        android:letterSpacing="0.08" android:textColor="@color/live" />
+                </LinearLayout>
+                <TextView android:id="@+id/infoDesc" android:layout_width="match_parent" android:layout_height="0dp"
+                    android:layout_weight="1" android:layout_marginTop="10dp" android:maxLines="3" android:ellipsize="end"
+                    android:textSize="15sp" android:lineSpacingExtra="2dp" android:textColor="@color/muted" />
+                <TextView android:id="@+id/hint" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:maxLines="1" android:textSize="13sp" android:textColor="#5B6477"
+                    android:text="OK  watch     ◀  categories &amp; settings     ≡  favourite" />
+            </LinearLayout>
+
+            <FrameLayout android:id="@+id/previewBox" android:layout_width="350dp" android:layout_height="197dp"
+                android:background="@drawable/logo_bg">
+                <TextView android:id="@+id/previewText" android:layout_width="match_parent" android:layout_height="match_parent"
+                    android:gravity="center" android:padding="16dp" android:textSize="16sp" android:textColor="@color/muted" />
+                <androidx.media3.ui.PlayerView android:id="@+id/preview"
+                    android:layout_width="match_parent" android:layout_height="match_parent"
+                    app:use_controller="false" app:resize_mode="fit" app:surface_type="texture_view"
+                    app:shutter_background_color="@android:color/transparent" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+            <app.dingus.tv.GuideGrid android:id="@+id/grid" android:layout_width="match_parent" android:layout_height="match_parent"
+                android:paddingStart="0dp" />
+            <TextView android:id="@+id/empty" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_gravity="center" android:gravity="center" android:textSize="18sp"
+                android:textColor="@color/muted" android:visibility="gone" />
+        </FrameLayout>
+    </LinearLayout>
+
+    <!-- Categories menu -->
+    <View android:id="@+id/scrim" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:background="#99000000" android:visibility="gone" />
+    <LinearLayout android:id="@+id/menu"
+        android:layout_width="360dp" android:layout_height="match_parent"
+        android:orientation="vertical" android:background="@color/surface" android:elevation="12dp"
+        android:visibility="gone"
+        android:paddingStart="34dp" android:paddingEnd="18dp" android:paddingTop="28dp" android:paddingBottom="24dp">
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="horizontal" android:gravity="center_vertical">
-            <ImageView android:layout_width="38dp" android:layout_height="38dp" android:src="@mipmap/ic_launcher"
+            <ImageView android:layout_width="36dp" android:layout_height="36dp" android:src="@mipmap/ic_launcher"
                 android:contentDescription="@null" />
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginStart="12dp" android:text="Dingus" android:textSize="26sp" android:textStyle="bold"
+                android:layout_marginStart="12dp" android:text="Dingus" android:textSize="24sp" android:textStyle="bold"
                 android:textColor="@color/text" />
         </LinearLayout>
 
-        <TextView android:id="@+id/clock" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginTop="6dp" android:textSize="15sp" android:textColor="@color/muted" />
-
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginTop="26dp" android:layout_marginBottom="8dp" android:paddingStart="14dp"
+            android:layout_marginTop="22dp" android:layout_marginBottom="8dp" android:paddingStart="14dp"
             android:text="CATEGORIES" android:textSize="12sp" android:textStyle="bold" android:letterSpacing="0.08"
             android:textColor="@color/muted" />
 
@@ -31,37 +90,12 @@
             android:scrollbars="none" android:descendantFocusability="afterDescendants" />
 
         <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="10dp" android:paddingStart="14dp" android:textSize="13sp" android:textColor="@color/muted" />
+            android:layout_marginTop="10dp" android:paddingStart="14dp" android:textSize="13sp" android:textColor="@color/muted"
+            android:visibility="gone" />
 
         <TextView android:id="@+id/settings" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="10dp" android:background="@drawable/button_bg" android:focusable="true"
             android:clickable="true" android:gravity="center" android:padding="12dp"
-            android:text="Playlist &amp; settings" android:textSize="16sp" android:textColor="@color/text" />
+            android:text="Settings" android:textSize="16sp" android:textColor="@color/text" />
     </LinearLayout>
-
-    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
-        android:orientation="vertical"
-        android:paddingStart="30dp" android:paddingEnd="48dp" android:paddingTop="30dp" android:paddingBottom="20dp">
-
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="horizontal" android:gravity="bottom">
-            <TextView android:id="@+id/title" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:textSize="28sp" android:textStyle="bold" android:textColor="@color/text"
-                android:maxLines="1" android:ellipsize="end" />
-            <TextView android:id="@+id/count" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginStart="14dp" android:layout_marginBottom="4dp" android:textSize="16sp"
-                android:textColor="@color/muted" />
-        </LinearLayout>
-
-        <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
-            android:layout_marginTop="14dp">
-            <androidx.recyclerview.widget.RecyclerView android:id="@+id/channels"
-                android:layout_width="match_parent" android:layout_height="match_parent"
-                android:scrollbars="none" android:descendantFocusability="afterDescendants" android:clipToPadding="false"
-                android:paddingBottom="40dp" />
-            <TextView android:id="@+id/empty" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_gravity="center" android:gravity="center" android:textSize="18sp"
-                android:textColor="@color/muted" android:visibility="gone" />
-        </FrameLayout>
-    </LinearLayout>
-</LinearLayout>
+</FrameLayout>

@@ -114,12 +114,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           V=$(grep -oPm1 '(?<=<Version>)[^<]+' Dingus.csproj)
-          if gh release view "v$V" --repo ${{ github.repository }} --json assets -q '.assets[].name' | grep -q "Dingus-$V.apk"; then
+          if gh release view "v$V" --repo ${{ github.repository }} --json assets -q '.assets[].name' | grep -qx "Dingus.apk"; then
             echo "The APK is already on v$V – nothing to do."; exit 0
           fi
           gradle -p android assembleRelease --no-daemon
-          cp android/app/build/outputs/apk/release/app-release.apk "Dingus-$V.apk"
-          gh release upload "v$V" "Dingus-$V.apk" --repo ${{ github.repository }} --clobber
+          # Always called Dingus.apk, so .../releases/latest/download/Dingus.apk is a link that never changes.
+          cp android/app/build/outputs/apk/release/app-release.apk Dingus.apk
+          gh release upload "v$V" Dingus.apk --repo ${{ github.repository }} --clobber
 
   # Parked until the Mac version is finished – turn on by removing the "if: false".
   mac:
