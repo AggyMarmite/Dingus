@@ -96,6 +96,31 @@ jobs:
           linux/package/build-appimage.sh "$V" out
           gh release upload "v$V" "out/Dingus-$V-x86_64.AppImage" --repo ${{ github.repository }} --clobber
 
+  # The Fire TV / Android TV app, attached to the same release.
+  android:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.14.3
+      - name: Build and attach the APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=$(grep -oPm1 '(?<=<Version>)[^<]+' Dingus.csproj)
+          if gh release view "v$V" --repo ${{ github.repository }} --json assets -q '.assets[].name' | grep -q "Dingus-$V.apk"; then
+            echo "The APK is already on v$V – nothing to do."; exit 0
+          fi
+          gradle -p android assembleRelease --no-daemon
+          cp android/app/build/outputs/apk/release/app-release.apk "Dingus-$V.apk"
+          gh release upload "v$V" "Dingus-$V.apk" --repo ${{ github.repository }} --clobber
+
   # Parked until the Mac version is finished – turn on by removing the "if: false".
   mac:
     if: false
