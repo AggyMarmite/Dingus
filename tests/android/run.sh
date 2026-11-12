@@ -14,6 +14,7 @@ check() { if wait_log "$1" "$2"; then echo "PASS $3"; echo "PASS $3" >> "$OUT/re
 
 adb install -r "$APK" || exit 1
 adb logcat -c
+adb logcat -s DINGUS-TEST:I AndroidRuntime:E > "$OUT/log-all.txt" &
 adb shell am start -n $PKG/.MainActivity --es dingus_test_m3u http://10.0.2.2:8000/playlist.m3u
 check "channels 3 categories 2" 60 "playlist loaded (3 channels, 2 categories)"
 check "guide 3" 60 "guide read for all 3 channels"
@@ -28,9 +29,13 @@ key KEYCODE_DPAD_DOWN
 check "playing Test 2" 45 "Test 2 plays (HLS) after changing channel"
 sleep 1; shot 05-zap
 key KEYCODE_MENU 2; shot 06-favourite
-key KEYCODE_BACK; key KEYCODE_BACK 2; shot 07-back
+adb logcat -c
+key KEYCODE_BACK; key KEYCODE_BACK 2
+check "main-shown" 10 "BACK returns to the channel list"
+key KEYCODE_DPAD_LEFT; key KEYCODE_DPAD_UP; key KEYCODE_DPAD_UP; key KEYCODE_DPAD_UP 2
+shot 07-back-favourites
 adb shell dumpsys meminfo $PKG | grep -E "TOTAL( PSS)?:" | head -1 | sed 's/^/memory: /' | tee -a "$OUT/result.txt"
 adb logcat -d -s DINGUS-TEST:I AndroidRuntime:E > "$OUT/log.txt"
-if grep -q "FATAL EXCEPTION" "$OUT/log.txt"; then echo "::error title=android self-test::app crashed"; fail=1; fi
+kill %1 2>/dev/null; if grep -A1 "FATAL EXCEPTION" "$OUT/log-all.txt" | grep -q "Process: $PKG"; then echo "::error title=android self-test::app crashed"; fail=1; fi
 [ $fail = 0 ] && echo PASSED >> "$OUT/result.txt" || echo FAILED >> "$OUT/result.txt"
 exit $fail

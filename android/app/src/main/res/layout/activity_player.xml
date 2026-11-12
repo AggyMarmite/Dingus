@@ -20,6 +20,8 @@
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="horizontal" android:gravity="center_vertical">
             <FrameLayout android:layout_width="112dp" android:layout_height="64dp" android:background="@drawable/logo_bg">
+                <TextView android:id="@+id/initials" android:layout_width="match_parent" android:layout_height="match_parent"
+                    android:gravity="center" android:textSize="22sp" android:textStyle="bold" android:textColor="@color/muted" />
                 <ImageView android:id="@+id/logo" android:layout_width="match_parent" android:layout_height="match_parent"
                     android:padding="6dp" android:scaleType="fitCenter" android:contentDescription="@null" />
             </FrameLayout>
@@ -50,7 +52,7 @@
             android:layout_marginTop="10dp" android:maxLines="1" android:ellipsize="end" android:textSize="17sp"
             android:textColor="@color/text" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp"
-            android:text="▲ ▼  change channel     OK  info     ≡  favourite     ◀  back to channels"
+            android:text="▲ ▼  change channel     OK  info     ≡  favourite     BACK  channel list"
             android:textSize="14sp" android:textColor="@color/muted" />
     </LinearLayout>
 </FrameLayout>

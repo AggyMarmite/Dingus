@@ -183,6 +183,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        Ui.test("main-shown")
         if (Repo.channels.isEmpty() && !loading) start()
         else if (Repo.channels.isNotEmpty()) { reload(); focusList() }
         tick.run()
@@ -194,6 +195,7 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        Ui.test("main-closed")
         Repo.removeListener(repoListener)
         scope.cancel()
         super.onDestroy()

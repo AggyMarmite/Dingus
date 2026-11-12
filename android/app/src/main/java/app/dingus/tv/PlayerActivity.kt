@@ -167,7 +167,8 @@ class PlayerActivity : Activity() {
         findViewById<TextView>(R.id.name).text = c.name
         findViewById<TextView>(R.id.number).text = if (c.number > 0) c.number.toString() else ""
         findViewById<View>(R.id.fav).visibility = if (Store.isFavourite(c.id)) View.VISIBLE else View.GONE
-        Logos.load(findViewById<ImageView>(R.id.logo), c.logo, Ui.dp(this, 56))
+        findViewById<TextView>(R.id.initials).text = Ui.initials(c.name)
+        Logos.load(findViewById<ImageView>(R.id.logo), c.logo, Ui.dp(this, 56), findViewById(R.id.initials))
         val (now, next) = Repo.nowNext(c)
         val nowV = findViewById<TextView>(R.id.now)
         val times = findViewById<TextView>(R.id.times)
@@ -194,6 +195,13 @@ class PlayerActivity : Activity() {
         handler.postDelayed(hideInfo, 5_000)
     }
 
+    /** BACK hides the info bar first, then goes back to the channel list. */
+    override fun onBackPressed() {
+        if (info.visibility == View.VISIBLE && info.alpha > 0.5f) { handler.removeCallbacks(hideInfo); hideInfo.run(); return }
+        Ui.test("player-closed")
+        super.onBackPressed()
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         when (keyCode) {
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_PAGE_UP -> { zap(-1); return true }
@@ -211,9 +219,6 @@ class PlayerActivity : Activity() {
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
                 player?.let { it.playWhenReady = !it.playWhenReady }
                 return true
-            }
-            KeyEvent.KEYCODE_BACK -> {
-                if (info.visibility == View.VISIBLE && info.alpha > 0.5f) { handler.removeCallbacks(hideInfo); hideInfo.run(); return true }
             }
         }
         return super.onKeyDown(keyCode, event)
