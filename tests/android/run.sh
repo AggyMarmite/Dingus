@@ -25,8 +25,8 @@ sleep 2; shot 01-guide
 key KEYCODE_DPAD_RIGHT; key KEYCODE_DPAD_RIGHT; key KEYCODE_DPAD_DOWN 2; shot 02-guide-later
 fresh
 key KEYCODE_DPAD_LEFT; key KEYCODE_DPAD_LEFT; key KEYCODE_DPAD_LEFT 2
-check "menu-open" 5 "LEFT from what's on now opens the menu"
-shot 03-menu
+check "categories-open" 5 "LEFT from what's on now shows the categories"
+shot 03-categories
 key KEYCODE_DPAD_DOWN; key KEYCODE_DPAD_CENTER 4   # UK: Entertainment
 check "preview Test 1 HD" 20 "picking a category shows its channels"
 fresh
@@ -48,7 +48,9 @@ check "preview Test 1 HD" 30 "the guide lands on the channel just watched"
 sleep 2; shot 06-guide-after
 
 fresh
-key KEYCODE_BACK 2
+key KEYCODE_BACK 1; key KEYCODE_DPAD_LEFT 2
+check "menu-open" 5 "LEFT from the categories opens the main menu"
+shot 06b-menu
 for _ in 1 2 3 4 5 6 7; do key KEYCODE_DPAD_DOWN 0.5; done
 key KEYCODE_DPAD_CENTER 2
 check "settings-shown" 10 "Settings opens from the menu"
@@ -70,9 +72,11 @@ check "channels 3 categories 2" 60 "Xtream login: live channels loaded"
 check "guide 3" 60 "Xtream login: guide read"
 sleep 3
 fresh
-key KEYCODE_BACK 2
-check "menu-open" 5 "BACK opens the menu"
-key KEYCODE_DPAD_UP 0.5; key KEYCODE_DPAD_UP 0.5   # TV Shows, then Films
+key KEYCODE_BACK 1
+check "categories-open" 5 "BACK shows the categories"
+key KEYCODE_DPAD_LEFT 2
+check "menu-open" 5 "then the main menu"
+key KEYCODE_DPAD_DOWN 0.5; key KEYCODE_DPAD_DOWN 0.5   # Search, then Films
 shot 09-menu-xtream
 key KEYCODE_DPAD_CENTER 3
 check "library movies 3" 40 "Films load"
@@ -92,7 +96,8 @@ check "detail-button .*Resume from" 10 "coming back offers to resume"
 shot 13-film-resume
 key KEYCODE_BACK 2; key KEYCODE_BACK 2
 fresh
-key KEYCODE_BACK 2; key KEYCODE_DPAD_UP 0.5; key KEYCODE_DPAD_CENTER 3    # menu → TV Shows
+key KEYCODE_BACK 1; key KEYCODE_DPAD_LEFT 2
+for _ in 1 2 3; do key KEYCODE_DPAD_DOWN 0.5; done; key KEYCODE_DPAD_CENTER 3    # menu → TV Shows
 check "library series 2" 40 "TV shows load"
 sleep 2
 fresh

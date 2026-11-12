@@ -57,6 +57,7 @@ class MainActivity : Activity(), GuideGrid.Listener {
         setContentView(R.layout.activity_main)
         grid = findViewById(R.id.grid)
         menu = findViewById(R.id.menu)
+        catPanel = findViewById(R.id.catPanel)
         scrim = findViewById(R.id.scrim)
         categories = findViewById(R.id.categories)
         empty = findViewById(R.id.empty)
@@ -72,7 +73,8 @@ class MainActivity : Activity(), GuideGrid.Listener {
         categories.adapter = catAdapter
         categories.itemAnimator = null
         // Going to another screen closes the menu, so you come back to the guide.
-        fun go(i: Intent) { closeMenu(); startActivity(i) }
+        fun go(i: Intent) { closeMenu(toGuide = true); startActivity(i) }
+        findViewById<View>(R.id.navGuide).setOnClickListener { closeMenu(toGuide = true) }
         findViewById<View>(R.id.settings).setOnClickListener { go(Intent(this, SettingsActivity::class.java)) }
         findViewById<View>(R.id.navSearch).setOnClickListener { go(Intent(this, SearchActivity::class.java)) }
         findViewById<View>(R.id.navFilms).setOnClickListener {
@@ -293,47 +295,70 @@ class MainActivity : Activity(), GuideGrid.Listener {
         if (current == Repo.FAV) showCategory(Repo.FAV, c.id)
     }
 
-    override fun onLeftEdge() = openMenu()
+    override fun onLeftEdge() = openCategories()
 
+    private lateinit var catPanel: View
+
+    /** LEFT from the guide: the categories appear over the channel names, with the current one highlighted. */
+    private fun openCategories() {
+        if (catPanel.visibility == View.VISIBLE) return
+        catPanel.visibility = View.VISIBLE
+        catPanel.translationX = -catPanel.width.toFloat().coerceAtLeast(200f)
+        catPanel.animate().translationX(0f).setDuration(140).start()
+        grid.isFocusable = false // the guide can't take the remote's presses while the list is open
+        val i = catAdapter.items.indexOfFirst { it.id == current }.coerceAtLeast(0)
+        categories.scrollToPosition(i)
+        focusCategory(i, 0)
+        Ui.test("categories-open")
+    }
+
+    /** The list may not be laid out yet the moment it appears: try again on the next frames. */
+    private fun focusCategory(i: Int, attempt: Int) {
+        categories.post {
+            if (catPanel.visibility != View.VISIBLE || menu.visibility == View.VISIBLE) return@post
+            val v = categories.findViewHolderForAdapterPosition(i)?.itemView
+            if (v != null) v.requestFocus() else if (attempt < 10) handler.postDelayed({ focusCategory(i, attempt + 1) }, 30)
+        }
+    }
+
+    private fun closeCategories() {
+        if (catPanel.visibility != View.VISIBLE) return
+        handler.removeCallbacks(catAdapter.pending)
+        catAdapter.pending.run()
+        catPanel.animate().translationX(-catPanel.width.toFloat()).setDuration(120).withEndAction {
+            catPanel.visibility = View.GONE
+        }.start()
+        grid.isFocusable = true
+        grid.requestFocus()
+    }
+
+    /** LEFT again (from the categories): the main menu – TV guide, search, films, TV shows, settings. */
     private fun openMenu() {
         if (menu.visibility == View.VISIBLE) return
         val vod = if (Vod.available) View.VISIBLE else View.GONE
         findViewById<View>(R.id.navFilms).visibility = vod
         findViewById<View>(R.id.navShows).visibility = vod
+        findViewById<View>(R.id.navGuide).isActivated = true
         menu.visibility = View.VISIBLE
         scrim.visibility = View.VISIBLE
         menu.translationX = -menu.width.toFloat().coerceAtLeast(300f)
         menu.animate().translationX(0f).setDuration(160).start()
-        grid.isFocusable = false // nothing behind the menu can take the remote's presses
-        val i = catAdapter.items.indexOfFirst { it.id == current }.coerceAtLeast(0)
-        categories.scrollToPosition(i)
-        focusMenuItem(i, 0)
+        grid.isFocusable = false
+        categories.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+        menu.post { findViewById<View>(R.id.navGuide).requestFocus() }
         Ui.test("menu-open")
     }
 
-    /** The list may not be laid out yet the moment the menu appears: try again on the next frames. */
-    private fun focusMenuItem(i: Int, attempt: Int) {
-        categories.post {
-            if (menu.visibility != View.VISIBLE) return@post
-            val v = categories.findViewHolderForAdapterPosition(i)?.itemView
-            when {
-                v != null -> v.requestFocus()
-                attempt < 8 -> handler.postDelayed({ focusMenuItem(i, attempt + 1) }, 30)
-                else -> findViewById<View>(R.id.settings).requestFocus()
-            }
-        }
-    }
-
-    private fun closeMenu() {
+    /** Close the main menu, back to the categories ([toGuide] = straight to the guide). */
+    private fun closeMenu(toGuide: Boolean = false) {
         if (menu.visibility != View.VISIBLE) return
-        grid.isFocusable = true
-        handler.removeCallbacks(catAdapter.pending)
-        catAdapter.pending.run()
         menu.animate().translationX(-menu.width.toFloat()).setDuration(140).withEndAction {
             menu.visibility = View.GONE
         }.start()
         scrim.visibility = View.GONE
-        grid.requestFocus()
+        categories.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+        if (toGuide || catPanel.visibility != View.VISIBLE) { catPanel.visibility = View.GONE; grid.isFocusable = true; grid.requestFocus() }
+        else focusCategory(catAdapter.items.indexOfFirst { it.id == current }.coerceAtLeast(0), 0)
     }
 
     private fun maybeAutoPlay() {
@@ -360,7 +385,7 @@ class MainActivity : Activity(), GuideGrid.Listener {
             if (Repo.channelsIn(current).none { it.id == last } || grid.current?.id != last) showCategory(current, last)
             else grid.refresh()
             grid.current?.let { if (previewing == null) preview(it) }
-            if (menu.visibility != View.VISIBLE) grid.requestFocus()
+            if (menu.visibility != View.VISIBLE && catPanel.visibility != View.VISIBLE) grid.requestFocus()
         }
         tick.run()
         if (!updateChecked && Store.playlist != null) {
@@ -382,37 +407,53 @@ class MainActivity : Activity(), GuideGrid.Listener {
         super.onDestroy()
     }
 
+    private fun inside(v: View?, parent: View): Boolean {
+        var x = v
+        while (x != null) { if (x === parent) return true; x = x.parent as? View }
+        return false
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (BuildConfig.DEBUG && event.action == KeyEvent.ACTION_DOWN)
             Ui.test("key ${KeyEvent.keyCodeToString(event.keyCode)} on ${currentFocus?.let { it.javaClass.simpleName + "/" + ((it as? TextView)?.text ?: "") }}")
-        // While the menu is open, make sure the presses go to it.
-        if (menu.visibility == View.VISIBLE && event.action == KeyEvent.ACTION_DOWN) {
+        if (event.action == KeyEvent.ACTION_DOWN && event.keyCode != KeyEvent.KEYCODE_BACK) {
             val f = currentFocus
-            var inMenu = false
-            var v: View? = f
-            while (v != null) { if (v === menu) { inMenu = true; break }; v = v.parent as? View }
-            if (!inMenu && event.keyCode != KeyEvent.KEYCODE_BACK) {
-                focusMenuItem(catAdapter.items.indexOfFirst { it.id == current }.coerceAtLeast(0), 0)
-                return true
+            when {
+                // The main menu keeps the remote's presses while it's open.
+                menu.visibility == View.VISIBLE -> {
+                    if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) { closeMenu(); return true }
+                    if (!inside(f, menu)) { findViewById<View>(R.id.navGuide).requestFocus(); return true }
+                }
+                catPanel.visibility == View.VISIBLE -> {
+                    when (event.keyCode) {
+                        KeyEvent.KEYCODE_DPAD_RIGHT -> { closeCategories(); return true }
+                        KeyEvent.KEYCODE_DPAD_LEFT -> { openMenu(); return true }
+                    }
+                    if (!inside(f, catPanel)) { focusCategory(catAdapter.items.indexOfFirst { it.id == current }.coerceAtLeast(0), 0); return true }
+                }
             }
         }
         return super.dispatchKeyEvent(event)
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (menu.visibility == View.VISIBLE) {
-            if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) { closeMenu(); return true }
-        } else if (Store.playlist == null && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
-            startActivity(Intent(this, AddPlaylistActivity::class.java)); return true
-        } else if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && grid.current == null) {
-            openMenu(); return true
+        if (menu.visibility != View.VISIBLE && catPanel.visibility != View.VISIBLE) {
+            if (Store.playlist == null && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
+                startActivity(Intent(this, AddPlaylistActivity::class.java)); return true
+            }
+            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && grid.current == null) { openMenu(); return true }
         }
         return super.onKeyDown(keyCode, event)
     }
 
-    /** BACK opens the menu; BACK again (from the menu) leaves the app. */
+    /** BACK steps out: guide → categories → menu → leave the app. */
     override fun onBackPressed() {
-        if (menu.visibility == View.VISIBLE) super.onBackPressed() else openMenu()
+        when {
+            menu.visibility == View.VISIBLE -> super.onBackPressed()
+            catPanel.visibility == View.VISIBLE -> openMenu()
+            grid.current == null -> openMenu()
+            else -> openCategories()
+        }
     }
 
     // ------------------------------------------------------------------ categories menu
@@ -449,7 +490,7 @@ class MainActivity : Activity(), GuideGrid.Listener {
             }
             v.setOnClickListener {
                 val p = h.bindingAdapterPosition
-                if (p >= 0) { pendingId = items[p].id; closeMenu() }
+                if (p >= 0) { pendingId = items[p].id; closeCategories() }
             }
             // MENU on a category offers to hide it.
             v.setOnKeyListener { _, code, ev ->

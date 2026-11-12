@@ -49,7 +49,7 @@
                     android:textSize="15sp" android:lineSpacingExtra="2dp" android:textColor="@color/muted" />
                 <TextView android:id="@+id/hint" android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:maxLines="1" android:textSize="13sp" android:textColor="#5B6477"
-                    android:text="OK  watch     ◀  menu: categories, films, TV shows, search     ≡  favourite" />
+                    android:text="OK  watch     ◀  categories     ◀ ◀  films, shows, search &amp; settings     ≡  favourite" />
             </LinearLayout>
 
         </LinearLayout>
@@ -60,6 +60,19 @@
             <TextView android:id="@+id/empty" android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:layout_gravity="center" android:gravity="center" android:textSize="18sp"
                 android:textColor="@color/muted" android:visibility="gone" />
+
+            <!-- Categories: LEFT from the guide shows them over the channel names (the programmes stay in view). -->
+            <LinearLayout android:id="@+id/catPanel" android:layout_width="250dp" android:layout_height="match_parent"
+                android:orientation="vertical" android:background="@color/surface" android:elevation="8dp"
+                android:visibility="gone" android:paddingStart="8dp" android:paddingEnd="8dp">
+                <TextView android:layout_width="match_parent" android:layout_height="34dp" android:gravity="center_vertical"
+                    android:paddingStart="12dp" android:text="CATEGORIES" android:textSize="12sp" android:textStyle="bold"
+                    android:letterSpacing="0.08" android:textColor="@color/muted" />
+                <androidx.recyclerview.widget.RecyclerView android:id="@+id/categories"
+                    android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+                    android:scrollbars="none" android:clipToPadding="false" android:paddingBottom="16dp"
+                    android:descendantFocusability="afterDescendants" />
+            </LinearLayout>
         </FrameLayout>
     </LinearLayout>
 
@@ -67,7 +80,7 @@
     <View android:id="@+id/scrim" android:layout_width="match_parent" android:layout_height="match_parent"
         android:background="#99000000" android:visibility="gone" />
     <LinearLayout android:id="@+id/menu"
-        android:layout_width="360dp" android:layout_height="match_parent"
+        android:layout_width="300dp" android:layout_height="match_parent"
         android:orientation="vertical" android:background="@color/surface" android:elevation="12dp"
         android:visibility="gone"
         android:paddingStart="34dp" android:paddingEnd="18dp" android:paddingTop="28dp" android:paddingBottom="24dp">
@@ -81,26 +94,17 @@
                 android:textColor="@color/text" />
         </LinearLayout>
 
-        <TextView android:id="@+id/navSearch" style="@style/NavRow" android:layout_marginTop="18dp" android:text="⌕   Search" />
+        <TextView android:id="@+id/navGuide" style="@style/NavRow" android:layout_marginTop="18dp" android:text="TV Guide" />
+        <TextView android:id="@+id/navSearch" style="@style/NavRow" android:text="Search" />
         <TextView android:id="@+id/navFilms" style="@style/NavRow" android:text="Films" />
         <TextView android:id="@+id/navShows" style="@style/NavRow" android:text="TV Shows" />
+        <TextView android:id="@+id/settings" style="@style/NavRow" android:text="Settings" />
 
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginTop="14dp" android:layout_marginBottom="8dp" android:paddingStart="14dp"
-            android:text="TV GUIDE CATEGORIES" android:textSize="12sp" android:textStyle="bold" android:letterSpacing="0.08"
-            android:textColor="@color/muted" />
-
-        <androidx.recyclerview.widget.RecyclerView android:id="@+id/categories"
-            android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
-            android:scrollbars="none" android:descendantFocusability="afterDescendants" />
+        <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
 
         <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="10dp" android:paddingStart="14dp" android:textSize="13sp" android:textColor="@color/muted"
             android:visibility="gone" />
 
-        <TextView android:id="@+id/settings" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="10dp" android:background="@drawable/button_bg" android:focusable="true"
-            android:clickable="true" android:gravity="center" android:padding="12dp"
-            android:text="Settings" android:textSize="16sp" android:textColor="@color/text" />
     </LinearLayout>
 </FrameLayout>
