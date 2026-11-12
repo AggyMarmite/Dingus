@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="@android:color/black"
+    android:keepScreenOn="true">
+    <androidx.media3.ui.PlayerView android:id="@+id/video"
+        android:layout_width="match_parent" android:layout_height="match_parent"
+        app:use_controller="true" app:show_buffering="when_playing" app:controller_layout_id="@layout/vod_controls"
+        app:show_timeout="3500" app:resize_mode="fit" app:surface_type="surface_view"
+        app:shutter_background_color="@android:color/black" />
+    <TextView android:id="@+id/message" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_gravity="center" android:gravity="center" android:padding="20dp" android:textSize="20sp"
+        android:textColor="@color/text" android:shadowColor="#000000" android:shadowRadius="6" />
+</FrameLayout>

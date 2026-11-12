@@ -72,4 +72,13 @@ object Store {
     var updateCheckedAt: Long
         get() = prefs.getLong("updateCheckedAt", 0)
         set(v) = prefs.edit().putLong("updateCheckedAt", v).apply()
+
+    /** Categories you've hidden, as "live:<id>", "movies:<id>" or "series:<id>". */
+    var hidden: Set<String>
+        get() = prefs.getStringSet("hidden", emptySet())!!.toSet()
+        set(v) { prefs.edit().putStringSet("hidden", HashSet(v)).apply(); cachedHidden = null }
+    fun isHidden(key: String) = hiddenCache().contains(key)
+    fun setHidden(key: String, on: Boolean) { hidden = if (on) hidden + key else hidden - key; cachedHidden = null }
+    @Volatile private var cachedHidden: Set<String>? = null
+    private fun hiddenCache(): Set<String> = cachedHidden ?: hidden.also { cachedHidden = it }
 }

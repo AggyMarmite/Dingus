@@ -12,20 +12,28 @@ import java.io.File
 import java.security.MessageDigest
 import java.util.concurrent.Executors
 
+/** Channel logos (kept sharp, with transparency). */
+val Logos = ImageCache("logos", 12, Bitmap.Config.ARGB_8888)
+/** Film and show artwork: bigger, so stored at half the memory per pixel. */
+val Posters = ImageCache("posters", 16, Bitmap.Config.RGB_565)
+
 /**
- * Channel logos: downloaded once (kept on the device), shrunk to the size they're shown at, and held in a small
- * memory cache – Fire Sticks don't have memory to spare.
+ * Pictures from the internet: downloaded once (kept on the device), shrunk to the size they're shown at, and held
+ * in a small memory cache – Fire Sticks don't have memory to spare.
  */
-object Logos {
+class ImageCache(private val name: String, megabytes: Int, private val config: Bitmap.Config) {
     private val pool = Executors.newFixedThreadPool(3)
     private val main = Handler(Looper.getMainLooper())
-    private val cache = object : LruCache<String, Bitmap>(12 * 1024 * 1024) {
+    private val cache = object : LruCache<String, Bitmap>(megabytes * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap) = value.byteCount
     }
     private val failed = HashSet<String>()
     private lateinit var dir: File
 
-    fun init(ctx: Context) { dir = File(ctx.cacheDir, "logos").apply { mkdirs() } }
+    fun init(ctx: Context) { dir = File(ctx.cacheDir, name).apply { mkdirs() } }
+
+    /** Forget pictures in memory (e.g. when leaving a screen full of posters). */
+    fun trim() = cache.trimToSize(cache.maxSize() / 3)
 
     private val loading = HashSet<String>()
 
@@ -61,7 +69,7 @@ object Logos {
     private fun fetch(url: String, heightPx: Int): Bitmap? {
         val f = File(dir, hash(url))
         if (!f.exists() || f.length() == 0L) {
-            val tmp = File(dir, f.name + ".tmp")
+            val tmp = File(dir, f.name + ".tmp." + Thread.currentThread().id)
             Net.open(url, 10_000).use { i -> tmp.outputStream().use { o -> i.copyTo(o) } }
             tmp.renameTo(f)
         }
@@ -70,7 +78,7 @@ object Logos {
         if (o.outHeight <= 0) return null
         var sample = 1
         while (o.outHeight / (sample * 2) >= heightPx) sample *= 2
-        return BitmapFactory.decodeFile(f.path, BitmapFactory.Options().apply { inSampleSize = sample; inPreferredConfig = Bitmap.Config.ARGB_8888 })
+        return BitmapFactory.decodeFile(f.path, BitmapFactory.Options().apply { inSampleSize = sample; inPreferredConfig = config })
     }
 
     private fun hash(s: String) = MessageDigest.getInstance("SHA-1").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }

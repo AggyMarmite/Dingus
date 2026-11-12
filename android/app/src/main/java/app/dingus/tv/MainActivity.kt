@@ -71,7 +71,16 @@ class MainActivity : Activity(), GuideGrid.Listener {
         categories.layoutManager = LinearLayoutManager(this)
         categories.adapter = catAdapter
         categories.itemAnimator = null
-        findViewById<View>(R.id.settings).setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
+        // Going to another screen closes the menu, so you come back to the guide.
+        fun go(i: Intent) { closeMenu(); startActivity(i) }
+        findViewById<View>(R.id.settings).setOnClickListener { go(Intent(this, SettingsActivity::class.java)) }
+        findViewById<View>(R.id.navSearch).setOnClickListener { go(Intent(this, SearchActivity::class.java)) }
+        findViewById<View>(R.id.navFilms).setOnClickListener {
+            go(Intent(this, LibraryActivity::class.java).putExtra(LibraryActivity.KIND, Vod.MOVIES))
+        }
+        findViewById<View>(R.id.navShows).setOnClickListener {
+            go(Intent(this, LibraryActivity::class.java).putExtra(LibraryActivity.KIND, Vod.SERIES))
+        }
 
         current = Store.lastCategory ?: Repo.ALL
         Repo.onChanged(repoListener)
@@ -89,7 +98,16 @@ class MainActivity : Activity(), GuideGrid.Listener {
             Store.playlist = Playlist("Test", "m3u", m3uUrl = url)
             Store.lastCategory = null
             current = Repo.ALL
-            Repo.clear()
+            Repo.clear(); Vod.clear()
+        }
+        i.getStringExtra("dingus_test_xtream")?.let { url ->
+            Store.playlist = Playlist("Test", "xtream", server = url, user = "test", pass = "test")
+            Store.lastCategory = null
+            current = Repo.ALL
+            Repo.clear(); Vod.clear()
+        }
+        i.getStringExtra("dingus_test_search")?.let { q ->
+            startActivity(Intent(this, SearchActivity::class.java).putExtra("dingus_test_query", q))
         }
         i.getStringExtra("dingus_test_update_api")?.let { api ->
             Updater.api = api
@@ -279,21 +297,36 @@ class MainActivity : Activity(), GuideGrid.Listener {
 
     private fun openMenu() {
         if (menu.visibility == View.VISIBLE) return
+        val vod = if (Vod.available) View.VISIBLE else View.GONE
+        findViewById<View>(R.id.navFilms).visibility = vod
+        findViewById<View>(R.id.navShows).visibility = vod
         menu.visibility = View.VISIBLE
         scrim.visibility = View.VISIBLE
         menu.translationX = -menu.width.toFloat().coerceAtLeast(300f)
         menu.animate().translationX(0f).setDuration(160).start()
+        grid.isFocusable = false // nothing behind the menu can take the remote's presses
         val i = catAdapter.items.indexOfFirst { it.id == current }.coerceAtLeast(0)
         categories.scrollToPosition(i)
-        categories.post {
-            val v = categories.findViewHolderForAdapterPosition(i)?.itemView
-            if (v != null) v.requestFocus() else findViewById<View>(R.id.settings).requestFocus()
-        }
+        focusMenuItem(i, 0)
         Ui.test("menu-open")
+    }
+
+    /** The list may not be laid out yet the moment the menu appears: try again on the next frames. */
+    private fun focusMenuItem(i: Int, attempt: Int) {
+        categories.post {
+            if (menu.visibility != View.VISIBLE) return@post
+            val v = categories.findViewHolderForAdapterPosition(i)?.itemView
+            when {
+                v != null -> v.requestFocus()
+                attempt < 8 -> handler.postDelayed({ focusMenuItem(i, attempt + 1) }, 30)
+                else -> findViewById<View>(R.id.settings).requestFocus()
+            }
+        }
     }
 
     private fun closeMenu() {
         if (menu.visibility != View.VISIBLE) return
+        grid.isFocusable = true
         handler.removeCallbacks(catAdapter.pending)
         catAdapter.pending.run()
         menu.animate().translationX(-menu.width.toFloat()).setDuration(140).withEndAction {
@@ -349,6 +382,23 @@ class MainActivity : Activity(), GuideGrid.Listener {
         super.onDestroy()
     }
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (BuildConfig.DEBUG && event.action == KeyEvent.ACTION_DOWN)
+            Ui.test("key ${KeyEvent.keyCodeToString(event.keyCode)} on ${currentFocus?.let { it.javaClass.simpleName + "/" + ((it as? TextView)?.text ?: "") }}")
+        // While the menu is open, make sure the presses go to it.
+        if (menu.visibility == View.VISIBLE && event.action == KeyEvent.ACTION_DOWN) {
+            val f = currentFocus
+            var inMenu = false
+            var v: View? = f
+            while (v != null) { if (v === menu) { inMenu = true; break }; v = v.parent as? View }
+            if (!inMenu && event.keyCode != KeyEvent.KEYCODE_BACK) {
+                focusMenuItem(catAdapter.items.indexOfFirst { it.id == current }.coerceAtLeast(0), 0)
+                return true
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (menu.visibility == View.VISIBLE) {
             if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) { closeMenu(); return true }
@@ -400,6 +450,20 @@ class MainActivity : Activity(), GuideGrid.Listener {
             v.setOnClickListener {
                 val p = h.bindingAdapterPosition
                 if (p >= 0) { pendingId = items[p].id; closeMenu() }
+            }
+            // MENU on a category offers to hide it.
+            v.setOnKeyListener { _, code, ev ->
+                if (code != KeyEvent.KEYCODE_MENU) return@setOnKeyListener false
+                val p = h.bindingAdapterPosition
+                if (ev.action == KeyEvent.ACTION_UP && p >= 0 && !items[p].id.startsWith("\u0001")) {
+                    val c = items[p]
+                    Dialogs.hideCategory(this@MainActivity, "live:${c.id}", c.name) {
+                        if (current == c.id) showCategory(Repo.ALL, null)
+                        set(Repo.sideCategories()); selected(current)
+                        categories.post { categories.getChildAt(0)?.requestFocus() }
+                    }
+                }
+                true
             }
             return h
         }

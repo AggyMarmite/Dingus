@@ -25,9 +25,10 @@ sleep 2; shot 01-guide
 key KEYCODE_DPAD_RIGHT; key KEYCODE_DPAD_RIGHT; key KEYCODE_DPAD_DOWN 2; shot 02-guide-later
 fresh
 key KEYCODE_DPAD_LEFT; key KEYCODE_DPAD_LEFT; key KEYCODE_DPAD_LEFT 2
-check "menu-open" 5 "LEFT from what's on now opens the categories menu"
+check "menu-open" 5 "LEFT from what's on now opens the menu"
 shot 03-menu
-key KEYCODE_DPAD_DOWN 2; key KEYCODE_DPAD_CENTER 2   # UK: Entertainment
+key KEYCODE_DPAD_DOWN; key KEYCODE_DPAD_CENTER 4   # UK: Entertainment
+check "preview Test 1 HD" 20 "picking a category shows its channels"
 fresh
 key KEYCODE_DPAD_DOWN
 check "preview Test 2" 40 "moving down previews the next channel (HLS)"
@@ -35,6 +36,7 @@ sleep 2; shot 04-category
 fresh
 key KEYCODE_DPAD_CENTER 2
 check "playing Test 2" 45 "OK plays the channel full screen"
+fresh
 key KEYCODE_DPAD_UP
 check "playing Test 1 HD" 45 "changing channel in full screen"
 sleep 1; shot 05-player-info
@@ -51,6 +53,7 @@ for _ in 1 2 3 4 5 6 7; do key KEYCODE_DPAD_DOWN 0.5; done
 key KEYCODE_DPAD_CENTER 2
 check "settings-shown" 10 "Settings opens from the menu"
 shot 07-settings
+key KEYCODE_BACK 2
 
 fresh
 adb shell am start -n $PKG/.MainActivity --es dingus_test_update_api http://10.0.2.2:8000/release.json
@@ -58,6 +61,48 @@ check "update-found 99.0.0" 30 "finds an update on the release page"
 check "update-downloaded [0-9]+" 60 "downloads the update"
 check "update-installer-opened|update-needs-permission" 15 "hands the update to Android's installer"
 sleep 2; shot 08-update
+key KEYCODE_BACK 2
+
+# ---- An Xtream Codes login: films and TV shows.
+fresh
+adb shell am start -n $PKG/.MainActivity --es dingus_test_xtream http://10.0.2.2:8000
+check "channels 3 categories 2" 60 "Xtream login: live channels loaded"
+check "guide 3" 60 "Xtream login: guide read"
+sleep 3
+fresh
+key KEYCODE_BACK 2
+check "menu-open" 5 "BACK opens the menu"
+key KEYCODE_DPAD_UP 0.5; key KEYCODE_DPAD_UP 0.5   # TV Shows, then Films
+shot 09-menu-xtream
+key KEYCODE_DPAD_CENTER 3
+check "library movies 3" 40 "Films load"
+sleep 3; shot 10-films
+fresh
+key KEYCODE_DPAD_RIGHT 1; key KEYCODE_DPAD_CENTER 3
+check "details .* episodes 0" 30 "a film's details load"
+sleep 2; shot 11-film-details
+fresh
+key KEYCODE_DPAD_CENTER 3
+check "vod-playing" 40 "the film plays"
+for _ in 1 2 3 4 5; do key KEYCODE_DPAD_RIGHT 0.5; done
+sleep 2; shot 12-film-playing
+fresh
+key KEYCODE_BACK 3
+check "detail-button .*Resume from" 10 "coming back offers to resume"
+shot 13-film-resume
+key KEYCODE_BACK 2; key KEYCODE_BACK 2
+fresh
+key KEYCODE_BACK 2; key KEYCODE_DPAD_UP 0.5; key KEYCODE_DPAD_CENTER 3    # menu → TV Shows
+check "library series 2" 40 "TV shows load"
+sleep 2
+fresh
+key KEYCODE_DPAD_RIGHT 1; key KEYCODE_DPAD_CENTER 3
+check "details .* episodes 4" 30 "a show's seasons and episodes load"
+sleep 3; shot 14-show-details
+fresh
+adb shell am start -n $PKG/.MainActivity --es dingus_test_search test
+check "search \"test\" [1-9]" 30 "search finds channels, films and shows"
+sleep 2; shot 15-search
 
 adb shell dumpsys meminfo $PKG | grep -E "TOTAL( PSS)?:" | head -1 | sed 's/^/memory: /' | tee -a "$OUT/result.txt"
 adb logcat -d -s DINGUS-TEST:I AndroidRuntime:E > "$OUT/log.txt"

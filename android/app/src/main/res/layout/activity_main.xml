@@ -39,7 +39,7 @@
                     android:textSize="15sp" android:lineSpacingExtra="2dp" android:textColor="@color/muted" />
                 <TextView android:id="@+id/hint" android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:maxLines="1" android:textSize="13sp" android:textColor="#5B6477"
-                    android:text="OK  watch     ◀  categories &amp; settings     ≡  favourite" />
+                    android:text="OK  watch     ◀  menu: categories, films, TV shows, search     ≡  favourite" />
             </LinearLayout>
 
             <FrameLayout android:id="@+id/previewBox" android:layout_width="350dp" android:layout_height="197dp"
@@ -80,9 +80,13 @@
                 android:textColor="@color/text" />
         </LinearLayout>
 
+        <TextView android:id="@+id/navSearch" style="@style/NavRow" android:layout_marginTop="18dp" android:text="⌕   Search" />
+        <TextView android:id="@+id/navFilms" style="@style/NavRow" android:text="Films" />
+        <TextView android:id="@+id/navShows" style="@style/NavRow" android:text="TV Shows" />
+
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginTop="22dp" android:layout_marginBottom="8dp" android:paddingStart="14dp"
-            android:text="CATEGORIES" android:textSize="12sp" android:textStyle="bold" android:letterSpacing="0.08"
+            android:layout_marginTop="14dp" android:layout_marginBottom="8dp" android:paddingStart="14dp"
+            android:text="TV GUIDE CATEGORIES" android:textSize="12sp" android:textStyle="bold" android:letterSpacing="0.08"
             android:textColor="@color/muted" />
 
         <androidx.recyclerview.widget.RecyclerView android:id="@+id/categories"

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simple on-screen controls for films and episodes: title, time bar and hints (the remote does the rest). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="bottom"
+        android:orientation="vertical" android:background="@drawable/overlay_bg"
+        android:paddingStart="56dp" android:paddingEnd="56dp" android:paddingTop="80dp" android:paddingBottom="36dp">
+        <TextView android:id="@+id/vodTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:maxLines="1" android:ellipsize="end" android:textSize="26sp" android:textStyle="bold" android:textColor="@color/text" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp"
+            android:orientation="horizontal" android:gravity="center_vertical">
+            <TextView android:id="@id/exo_position" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textSize="16sp" android:textColor="@color/text" />
+            <androidx.media3.ui.DefaultTimeBar android:id="@id/exo_progress" android:layout_width="0dp"
+                android:layout_height="26dp" android:layout_weight="1" android:layout_marginStart="14dp" android:layout_marginEnd="14dp"
+                android:focusable="false" app:played_color="@color/accent" app:scrubber_color="@color/accent"
+                app:buffered_color="#66FFFFFF" app:unplayed_color="#33FFFFFF" />
+            <TextView android:id="@id/exo_duration" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textSize="16sp" android:textColor="@color/muted" />
+        </LinearLayout>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp"
+            android:text="OK  pause / play     ◀ ▶  back / forward 10 s     ≡  audio &amp; subtitles     BACK  stop"
+            android:textSize="14sp" android:textColor="@color/muted" />
+    </LinearLayout>
+</FrameLayout>

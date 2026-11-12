@@ -43,6 +43,10 @@ jobs:
             -c:v libx264 -preset veryfast -pix_fmt yuv420p -g 50 -c:a aac -f mpegts $RUNNER_TEMP/www/test.ts
           ffmpeg -loglevel error -i $RUNNER_TEMP/www/test.ts -c copy -hls_time 4 -hls_list_size 0 \
             -hls_segment_filename "$RUNNER_TEMP/www/hls/seg%03d.ts" $RUNNER_TEMP/www/hls/index.m3u8
+          ffmpeg -loglevel error -f lavfi -i testsrc2=size=1280x720:rate=25 -f lavfi -i sine=frequency=330 -t 120 \
+            -c:v libx264 -preset veryfast -pix_fmt yuv420p -c:a aac -movflags +faststart $RUNNER_TEMP/www/test.mp4
+          ffmpeg -loglevel error -f lavfi -i "gradients=s=400x600:c0=0x3B82F6:c1=0x9333EA:seed=1" -frames:v 1 $RUNNER_TEMP/www/poster1.png || ffmpeg -loglevel error -f lavfi -i color=c=0x3B82F6:s=400x600 -frames:v 1 $RUNNER_TEMP/www/poster1.png
+          ffmpeg -loglevel error -f lavfi -i "gradients=s=400x600:c0=0xF59E0B:c1=0xDC2626:seed=7" -frames:v 1 $RUNNER_TEMP/www/poster2.png || ffmpeg -loglevel error -f lavfi -i color=c=0xDC2626:s=400x600 -frames:v 1 $RUNNER_TEMP/www/poster2.png
           cp android/app/build/outputs/apk/debug/app-debug.apk $RUNNER_TEMP/www/Dingus.apk
           nohup python3 tests/android/server.py $RUNNER_TEMP/www > /dev/null 2>&1 &
           sleep 1; curl -sf http://127.0.0.1:8000/playlist.m3u | head -3

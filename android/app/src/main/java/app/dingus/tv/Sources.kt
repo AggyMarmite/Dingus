@@ -20,7 +20,7 @@ object Sources {
         return s
     }
 
-    private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
+    internal fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
 
     private fun xtream(p: Playlist): Result {
         val base = xtreamBase(p.server)
@@ -92,7 +92,7 @@ object Sources {
     }
 
     /** A value as text, whatever JSON type it came as (Xtream servers mix numbers, strings and nulls). */
-    private fun str(r: JsonReader): String = when (r.peek()) {
+    internal fun str(r: JsonReader): String = when (r.peek()) {
         JsonToken.NULL -> { r.nextNull(); "" }
         JsonToken.BOOLEAN -> r.nextBoolean().toString()
         JsonToken.BEGIN_ARRAY, JsonToken.BEGIN_OBJECT -> { r.skipValue(); "" }

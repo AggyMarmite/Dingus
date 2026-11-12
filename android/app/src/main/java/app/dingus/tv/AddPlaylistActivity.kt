@@ -47,6 +47,7 @@ class AddPlaylistActivity : Activity() {
                 setOnClickListener {
                     Store.playlist = null
                     Repo.clear()
+                    Vod.clear()
                     recreate()
                 }
             }
@@ -89,6 +90,7 @@ class AddPlaylistActivity : Activity() {
                 if (r.channels.isEmpty()) { showError("That worked, but there are no live channels in it."); return@launch }
                 Store.playlist = p
                 Repo.clear()
+                Vod.clear()
                 Repo.refreshChannels(p, r)
                 finish()
             } catch (e: Exception) {

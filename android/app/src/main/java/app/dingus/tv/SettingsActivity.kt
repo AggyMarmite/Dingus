@@ -23,6 +23,7 @@ class SettingsActivity : Activity() {
     private lateinit var refreshRow: View
     private lateinit var previewRow: View
     private lateinit var updateRow: View
+    private lateinit var hiddenRow: View
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,6 +36,7 @@ class SettingsActivity : Activity() {
             Store.preview = !Store.preview
             update()
         }
+        hiddenRow = row("Hidden categories", "") { unhide() }
         updateRow = row("Check for updates", "") {
             sub(updateRow, "Checking…")
             Updater.check(this, manual = true) { msg -> sub(updateRow, msg) }
@@ -55,6 +57,8 @@ class SettingsActivity : Activity() {
         }
         sub(previewRow, if (Store.preview) "On  ·  the highlighted channel plays in the small window" else "Off")
         sub(updateRow, "You have version ${BuildConfig.VERSION_NAME}")
+        val n = Store.hidden.size
+        sub(hiddenRow, if (n == 0) "None  ·  press ≡ on a category to hide it" else "$n hidden  ·  choose to show them again")
     }
 
     private fun refresh() {
@@ -74,6 +78,29 @@ class SettingsActivity : Activity() {
                 sub(refreshRow, Net.friendly(e))
             }
         }
+    }
+
+    /** Pick hidden categories to show again. */
+    private fun unhide() {
+        val keys = Store.hidden.toList()
+        if (keys.isEmpty()) return
+        val names = keys.map { k ->
+            val kind = k.substringBefore(':'); val id = k.substringAfter(':')
+            val name = when (kind) {
+                "live" -> Repo.categories.firstOrNull { it.id == id }?.name
+                else -> Vod.cached(kind)?.categories?.firstOrNull { it.id == id }?.name
+            } ?: "Category $id"
+            name + when (kind) { "movies" -> "  (Films)"; "series" -> "  (TV Shows)"; else -> "  (TV guide)" }
+        }
+        val show = BooleanArray(keys.size)
+        Dialogs.builder(this).setTitle("Show again")
+            .setMultiChoiceItems(names.toTypedArray(), show) { _, i, on -> show[i] = on }
+            .setPositiveButton("Done") { _, _ ->
+                keys.forEachIndexed { i, k -> if (show[i]) Store.setHidden(k, false) }
+                update()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun row(title: String, subtitle: String, click: () -> Unit): View {
