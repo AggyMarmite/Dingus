@@ -1,14 +1,62 @@
 <resources>
     <style name="Theme.Dingus" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowBackground">@color/bg</item>
-        <item name="android:colorAccent">@color/accent</item>
-        <item name="android:colorPrimary">@color/surface</item>
-        <item name="android:colorPrimaryDark">@color/bg</item>
-        <item name="android:textColor">@color/text</item>
-        <item name="android:textColorPrimary">@color/text</item>
-        <item name="android:textColorSecondary">@color/muted</item>
+        <item name="android:windowBackground">?attr/dBg</item>
+        <item name="android:colorAccent">?attr/dAccent</item>
+        <item name="android:colorPrimary">?attr/dSurface</item>
+        <item name="android:colorPrimaryDark">?attr/dBg</item>
+        <item name="android:textColor">?attr/dText</item>
+        <item name="android:textColorPrimary">?attr/dText</item>
+        <item name="android:textColorSecondary">?attr/dMuted</item>
         <item name="android:windowContentOverlay">@null</item>
+        <!-- Midnight + blue unless changed in Settings -->
+        <item name="dBg">#0B0E14</item>
+        <item name="dSurface">#141923</item>
+        <item name="dSurface2">#1C2330</item>
+        <item name="dLine">#262E3D</item>
+        <item name="dText">#E8ECF3</item>
+        <item name="dMuted">#8B94A7</item>
+        <item name="dAiring">#1A2130</item>
+        <item name="dPast">#10141C</item>
+        <item name="dAccent">#3B82F6</item>
+        <item name="dAccentSoft">#263B82F6</item>
     </style>
+
+    <!-- Backgrounds -->
+    <style name="Bg.Midnight">
+        <item name="dBg">#0B0E14</item><item name="dSurface">#141923</item><item name="dSurface2">#1C2330</item>
+        <item name="dLine">#262E3D</item><item name="dText">#E8ECF3</item><item name="dMuted">#8B94A7</item>
+        <item name="dAiring">#1A2130</item><item name="dPast">#10141C</item>
+    </style>
+    <style name="Bg.Slate">
+        <item name="dBg">#1E2228</item><item name="dSurface">#272C34</item><item name="dSurface2">#323843</item>
+        <item name="dLine">#3D4450</item><item name="dText">#F1F3F6</item><item name="dMuted">#A0A8B5</item>
+        <item name="dAiring">#2E343E</item><item name="dPast">#22262D</item>
+    </style>
+    <style name="Bg.Black">
+        <item name="dBg">#000000</item><item name="dSurface">#0D0D0F</item><item name="dSurface2">#18181C</item>
+        <item name="dLine">#232328</item><item name="dText">#EDEDED</item><item name="dMuted">#8A8A92</item>
+        <item name="dAiring">#141418</item><item name="dPast">#070708</item>
+    </style>
+    <style name="Bg.Plum">
+        <item name="dBg">#120D18</item><item name="dSurface">#1B1424</item><item name="dSurface2">#251C31</item>
+        <item name="dLine">#30253F</item><item name="dText">#EFEAF5</item><item name="dMuted">#9D93AC</item>
+        <item name="dAiring">#221A2D</item><item name="dPast">#160F1D</item>
+    </style>
+    <style name="Bg.Forest">
+        <item name="dBg">#0B1210</item><item name="dSurface">#121B18</item><item name="dSurface2">#1A2622</item>
+        <item name="dLine">#24332E</item><item name="dText">#E8F2EE</item><item name="dMuted">#8CA39A</item>
+        <item name="dAiring">#18231F</item><item name="dPast">#0E1613</item>
+    </style>
+
+    <!-- Accents -->
+    <style name="Accent.Blue"><item name="dAccent">#3B82F6</item><item name="dAccentSoft">#263B82F6</item></style>
+    <style name="Accent.Purple"><item name="dAccent">#8B5CF6</item><item name="dAccentSoft">#268B5CF6</item></style>
+    <style name="Accent.Teal"><item name="dAccent">#14B8A6</item><item name="dAccentSoft">#2614B8A6</item></style>
+    <style name="Accent.Green"><item name="dAccent">#22C55E</item><item name="dAccentSoft">#2622C55E</item></style>
+    <style name="Accent.Orange"><item name="dAccent">#F97316</item><item name="dAccentSoft">#26F97316</item></style>
+    <style name="Accent.Pink"><item name="dAccent">#EC4899</item><item name="dAccentSoft">#26EC4899</item></style>
+    <style name="Accent.Red"><item name="dAccent">#EF4444</item><item name="dAccentSoft">#26EF4444</item></style>
+    <style name="Accent.Gold"><item name="dAccent">#EAB308</item><item name="dAccentSoft">#26EAB308</item></style>
     <style name="Theme.Dingus.Player">
         <item name="android:windowBackground">@android:color/black</item>
         <item name="android:windowFullscreen">true</item>
@@ -19,7 +67,7 @@
         <item name="android:layout_marginTop">16dp</item>
         <item name="android:layout_marginBottom">6dp</item>
         <item name="android:textSize">15sp</item>
-        <item name="android:textColor">@color/muted</item>
+        <item name="android:textColor">?attr/dMuted</item>
     </style>
     <style name="Field">
         <item name="android:layout_width">match_parent</item>
@@ -27,7 +75,7 @@
         <item name="android:background">@drawable/field_bg</item>
         <item name="android:padding">14dp</item>
         <item name="android:textSize">18sp</item>
-        <item name="android:textColor">@color/text</item>
+        <item name="android:textColor">?attr/dText</item>
         <item name="android:textColorHint">#5B6477</item>
         <item name="android:singleLine">true</item>
         <item name="android:imeOptions">actionNext</item>
@@ -44,7 +92,7 @@
         <item name="android:paddingTop">12dp</item>
         <item name="android:paddingBottom">12dp</item>
         <item name="android:textSize">17sp</item>
-        <item name="android:textColor">@color/text</item>
+        <item name="android:textColor">?attr/dText</item>
     </style>
     <style name="NavRow">
         <item name="android:layout_width">match_parent</item>
@@ -58,6 +106,6 @@
         <item name="android:paddingTop">10dp</item>
         <item name="android:paddingBottom">10dp</item>
         <item name="android:textSize">17sp</item>
-        <item name="android:textColor">@color/text</item>
+        <item name="android:textColor">?attr/dText</item>
     </style>
 </resources>

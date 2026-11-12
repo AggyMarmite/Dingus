@@ -2,38 +2,84 @@ package app.dingus.tv
 
 import android.content.Context
 import android.content.SharedPreferences
+import org.json.JSONArray
 import org.json.JSONObject
 
-/** What Dingus remembers: your playlist, favourites, recently watched, and the last channel. Private to the app. */
+/** What Dingus remembers: your playlists, favourites, recently watched, settings. Private to the app. */
 object Store {
     private lateinit var prefs: SharedPreferences
 
     fun init(ctx: Context) {
         prefs = ctx.getSharedPreferences("dingus", Context.MODE_PRIVATE)
+        // From the one-playlist version: carry favourites etc. over to the first playlist.
+        if (prefs.contains("playlist") && !prefs.contains("playlists")) {
+            val e = prefs.edit()
+            for (n in listOf("favourites", "recent", "last", "lastCategory")) prefs.getString(n, null)?.let { e.putString("${n}_p1", it) }
+            prefs.getStringSet("hidden", null)?.let { e.putStringSet("hidden_p1", it) }
+            e.apply()
+            playlists = playlists
+        }
     }
 
-    var playlist: Playlist?
+    // ------------------------------------------------------------------ playlists (several; one is in use)
+
+    private fun toJson(p: Playlist) = JSONObject()
+        .put("id", p.id).put("name", p.name).put("type", p.type).put("server", p.server).put("user", p.user)
+        .put("pass", p.pass).put("m3uUrl", p.m3uUrl).put("epgUrl", p.epgUrl).put("providerGuide", p.useProviderGuide)
+
+    private fun fromJson(o: JSONObject) = Playlist(
+        o.optString("name"), o.optString("type"), o.optString("server"), o.optString("user"),
+        o.optString("pass"), o.optString("m3uUrl"), o.optString("epgUrl"), o.optString("id").ifEmpty { "p1" },
+        o.optBoolean("providerGuide", true),
+    )
+
+    @Volatile private var cachedPlaylists: List<Playlist>? = null
+
+    var playlists: List<Playlist>
         get() {
-            val s = prefs.getString("playlist", null) ?: return null
-            return try {
-                val o = JSONObject(s)
-                Playlist(
-                    o.optString("name"), o.optString("type"), o.optString("server"), o.optString("user"),
-                    o.optString("pass"), o.optString("m3uUrl"), o.optString("epgUrl"),
-                )
-            } catch (e: Exception) { null }
+            cachedPlaylists?.let { return it }
+            val list = try {
+                val raw = prefs.getString("playlists", null)
+                if (raw != null) JSONArray(raw).let { a -> (0 until a.length()).map { fromJson(a.getJSONObject(it)) } }
+                else prefs.getString("playlist", null)?.let { listOf(fromJson(JSONObject(it)).copy(id = "p1")) } ?: emptyList()
+            } catch (e: Exception) { emptyList() }
+            cachedPlaylists = list
+            return list
         }
-        set(p) {
-            if (p == null) { prefs.edit().remove("playlist").apply(); return }
-            val o = JSONObject()
-                .put("name", p.name).put("type", p.type).put("server", p.server).put("user", p.user)
-                .put("pass", p.pass).put("m3uUrl", p.m3uUrl).put("epgUrl", p.epgUrl)
-            prefs.edit().putString("playlist", o.toString()).apply()
+        set(v) {
+            val a = JSONArray(); v.forEach { a.put(toJson(it)) }
+            prefs.edit().putString("playlists", a.toString()).remove("playlist").apply()
+            cachedPlaylists = v
         }
 
+    /** The playlist in use. */
+    var activeId: String
+        get() = prefs.getString("active", null) ?: playlists.firstOrNull()?.id ?: "p1"
+        set(v) = prefs.edit().putString("active", v).apply()
+
+    fun newId(): String = "p" + (System.currentTimeMillis() % 100_000_000).toString(36)
+
+    /** The playlist in use. Setting it adds or replaces it (by id); null removes it and moves to another one. */
+    var playlist: Playlist?
+        get() = playlists.firstOrNull { it.id == activeId } ?: playlists.firstOrNull()
+        set(p) {
+            if (p == null) {
+                val rest = playlists.filter { it.id != activeId }
+                playlists = rest
+                rest.firstOrNull()?.let { activeId = it.id }
+                return
+            }
+            @Suppress("NAME_SHADOWING") val p = if (p.id.isEmpty()) p.copy(id = newId()) else p
+            playlists = if (playlists.any { it.id == p.id }) playlists.map { if (it.id == p.id) p else it } else playlists + p
+            activeId = p.id
+        }
+
+    /** Settings that belong to one playlist (favourites, history…) are stored under its id. */
+    private fun k(name: String) = "${name}_$activeId"
+
     var favourites: List<String>
-        get() = prefs.getString("favourites", "")!!.split('\n').filter { it.isNotEmpty() }
-        set(v) = prefs.edit().putString("favourites", v.joinToString("\n")).apply()
+        get() = prefs.getString(k("favourites"), "")!!.split('\n').filter { it.isNotEmpty() }
+        set(v) = prefs.edit().putString(k("favourites"), v.joinToString("\n")).apply()
 
     fun isFavourite(id: String) = favourites.contains(id)
 
@@ -46,28 +92,73 @@ object Store {
     }
 
     var recent: List<String>
-        get() = prefs.getString("recent", "")!!.split('\n').filter { it.isNotEmpty() }
-        set(v) = prefs.edit().putString("recent", v.joinToString("\n")).apply()
+        get() = prefs.getString(k("recent"), "")!!.split('\n').filter { it.isNotEmpty() }
+        set(v) = prefs.edit().putString(k("recent"), v.joinToString("\n")).apply()
 
     fun noteWatched(id: String) {
         recent = (listOf(id) + recent.filter { it != id }).take(30)
-        prefs.edit().putString("last", id).apply()
+        prefs.edit().putString(k("last"), id).apply()
     }
 
-    val lastChannel: String? get() = prefs.getString("last", null)
+    val lastChannel: String? get() = prefs.getString(k("last"), null)
 
     var lastCategory: String?
-        get() = prefs.getString("lastCategory", null)
-        set(v) = prefs.edit().putString("lastCategory", v).apply()
+        get() = prefs.getString(k("lastCategory"), null)
+        set(v) = prefs.edit().putString(k("lastCategory"), v).apply()
 
     var guideLoadedAt: Long
-        get() = prefs.getLong("guideLoadedAt", 0)
-        set(v) = prefs.edit().putLong("guideLoadedAt", v).apply()
+        get() = prefs.getLong(k("guideLoadedAt"), 0)
+        set(v) = prefs.edit().putLong(k("guideLoadedAt"), v).apply()
 
     /** The provider's time zone (Xtream catch-up addresses use it). */
     var serverTimeZone: String?
-        get() = prefs.getString("serverTz", null)
-        set(v) = prefs.edit().putString("serverTz", v).apply()
+        get() = prefs.getString(k("serverTz"), null)
+        set(v) = prefs.edit().putString(k("serverTz"), v).apply()
+
+    var background: String
+        get() = prefs.getString("background", "midnight")!!
+        set(v) = prefs.edit().putString("background", v).apply()
+    var accent: String
+        get() = prefs.getString("accent", "blue")!!
+        set(v) = prefs.edit().putString("accent", v).apply()
+
+    /** Switch the TV's refresh rate to suit the video. */
+    var matchFrameRate: Boolean
+        get() = prefs.getBoolean("matchFrameRate", true)
+        set(v) = prefs.edit().putBoolean("matchFrameRate", v).apply()
+
+    /** Live channels from an Xtream login as "ts" (MPEG-TS) or "hls". */
+    var streamFormat: String
+        get() = prefs.getString("streamFormat", "ts")!!
+        set(v) = prefs.edit().putString("streamFormat", v).apply()
+
+    /** Hours of TV guide to keep ahead (less = lighter on memory). */
+    var guideHours: Int
+        get() = prefs.getInt("guideHours", 24)
+        set(v) = prefs.edit().putInt("guideHours", v).apply()
+
+    /** Keep the last 15 minutes of live TV, so it can be paused and rewound. */
+    var timeshift: Boolean
+        get() = prefs.getBoolean("timeshift", true)
+        set(v) = prefs.edit().putBoolean("timeshift", v).apply()
+
+    var remindersJson: String
+        get() = prefs.getString("reminders", "[]")!!
+        set(v) = prefs.edit().putString("reminders", v).apply()
+
+    /** Show a channel's HD/FHD/backup versions as one row. */
+    var mergeChannels: Boolean
+        get() = prefs.getBoolean("mergeChannels", false)
+        set(v) = prefs.edit().putBoolean("mergeChannels", v).apply()
+
+    /** A coloured stripe on programmes by genre (sport, films, news…). */
+    var genreColours: Boolean
+        get() = prefs.getBoolean("genreColours", true)
+        set(v) = prefs.edit().putBoolean("genreColours", v).apply()
+
+    var channelEditsJson: String
+        get() = prefs.getString(k("channelEdits"), "{}")!!
+        set(v) = prefs.edit().putString(k("channelEdits"), v).apply()
 
     /** Play the highlighted channel in the small window above the guide. */
     var preview: Boolean
@@ -80,8 +171,10 @@ object Store {
 
     /** Categories you've hidden, as "live:<id>", "movies:<id>" or "series:<id>". */
     var hidden: Set<String>
-        get() = prefs.getStringSet("hidden", emptySet())!!.toSet()
-        set(v) { prefs.edit().putStringSet("hidden", HashSet(v)).apply(); cachedHidden = null }
+        get() = prefs.getStringSet(k("hidden"), emptySet())!!.toSet()
+        set(v) { prefs.edit().putStringSet(k("hidden"), HashSet(v)).apply(); cachedHidden = null }
+    /** Forget per-playlist caches (after switching playlist). */
+    fun switched() { cachedHidden = null }
     fun isHidden(key: String) = hiddenCache().contains(key)
     fun setHidden(key: String, on: Boolean) { hidden = if (on) hidden + key else hidden - key; cachedHidden = null }
     @Volatile private var cachedHidden: Set<String>? = null

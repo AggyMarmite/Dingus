@@ -23,7 +23,7 @@ import java.util.Locale
 
 /** Films and episodes: resumes where you left off, and goes straight on to the next episode. */
 @OptIn(UnstableApi::class)
-class VodPlayerActivity : Activity() {
+class VodPlayerActivity : BaseActivity() {
     class Entry(val id: String, val title: String, val url: String)
 
     companion object {
@@ -76,6 +76,7 @@ class VodPlayerActivity : Activity() {
         super.onStart()
         if (ids.isEmpty()) return
         val p = Players.create(this)
+        Players.watchFrameRate(this, p)
         p.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 when (state) {
@@ -111,6 +112,7 @@ class VodPlayerActivity : Activity() {
 
     override fun onStop() {
         super.onStop()
+        FrameRate.reset(this)
         handler.removeCallbacksAndMessages(null)
         savePosition()
         resumeAt = player?.currentPosition ?: -1L

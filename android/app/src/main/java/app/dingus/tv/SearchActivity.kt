@@ -28,7 +28,7 @@ import kotlinx.coroutines.withContext
 import java.text.Normalizer
 
 /** One search box for channels, what's on, films and TV shows. */
-class SearchActivity : Activity() {
+class SearchActivity : BaseActivity() {
     private sealed class Row {
         class Heading(val text: String) : Row()
         class Live(val c: Channel, val p: Programme?) : Row()

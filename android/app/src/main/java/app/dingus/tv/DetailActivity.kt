@@ -19,7 +19,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /** A film or TV show: details, play/resume, and for shows the seasons and episodes. */
-class DetailActivity : Activity() {
+class DetailActivity : BaseActivity() {
     companion object {
         const val KIND = "kind"
         const val ID = "id"
@@ -50,6 +50,12 @@ class DetailActivity : Activity() {
 
         play.setOnClickListener { playMain(fromStart = false) }
         restart.setOnClickListener { playMain(fromStart = true) }
+        findViewById<TextView>(R.id.watched).setOnClickListener {
+            val m = item ?: return@setOnClickListener
+            Vod.setWatched(m.id, !Vod.watched(m.id), kind)
+            Ui.test("watched ${m.name} ${Vod.watched(m.id)}")
+            refreshButtons()
+        }
         play.requestFocus()
 
         val id = intent.getStringExtra(ID)
@@ -126,6 +132,7 @@ class DetailActivity : Activity() {
                 row.addView(b)
             }
             findViewById<View>(R.id.seasonsScroll).visibility = View.VISIBLE
+            findViewById<View>(R.id.episodeHint).visibility = View.VISIBLE
             episodeList.visibility = View.VISIBLE
             val last = item?.let { Vod.lastEpisode(it.id) }
             showSeason(d.episodes.firstOrNull { it.id == last }?.season ?: seasons.first())
@@ -163,6 +170,11 @@ class DetailActivity : Activity() {
             val pos = Vod.position(m.id)
             play.text = if (pos != null) "▶  Resume from ${clock(pos.first)}" else "▶  Play"
             restart.visibility = if (pos != null) View.VISIBLE else View.GONE
+            findViewById<TextView>(R.id.watched).apply {
+                visibility = View.VISIBLE
+                text = if (Vod.watched(m.id)) "✓  Watched" else "Mark as watched"
+                isActivated = Vod.watched(m.id)
+            }
         } else {
             val e = nextEpisode() ?: return
             val pos = Vod.position(e.id)
@@ -222,6 +234,19 @@ class DetailActivity : Activity() {
             val v = LayoutInflater.from(parent.context).inflate(R.layout.item_episode, parent, false)
             val holder = H(v)
             v.setOnClickListener { val p = holder.bindingAdapterPosition; if (p >= 0) playEpisode(items[p], false) }
+            // MENU on an episode marks it watched or not.
+            v.setOnKeyListener { _, code, ev ->
+                if (code != android.view.KeyEvent.KEYCODE_MENU) return@setOnKeyListener false
+                val p = holder.bindingAdapterPosition
+                if (ev.action == android.view.KeyEvent.ACTION_UP && p >= 0) {
+                    val e = items[p]
+                    Vod.setWatched(e.id, !Vod.watched(e.id), Vod.SERIES, item?.id)
+                    Ui.test("watched ${e.title} ${Vod.watched(e.id)}")
+                    notifyItemChanged(p)
+                    refreshButtons()
+                }
+                true
+            }
             return holder
         }
 

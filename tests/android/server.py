@@ -69,15 +69,33 @@ class H(http.server.SimpleHTTPRequestHandler):
         u = urllib.parse.urlparse(self.path)
         if u.path == "/player_api.php": return self.send(json.dumps(xtream(urllib.parse.parse_qs(u.query))).encode(), "application/json")
         if u.path == "/xmltv.php": return self.send(guide(), "application/xml")
-        if u.path.startswith("/live/") and u.path.count("/") >= 4: self.path = "/test.ts"; return super().do_GET()
+        if u.path.startswith("/live/") and u.path.endswith(".ts"): return self.live()
         if u.path.startswith("/timeshift/"): self.path = "/test.ts"; return super().do_GET()
         if u.path.startswith("/movie/") or u.path.startswith("/series/"): self.path = "/test.mp4"; return super().do_GET()
         if self.path.startswith("/release.json"):
             body = ('{"tag_name":"v99.0.0","body":"- Test update\\n- Another line","assets":[{"name":"Dingus.apk",'
                     f'"browser_download_url":"{HOST}/Dingus.apk"' + '}]}').encode()
             return self.send(body, "application/json")
-        if self.path.startswith("/live/"): self.path = "/test.ts"
         return super().do_GET()
+    def live(self):
+        """Plays the test video like a real live channel: at its own speed, round and round, until the app hangs up."""
+        path = os.path.join(ROOT, "test.ts")
+        size = os.path.getsize(path)
+        rate = size / 120.0  # the test video is 2 minutes long
+        self.send_response(200); self.send_header("Content-Type", "video/mp2t"); self.end_headers()
+        start = time.time(); sent = 0
+        try:
+            while True:
+                with open(path, "rb") as f:
+                    while True:
+                        chunk = f.read(188 * 350)
+                        if not chunk: break
+                        self.wfile.write(chunk); sent += len(chunk)
+                        ahead = sent / rate - (time.time() - start)
+                        if ahead > 1.5: time.sleep(ahead - 1.0)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
     def send(self, body, ctype):
         self.send_response(200); self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body))); self.end_headers(); self.wfile.write(body)

@@ -24,7 +24,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /** The TV guide, opened on start. Everything works with the remote. */
-class MainActivity : Activity(), GuideGrid.Listener {
+class MainActivity : BaseActivity(), GuideGrid.Listener {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val handler = Handler(Looper.getMainLooper())
 
@@ -75,6 +75,7 @@ class MainActivity : Activity(), GuideGrid.Listener {
         // Going to another screen closes the menu, so you come back to the guide.
         fun go(i: Intent) { closeMenu(toGuide = true); startActivity(i) }
         findViewById<View>(R.id.navGuide).setOnClickListener { closeMenu(toGuide = true) }
+        findViewById<View>(R.id.navPlaylist).setOnClickListener { switchPlaylist() }
         findViewById<View>(R.id.settings).setOnClickListener { go(Intent(this, SettingsActivity::class.java)) }
         findViewById<View>(R.id.navSearch).setOnClickListener { go(Intent(this, SearchActivity::class.java)) }
         findViewById<View>(R.id.navFilms).setOnClickListener {
@@ -97,13 +98,13 @@ class MainActivity : Activity(), GuideGrid.Listener {
     private fun handleTestExtras(i: Intent) {
         if (!BuildConfig.DEBUG) return
         i.getStringExtra("dingus_test_m3u")?.let { url ->
-            Store.playlist = Playlist("Test", "m3u", m3uUrl = url)
+            Store.playlist = Playlist("Test M3U", "m3u", m3uUrl = url, id = "test-m3u")
             Store.lastCategory = null
             current = Repo.ALL
             Repo.clear(); Vod.clear()
         }
         i.getStringExtra("dingus_test_xtream")?.let { url ->
-            Store.playlist = Playlist("Test", "xtream", server = url, user = "test", pass = "test")
+            Store.playlist = Playlist("Test Xtream", "xtream", server = url, user = "test", pass = "test", id = "test-xtream")
             Store.lastCategory = null
             current = Repo.ALL
             Repo.clear(); Vod.clear()
@@ -128,6 +129,9 @@ class MainActivity : Activity(), GuideGrid.Listener {
         }
         scope.launch {
             if (Repo.channels.isEmpty()) Repo.loadSaved()
+            // The category may belong to another playlist (after switching).
+            val cats = Repo.sideCategories()
+            if (cats.none { it.id == current }) current = Store.lastCategory?.takeIf { id -> cats.any { it.id == id } } ?: Repo.ALL
             showCategory(current, Store.lastChannel)
             grid.requestFocus()
             if (Repo.channels.isEmpty()) refresh(p, true)
@@ -233,7 +237,7 @@ class MainActivity : Activity(), GuideGrid.Listener {
             airing -> "${Ui.span(p)}   ·   ${(p.stop - now + 59_999) / 60_000} min left"
             p.stop <= now && c != null && Repo.canCatchUp(c, p) -> "${Ui.day(p.start)}${Ui.span(p)}   ·   ↺ Catch up: press OK to watch"
             p.stop <= now -> "${Ui.day(p.start)}${Ui.span(p)}   ·   Ended"
-            else -> "${Ui.day(p.start)}${Ui.span(p)}   ·   $mins min"
+            else -> "${Ui.day(p.start)}${Ui.span(p)}   ·   $mins min   ·   " + if (c != null && Reminders.has(c, p)) "● Reminder set" else "OK to set a reminder"
         }
         prog.visibility = if (airing) View.VISIBLE else View.GONE
         live.visibility = if (airing) View.VISIBLE else View.GONE
@@ -282,15 +286,31 @@ class MainActivity : Activity(), GuideGrid.Listener {
     // ------------------------------------------------------------------ actions
 
     override fun onPlay(c: Channel, p: Programme?) {
-        stopPreview() // one connection at a time: the full-screen player takes over
+        // A programme still to come: set a reminder (or watch the channel now).
+        if (p != null && p.start > System.currentTimeMillis()) {
+            val set = Reminders.has(c, p)
+            Dialogs.builder(this).setTitle(p.title).setMessage("${c.name}  ·  ${Ui.day(p.start)}${Ui.span(p)}")
+                .setPositiveButton(if (set) "Cancel reminder" else "Remind me") { _, _ ->
+                    val on = Reminders.toggle(c, p)
+                    Ui.test("reminder-set $on ${p.title}")
+                    grid.invalidate()
+                    setStatus(if (on) "Reminder set for ${p.title}" else "Reminder cancelled")
+                    handler.postDelayed({ if (!loading) setStatus("") }, 2_500)
+                }
+                .setNegativeButton("Watch ${c.name} now") { _, _ -> onPlay(c, null) }
+                .show().getButton(android.app.AlertDialog.BUTTON_POSITIVE)?.requestFocus()
+            return
+        }
         // A programme that's finished, on a channel with catch-up: watch it from the start, with pause and skip.
         if (p != null && Repo.canCatchUp(c, p)) {
             val url = Repo.catchUpUrl(c, p) ?: return
+            stopPreview() // one connection at a time: the full-screen player takes over
             Ui.test("catchup ${c.name} ${p.title}")
             startActivity(VodPlayerActivity.intent(this, VodPlayerActivity.CATCHUP, null,
                 listOf(VodPlayerActivity.Entry("cu:${c.id}:${p.start}", "${c.name}  ·  ${p.title}", url)), 0, true))
             return
         }
+        stopPreview()
         startActivity(Intent(this, PlayerActivity::class.java)
             .putExtra(PlayerActivity.CHANNEL, c.id)
             .putExtra(PlayerActivity.CATEGORY, current))
@@ -349,6 +369,10 @@ class MainActivity : Activity(), GuideGrid.Listener {
         findViewById<View>(R.id.navFilms).visibility = vod
         findViewById<View>(R.id.navShows).visibility = vod
         findViewById<View>(R.id.navGuide).isActivated = true
+        findViewById<TextView>(R.id.navPlaylist).apply {
+            visibility = if (Store.playlists.size > 1) View.VISIBLE else View.GONE
+            text = "Playlist: ${Store.playlist?.name ?: ""}"
+        }
         menu.visibility = View.VISIBLE
         scrim.visibility = View.VISIBLE
         menu.translationX = -menu.width.toFloat().coerceAtLeast(300f)
@@ -371,6 +395,32 @@ class MainActivity : Activity(), GuideGrid.Listener {
         else focusCategory(catAdapter.items.indexOfFirst { it.id == current }.coerceAtLeast(0), 0)
     }
 
+    private fun switchPlaylist() {
+        val all = Store.playlists
+        Dialogs.builder(this).setTitle("Switch playlist")
+            .setSingleChoiceItems(all.map { it.name }.toTypedArray(), all.indexOfFirst { it.id == Store.activeId }) { d, i ->
+                d.dismiss()
+                if (all[i].id != Store.activeId) {
+                    closeMenu(toGuide = true)
+                    stopPreview()
+                    Playlists.switchTo(all[i].id)
+                    current = Store.lastCategory ?: Repo.ALL
+                    start()
+                }
+            }
+            .show()
+    }
+
+    private fun refreshGuideOnly() {
+        if (loading) return
+        loading = true
+        scope.launch {
+            try { setStatus("Updating the TV guide…"); Repo.refreshGuide(); setStatus(""); Ui.test("guide ${Repo.guideChannels}") }
+            catch (e: Exception) { setStatus("TV guide: ${Net.friendly(e)}") }
+            finally { loading = false }
+        }
+    }
+
     private fun maybeAutoPlay() {
         if (!BuildConfig.DEBUG || !intent.getBooleanExtra("dingus_test_play", false)) return
         intent.removeExtra("dingus_test_play")
@@ -388,6 +438,7 @@ class MainActivity : Activity(), GuideGrid.Listener {
     override fun onResume() {
         super.onResume()
         Ui.test("main-shown")
+        grid.genreColours = Store.genreColours
         if (Repo.channels.isEmpty() && !loading) start()
         else if (Repo.channels.isNotEmpty()) {
             // Back from full screen: land on the channel just watched and preview it straight away.
@@ -397,6 +448,7 @@ class MainActivity : Activity(), GuideGrid.Listener {
             grid.current?.let { if (previewing == null) preview(it) }
             if (menu.visibility != View.VISIBLE && catPanel.visibility != View.VISIBLE) grid.requestFocus()
         }
+        if (Repo.channels.isNotEmpty() && Store.guideLoadedAt == 0L) refreshGuideOnly()
         tick.run()
         if (!updateChecked && Store.playlist != null) {
             updateChecked = true

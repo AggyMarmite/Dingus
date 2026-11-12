@@ -54,13 +54,21 @@ object Vod {
 
     @Volatile private var libs = HashMap<String, Library>()
     private val locks = mapOf(MOVIES to Mutex(), SERIES to Mutex())
-    private lateinit var dir: File
-    private lateinit var progress: SharedPreferences
-
-    fun init(ctx: Context) {
-        dir = ctx.filesDir
-        progress = ctx.getSharedPreferences("progress", Context.MODE_PRIVATE)
+    private lateinit var app: Context
+    /** Each playlist keeps its own saved copies and watch progress. */
+    private val dir: File get() = File(app.filesDir, "p_${Store.activeId}").apply { mkdirs() }
+    private var progressFor = ""
+    private var progressPrefs: SharedPreferences? = null
+    private val progress: SharedPreferences get() {
+        val id = Store.activeId
+        if (id != progressFor || progressPrefs == null) { progressPrefs = app.getSharedPreferences("progress_$id", Context.MODE_PRIVATE); progressFor = id }
+        return progressPrefs!!
     }
+
+    fun init(ctx: Context) { app = ctx.applicationContext }
+
+    /** After switching playlist: forget what's in memory (saved copies stay). */
+    fun reset() { libs = HashMap() }
 
     /** Films and TV shows need an Xtream Codes login (M3U links only carry live channels here). */
     val available: Boolean get() = Store.playlist?.type == "xtream"
@@ -135,6 +143,18 @@ object Vod {
     }
 
     fun watched(id: String) = progress.getBoolean("w:$id", false)
+
+    /** Mark a film or episode as watched or not, by hand. */
+    fun setWatched(id: String, on: Boolean, kind: String, showId: String? = null) {
+        val e = progress.edit().remove("p:$id")
+        if (on) e.putBoolean("w:$id", true) else e.remove("w:$id")
+        if (kind == MOVIES && on) {
+            val list = (progress.getString("c:$kind", "") ?: "").split('\n').filter { it.isNotEmpty() && it != id }
+            e.putString("c:$kind", list.joinToString("\n"))
+        }
+        if (showId != null && on) e.putString("last:$showId", id)
+        e.apply()
+    }
     fun lastEpisode(showId: String): String? = progress.getString("last:$showId", null)
 
     fun continueList(kind: String, lib: Library): List<VodItem> =

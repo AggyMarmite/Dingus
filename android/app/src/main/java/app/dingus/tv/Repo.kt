@@ -9,6 +9,7 @@ import java.io.BufferedOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
+import java.io.IOException
 import java.io.FileInputStream
 import java.io.FileOutputStream
 
@@ -22,7 +23,13 @@ object Repo {
     const val ALL = "\u0001all"
 
     @Volatile var categories: List<Category> = emptyList(); private set
+    /** Every channel, with your edits (new names/numbers) applied – hidden ones included. */
     @Volatile var channels: List<Channel> = emptyList(); private set
+    /** The channels exactly as the playlist has them (what's saved). */
+    @Volatile private var raw: List<Channel> = emptyList()
+    @Volatile private var hiddenIds: Set<String> = emptySet()
+    @Volatile private var renumbered = false
+    private val listCache = HashMap<String, List<Channel>>()
     @Volatile private var byId: Map<String, Channel> = emptyMap()
     @Volatile private var byCategory: Map<String, List<Channel>> = emptyMap()
     @Volatile private var guide: Map<String, Array<Programme>> = emptyMap()
@@ -33,8 +40,18 @@ object Repo {
     fun removeListener(l: () -> Unit) { synchronized(listeners) { listeners.remove(l) } }
     private fun changed() { synchronized(listeners) { listeners.toList() }.forEach { it() } }
 
-    private lateinit var dir: File
-    fun init(ctx: Context) { dir = ctx.filesDir }
+    private lateinit var base: File
+    /** Each playlist keeps its own saved channels and guide. */
+    private val dir: File get() = File(base, "p_${Store.activeId}").apply { mkdirs() }
+    fun init(ctx: Context) { base = ctx.filesDir }
+
+    /** After switching playlist: forget what's in memory (its saved copies stay, so switching back is instant). */
+    fun reset() {
+        set(emptyList(), emptyList(), null)
+        guide = emptyMap()
+        Store.switched()
+        changed()
+    }
 
     fun channel(id: String?) = id?.let { byId[it] }
 
@@ -48,11 +65,38 @@ object Repo {
         return out
     }
 
-    fun channelsIn(categoryId: String): List<Channel> = when (categoryId) {
-        ALL -> channels
-        FAV -> Store.favourites.mapNotNull { byId[it] }
-        RECENT -> Store.recent.mapNotNull { byId[it] }
-        else -> byCategory[categoryId] ?: emptyList()
+    /** A category's channels as the guide shows them: hidden ones left out, your numbers, duplicates merged (if on). */
+    fun channelsIn(categoryId: String): List<Channel> {
+        if (categoryId == FAV || categoryId == RECENT) {
+            val ids = if (categoryId == FAV) Store.favourites else Store.recent
+            return ids.mapNotNull { byId[it] }.filter { it.id !in hiddenIds }
+        }
+        synchronized(listCache) { listCache[categoryId]?.let { return it } }
+        var list = (if (categoryId == ALL) channels else byCategory[categoryId] ?: emptyList())
+        if (hiddenIds.isNotEmpty()) list = list.filter { it.id !in hiddenIds }
+        if (renumbered) list = list.sortedBy { it.number }
+        if (Store.mergeChannels) list = Merge.fold(list)
+        synchronized(listCache) { listCache[categoryId] = list }
+        return list
+    }
+
+    /** All versions of a channel (best first) when duplicates are merged; just the channel otherwise. */
+    fun versions(c: Channel): List<Channel> {
+        if (!Store.mergeChannels) return listOf(c)
+        val k = Merge.key(c).ifEmpty { return listOf(c) }
+        return Merge.order(channels.filter { it.id !in hiddenIds && Merge.key(it) == k })
+    }
+
+    /** Every channel including hidden ones, for the channel editor. */
+    fun allForEditing(): List<Channel> = channels
+    fun isHiddenChannel(id: String) = id in hiddenIds
+
+    /** Settings that change what the lists hold (merging, channel edits) call this. */
+    fun reapply() {
+        val keys = channels.associate { it.id to it.guideKey }
+        raw.forEach { r -> keys[r.id]?.let { r.guideKey = it } }
+        set(categories, raw, guideUrl)
+        changed()
     }
 
     /** Every programme known for a channel, in time order. */
@@ -75,11 +119,17 @@ object Repo {
     // ------------------------------------------------------------------ loading
 
     private fun set(cats: List<Category>, chans: List<Channel>, url: String?) {
+        val edited = ChannelEdits.apply(chans, includeHidden = true)
+        val edits = ChannelEdits.all()
         categories = cats
-        channels = chans
-        byId = chans.associateBy { it.id }
-        byCategory = chans.groupBy { it.categoryId }
+        raw = chans
+        channels = edited
+        hiddenIds = edits.filterValues { it.hidden }.keys
+        renumbered = edits.values.any { it.number != null }
+        byId = edited.associateBy { it.id }
+        byCategory = edited.groupBy { it.categoryId }
         guideUrl = url
+        synchronized(listCache) { listCache.clear() }
     }
 
     /** What was saved last time (instant start). False when there's nothing yet. */
@@ -104,11 +154,33 @@ object Repo {
 
     /** Reads the TV guide (in the background; can take a while for big guides). */
     suspend fun refreshGuide() = withContext(Dispatchers.IO) {
-        val url = guideUrl ?: return@withContext
+        val p = Store.playlist
+        // Your own guide addresses first (in your order), then the provider's: each fills in channels the earlier ones missed.
+        val sources = (p?.epgUrls ?: emptyList()) + listOfNotNull(guideUrl.takeIf { p?.useProviderGuide != false })
+        if (sources.isEmpty()) return@withContext
         val chans = channels
-        val parsed = Net.open(url, 30_000).use { Guide.parse(it, chans, hoursBack = backHours) }
-        for (c in chans) c.guideKey = parsed.keysByChannelId[c.id]
-        guide = parsed.programmes
+        val keys = HashMap<String, String>()
+        val programmes = HashMap<String, Array<Programme>>()
+        var lastError: Exception? = null
+        var anyWorked = false
+        for ((n, url) in sources.withIndex()) {
+            val todo = chans.filter { !keys.containsKey(it.id) }
+            if (todo.isEmpty()) break
+            try {
+                val parsed = Net.open(url, 30_000).use { Guide.parse(it, todo, hoursAhead = Store.guideHours, hoursBack = backHours) }
+                anyWorked = true
+                // Keys from different guides could clash, so each guide's are kept apart.
+                for ((k, v) in parsed.programmes) programmes["$n|$k"] = v
+                for ((id, k) in parsed.keysByChannelId) keys[id] = "$n|$k"
+            } catch (e: Exception) {
+                Log.w("Dingus", "guide $n", e)
+                lastError = e
+            }
+        }
+        if (!anyWorked) throw lastError ?: IOException("No TV guide")
+        for (c in chans) c.guideKey = keys[c.id]
+        for (c in raw) c.guideKey = keys[c.id]
+        guide = programmes
         Store.guideLoadedAt = System.currentTimeMillis()
         try { writeGuide() } catch (e: Exception) { Log.w("Dingus", "save guide", e) }
         changed()
@@ -153,8 +225,9 @@ object Repo {
             o.str(guideUrl)
             o.writeInt(categories.size)
             for (c in categories) { o.writeUTF(c.id); o.writeUTF(c.name) }
-            o.writeInt(channels.size)
-            for (c in channels) {
+            o.writeInt(raw.size)
+            for (c in raw) {
+                c.guideKey = byId[c.id]?.guideKey ?: c.guideKey
                 o.writeUTF(c.id); o.writeUTF(c.name); o.writeInt(c.number); o.writeUTF(c.categoryId)
                 o.str(c.logo); o.str(c.epgId); o.writeUTF(c.url); o.str(c.guideKey); o.writeShort(c.archiveDays)
             }
@@ -184,12 +257,12 @@ object Repo {
 
     private fun writeGuide() {
         out("guide.bin").use { o ->
-            o.writeInt(1)
+            o.writeInt(2)
             o.writeInt(guide.size)
             for ((k, list) in guide) {
                 o.writeUTF(k)
                 o.writeInt(list.size)
-                for (p in list) { o.writeLong(p.start); o.writeLong(p.stop); o.writeUTF(p.title); o.str(p.desc) }
+                for (p in list) { o.writeLong(p.start); o.writeLong(p.stop); o.writeUTF(p.title); o.str(p.desc); o.writeByte(p.genre.toInt()) }
             }
         }
         commit("guide.bin")
@@ -201,12 +274,13 @@ object Repo {
         val cutoff = System.currentTimeMillis() - backHours * 60 * 60_000L
         val g = HashMap<String, Array<Programme>>()
         DataInputStream(BufferedInputStream(FileInputStream(f), 1 shl 16)).use { i ->
-            if (i.readInt() != 1) return
+            val version = i.readInt()
+            if (version != 1 && version != 2) return
             repeat(i.readInt()) {
                 val k = i.readUTF()
                 val list = ArrayList<Programme>()
                 repeat(i.readInt()) {
-                    val p = Programme(i.readLong(), i.readLong(), i.readUTF(), i.str())
+                    val p = Programme(i.readLong(), i.readLong(), i.readUTF(), i.str(), if (version >= 2) i.readByte() else 0)
                     if (p.stop > cutoff) list.add(p)
                 }
                 if (list.isNotEmpty()) g[k] = list.toTypedArray()

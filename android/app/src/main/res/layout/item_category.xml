@@ -4,4 +4,4 @@
     android:layout_marginBottom="3dp" android:background="@drawable/row_bg"
     android:focusable="true" android:clickable="true"
     android:paddingStart="14dp" android:paddingEnd="14dp" android:paddingTop="11dp" android:paddingBottom="11dp"
-    android:maxLines="1" android:ellipsize="end" android:textSize="17sp" android:textColor="@color/text" />
+    android:maxLines="1" android:ellipsize="end" android:textSize="17sp" android:textColor="?attr/dText" />

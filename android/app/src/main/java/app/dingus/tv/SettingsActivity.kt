@@ -1,6 +1,5 @@
 package app.dingus.tv
 
-import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -12,53 +11,196 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import java.io.File
 
-/** Settings: playlist, refreshing, the guide preview and updates. */
-class SettingsActivity : Activity() {
+/** Settings: playlists, TV guide, playback, look, updates. */
+class SettingsActivity : BaseActivity() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var list: LinearLayout
     private var refreshing = false
-
-    private lateinit var playlistRow: View
-    private lateinit var refreshRow: View
-    private lateinit var previewRow: View
-    private lateinit var updateRow: View
-    private lateinit var hiddenRow: View
+    /** Each row's subtitle is worked out again whenever something changes. */
+    private val subtitles = ArrayList<Pair<View, () -> String>>()
+    private var refreshRow: View? = null
+    private var updateRow: View? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         list = findViewById(R.id.list)
 
-        playlistRow = row("Playlist", "") { startActivity(Intent(this, AddPlaylistActivity::class.java)) }
-        refreshRow = row("Update channels and TV guide", "") { refresh() }
-        previewRow = row("Preview in the guide", "") {
-            Store.preview = !Store.preview
-            update()
+        header("Playlist & TV guide")
+        val first = row("Playlists", { playlistsSummary() }) { playlists() }
+        row("TV guide sources", { guideSummary() }) { guideSources() }
+        refreshRow = row("Update channels and TV guide now", { refreshSummary() }) { refresh() }
+        row("How much TV guide to keep", { "${hoursName(Store.guideHours)} ahead  ·  less is lighter on memory" }) { guideLength() }
+
+        header("TV guide")
+        toggle("Preview in the guide", "The highlighted channel plays in the small window", { Store.preview }) { Store.preview = it }
+        toggle("Colour-coded programmes", "A coloured line for sport, films, news, kids…", { Store.genreColours }) { Store.genreColours = it }
+        toggle("Merge duplicate channels", "Show a channel's HD, FHD and backup versions as one, and try the next if one fails",
+            { Store.mergeChannels }) { Store.mergeChannels = it; Repo.reapply() }
+        row("Edit channels", { "Rename, renumber or hide channels" }) { startActivity(Intent(this, ChannelEditorActivity::class.java)) }
+        row("Hidden categories", { hiddenSummary() }) { unhide() }
+
+        header("Playback")
+        toggle("Pause & rewind live TV", "Keeps the last 15 minutes while you watch (MPEG-TS channels)", { Store.timeshift }) { Store.timeshift = it }
+        row("Stream format", { if (Store.streamFormat == "hls") "HLS" else "MPEG-TS (recommended)" }) { streamFormat() }
+        toggle("Match the TV's frame rate", "Switches the TV to suit the video (50 Hz for UK TV, 24 Hz for films) for smoother motion",
+            { Store.matchFrameRate }) { Store.matchFrameRate = it }
+
+        header("Look")
+        row("Theme", { "${Themes.background().name}  ·  ${Themes.accent().name}" }) { theme() }
+
+        header("Dingus")
+        updateRow = row("Check for updates", { "You have version ${BuildConfig.VERSION_NAME}" }) {
+            updateRow?.let { sub(it, "Checking…") }
+            Updater.check(this, manual = true) { msg -> updateRow?.let { sub(it, msg) } }
         }
-        hiddenRow = row("Hidden categories", "") { unhide() }
-        updateRow = row("Check for updates", "") {
-            sub(updateRow, "Checking…")
-            Updater.check(this, manual = true) { msg -> sub(updateRow, msg) }
-        }
-        row("About Dingus", "Version ${BuildConfig.VERSION_NAME}  ·  Live TV with a TV guide, made for the remote") {}
-        playlistRow.requestFocus()
+        row("About Dingus", { "Version ${BuildConfig.VERSION_NAME}  ·  Live TV, films and shows, made for the remote" }) {}
+        first.requestFocus()
     }
 
     override fun onResume() { super.onResume(); update(); Ui.test("settings-shown") }
+    override fun onDestroy() { scope.cancel(); super.onDestroy() }
 
-    private fun update() {
-        val p = Store.playlist
-        sub(playlistRow, p?.let { "${it.name}  ·  ${if (it.type == "xtream") "Xtream Codes login" else "M3U link"}" } ?: "Add your playlist")
-        if (!refreshing) {
-            val at = Store.guideLoadedAt
-            sub(refreshRow, "${Repo.channels.size} channels" +
-                (if (at > 0) "  ·  guide updated ${Ui.day(at).trim().ifEmpty { "today" }} at ${Ui.time(at)}" else ""))
+    private fun update() { for ((v, f) in subtitles) sub(v, f()) }
+
+    // ------------------------------------------------------------------ rows
+
+    private fun header(text: String) {
+        val v = LayoutInflater.from(this).inflate(R.layout.item_heading, list, false) as TextView
+        v.text = text.uppercase()
+        list.addView(v)
+    }
+
+    private fun row(title: String, subtitle: () -> String, click: () -> Unit): View {
+        val v = LayoutInflater.from(this).inflate(R.layout.item_setting, list, false)
+        v.findViewById<TextView>(R.id.title).text = title
+        v.setOnClickListener { click() }
+        list.addView(v)
+        subtitles.add(v to subtitle)
+        return v
+    }
+
+    private fun toggle(title: String, about: String, get: () -> Boolean, set: (Boolean) -> Unit): View =
+        row(title, { (if (get()) "On" else "Off") + "  ·  " + about }) { set(!get()); update() }
+
+    private fun sub(v: View, s: String) { v.findViewById<TextView>(R.id.subtitle).text = s }
+
+    private fun choose(title: String, options: List<String>, current: Int, done: (Int) -> Unit) {
+        Dialogs.builder(this).setTitle(title)
+            .setSingleChoiceItems(options.toTypedArray(), current) { d, i -> d.dismiss(); done(i) }
+            .show()
+    }
+
+    // ------------------------------------------------------------------ playlists
+
+    private fun typeName(p: Playlist) = if (p.type == "xtream") "Xtream Codes login" else "M3U link"
+
+    private fun playlistsSummary(): String {
+        val all = Store.playlists
+        val p = Store.playlist ?: return "Add your playlist"
+        return "${p.name}  ·  ${typeName(p)}" + if (all.size > 1) "  ·  ${all.size} playlists" else ""
+    }
+
+    private fun playlists() {
+        val all = Store.playlists
+        val names = all.map { (if (it.id == Store.activeId) "✓  " else "     ") + it.name + "   (" + typeName(it) + ")" } + "+  Add a playlist"
+        Dialogs.builder(this).setTitle("Playlists")
+            .setItems(names.toTypedArray()) { _, i ->
+                if (i == all.size) startActivity(Intent(this, AddPlaylistActivity::class.java).putExtra(AddPlaylistActivity.NEW, true))
+                else playlistOptions(all[i])
+            }
+            .show()
+    }
+
+    private fun playlistOptions(p: Playlist) {
+        val active = p.id == Store.activeId
+        val opts = listOfNotNull(if (!active) "Use this playlist" else null, "Edit", "Remove")
+        Dialogs.builder(this).setTitle(p.name)
+            .setItems(opts.toTypedArray()) { _, i ->
+                when (opts[i]) {
+                    "Use this playlist" -> { Playlists.switchTo(p.id); update() }
+                    "Edit" -> startActivity(Intent(this, AddPlaylistActivity::class.java).putExtra(AddPlaylistActivity.ID, p.id))
+                    "Remove" -> Dialogs.builder(this).setTitle("Remove “${p.name}”?")
+                        .setMessage("Its channels, favourites and history on this device are removed too.")
+                        .setPositiveButton("Remove") { _, _ -> Playlists.remove(this, p.id); update() }
+                        .setNegativeButton("Cancel", null).show()
+                }
+            }
+            .show()
+    }
+
+    // ------------------------------------------------------------------ TV guide
+
+    private fun guideSummary(): String {
+        val p = Store.playlist ?: return "Add a playlist first"
+        val own = p.epgUrls.size
+        return when {
+            own == 0 && p.useProviderGuide -> "The provider's guide  ·  add your own guide address here"
+            own == 0 -> "None"
+            p.useProviderGuide -> "$own of your own, then the provider's"
+            else -> "$own of your own"
         }
-        sub(previewRow, if (Store.preview) "On  ·  the highlighted channel plays in the small window" else "Off")
-        sub(updateRow, "You have version ${BuildConfig.VERSION_NAME}")
-        val n = Store.hidden.size
-        sub(hiddenRow, if (n == 0) "None  ·  press ≡ on a category to hide it" else "$n hidden  ·  choose to show them again")
+    }
+
+    private fun savePlaylist(p: Playlist) {
+        Store.playlist = p
+        Store.guideLoadedAt = 0
+        update()
+        refreshGuideOnly()
+    }
+
+    private fun guideSources() {
+        val p = Store.playlist ?: return
+        val urls = p.epgUrls
+        val items = urls.mapIndexed { i, u -> "${i + 1}.  $u" } +
+            ("Provider's guide (used after yours): " + if (p.useProviderGuide) "On" else "Off") + "+  Add a guide address"
+        Dialogs.builder(this).setTitle("TV guide sources (first is used first)")
+            .setItems(items.toTypedArray()) { _, i ->
+                when {
+                    i < urls.size -> guideSourceOptions(p, i)
+                    i == urls.size -> savePlaylist(p.copy(useProviderGuide = !p.useProviderGuide))
+                    else -> Dialogs.input(this, "Add a TV guide address", "", "http://…/guide.xml") { u ->
+                        if (u.isNotEmpty()) savePlaylist(p.copy(epgUrl = (urls + u).joinToString("\n")))
+                    }
+                }
+            }
+            .show()
+    }
+
+    private fun guideSourceOptions(p: Playlist, i: Int) {
+        val urls = p.epgUrls.toMutableList()
+        val opts = listOfNotNull(if (i > 0) "Move up (use sooner)" else null, if (i < urls.size - 1) "Move down" else null, "Edit", "Remove")
+        Dialogs.builder(this).setTitle(urls[i])
+            .setItems(opts.toTypedArray()) { _, k ->
+                when (opts[k]) {
+                    "Move up (use sooner)" -> { urls.add(i - 1, urls.removeAt(i)); savePlaylist(p.copy(epgUrl = urls.joinToString("\n"))) }
+                    "Move down" -> { urls.add(i + 1, urls.removeAt(i)); savePlaylist(p.copy(epgUrl = urls.joinToString("\n"))) }
+                    "Edit" -> Dialogs.input(this, "TV guide address", urls[i], "http://…/guide.xml") { u ->
+                        if (u.isEmpty()) urls.removeAt(i) else urls[i] = u
+                        savePlaylist(p.copy(epgUrl = urls.joinToString("\n")))
+                    }
+                    "Remove" -> { urls.removeAt(i); savePlaylist(p.copy(epgUrl = urls.joinToString("\n"))) }
+                }
+            }
+            .show()
+    }
+
+    private fun hoursName(h: Int) = when { h % 24 == 0 && h > 24 -> "${h / 24} days"; h == 24 -> "1 day"; else -> "$h hours" }
+
+    private fun guideLength() {
+        val opts = listOf(12, 24, 48, 72)
+        choose("How much TV guide to keep", opts.map { hoursName(it) + if (it == 24) "  (recommended)" else "" }, opts.indexOf(Store.guideHours)) {
+            Store.guideHours = opts[it]
+            update()
+            refreshGuideOnly()
+        }
+    }
+
+    private fun refreshSummary(): String {
+        val at = Store.guideLoadedAt
+        return "${Repo.channels.size} channels" + if (at > 0) "  ·  guide updated ${Ui.day(at).trim().ifEmpty { "today" }} at ${Ui.time(at)}" else ""
     }
 
     private fun refresh() {
@@ -66,21 +208,46 @@ class SettingsActivity : Activity() {
         if (refreshing) return
         refreshing = true
         scope.launch {
+            val row = refreshRow ?: return@launch
             try {
-                sub(refreshRow, "Updating channels…")
+                sub(row, "Updating channels…")
                 Repo.refreshChannels(p)
-                sub(refreshRow, "Updating the TV guide…")
+                sub(row, "Updating the TV guide…")
+                Repo.refreshGuide()
+                Vod.reset()
+                refreshing = false
+                update()
+            } catch (e: Exception) {
+                refreshing = false
+                sub(row, Net.friendly(e))
+            }
+        }
+    }
+
+    private fun refreshGuideOnly() {
+        if (refreshing || Repo.channels.isEmpty()) return
+        refreshing = true
+        scope.launch {
+            val row = refreshRow ?: return@launch
+            try {
+                sub(row, "Updating the TV guide…")
                 Repo.refreshGuide()
                 refreshing = false
                 update()
             } catch (e: Exception) {
                 refreshing = false
-                sub(refreshRow, Net.friendly(e))
+                sub(row, "TV guide: ${Net.friendly(e)}")
             }
         }
     }
 
-    /** Pick hidden categories to show again. */
+    // ------------------------------------------------------------------ categories, playback, look
+
+    private fun hiddenSummary(): String {
+        val n = Store.hidden.size
+        return if (n == 0) "None  ·  press ≡ on a category to hide it" else "$n hidden  ·  choose to show them again"
+    }
+
     private fun unhide() {
         val keys = Store.hidden.toList()
         if (keys.isEmpty()) return
@@ -103,16 +270,41 @@ class SettingsActivity : Activity() {
             .show()
     }
 
-    private fun row(title: String, subtitle: String, click: () -> Unit): View {
-        val v = LayoutInflater.from(this).inflate(R.layout.item_setting, list, false)
-        v.findViewById<TextView>(R.id.title).text = title
-        v.findViewById<TextView>(R.id.subtitle).text = subtitle
-        v.setOnClickListener { click() }
-        list.addView(v)
-        return v
+    private fun streamFormat() {
+        choose("Stream format (Xtream logins)", listOf("MPEG-TS  (recommended – needed for pause & rewind)", "HLS  (try this if channels stutter or won't play)"),
+            if (Store.streamFormat == "hls") 1 else 0) { Store.streamFormat = if (it == 1) "hls" else "ts"; update() }
     }
 
-    private fun sub(v: View, s: String) { v.findViewById<TextView>(R.id.subtitle).text = s }
+    private fun theme() {
+        val bgs = Themes.backgrounds
+        choose("Background", bgs.map { it.name }, bgs.indexOf(Themes.background())) { b ->
+            val acs = Themes.accents
+            choose("Accent colour", acs.map { it.name }, acs.indexOf(Themes.accent())) { a ->
+                Store.background = bgs[b].key
+                Store.accent = acs[a].key
+                Themes.version++
+                Ui.test("theme ${bgs[b].key} ${acs[a].key}")
+                recreate()
+            }
+        }
+    }
+}
 
-    override fun onDestroy() { scope.cancel(); super.onDestroy() }
+/** Switching between and removing playlists. */
+object Playlists {
+    fun switchTo(id: String) {
+        if (id == Store.activeId) return
+        Store.activeId = id
+        Repo.reset()
+        Vod.reset()
+        Ui.test("playlist ${Store.playlist?.name}")
+    }
+
+    fun remove(a: android.app.Activity, id: String) {
+        val wasActive = id == Store.activeId
+        if (wasActive) Store.playlist = null else Store.playlists = Store.playlists.filter { it.id != id }
+        File(a.filesDir, "p_$id").deleteRecursively()
+        if (android.os.Build.VERSION.SDK_INT >= 24) a.deleteSharedPreferences("progress_$id")
+        if (wasActive) { Repo.reset(); Vod.reset() }
+    }
 }

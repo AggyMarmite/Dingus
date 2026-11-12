@@ -1,0 +1,13 @@
+<resources>
+    <!-- Theme colours: set by the chosen background and accent (Settings → Theme). -->
+    <attr name="dBg" format="color" />
+    <attr name="dSurface" format="color" />
+    <attr name="dSurface2" format="color" />
+    <attr name="dLine" format="color" />
+    <attr name="dText" format="color" />
+    <attr name="dMuted" format="color" />
+    <attr name="dAccent" format="color" />
+    <attr name="dAccentSoft" format="color" />
+    <attr name="dAiring" format="color" />
+    <attr name="dPast" format="color" />
+</resources>

@@ -2,8 +2,8 @@
 <!-- A poster: a bright frame when the remote is on it. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_focused="true">
-        <shape><solid android:color="@color/surface2" /><corners android:radius="10dp" />
-            <stroke android:width="3dp" android:color="@color/accent" /></shape>
+        <shape><solid android:color="?attr/dSurface2" /><corners android:radius="10dp" />
+            <stroke android:width="3dp" android:color="?attr/dAccent" /></shape>
     </item>
-    <item><shape><solid android:color="@color/surface" /><corners android:radius="10dp" /></shape></item>
+    <item><shape><solid android:color="?attr/dSurface" /><corners android:radius="10dp" /></shape></item>
 </selector>

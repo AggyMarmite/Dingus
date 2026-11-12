@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- A film or show: artwork behind, poster and details, play buttons; for shows, seasons and episodes. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg">
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="?attr/dBg">
 
     <ImageView android:id="@+id/backdrop" android:layout_width="match_parent" android:layout_height="match_parent"
         android:scaleType="centerCrop" android:alpha="0.32" android:contentDescription="@null" />
@@ -13,7 +13,7 @@
         <FrameLayout android:layout_width="196dp" android:layout_height="294dp" android:background="@drawable/logo_bg">
             <TextView android:id="@+id/fallback" android:layout_width="match_parent" android:layout_height="match_parent"
                 android:gravity="center" android:padding="12dp" android:textSize="18sp" android:textStyle="bold"
-                android:textColor="@color/muted" />
+                android:textColor="?attr/dMuted" />
             <ImageView android:id="@+id/poster" android:layout_width="match_parent" android:layout_height="match_parent"
                 android:scaleType="centerCrop" android:contentDescription="@null" />
         </FrameLayout>
@@ -22,22 +22,24 @@
             android:layout_marginStart="36dp" android:orientation="vertical">
             <TextView android:id="@+id/title" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:maxLines="2" android:ellipsize="end" android:textSize="32sp" android:textStyle="bold"
-                android:textColor="@color/text" />
+                android:textColor="?attr/dText" />
             <TextView android:id="@+id/meta" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="6dp" android:maxLines="1" android:ellipsize="end" android:textSize="16sp"
-                android:textColor="@color/muted" />
+                android:textColor="?attr/dMuted" />
             <TextView android:id="@+id/plot" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="14dp" android:maxLines="4" android:ellipsize="end" android:textSize="16sp"
-                android:lineSpacingExtra="3dp" android:textColor="@color/text" />
+                android:lineSpacingExtra="3dp" android:textColor="?attr/dText" />
             <TextView android:id="@+id/people" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="10dp" android:maxLines="2" android:ellipsize="end" android:textSize="14sp"
-                android:textColor="@color/muted" />
+                android:textColor="?attr/dMuted" />
 
             <LinearLayout android:id="@+id/buttons" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="18dp" android:orientation="horizontal">
                 <TextView android:id="@+id/play" style="@style/Choice" android:minWidth="170dp" android:text="▶  Play" />
                 <TextView android:id="@+id/restart" style="@style/Choice" android:layout_marginStart="12dp"
                     android:text="Start over" android:visibility="gone" />
+                <TextView android:id="@+id/watched" style="@style/Choice" android:layout_marginStart="12dp"
+                    android:text="Mark as watched" android:visibility="gone" />
             </LinearLayout>
 
             <HorizontalScrollView android:id="@+id/seasonsScroll" android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -50,7 +52,10 @@
                 android:layout_marginTop="10dp" android:scrollbars="none" android:clipToPadding="false" android:paddingBottom="20dp"
                 android:descendantFocusability="afterDescendants" android:visibility="gone" />
             <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="16dp" android:textSize="15sp" android:textColor="@color/muted" />
+                android:layout_marginTop="16dp" android:textSize="15sp" android:textColor="?attr/dMuted" />
+            <TextView android:id="@+id/episodeHint" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="OK  play     ≡  mark watched / not watched" android:textSize="13sp" android:textColor="?attr/dMuted"
+                android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
 </FrameLayout>

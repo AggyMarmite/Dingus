@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="?attr/dBg"
     android:fillViewport="true">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="vertical" android:gravity="center_horizontal" android:paddingTop="40dp" android:paddingBottom="40dp">
         <LinearLayout android:id="@+id/list" android:layout_width="700dp" android:layout_height="wrap_content"
             android:orientation="vertical">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="20dp"
-                android:text="Settings" android:textSize="30sp" android:textStyle="bold" android:textColor="@color/text" />
+                android:text="Settings" android:textSize="30sp" android:textStyle="bold" android:textColor="?attr/dText" />
         </LinearLayout>
     </LinearLayout>
 </ScrollView>

@@ -97,7 +97,7 @@ object Sources {
             }
             r.endArray()
         }
-        return Result(cats, chans, p.epgUrl.ifBlank { "$base/xmltv.php?$auth" })
+        return Result(cats, chans, "$base/xmltv.php?$auth")
     }
 
     /** A value as text, whatever JSON type it came as (Xtream servers mix numbers, strings and nulls). */
@@ -115,7 +115,7 @@ object Sources {
     private fun m3u(p: Playlist): Result {
         val cats = LinkedHashMap<String, Category>()
         val chans = ArrayList<Channel>()
-        var guide: String? = p.epgUrl.ifBlank { null }
+        var guide: String? = null
         Net.open(p.m3uUrl.trim(), 30_000).bufferedReader(Charsets.UTF_8).use { rd ->
             var info: String? = null
             var group: String? = null

@@ -13,7 +13,15 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** Add (or change) the playlist: an Xtream Codes login or an M3U link. It's checked before it's saved. */
-class AddPlaylistActivity : Activity() {
+class AddPlaylistActivity : BaseActivity() {
+    companion object {
+        /** Add another playlist (otherwise: edit the one in use, or add the first). */
+        const val NEW = "new"
+        /** Edit this playlist. */
+        const val ID = "id"
+    }
+
+    private var editing: Playlist? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var type = "xtream"
     private var busy = false
@@ -35,23 +43,29 @@ class AddPlaylistActivity : Activity() {
         findViewById<View>(R.id.typeM3u).setOnClickListener { setType("m3u") }
         save.setOnClickListener { trySave() }
 
-        val existing = Store.playlist
+        val existing = when {
+            intent.getBooleanExtra(NEW, false) -> null
+            intent.getStringExtra(ID) != null -> Store.playlists.firstOrNull { it.id == intent.getStringExtra(ID) }
+            else -> Store.playlist
+        }
+        editing = existing
         if (existing != null) {
-            findViewById<TextView>(R.id.heading).text = "Your playlist"
+            findViewById<TextView>(R.id.heading).text = existing.name
             name.setText(existing.name)
             server.setText(existing.server); user.setText(existing.user); pass.setText(existing.pass)
-            m3uUrl.setText(existing.m3uUrl); epg.setText(existing.epgUrl)
+            m3uUrl.setText(existing.m3uUrl); epg.setText(existing.epgUrls.firstOrNull() ?: "")
             setType(existing.type)
             findViewById<View>(R.id.remove).apply {
                 visibility = View.VISIBLE
                 setOnClickListener {
-                    Store.playlist = null
-                    Repo.clear()
-                    Vod.clear()
-                    recreate()
+                    Playlists.remove(this@AddPlaylistActivity, existing.id)
+                    finish()
                 }
             }
-        } else setType("xtream")
+        } else {
+            if (Store.playlists.isNotEmpty()) findViewById<TextView>(R.id.heading).text = "Add another playlist"
+            setType("xtream")
+        }
         findViewById<View>(if (type == "xtream") R.id.typeXtream else R.id.typeM3u).requestFocus()
     }
 
@@ -77,7 +91,10 @@ class AddPlaylistActivity : Activity() {
             user = user.text.toString().trim(),
             pass = pass.text.toString(),
             m3uUrl = m3uUrl.text.toString().trim(),
-            epgUrl = epg.text.toString().trim(),
+            // The box holds your first guide address; any others (added in Settings) are kept.
+            epgUrl = (listOf(epg.text.toString().trim()) + (editing?.epgUrls?.drop(1) ?: emptyList())).filter { it.isNotEmpty() }.joinToString("\n"),
+            id = editing?.id ?: Store.newId(),
+            useProviderGuide = editing?.useProviderGuide ?: true,
         )
         if (type == "xtream" && (p.server.isEmpty() || p.user.isEmpty())) return showError("Enter the server address, username and password.")
         if (type == "m3u" && p.m3uUrl.isEmpty()) return showError("Enter the M3U address.")
@@ -88,10 +105,13 @@ class AddPlaylistActivity : Activity() {
             try {
                 val r = withContext(Dispatchers.IO) { Sources.load(p) }
                 if (r.channels.isEmpty()) { showError("That worked, but there are no live channels in it."); return@launch }
-                Store.playlist = p
+                val switching = p.id != Store.activeId
+                Store.playlist = p // saves it and makes it the one in use
+                if (switching) { Repo.reset(); Vod.reset() }
                 Repo.clear()
                 Vod.clear()
                 Repo.refreshChannels(p, r)
+                Store.guideLoadedAt = 0
                 finish()
             } catch (e: Exception) {
                 showError(Net.friendly(e))

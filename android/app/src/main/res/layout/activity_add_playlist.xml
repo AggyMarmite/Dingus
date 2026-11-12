@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="?attr/dBg"
     android:fillViewport="true">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="vertical" android:gravity="center_horizontal" android:paddingTop="40dp" android:paddingBottom="40dp">
         <LinearLayout android:layout_width="760dp" android:layout_height="wrap_content" android:orientation="vertical">
 
             <TextView android:id="@+id/heading" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="Add your playlist" android:textSize="30sp" android:textStyle="bold" android:textColor="@color/text" />
+                android:text="Add your playlist" android:textSize="30sp" android:textStyle="bold" android:textColor="?attr/dText" />
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp"
                 android:text="Xtream Codes logins and M3U links are both supported." android:textSize="16sp"
-                android:textColor="@color/muted" />
+                android:textColor="?attr/dMuted" />
 
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="24dp" android:orientation="horizontal">
@@ -37,7 +37,7 @@
                 <EditText android:id="@+id/m3uUrl" style="@style/Field" android:hint="http://provider.example/get.php?…" android:inputType="textUri" />
             </LinearLayout>
 
-            <TextView style="@style/Label" android:text="TV guide address (optional)" />
+            <TextView style="@style/Label" android:text="Your own TV guide address (optional – add more in Settings)" />
             <EditText android:id="@+id/epg" style="@style/Field" android:hint="Leave empty to use the provider's guide" android:inputType="textUri" />
 
             <TextView android:id="@+id/error" android:layout_width="match_parent" android:layout_height="wrap_content"

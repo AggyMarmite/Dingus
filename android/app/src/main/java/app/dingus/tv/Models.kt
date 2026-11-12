@@ -20,7 +20,7 @@ class Channel(
 }
 
 /** A programme in the TV guide (times in milliseconds since 1970, UTC). */
-class Programme(val start: Long, val stop: Long, val title: String, val desc: String?)
+class Programme(val start: Long, val stop: Long, val title: String, val desc: String?, val genre: Byte = 0)
 
 /** Your playlist: an Xtream Codes login, or an M3U link. */
 data class Playlist(
@@ -30,5 +30,11 @@ data class Playlist(
     val user: String = "",
     val pass: String = "",
     val m3uUrl: String = "",
+    /** Your own TV guide addresses, one per line, first = used first. */
     val epgUrl: String = "",
-)
+    val id: String = "",
+    /** Also use the guide the provider gives (after your own). */
+    val useProviderGuide: Boolean = true,
+) {
+    val epgUrls: List<String> get() = epgUrl.split('\n').map { it.trim() }.filter { it.isNotEmpty() }
+}

@@ -24,6 +24,11 @@ sleep 2; shot 01-guide
 
 key KEYCODE_DPAD_RIGHT; key KEYCODE_DPAD_RIGHT; key KEYCODE_DPAD_DOWN 2; shot 02-guide-later
 fresh
+key KEYCODE_DPAD_CENTER 2; shot 02b-reminder-dialog
+key KEYCODE_DPAD_CENTER 2
+check "reminder-set true" 5 "OK on a later programme sets a reminder"
+shot 02c-reminder-set
+fresh
 key KEYCODE_DPAD_LEFT; key KEYCODE_DPAD_LEFT; key KEYCODE_DPAD_LEFT 2
 check "categories-open" 5 "LEFT from what's on now shows the categories"
 shot 03-categories
@@ -40,7 +45,18 @@ fresh
 key KEYCODE_DPAD_UP
 check "playing Test 1 HD" 45 "changing channel in full screen"
 sleep 1; shot 05-player-info
-key KEYCODE_MENU 2
+sleep 15
+fresh
+key KEYCODE_DPAD_LEFT 0.3; key KEYCODE_DPAD_LEFT 2
+check "timeshift behind (1[0-9]|2[0-9])s" 10 "LEFT rewinds live TV"
+check "playing Test 1 HD" 20 "playback carries on from the earlier point"
+sleep 2; shot 05b-rewound
+key KEYCODE_MEDIA_PLAY_PAUSE 2
+check "timeshift paused" 5 "play/pause pauses live TV"
+shot 05c-paused
+key KEYCODE_MEDIA_PLAY_PAUSE 1
+key KEYCODE_MENU 2; shot 05d-options
+key KEYCODE_DPAD_CENTER 2   # Add to Favourites
 fresh
 key KEYCODE_BACK; key KEYCODE_BACK 2
 check "main-shown" 10 "BACK returns to the guide"
@@ -55,6 +71,10 @@ for _ in 1 2 3 4 5 6 7; do key KEYCODE_DPAD_DOWN 0.5; done
 key KEYCODE_DPAD_CENTER 2
 check "settings-shown" 10 "Settings opens from the menu"
 shot 07-settings
+for _ in $(seq 1 9); do key KEYCODE_DPAD_DOWN 0.4; done
+sleep 1; shot 07b-settings-more
+for _ in $(seq 1 8); do key KEYCODE_DPAD_DOWN 0.4; done
+sleep 1; shot 07c-settings-end
 key KEYCODE_BACK 2
 
 fresh

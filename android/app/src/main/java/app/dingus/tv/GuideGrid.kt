@@ -29,6 +29,11 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
     }
 
     var listener: Listener? = null
+    /** Marks programmes with a reminder (a dot in the corner). */
+    private var reminder: ((Programme) -> Boolean)? = null
+    /** Colour stripe on programmes by genre (Settings). */
+    var genreColours = true
+        set(v) { field = v; invalidate() }
     var title: String = ""
         set(v) { field = v; invalidate() }
 
@@ -49,18 +54,18 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
     private var anchor = 0L       // the time the selection follows when moving up and down
     private var start = 0L        // time at the left edge
 
-    private fun col(id: Int) = ContextCompat.getColor(context, id)
-    private val cBg = col(R.color.bg)
-    private val cSurface = col(R.color.surface)
-    private val cSurface2 = col(R.color.surface2)
-    private val cLine = col(R.color.line)
-    private val cText = col(R.color.text)
-    private val cMuted = col(R.color.muted)
-    private val cAccent = col(R.color.accent)
-    private val cAccentSoft = col(R.color.accent_soft)
-    private val cLive = col(R.color.live)
-    private val cAiring = 0xFF1A2130.toInt()
-    private val cPast = 0xFF10141C.toInt()
+    private fun col(attr: Int) = Themes.color(context, attr)
+    private val cBg = col(R.attr.dBg)
+    private val cSurface = col(R.attr.dSurface)
+    private val cSurface2 = col(R.attr.dSurface2)
+    private val cLine = col(R.attr.dLine)
+    private val cText = col(R.attr.dText)
+    private val cMuted = col(R.attr.dMuted)
+    private val cAccent = col(R.attr.dAccent)
+    private val cAccentSoft = col(R.attr.dAccentSoft)
+    private val cLive = ContextCompat.getColor(context, R.color.live)
+    private val cAiring = col(R.attr.dAiring)
+    private val cPast = col(R.attr.dPast)
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val titleP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 16 * d; typeface = Typeface.DEFAULT_BOLD; color = cText }
@@ -267,6 +272,8 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
 
         // Programmes.
         val list = Repo.programmes(c)
+        val rs = Reminders.all()
+        reminder = if (rs.isEmpty()) null else { p -> rs.any { it.channelId == c.id && it.start == p.start } }
         var i = indexAt(list, start)
         if (i < 0 || list[i].start >= end) {
             block(canvas, chanW, w, y0, y1, if (list.isEmpty()) "No information" else "", null, selected && sel == null, false)
@@ -289,6 +296,13 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         fill.color = when { on -> cAccent; airing -> cAiring; past -> cPast; else -> cSurface }
         r.set(x0 + gap, y0, x1 - gap, y1)
         canvas.drawRoundRect(r, 6 * d, 6 * d, fill)
+        if (genreColours && p != null && p.genre != Genres.NONE && x1 - x0 > 12 * d) {
+            fill.color = Genres.color(p.genre)
+            if (past && !on) fill.alpha = 110
+            r.set(x0 + gap + 4 * d, y1 - 5 * d, x1 - gap - 4 * d, y1 - 3 * d)
+            canvas.drawRoundRect(r, d, d, fill)
+            fill.alpha = 255
+        }
         val avail = x1 - x0 - 2 * pad
         if (avail < 12 * d || text.isEmpty()) return
         titleP.color = if (past && !on && !catchUp) cMuted else cText
@@ -296,7 +310,9 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
             canvas.drawText(TextUtils.ellipsize(text, subP, avail, TextUtils.TruncateAt.END).toString(), x0 + pad, (y0 + y1) / 2 + 5 * d, subP)
             return
         }
-        canvas.drawText(TextUtils.ellipsize(text, titleP, avail, TextUtils.TruncateAt.END).toString(), x0 + pad, y0 + 22 * d, titleP)
+        val bell = reminder?.invoke(p) == true
+        canvas.drawText(TextUtils.ellipsize(text, titleP, avail - if (bell) 14 * d else 0f, TextUtils.TruncateAt.END).toString(), x0 + pad, y0 + 22 * d, titleP)
+        if (bell) { fill.color = if (on) cText else cAccent; canvas.drawCircle(x1 - gap - 10 * d, y0 + 12 * d, 4 * d, fill) }
         subP.color = if (on) 0xDDFFFFFF.toInt() else cMuted
         canvas.drawText(TextUtils.ellipsize((if (catchUp) "↺  " else "") + Ui.span(p), subP, avail, TextUtils.TruncateAt.END).toString(), x0 + pad, y0 + 40 * d, subP)
         subP.color = cMuted

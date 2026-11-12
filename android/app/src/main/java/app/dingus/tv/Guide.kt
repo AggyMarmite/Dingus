@@ -74,14 +74,15 @@ object Guide {
                         if (key == null || start == 0L || stop <= from || start >= until) {
                             skip(p)
                         } else {
-                            var title = ""; var desc: String? = null
+                            var title = ""; var desc: String? = null; var genre: Byte = 0
                             while (inside(p, "programme")) {
                                 if (p.eventType == XmlPullParser.START_TAG) when (p.name) {
                                     "title" -> if (title.isEmpty()) title = p.nextText().trim()
                                     "desc" -> if (desc == null) desc = p.nextText().trim().take(400)
+                                    "category" -> if (genre == Genres.NONE) genre = Genres.of(p.nextText())
                                 }
                             }
-                            progs.getOrPut(key) { ArrayList() }.add(Programme(start, if (stop > start) stop else start + 1800_000, title, desc))
+                            progs.getOrPut(key) { ArrayList() }.add(Programme(start, if (stop > start) stop else start + 1800_000, title.intern(), desc, genre))
                         }
                     }
                 }

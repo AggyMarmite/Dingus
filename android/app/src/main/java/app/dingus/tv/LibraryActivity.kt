@@ -19,7 +19,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /** Films or TV shows: categories down the left, posters on the right. */
-class LibraryActivity : Activity() {
+class LibraryActivity : BaseActivity() {
     companion object { const val KIND = "kind" }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
