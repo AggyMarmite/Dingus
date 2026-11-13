@@ -52,6 +52,19 @@ class CategoryList(
         v.setOnClickListener { val p = h.bindingAdapterPosition; if (p >= 0) { handler.removeCallbacks(pending); pendingCat = null; onPick(items[p]) } }
         v.setOnKeyListener { _, code, ev ->
             val p = h.bindingAdapterPosition
+            // Up and down one category at a time, scrolling the list as needed (left to itself, focus could stop at
+            // the last one showing, or jump out of the list).
+            if (ev.action == KeyEvent.ACTION_DOWN && p >= 0 && (code == KeyEvent.KEYCODE_DPAD_DOWN || code == KeyEvent.KEYCODE_DPAD_UP)) {
+                val rv = v.parent as? RecyclerView
+                val t = if (code == KeyEvent.KEYCODE_DPAD_DOWN) p + 1 else p - 1
+                if (rv != null && t in items.indices) {
+                    val next = rv.findViewHolderForAdapterPosition(t)?.itemView
+                    if (next != null && next.isShown) next.requestFocus()
+                    else { rv.scrollToPosition(t); rv.post { rv.findViewHolderForAdapterPosition(t)?.itemView?.requestFocus() } }
+                    return@setOnKeyListener true
+                }
+                if (code == KeyEvent.KEYCODE_DPAD_DOWN) return@setOnKeyListener true // the last one: stay
+            }
             if (code == KeyEvent.KEYCODE_MENU && ev.action == KeyEvent.ACTION_UP && p >= 0 && onMenu != null) { onMenu.invoke(items[p]); true }
             else code == KeyEvent.KEYCODE_MENU && onMenu != null
         }

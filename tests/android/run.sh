@@ -189,6 +189,15 @@ check "library movies 3" 30 "Films opens from the side menu"
 sleep 3; shot 18-films-rows
 key KEYCODE_DPAD_DOWN 3; shot 19-films-rows-2
 fresh
+key KEYCODE_MENU 2
+check "library movies" 15 "≡ on Films opens all its categories"
+key KEYCODE_DPAD_RIGHT 1.5
+check "library-side hidden" 5 "into the films, the categories step aside"
+shot 19-library-films
+key KEYCODE_DPAD_LEFT 1.5
+check "library-side shown" 5 "LEFT from the first column brings them back"
+key KEYCODE_BACK 1.5
+fresh
 key KEYCODE_DPAD_LEFT 1.5
 check "menu-open" 5 "the side menu opens on Films too"
 shot 19a-films-menu

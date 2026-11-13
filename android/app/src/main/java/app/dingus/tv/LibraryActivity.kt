@@ -75,6 +75,13 @@ class LibraryActivity : BaseActivity() {
         grid.setHasFixedSize(true)
         grid.setItemViewCacheSize(cols * 3)
 
+        colsNarrow = cols
+        colsWide = ((resources.displayMetrics.widthPixels / resources.displayMetrics.density - 60 - 44) / 146).toInt().coerceIn(cols, 10)
+        // Into the films: the categories step aside (more films showing); back to them: they come back. Like Live TV.
+        window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, n ->
+            if (n != null && inside(n, grid)) hideSide() else if (n != null && inside(n, side0)) showSide()
+        }
+
         current = intent.getStringExtra(CATEGORY) ?: getPreferences(MODE_PRIVATE).getString("cat", Vod.RECENT) ?: Vod.RECENT
         load()
     }
@@ -132,6 +139,37 @@ class LibraryActivity : BaseActivity() {
         count.text = if (items.isEmpty()) "" else "${items.size}"
         empty.text = "Nothing here."
         empty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
+    }
+
+    private var colsNarrow = 4
+    private var colsWide = 6
+    private val side0 by lazy { findViewById<View>(R.id.libSide) }
+
+    private fun inside(v: View, parent: View): Boolean {
+        var p: Any? = v
+        while (p is View) { if (p === parent) return true; p = p.parent }
+        return false
+    }
+
+    private fun smoothly() {
+        if (!Ui.lite) android.transition.TransitionManager.beginDelayedTransition(side0.parent as android.view.ViewGroup,
+            android.transition.ChangeBounds().setDuration(200).setInterpolator(android.view.animation.DecelerateInterpolator()))
+    }
+
+    private fun hideSide() {
+        if (side0.visibility != View.VISIBLE) return
+        smoothly()
+        side0.visibility = View.GONE
+        (grid.layoutManager as GridLayoutManager).spanCount = colsWide
+        Ui.test("library-side hidden")
+    }
+
+    private fun showSide() {
+        if (side0.visibility == View.VISIBLE) return
+        smoothly()
+        side0.visibility = View.VISIBLE
+        (grid.layoutManager as GridLayoutManager).spanCount = colsNarrow
+        Ui.test("library-side shown")
     }
 
     private fun focusCategory() {
@@ -198,6 +236,19 @@ class LibraryActivity : BaseActivity() {
         }
     }
 
-    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean = side.onKey(event) || super.dispatchKeyEvent(event)
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        // LEFT from the first column of films: back to the categories (they slide back in).
+        if (event.action == android.view.KeyEvent.ACTION_DOWN && event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+            val f = currentFocus
+            if (f != null && inside(f, grid)) {
+                val item = grid.findContainingItemView(f)
+                val pos = item?.let { grid.getChildAdapterPosition(it) } ?: -1
+                if (pos >= 0 && pos % (grid.layoutManager as GridLayoutManager).spanCount == 0) {
+                    showSide(); categories.post { focusCategory() }; return true
+                }
+            }
+        }
+        return side.onKey(event) || super.dispatchKeyEvent(event)
+    }
 
 }

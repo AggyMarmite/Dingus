@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The highlighted title or channel: artwork behind, details on the left. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/hero" android:layout_width="match_parent" android:layout_height="196dp">
+    android:id="@+id/hero" android:layout_width="match_parent" android:layout_height="250dp">
     <ImageView android:id="@+id/heroArt" android:layout_width="match_parent" android:layout_height="match_parent"
         android:scaleType="centerCrop" android:alpha="0.55" android:contentDescription="@null" />
     <View android:id="@+id/heroShade" android:layout_width="match_parent" android:layout_height="match_parent" />
@@ -9,7 +9,7 @@
         android:paddingStart="48dp" android:paddingTop="14dp" android:gravity="top" android:paddingBottom="6dp">
         <TextView android:id="@+id/heroKicker" android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:textSize="13sp" android:textStyle="bold" android:letterSpacing="0.08" android:textColor="?attr/dAccent" />
-        <ImageView android:id="@+id/heroLogo" android:layout_width="wrap_content" android:layout_height="64dp"
+        <ImageView android:id="@+id/heroLogo" android:layout_width="wrap_content" android:layout_height="84dp"
             android:layout_marginTop="2dp" android:maxWidth="420dp" android:adjustViewBounds="true" android:scaleType="fitStart"
             android:contentDescription="@null" android:visibility="gone" />
         <TextView android:id="@+id/heroTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
