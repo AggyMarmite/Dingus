@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shown while the playlist is first read or loaded: the Dingus logo, a spinner and what's happening. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/loadingScreen" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:gravity="center" android:background="?attr/dBg" android:clickable="true">
+    <ImageView android:layout_width="96dp" android:layout_height="96dp" android:src="@mipmap/ic_launcher"
+        android:contentDescription="@null" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="16dp"
+        android:text="Dingus" android:textSize="34sp" android:textStyle="bold" android:textColor="?attr/dText" />
+    <ProgressBar android:layout_width="34dp" android:layout_height="34dp" android:layout_marginTop="28dp"
+        android:indeterminate="true" style="@android:style/Widget.ProgressBar" />
+    <TextView android:id="@+id/loadingText" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_marginTop="16dp" android:text="Getting your channels ready…" android:textSize="17sp"
+        android:textColor="?attr/dMuted" android:gravity="center" />
+</LinearLayout>

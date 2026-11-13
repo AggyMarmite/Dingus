@@ -74,6 +74,7 @@ class HomeActivity : BaseActivity() {
         side.refresh()
         tick.run()
         if (Store.playlist == null) {
+            hideLoading()
             empty.text = "Welcome to Dingus.\nAdd your playlist to get started."
             empty.visibility = View.VISIBLE
             adapter.set(emptyList())
@@ -146,14 +147,14 @@ class HomeActivity : BaseActivity() {
                 Vpn.startup() // "connect when Dingus starts": before anything goes online
                 val p = Store.playlist ?: return@launch
                 if (Repo.channels.isEmpty()) {
-                    empty.text = "Loading your channels…"; empty.visibility = View.VISIBLE
+                    loadingText("Loading your channels…")
                     Notice.working("Updating playlist & TV guide…")
                     var tries = 0
                     while (true) {
                         try { Repo.refreshChannels(p); break } catch (e: Exception) {
                             // The network may not be up yet (just after waking): try again a few times by itself.
-                            if (++tries > 4) { empty.text = "Couldn't load your playlist.\n${Net.friendly(e)}"; Notice.clear(); return@launch }
-                            empty.text = "Waiting for the network…"
+                            if (++tries > 4) { hideLoading(); empty.text = "Couldn't load your playlist.\n${Net.friendly(e)}"; empty.visibility = View.VISIBLE; Notice.clear(); return@launch }
+                            loadingText("Waiting for the network…")
                             kotlinx.coroutines.delay(3_000L * tries)
                         }
                     }
@@ -171,7 +172,7 @@ class HomeActivity : BaseActivity() {
                     for (k in listOf(Vod.MOVIES, Vod.SERIES)) try { Vod.library(k) } catch (_: Exception) {}
                     build()
                 }
-            } finally { loading = false }
+            } finally { loading = false; build() }
         }
     }
 
@@ -186,10 +187,26 @@ class HomeActivity : BaseActivity() {
         }
     }
 
+    /** The Dingus loading screen (logo, spinner, what's happening) while the playlist's read or loaded. */
+    private fun loadingText(t: String) {
+        findViewById<View>(R.id.loadingScreen)?.visibility = View.VISIBLE
+        findViewById<TextView>(R.id.loadingText)?.text = t
+    }
+
+    private fun hideLoading() {
+        val v = findViewById<View>(R.id.loadingScreen) ?: return
+        if (v.visibility != View.VISIBLE) return
+        Ui.test("home-loading-done")
+        if (Ui.lite) { v.visibility = View.GONE; return }
+        v.animate().alpha(0f).setDuration(250).withEndAction { v.visibility = View.GONE; v.alpha = 1f }.start()
+    }
+
     private fun show(slides: List<Slide>, out: List<Row>) {
         if (!lite) feature?.set(slides)
         adapter.set(out)
-        empty.visibility = if (out.isEmpty() && slides.isEmpty() && Repo.channels.isEmpty()) View.VISIBLE else View.GONE
+        val nothing = out.isEmpty() && slides.isEmpty()
+        if (!nothing || !loading) hideLoading()
+        empty.visibility = if (nothing && Repo.channels.isEmpty() && !loading) View.VISIBLE else View.GONE
         Ui.test(if (lite) "home rows ${out.size}" else "home rows ${out.size} slides ${slides.size}")
         if (!focusedOnce && (slides.isNotEmpty() || out.isNotEmpty())) { focusedOnce = true; focusFirstCard() }
     }

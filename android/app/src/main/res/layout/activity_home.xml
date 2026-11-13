@@ -16,6 +16,7 @@
         <TextView android:id="@+id/clock" android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:textSize="18sp" android:textColor="?attr/dMuted" />
     </LinearLayout>
+    <include layout="@layout/loading_screen" />
     <TextView android:id="@+id/empty" android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:layout_gravity="center" android:layout_marginTop="80dp" android:gravity="center" android:textSize="18sp"
         android:textColor="?attr/dMuted" android:visibility="gone" />
