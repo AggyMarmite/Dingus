@@ -36,6 +36,8 @@ class Details(
     val title: String?, val plot: String?, val cast: String?, val director: String?, val genre: String?,
     val year: Int, val duration: String?, val rating: String?, val poster: String?, val backdrop: String?,
     val episodes: List<Episode>,
+    /** The film's or show's number on TMDB, when the provider gives it (used for title logos). */
+    val tmdbId: String? = null,
 )
 
 /** Films and TV shows from an Xtream Codes login: loaded when first opened, kept on the device, refreshed twice a day. */
@@ -274,6 +276,7 @@ object Vod {
             year = yearOf(s("releasedate", "releaseDate", "release_date") ?: "").takeIf { it > 0 } ?: item.year,
             duration = s("duration"), rating = s("rating"),
             poster = s("movie_image", "cover_big", "cover") ?: item.poster, backdrop = backdrop, episodes = eps,
+            tmdbId = s("tmdb_id", "tmdb"),
         )
     }
 

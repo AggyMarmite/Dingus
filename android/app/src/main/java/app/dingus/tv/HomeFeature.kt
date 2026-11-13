@@ -13,12 +13,15 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.launch
 
 /** One slide of the big feature at the top of Home. */
 class Slide(
     val kicker: String, val title: String, val meta: String, val text: String?,
     val progress: Float = -1f, val art: String? = null,
     val watch: () -> Unit, val second: Pair<String, () -> Unit>? = null,
+    /** A film or show: its title logo is shown when there is one. */
+    val title_: Pair<String, VodItem>? = null,
 )
 
 /**
@@ -26,7 +29,7 @@ class Slide(
  * live sport, new films), Watch / a second action / next, and dots. Moves on by itself every few seconds
  * while you're on it and not pressing anything.
  */
-class HomeFeature(private val a: Activity) : RecyclerView.Adapter<HomeFeature.H>() {
+class HomeFeature(private val a: Activity, private val scope: kotlinx.coroutines.CoroutineScope? = null) : RecyclerView.Adapter<HomeFeature.H>() {
     private var slides: List<Slide> = emptyList()
     private var index = 0
     private var holder: H? = null
@@ -68,6 +71,7 @@ class HomeFeature(private val a: Activity) : RecyclerView.Adapter<HomeFeature.H>
         val second: TextView = v.findViewById(R.id.heroSecond)
         val next: TextView = v.findViewById(R.id.heroNext)
         val dots: LinearLayout = v.findViewById(R.id.heroDots)
+        val logo: ImageView = v.findViewById(R.id.heroLogo)
     }
 
     override fun getItemCount() = if (slides.isEmpty()) 0 else 1
@@ -103,6 +107,12 @@ class HomeFeature(private val a: Activity) : RecyclerView.Adapter<HomeFeature.H>
         val s = slides.getOrNull(index) ?: return
         h.kicker.text = s.kicker
         h.title.text = s.title
+        val t = s.title_
+        TitleLogos.show(h.logo, h.title, t?.let { TitleLogos.cached(it.first, it.second) })
+        if (t != null && TitleLogos.enabled && TitleLogos.cached(t.first, t.second) == null) scope?.launch {
+            val url = TitleLogos.find(t.first, t.second, Vod.cachedDetails(t.first, t.second.id)?.tmdbId)
+            if (url != null && slides.getOrNull(index) === s) TitleLogos.show(h.logo, h.title, url)
+        }
         h.meta.text = s.meta
         h.text.text = s.text ?: ""
         h.text.visibility = if (s.text.isNullOrBlank()) View.GONE else View.VISIBLE

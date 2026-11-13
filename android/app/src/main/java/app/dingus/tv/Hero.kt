@@ -16,6 +16,7 @@ class Hero(private val a: Activity, private val scope: CoroutineScope) {
     private val title: TextView = a.findViewById(R.id.heroTitle)
     private val meta: TextView = a.findViewById(R.id.heroMeta)
     private val text: TextView = a.findViewById(R.id.heroText)
+    private val logo: ImageView = a.findViewById(R.id.heroLogo)
     private val handler = Handler(Looper.getMainLooper())
     private var job: Job? = null
     private var showing: Card? = null
@@ -35,6 +36,7 @@ class Hero(private val a: Activity, private val scope: CoroutineScope) {
         showing = card
         handler.removeCallbacksAndMessages(null)
         job?.cancel()
+        TitleLogos.show(logo, title, (card as? Card.Title)?.let { TitleLogos.cached(it.kind, it.item) })
         when (card) {
             is Card.Title -> {
                 val m = card.item
@@ -46,6 +48,7 @@ class Hero(private val a: Activity, private val scope: CoroutineScope) {
                     job = scope.launch {
                         val got = try { Vod.details(card.kind, m) } catch (e: Exception) { null }
                         if (showing === card && got != null) bindTitle(card, got)
+                        if (showing === card && TitleLogos.enabled) TitleLogos.find(card.kind, m, got?.tmdbId)?.let { if (showing === card) TitleLogos.show(logo, title, it) }
                     }
                 }, 650)
             }

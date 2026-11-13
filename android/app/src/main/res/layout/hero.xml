@@ -9,6 +9,9 @@
         android:paddingStart="48dp" android:paddingTop="20dp" android:gravity="bottom" android:paddingBottom="8dp">
         <TextView android:id="@+id/heroKicker" android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:textSize="13sp" android:textStyle="bold" android:letterSpacing="0.08" android:textColor="?attr/dAccent" />
+        <ImageView android:id="@+id/heroLogo" android:layout_width="wrap_content" android:layout_height="72dp"
+            android:layout_marginTop="6dp" android:maxWidth="420dp" android:adjustViewBounds="true" android:scaleType="fitStart"
+            android:contentDescription="@null" android:visibility="gone" />
         <TextView android:id="@+id/heroTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="4dp" android:maxLines="1" android:ellipsize="end" android:textSize="32sp"
             android:textStyle="bold" android:textColor="?attr/dText" />

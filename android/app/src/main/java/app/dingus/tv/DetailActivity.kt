@@ -115,6 +115,11 @@ class DetailActivity : BaseActivity() {
         people.text = listOfNotNull(d.director?.let { "Director: $it" }, d.cast?.let { "Cast: $it" }).joinToString("\n")
         if (d.poster != null && d.poster != m.poster) Posters.load(findViewById(R.id.poster), d.poster, (294 * resources.displayMetrics.density).toInt(), findViewById(R.id.fallback))
         d.backdrop?.let { Posters.load(findViewById<ImageView>(R.id.backdrop), it, resources.displayMetrics.heightPixels / 2) }
+        // The official title logo (from TMDB), in place of the plain title.
+        TitleLogos.cached(kind, m)?.let { TitleLogos.show(findViewById(R.id.titleLogo), findViewById(R.id.title), it) }
+        if (TitleLogos.enabled) scope.launch {
+            TitleLogos.find(kind, m, d.tmdbId)?.let { TitleLogos.show(findViewById(R.id.titleLogo), findViewById(R.id.title), it) }
+        }
 
         if (kind == Vod.SERIES) {
             plot.maxLines = 2

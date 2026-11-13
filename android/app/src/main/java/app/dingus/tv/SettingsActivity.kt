@@ -72,6 +72,7 @@ class SettingsActivity : BaseActivity() {
             }
         }
         toggle("Lite home page", "A simpler Home, if the full one feels slow", { Store.homeLite }) { Store.homeLite = it }
+        toggle("Title logos for films and shows", "The official logo in place of the plain title, where TMDB has one", { Store.titleLogos }) { Store.titleLogos = it }
         row("Theme", { "${Themes.background().name}  ·  ${Themes.accent().name}" }) { theme() }
 
         header("Dingus")
@@ -79,7 +80,10 @@ class SettingsActivity : BaseActivity() {
             updateRow?.let { sub(it, "Checking…") }
             Updater.check(this, manual = true) { msg -> updateRow?.let { sub(it, msg) } }
         }
-        row("About Dingus", { "Version ${BuildConfig.VERSION_NAME}  ·  Live TV, films and shows, made for the remote" }) {}
+        row("About Dingus", { "Version ${BuildConfig.VERSION_NAME}  ·  Film and show logos from TMDB (not endorsed or certified by TMDB)" }) {}
+        row("Your own TMDB key (optional)", { if (Store.prefsString("tmdbKey", "").isBlank()) "Using the built-in one" else "Using yours" }) {
+            Dialogs.input(this, "TMDB API key or read access token", Store.prefsString("tmdbKey", ""), "Leave empty to use the built-in one") { Store.putString("tmdbKey", it); update() }
+        }
         first.requestFocus()
     }
 

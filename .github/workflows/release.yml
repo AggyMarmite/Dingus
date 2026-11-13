@@ -112,6 +112,7 @@ jobs:
       - name: Build and attach the APK
         env:
           GH_TOKEN: ${{ github.token }}
+          TMDB_KEY: ${{ secrets.TMDB_KEY }}
         run: |
           V=$(grep -oPm1 '(?<=<Version>)[^<]+' Dingus.csproj)
           if gh release view "v$V" --repo ${{ github.repository }} --json assets -q '.assets[].name' | grep -qx "Dingus.apk"; then

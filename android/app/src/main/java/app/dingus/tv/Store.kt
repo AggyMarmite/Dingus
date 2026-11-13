@@ -235,6 +235,11 @@ object Store {
         get() = prefs.getString(k("account"), "")!!
         set(v) = prefs.edit().putString(k("account"), v).apply()
 
+    /** Show official title logos for films and shows (when TMDB has one). */
+    var titleLogos: Boolean
+        get() = prefs.getBoolean("titleLogos", true)
+        set(v) = prefs.edit().putBoolean("titleLogos", v).apply()
+
     /** Play the highlighted channel in the small window above the guide. */
     var preview: Boolean
         get() = prefs.getBoolean("preview", true)

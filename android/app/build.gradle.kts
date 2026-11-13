@@ -21,6 +21,8 @@ android {
         // Fire TV sticks are ARM; x86 is only for the emulator the self-test runs on. (Keeps the VPN's
         // WireGuard engine from adding every phone architecture to the download.)
         ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86") }
+        // Title logos for films and shows come from TMDB; the key is a GitHub secret, put in at build time.
+        buildConfigField("String", "TMDB_KEY", "\"${(System.getenv("TMDB_KEY") ?: "").trim()}\"")
     }
 
     signingConfigs {

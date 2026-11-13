@@ -45,7 +45,7 @@ class HomeActivity : BaseActivity() {
         else {
             // The big feature scrolls with the rows, as the first item.
             findViewById<View>(R.id.hero).visibility = View.GONE
-            val f = HomeFeature(this)
+            val f = HomeFeature(this, scope)
             feature = f
             rows.adapter = ConcatAdapter(f, adapter)
         }
@@ -254,7 +254,7 @@ class HomeActivity : BaseActivity() {
         Vod.cached(Vod.SERIES)?.let { lib -> Vod.continueList(Vod.SERIES, lib).forEach { cont.add(Card.Title(Vod.SERIES, it, label = "Continue")) } }
         (cont.firstOrNull() as? Card.Title)?.let { t ->
             slides.add(Slide("Continue watching", t.item.name, listOfNotNull(if (t.kind == Vod.MOVIES) "Film" else "TV show", t.item.year.takeIf { it > 0 }?.toString()).joinToString("  ·  "),
-                null, t.progress, Vod.cachedDetails(t.kind, t.item.id)?.backdrop ?: t.item.poster, watch = { openTitle(t.kind, t.item) }))
+                null, t.progress, Vod.cachedDetails(t.kind, t.item.id)?.backdrop ?: t.item.poster, watch = { openTitle(t.kind, t.item) }, title_ = t.kind to t.item))
         }
 
         // What's on your channels now, and next.
@@ -288,7 +288,7 @@ class HomeActivity : BaseActivity() {
         Vod.cached(Vod.MOVIES)?.newest?.firstOrNull()?.let { m ->
             slides.add(Slide("New film", m.name, listOfNotNull(m.year.takeIf { it > 0 }?.toString(), m.rating.takeIf { it > 0 }?.let { "★ %.1f".format(it) }).joinToString("  ·  "),
                 Vod.cachedDetails(Vod.MOVIES, m.id)?.plot, art = m.poster, watch = { openTitle(Vod.MOVIES, m) },
-                second = "Films" to { startActivity(Intent(this, BrowseActivity::class.java).putExtra(BrowseActivity.KIND, Vod.MOVIES)) }))
+                second = "Films" to { startActivity(Intent(this, BrowseActivity::class.java).putExtra(BrowseActivity.KIND, Vod.MOVIES)) }, title_ = Vod.MOVIES to m))
         }
         // Nothing personal yet: something on now to start with.
         if (slides.isEmpty()) Repo.channelsIn(Repo.ALL).firstNotNullOfOrNull { c -> Repo.nowNext(c).first?.let { c to it } }?.let { (c, p) ->

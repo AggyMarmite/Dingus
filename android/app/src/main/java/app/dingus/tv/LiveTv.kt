@@ -58,10 +58,11 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
 
     /** Plays [c] (from [channels], for up/down). Does nothing if it's already playing. */
     fun play(channels: List<Channel>, c: Channel) {
+        // (Work out what's playing before switching to the new list – after, the old position points somewhere else.)
+        val playingSame = player != null && current?.id == c.id
         val i = channels.indexOfFirst { it.id == c.id }
-        list = channels.ifEmpty { listOf(c) }
-        val playingSame = player != null && current?.id == c.id && i >= 0
-        index = if (i >= 0) i else { list = listOf(c) + channels; 0 }
+        list = if (i >= 0) channels else listOf(c) + channels
+        index = if (i >= 0) i else 0
         if (playingSame) return
         version = null; versionTry = 0; retries = 0
         makePlayer()

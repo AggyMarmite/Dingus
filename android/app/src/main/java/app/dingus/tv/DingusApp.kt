@@ -16,6 +16,7 @@ class DingusApp : Application() {
         Posters.init(this)
         Vod.init(this)
         Vpn.init(this)
+        TitleLogos.init(this)
         // Pause/rewind files left over from last time (e.g. if the app was closed while watching).
         Thread { java.io.File(cacheDir, "timeshift").deleteRecursively() }.start()
     }

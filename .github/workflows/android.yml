@@ -28,7 +28,11 @@ jobs:
         with:
           gradle-version: 8.14.3
       - name: Build
-        run: gradle -p android assembleRelease assembleDebug --no-daemon --stacktrace
+        env:
+          TMDB_KEY: ${{ secrets.TMDB_KEY }}
+        run: |
+          [ -n "$TMDB_KEY" ] && echo "TMDB key: present" || echo "::warning::No TMDB_KEY secret – title logos will be off"
+          gradle -p android assembleRelease assembleDebug --no-daemon --stacktrace
       - name: Size
         run: |
           ls -la android/app/build/outputs/apk/*/
