@@ -57,7 +57,7 @@ class SearchActivity : BaseActivity() {
         query.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
-            override fun afterTextChanged(s: Editable?) { search(s?.toString() ?: "", 350) }
+            override fun afterTextChanged(s: Editable?) { search(s?.toString() ?: "", 250) }
         })
         query.setOnEditorActionListener { _, action, _ ->
             if (action == EditorInfo.IME_ACTION_SEARCH || action == EditorInfo.IME_ACTION_DONE) {
@@ -74,42 +74,45 @@ class SearchActivity : BaseActivity() {
         }
         status.text = "Type to search."
         // Films and shows are loaded in the background so they can be searched too.
-        if (Vod.available) scope.launch {
-            for (k in listOf(Vod.MOVIES, Vod.SERIES)) try { Vod.library(k) } catch (_: Exception) {}
+        // Get everything ready to search while you type (names worked out once, films and shows read in).
+        scope.launch {
+            withContext(Dispatchers.Default) { SearchIndex.channels(); SearchIndex.onTv() }
+            if (Vod.available) for (k in listOf(Vod.MOVIES, Vod.SERIES)) try { Vod.library(k); withContext(Dispatchers.Default) { SearchIndex.vod(k) } } catch (_: Exception) {}
             if (query.text.isNotEmpty()) search(query.text.toString(), 0)
         }
         query.requestFocus()
         if (BuildConfig.DEBUG) intent.getStringExtra("dingus_test_query")?.let { query.setText(it) }
     }
 
-    private fun norm(s: String) = Normalizer.normalize(s.lowercase(), Normalizer.Form.NFD).replace(Regex("\\p{Mn}+"), "")
-
     private fun search(text: String, wait: Long) {
         job?.cancel()
-        val words = norm(text).split(' ').filter { it.isNotBlank() }
+        val words = SearchIndex.norm(text).split(' ').filter { it.isNotBlank() }
         if (words.isEmpty() || words.sumOf { it.length } < 2) { adapter.set(emptyList()); status.text = "Type to search."; return }
         job = scope.launch {
             if (wait > 0) delay(wait)
             val rows = withContext(Dispatchers.Default) {
-                fun hit(name: String) = norm(name).let { n -> words.all { n.contains(it) } }
+                fun hit(n: String): Boolean { for (w in words) if (!n.contains(w)) return false; return true }
                 val out = ArrayList<Row>()
-                val chans = Repo.channels.asSequence().filter { hit(it.name) }.take(40).toList()
+                val ci = SearchIndex.channels()
+                val chans = ArrayList<Channel>()
+                for (i in ci.names.indices) { if (hit(ci.names[i])) { chans.add(ci.items[i]); if (chans.size >= 40) break } }
                 ensureActive()
-                // What's on: programmes on now or later today whose title matches.
-                val now = System.currentTimeMillis()
+                // What's on: programmes on now or later today whose title matches (one per channel).
+                val tv = SearchIndex.onTv()
                 val progs = ArrayList<Row.Live>()
-                for (c in Repo.channels) {
+                val seen = HashSet<String>()
+                for (i in tv.titles.indices) {
                     if (progs.size >= 40) break
-                    for (p in Repo.programmes(c)) {
-                        if (p.stop > now && p.start < now + 12 * 3600_000L && hit(p.title)) { progs.add(Row.Live(c, p)); break }
-                    }
+                    val c = tv.channels[i]
+                    if (c.id !in seen && hit(tv.titles[i])) { seen.add(c.id); progs.add(Row.Live(c, tv.programmes[i])) }
                 }
                 ensureActive()
                 if (chans.isNotEmpty()) { out.add(Row.Heading("CHANNELS")); chans.forEach { out.add(Row.Live(it, Repo.nowNext(it).first)) } }
                 if (progs.isNotEmpty()) { out.add(Row.Heading("ON TV")); out.addAll(progs) }
                 for (k in listOf(Vod.MOVIES, Vod.SERIES)) {
-                    val lib = Vod.cached(k) ?: continue
-                    val hits = lib.items.asSequence().filter { hit(it.name) }.take(60).toList()
+                    val vi = SearchIndex.vod(k) ?: continue
+                    val hits = ArrayList<VodItem>()
+                    for (i in vi.names.indices) { if (hit(vi.names[i])) { hits.add(vi.items[i]); if (hits.size >= 60) break } }
                     ensureActive()
                     if (hits.isNotEmpty()) { out.add(Row.Heading(if (k == Vod.MOVIES) "FILMS" else "TV SHOWS")); hits.forEach { out.add(Row.Item(k, it)) } }
                 }

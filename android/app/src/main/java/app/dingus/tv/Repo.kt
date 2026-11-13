@@ -38,7 +38,9 @@ object Repo {
     private val listeners = mutableListOf<() -> Unit>()
     fun onChanged(l: () -> Unit) { synchronized(listeners) { listeners.add(l) } }
     fun removeListener(l: () -> Unit) { synchronized(listeners) { listeners.remove(l) } }
-    private fun changed() { synchronized(listeners) { listeners.toList() }.forEach { it() } }
+    /** Goes up every time the channels or the guide change (for things worked out from them, like search). */
+    @Volatile var version = 0; private set
+    private fun changed() { version++; synchronized(listeners) { listeners.toList() }.forEach { it() } }
 
     private lateinit var base: File
     /** Each playlist keeps its own saved channels and guide. */
