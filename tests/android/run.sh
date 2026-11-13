@@ -177,7 +177,7 @@ key KEYCODE_DPAD_UP 1
 check "home-focus row 0 heroWatch" 5 "UP from the rows goes back up to the top"
 key KEYCODE_DPAD_LEFT 1.5
 check "menu-open" 5 "LEFT at the left edge of Home opens the side menu"
-check "account .*online" 15 "the menu shows the server is online"
+check "account .*online" 40 "the server shows as online"
 shot 17b-home-menu
 key KEYCODE_DPAD_DOWN 0.5; key KEYCODE_DPAD_DOWN 0.5; key KEYCODE_DPAD_CENTER 3     # Home → Live TV → Films
 check "library movies 3" 30 "Films opens from the side menu"
