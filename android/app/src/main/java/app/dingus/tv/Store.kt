@@ -137,6 +137,11 @@ object Store {
         set(v) = prefs.edit().putString("accent", v).apply()
 
     /** Switch the TV's refresh rate to suit the video. */
+    /** Stream stats kept on screen while watching (≡ → Show stream stats). */
+    var statsPinned: Boolean
+        get() = prefs.getBoolean("statsPinned", false)
+        set(v) = prefs.edit().putBoolean("statsPinned", v).apply()
+
     var matchFrameRate: Boolean
         get() = prefs.getBoolean("matchFrameRate", true)
         set(v) = prefs.edit().putBoolean("matchFrameRate", v).apply()

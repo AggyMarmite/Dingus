@@ -76,7 +76,27 @@ object TitleLogos {
         val q = URLEncoder.encode(item.name, "UTF-8")
         val year = if (item.year > 0) (if (type == "movie") "&year=${item.year}" else "&first_air_date_year=${item.year}") else ""
         val results = get("/search/$type?query=$q$year&include_adult=false").optJSONArray("results") ?: return null
+        // A TV programme: only a show or film with exactly that name (so "News" doesn't get some other show's logo).
+        if (item.id.startsWith("p:")) {
+            for (i in 0 until results.length()) {
+                val r = results.optJSONObject(i) ?: continue
+                val n = r.optString(if (type == "movie") "title" else "name")
+                if (n.equals(item.name, ignoreCase = true)) return r.optString("id").takeIf { it.isNotEmpty() }
+            }
+            return null
+        }
         return results.optJSONObject(0)?.optString("id")?.takeIf { it.isNotEmpty() }
+    }
+
+    /** A TV programme as something to look a logo up for: films by film, everything else as a TV show. */
+    fun forProgramme(p: Programme): Pair<String, VodItem>? {
+        var t = p.title.trim()
+        t = t.replace(Regex("""^(new|live|premiere|repeat)\s*[:\-–]\s*""", RegexOption.IGNORE_CASE), "")
+        t = t.replace(Regex("""\s*\((?:s\d+|series|season|ep|episode|\d{4}|new|repeat)[^)]*\)\s*$""", RegexOption.IGNORE_CASE), "")
+        t = t.trimEnd('.', '…', ' ')
+        if (t.length < 2) return null
+        val kind = if (p.genre == Genres.FILM) Vod.MOVIES else Vod.SERIES
+        return kind to VodItem("p:" + t.lowercase(), t, null, "", 0f, 0, "", 0L)
     }
 
     /** English logo first, then one with no language, best rated; a wide logo works best. */

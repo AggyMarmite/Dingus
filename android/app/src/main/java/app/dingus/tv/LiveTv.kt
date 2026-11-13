@@ -30,6 +30,14 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     private var player: ExoPlayer? = null
     private val info: View = overlay.findViewById(R.id.info)
     private val message: TextView = overlay.findViewById(R.id.message)
+    private val statsLine: TextView = overlay.findViewById(R.id.stats)
+    private val statsBadge: TextView = overlay.findViewById(R.id.statsBadge)
+    private var dropped = 0
+    private var lastBytes = -1L
+    private var lastFrames = -1
+    private var lastSample = 0L
+    private var mbps = 0.0
+    private var measuredFps = 0.0
     private val shift: TextView = overlay.findViewById(R.id.shift)
 
     /** The channels up/down move through, and which one is playing. */
@@ -92,6 +100,10 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     private fun makePlayer() {
         if (player != null) return
         val p = Players.create(a)
+        dropped = 0; lastBytes = -1; lastFrames = -1; mbps = 0.0; measuredFps = 0.0
+        p.addAnalyticsListener(object : androidx.media3.exoplayer.analytics.AnalyticsListener {
+            override fun onDroppedVideoFrames(eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime, droppedFrames: Int, elapsedMs: Long) { dropped += droppedFrames }
+        })
         p.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 when (state) {
@@ -176,10 +188,13 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         player?.videoFormat?.frameRate?.let { FrameRate.match(a, it) }
         showShift()
         showInfo()
+        handler.removeCallbacks(statsTick); handler.post(statsTick)
     }
 
     fun leaveFullScreen() {
         fullScreen = false
+        handler.removeCallbacks(statsTick)
+        statsBadge.visibility = View.GONE
         a.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         FrameRate.reset(a)
         message.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
@@ -258,6 +273,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         }
         desc.visibility = if (desc.text.isEmpty()) View.GONE else View.VISIBLE
         overlay.findViewById<TextView>(R.id.next).text = next?.let { "Next  ${Ui.time(it.start)}  ${it.title}" } ?: ""
+        updateStats()
         info.animate().cancel()
         info.alpha = 1f
         info.visibility = View.VISIBLE
@@ -335,8 +351,73 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         items.add((if (Store.isFavourite(c.id)) "Remove from Favourites" else "Add to Favourites") to { Store.toggleFavourite(c.id); showInfo() })
         items.add("Audio & subtitles" to { app.dingus.tv.Tracks.choose(a, p) })
         if (currentBehind() >= 3_000) items.add("Back to live" to { seekBehind(0) })
+        items.add((if (Store.statsPinned) "Hide stream stats" else "Show stream stats") to {
+            Store.statsPinned = !Store.statsPinned; updateStats(); Ui.test("stats-pinned ${Store.statsPinned}")
+        })
         items.add("Stream information" to { streamInfo() })
         Dialogs.builder(a).setTitle(c.name).setItems(items.map { it.first }.toTypedArray()) { _, i -> items[i].second() }.show()
+    }
+
+    // ------------------------------------------------------------------ stream stats
+
+    /** "4K", "FHD", "HD", or the height ("576p") for anything lower – like the Windows app. */
+    private fun resLabel(w: Int, h: Int): String = when {
+        h >= 2000 || w >= 3600 -> "4K"
+        h >= 1400 -> "1440p"
+        h >= 1000 || w >= 1900 -> "FHD"
+        h >= 700 || w >= 1260 -> "HD"
+        h > 0 -> "${h}p"
+        else -> ""
+    }
+
+    /** Every 2 seconds in full screen: bitrate and frame rate measured, the stats line and badge redrawn. */
+    private val statsTick = object : Runnable {
+        override fun run() {
+            if (!fullScreen) return
+            val p = player
+            val now = android.os.SystemClock.elapsedRealtime()
+            val bytes = StreamMeter.bytes
+            val frames = p?.videoDecoderCounters?.let { it.ensureUpdated(); it.renderedOutputBufferCount } ?: -1
+            if (lastBytes >= 0 && now > lastSample) {
+                val secs = (now - lastSample) / 1000.0
+                val m = (bytes - lastBytes) * 8 / 1_000_000.0 / secs
+                mbps = if (mbps <= 0) m else mbps * 0.6 + m * 0.4 // smoothed
+                if (frames >= 0 && lastFrames >= 0 && frames >= lastFrames) measuredFps = (frames - lastFrames) / secs
+            }
+            lastBytes = bytes; lastFrames = frames; lastSample = now
+            updateStats()
+            handler.postDelayed(this, 2_000)
+        }
+    }
+
+    private fun statsText(): String {
+        val p = player ?: return ""
+        val parts = ArrayList<String>()
+        val v = p.videoFormat
+        val w = p.videoSize.width.takeIf { it > 0 } ?: v?.width ?: 0
+        val h = p.videoSize.height.takeIf { it > 0 } ?: v?.height ?: 0
+        resLabel(w, h).takeIf { it.isNotEmpty() }?.let { parts.add(it) }
+        val fps = v?.frameRate?.takeIf { it > 1 }?.toDouble() ?: measuredFps
+        if (fps > 1) parts.add("${Math.round(fps)} fps")
+        if (mbps > 0.05) parts.add("%.1f Mbps".format(mbps))
+        parts.add(if (dropped == 0) "no dropped frames" else "$dropped dropped")
+        if (Vpn.status == Vpn.Status.ON) parts.add("VPN · ${Vpn.connectedTo?.label ?: "on"}")
+        return parts.joinToString("  ·  ")
+    }
+
+    private fun updateStats() {
+        val t = statsText()
+        val healthy = (player?.playbackState == Player.STATE_READY) && dropped <= 5
+        val dot = if (player?.playbackState == Player.STATE_BUFFERING) 0xFFFBBF24.toInt() else if (healthy) 0xFF4ADE80.toInt() else 0xFFF87171.toInt()
+        val sb = android.text.SpannableStringBuilder("●  ").apply {
+            setSpan(android.text.style.ForegroundColorSpan(dot), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            append(t)
+        }
+        statsLine.text = if (t.isEmpty()) "" else sb
+        statsLine.visibility = if (t.isEmpty()) View.GONE else View.VISIBLE
+        statsBadge.text = sb
+        statsBadge.visibility = if (fullScreen && Store.statsPinned && t.isNotEmpty()) View.VISIBLE else View.GONE
+        if (t.isNotEmpty()) Ui.test("stats $t")
     }
 
     private fun streamInfo() {

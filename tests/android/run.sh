@@ -68,6 +68,7 @@ shot 04b-fullscreen
 fresh
 key KEYCODE_DPAD_UP
 check "playing Test 1 HD" 45 "changing channel in full screen"
+check "stats HD  ·  " 15 "full screen shows stream stats (HD, fps, Mbps)"
 sleep 1; shot 05-player-info
 sleep 15
 fresh

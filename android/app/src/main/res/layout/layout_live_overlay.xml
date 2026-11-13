@@ -12,6 +12,12 @@
         android:layout_gravity="center" android:gravity="center" android:padding="12dp" android:textSize="14sp"
         android:textColor="?attr/dText" android:shadowColor="#000000" android:shadowRadius="6" />
 
+    <!-- Stream stats kept on screen (≡ → Show stream stats): top right. -->
+    <TextView android:id="@+id/statsBadge" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_gravity="top|end" android:layout_marginTop="28dp" android:layout_marginEnd="36dp"
+        android:background="@drawable/pill_bg" android:paddingStart="14dp" android:paddingEnd="14dp" android:paddingTop="7dp"
+        android:paddingBottom="7dp" android:textSize="15sp" android:textColor="#FFFFFFFF" android:visibility="gone" />
+
     <!-- The info bar: shown when you change channel or press OK. -->
     <LinearLayout android:id="@+id/info" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_gravity="bottom" android:orientation="vertical" android:background="@drawable/overlay_bg" android:visibility="gone"
@@ -34,8 +40,10 @@
                 android:text="★" android:textSize="26sp" android:textColor="#FBBF24" android:visibility="gone" />
         </LinearLayout>
 
+        <TextView android:id="@+id/stats" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="12dp" android:textSize="15sp" android:textColor="?attr/dMuted" />
         <TextView android:id="@+id/now" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="18dp" android:maxLines="1" android:ellipsize="end" android:textSize="24sp"
+            android:layout_marginTop="12dp" android:maxLines="1" android:ellipsize="end" android:textSize="24sp"
             android:textColor="?attr/dText" />
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="10dp" android:orientation="horizontal" android:gravity="center_vertical">

@@ -315,7 +315,7 @@ class HomeActivity : BaseActivity() {
             val p = Repo.nowNext(c).first
             slides.add(Slide("Carry on watching", p?.title ?: c.name,
                 listOfNotNull(c.name, p?.let { Ui.span(it) }, p?.let { left(it, now) }).joinToString("  ·  "), p?.desc,
-                p?.let { Ui.progress(it) / 1000f } ?: -1f, watch = { watch(c) }, second = "Live TV" to { guide() }))
+                p?.let { Ui.progress(it) / 1000f } ?: -1f, watch = { watch(c) }, second = "Live TV" to { guide() }, title_ = p?.let { TitleLogos.forProgramme(it) }))
         }
         val cont = ArrayList<Card>()
         Vod.cached(Vod.MOVIES)?.let { lib ->
@@ -334,7 +334,7 @@ class HomeActivity : BaseActivity() {
         val onNow = mine.mapNotNull { c -> Repo.nowNext(c).first?.let { c to it } }
         onNow.take(2).forEach { (c, p) ->
             if (slides.none { it.title == p.title }) slides.add(Slide("On now", p.title, "${c.name}  ·  ${Ui.span(p)}  ·  ${left(p, now)}", p.desc,
-                Ui.progress(p) / 1000f, watch = { watch(c) }, second = "Live TV" to { guide() }))
+                Ui.progress(p) / 1000f, watch = { watch(c) }, second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(p)))
         }
 
         // Live sport now and tonight's picks: from your channels first, then the rest (only so many, to stay quick).
@@ -365,7 +365,7 @@ class HomeActivity : BaseActivity() {
         sport.firstOrNull()?.let { s ->
             val p = s.programme!!
             if (slides.none { it.title == p.title }) slides.add(Slide("Live sport", p.title, "${s.channel.name}  ·  ${Ui.span(p)}  ·  ${left(p, now)}", p.desc,
-                Ui.progress(p) / 1000f, watch = { watch(s.channel) }, second = "Live TV" to { guide() }))
+                Ui.progress(p) / 1000f, watch = { watch(s.channel) }, second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(p)))
         }
         Vod.cached(Vod.MOVIES)?.newest?.firstOrNull()?.let { m ->
             slides.add(Slide("New film", m.name, listOfNotNull(m.year.takeIf { it > 0 }?.toString(), m.rating.takeIf { it > 0 }?.let { "★ %.1f".format(it) }).joinToString("  ·  "),
@@ -374,7 +374,7 @@ class HomeActivity : BaseActivity() {
         }
         // Nothing personal yet: something on now to start with.
         if (slides.isEmpty()) Repo.channelsIn(Repo.ALL).firstNotNullOfOrNull { c -> Repo.nowNext(c).first?.let { c to it } }?.let { (c, p) ->
-            slides.add(Slide("On now", p.title, "${c.name}  ·  ${Ui.span(p)}", p.desc, Ui.progress(p) / 1000f, watch = { watch(c) }, second = "Live TV" to { guide() }))
+            slides.add(Slide("On now", p.title, "${c.name}  ·  ${Ui.span(p)}", p.desc, Ui.progress(p) / 1000f, watch = { watch(c) }, second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(p)))
         }
 
         if (cont.isNotEmpty()) out.add(Row("Continue watching", cont.take(20)))

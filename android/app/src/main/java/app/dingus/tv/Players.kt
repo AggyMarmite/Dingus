@@ -12,6 +12,16 @@ import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 
+/** Counts the bytes the player downloads, for the bitrate in the stream stats. */
+@OptIn(UnstableApi::class)
+object StreamMeter : androidx.media3.datasource.TransferListener {
+    @Volatile var bytes = 0L; private set
+    override fun onTransferInitializing(source: androidx.media3.datasource.DataSource, dataSpec: androidx.media3.datasource.DataSpec, isNetwork: Boolean) {}
+    override fun onTransferStart(source: androidx.media3.datasource.DataSource, dataSpec: androidx.media3.datasource.DataSpec, isNetwork: Boolean) {}
+    override fun onBytesTransferred(source: androidx.media3.datasource.DataSource, dataSpec: androidx.media3.datasource.DataSpec, isNetwork: Boolean, bytesTransferred: Int) { bytes += bytesTransferred }
+    override fun onTransferEnd(source: androidx.media3.datasource.DataSource, dataSpec: androidx.media3.datasource.DataSpec, isNetwork: Boolean) {}
+}
+
 /** One place that makes the video player, for full screen and the guide's preview. */
 @OptIn(UnstableApi::class)
 object Players {
@@ -21,6 +31,7 @@ object Players {
             .setAllowCrossProtocolRedirects(true)
             .setConnectTimeoutMs(12_000)
             .setReadTimeoutMs(15_000)
+            .setTransferListener(StreamMeter)
         // Modest buffers: quick to start, and kind to the Fire Stick's memory.
         val load = DefaultLoadControl.Builder()
             .setBufferDurationsMs(if (small) 4_000 else 8_000, if (small) 12_000 else 30_000, 1_000, 2_000)
