@@ -33,7 +33,7 @@ object HomeSnapshot {
         val o = JSONObject()
         o.put("slides", JSONArray().apply {
             for (s in slides) put(JSONObject().put("k", s.kicker).put("t", s.title).put("m", s.meta).put("x", s.text ?: "")
-                .put("p", s.progress.toDouble()).put("a", s.art ?: "").put("r", s.ref).put("s", s.second?.first ?: "")
+                .put("p", s.progress.toDouble()).put("a", s.art ?: "").put("r", s.ref).put("s", s.second?.first ?: "").put("u", s.until)
                 .also { j -> s.title_?.let { j.put("tk", it.first).put("ti", item(it.second)) } })
         })
         o.put("rows", JSONArray().apply {
@@ -56,7 +56,12 @@ object HomeSnapshot {
 
     private fun card(o: JSONObject): Card? = when (o.optString("y")) {
         "t" -> Card.Title(o.getString("k"), item(o.getJSONObject("m")), o.optDouble("p", -1.0).toFloat(), o.optString("l").ifEmpty { null }, o.optBoolean("n"))
-        "s" -> Card.Show(channel(o.getJSONObject("c")), o.optJSONObject("g")?.let { programme(it) }, o.optString("l").ifEmpty { null })
+        "s" -> {
+            val p = o.optJSONObject("g")?.let { programme(it) }
+            // A programme that's already finished (or not started yet, for "coming up"): don't show it as current.
+            if (p != null && p.stop <= System.currentTimeMillis()) Card.Show(channel(o.getJSONObject("c")), null, FETCHING)
+            else Card.Show(channel(o.getJSONObject("c")), p, o.optString("l").ifEmpty { null })
+        }
         "l" -> Card.Live(channel(o.getJSONObject("c")))
         "a" -> Card.SeeAll(o.getString("k"), o.getString("i"), o.getString("n"), o.optBoolean("h"))
         else -> null
@@ -66,17 +71,27 @@ object HomeSnapshot {
      * The saved copy, or null. [action] turns a slide's "what to open" back into what Watch (or the second
      * button, by its label) does.
      */
+    const val FETCHING = "Fetching what's on now…"
+
     fun read(action: (ref: String) -> () -> Unit, second: (label: String) -> (() -> Unit)?): Pair<List<Slide>, List<Row>>? = try {
         val o = JSONObject(file().readText())
+        val now = System.currentTimeMillis()
         val slides = ArrayList<Slide>()
         o.optJSONArray("slides")?.let { a ->
             for (i in 0 until a.length()) {
                 val j = a.getJSONObject(i)
                 val label = j.optString("s")
                 val sec = if (label.isEmpty()) null else second(label)?.let { label to it }
+                val until = j.optLong("u")
+                if (until in 1..now) {
+                    // That programme has finished: say so, rather than show what was on then.
+                    slides.add(Slide(j.getString("k"), FETCHING, j.getString("m").substringBefore("  ·  "), null, -1f, null,
+                        action(j.optString("r")), sec, null, j.optString("r")))
+                    continue
+                }
                 slides.add(Slide(j.getString("k"), j.getString("t"), j.getString("m"), j.optString("x").ifEmpty { null },
                     j.optDouble("p", -1.0).toFloat(), j.optString("a").ifEmpty { null }, action(j.optString("r")), sec,
-                    j.optJSONObject("ti")?.let { j.getString("tk") to item(it) }, j.optString("r")))
+                    j.optJSONObject("ti")?.let { j.getString("tk") to item(it) }, j.optString("r"), until))
             }
         }
         val rows = ArrayList<Row>()

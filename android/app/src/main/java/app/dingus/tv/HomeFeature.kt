@@ -24,6 +24,8 @@ class Slide(
     val title_: Pair<String, VodItem>? = null,
     /** What Watch opens ("ch:<id>" or "vod:<kind>:<id>"), so a saved copy of Home can be shown at start. */
     val ref: String = "",
+    /** When the programme on a channel slide ends (so a saved copy knows it's out of date). */
+    val until: Long = 0,
 )
 
 /**
