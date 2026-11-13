@@ -172,6 +172,12 @@ check "library movies 3" 30 "Films opens from Home"
 sleep 3; shot 18-films-rows
 key KEYCODE_DPAD_DOWN 3; shot 19-films-rows-2
 
+# ---- Channel numbers off
+fresh
+adb shell am start -n $PKG/.MainActivity --ez dingus_test_numbers_off true
+check "numbers false" 10 "channel numbers can be turned off"
+sleep 3; shot 19b-guide-no-numbers
+
 # ---- Built-in VPN (a real WireGuard server runs on the test machine)
 if [ -n "${WG_CONF:-}" ] && [ -f "$WG_CONF" ]; then
   adb shell appops set $PKG ACTIVATE_VPN allow

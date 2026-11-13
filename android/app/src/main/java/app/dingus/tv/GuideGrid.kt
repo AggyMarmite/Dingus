@@ -31,6 +31,35 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
     var listener: Listener? = null
     /** Marks programmes with a reminder (a dot in the corner). */
     private var reminder: ((Programme) -> Boolean)? = null
+    /** Channel numbers beside the logos (Settings). */
+    var showNumbers = true
+        set(v) { if (field != v) { field = v; lines.clear(); invalidate() } }
+
+    /** A channel name split over (at most) two lines to fit [width]; worked out once per name. */
+    private val lines = HashMap<String, Pair<String, String?>>()
+    private fun twoLines(name: String, width: Float, bold: Boolean): Pair<String, String?> {
+        val key = "$bold|${width.toInt()}|$name"
+        lines[key]?.let { return it }
+        val result = if (nameP.measureText(name) <= width) name to null else {
+            val words = name.split(' ')
+            var first = ""
+            var i = 0
+            while (i < words.size) {
+                val tryFirst = if (first.isEmpty()) words[i] else "$first ${words[i]}"
+                if (nameP.measureText(tryFirst) > width) break
+                first = tryFirst; i++
+            }
+            if (first.isEmpty()) { // one very long word: cut it where it fits
+                var n = name.length
+                while (n > 1 && nameP.measureText(name, 0, n) > width) n--
+                name.substring(0, n) to TextUtils.ellipsize(name.substring(n), nameP, width, TextUtils.TruncateAt.END).toString()
+            } else first to TextUtils.ellipsize(words.drop(i).joinToString(" "), nameP, width, TextUtils.TruncateAt.END).toString()
+        }
+        if (lines.size > 2000) lines.clear()
+        lines[key] = result
+        return result
+    }
+
     /** Colour stripe on programmes by genre (Settings). */
     var genreColours = true
         set(v) { field = v; invalidate() }
@@ -257,8 +286,8 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         r.set(0f, y0, chanW - gap * 2, y1)
         canvas.drawRoundRect(r, 6 * d, 6 * d, fill)
         val mid = (y0 + y1) / 2
-        if (c.number > 0) canvas.drawText(c.number.toString(), 44 * d, mid + 5 * d, numP)
-        val logoX = 52 * d; val logoW = 70 * d; val logoH = rowH - 16 * d
+        if (showNumbers && c.number > 0) canvas.drawText(c.number.toString(), 44 * d, mid + 5 * d, numP)
+        val logoX = if (showNumbers) 52 * d else 10 * d; val logoW = 70 * d; val logoH = rowH - 16 * d
         val bmp = Logos.get(c.logo, logoH.toInt()) { invalidate() }
         if (bmp != null) {
             val scale = minOf(logoW / bmp.width, logoH / bmp.height)
@@ -277,7 +306,10 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         val nameX = logoX + logoW + 10 * d
         val nameW = chanW - nameX - pad - (if (fav) 16 * d else 0f)
         nameP.typeface = if (selected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-        canvas.drawText(TextUtils.ellipsize(c.name, nameP, nameW, TextUtils.TruncateAt.END).toString(), nameX, mid + 5 * d, nameP)
+        // Names get two lines, so long ones aren't cut short.
+        val (l1, l2) = twoLines(c.name, nameW, selected)
+        if (l2 == null) canvas.drawText(l1, nameX, mid + 5 * d, nameP)
+        else { canvas.drawText(l1, nameX, mid - 4 * d, nameP); canvas.drawText(l2, nameX, mid + 14 * d, nameP) }
         if (fav) canvas.drawText("★", chanW - pad - 14 * d, mid + 5 * d, starP)
 
         // Programmes.

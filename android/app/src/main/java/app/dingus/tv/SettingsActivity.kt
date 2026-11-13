@@ -36,6 +36,7 @@ class SettingsActivity : BaseActivity() {
 
         header("TV guide")
         toggle("Watch in the guide first", "OK on a channel plays it in the guide's window, OK again for full screen (off: straight to full screen)", { Store.preview }) { Store.preview = it }
+        toggle("Channel numbers", "Show each channel's number beside its name", { Store.showNumbers }) { Store.showNumbers = it }
         toggle("Colour-coded programmes", "A coloured line for sport, films, news, kids…", { Store.genreColours }) { Store.genreColours = it }
         toggle("Merge duplicate channels", "Show a channel's HD, FHD and backup versions as one, and try the next if one fails",
             { Store.mergeChannels }) { Store.mergeChannels = it; Repo.reapply() }

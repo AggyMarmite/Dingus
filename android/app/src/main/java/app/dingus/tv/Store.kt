@@ -201,6 +201,11 @@ object Store {
     fun prefsString(key: String, def: String): String = prefs.getString(key, def) ?: def
     fun putString(key: String, v: String) = prefs.edit().putString(key, v).apply()
 
+    /** Show channel numbers in the guide and elsewhere. */
+    var showNumbers: Boolean
+        get() = prefs.getBoolean("showNumbers", true)
+        set(v) = prefs.edit().putBoolean("showNumbers", v).apply()
+
     /** Play the highlighted channel in the small window above the guide. */
     var preview: Boolean
         get() = prefs.getBoolean("preview", true)

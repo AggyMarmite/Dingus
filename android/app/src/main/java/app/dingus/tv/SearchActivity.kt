@@ -160,7 +160,7 @@ class SearchActivity : BaseActivity() {
                 is Row.Heading -> (holder as Head).v.text = r.text
                 is Row.Live -> {
                     val h = holder as H
-                    h.title.text = (if (r.c.number > 0) "${r.c.number}   " else "") + r.c.name
+                    h.title.text = (if (Store.showNumbers && r.c.number > 0) "${r.c.number}   " else "") + r.c.name
                     val p = r.p
                     h.subtitle.text = when {
                         p == null -> ""

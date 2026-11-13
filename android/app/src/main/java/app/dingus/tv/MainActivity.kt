@@ -163,6 +163,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             scope.launch { Vpn.connect(Vpn.locations().firstOrNull { it.country == name }) }
         }
         if (i.getBooleanExtra("dingus_test_vpn_off", false)) scope.launch { Vpn.disconnect() }
+        if (i.getBooleanExtra("dingus_test_numbers_off", false)) { Store.showNumbers = false; grid.showNumbers = false; Ui.test("numbers false") }
         i.getStringExtra("dingus_test_search")?.let { q ->
             startActivity(Intent(this, SearchActivity::class.java).putExtra("dingus_test_query", q))
         }
@@ -286,7 +287,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         val prog = findViewById<ProgressBar>(R.id.infoProgress)
         val live = findViewById<View>(R.id.infoLive)
         val desc = findViewById<TextView>(R.id.infoDesc)
-        ch.text = c?.let { (if (it.number > 0) "${it.number}   " else "") + it.name } ?: ""
+        ch.text = c?.let { (if (Store.showNumbers && it.number > 0) "${it.number}   " else "") + it.name } ?: ""
         val now = System.currentTimeMillis()
         if (p == null) {
             title.text = c?.name ?: ""
@@ -519,6 +520,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         super.onResume()
         Ui.test("main-shown")
         grid.genreColours = Store.genreColours
+        grid.showNumbers = Store.showNumbers
         if (Repo.channels.isEmpty() && !loading) start()
         else if (Repo.channels.isNotEmpty()) {
             grid.refresh()

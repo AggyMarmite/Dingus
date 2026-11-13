@@ -56,7 +56,7 @@ class Hero(private val a: Activity, private val scope: CoroutineScope) {
                 title.text = now?.title ?: c.name
                 val t = System.currentTimeMillis()
                 meta.text = listOfNotNull(
-                    if (c.number > 0) "${c.number}" else null,
+                    if (Store.showNumbers && c.number > 0) "${c.number}" else null,
                     now?.let { "${Ui.span(it)}  ·  ${(it.stop - t + 59_999) / 60_000} min left" },
                     next?.let { "Next ${Ui.time(it.start)}  ${it.title}" },
                 ).joinToString("   ·   ")

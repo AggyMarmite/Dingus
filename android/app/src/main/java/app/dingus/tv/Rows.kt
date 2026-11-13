@@ -114,7 +114,7 @@ class RowsAdapter(
                 is Card.Live -> {
                     val ch = card.channel
                     val now = Repo.nowNext(ch).first
-                    c.title?.text = (if (ch.number > 0) "${ch.number}  " else "") + ch.name
+                    c.title?.text = (if (Store.showNumbers && ch.number > 0) "${ch.number}  " else "") + ch.name
                     c.meta?.text = now?.title ?: ""
                     c.fallback?.text = Ui.initials(ch.name)
                     c.poster?.let { Logos.load(it, ch.logo, (76 * d).toInt(), c.fallback) }

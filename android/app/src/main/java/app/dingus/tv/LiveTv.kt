@@ -237,7 +237,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     fun showInfo() {
         val c = list.getOrNull(index) ?: return
         overlay.findViewById<TextView>(R.id.name).text = c.name
-        overlay.findViewById<TextView>(R.id.number).text = if (c.number > 0) c.number.toString() else ""
+        overlay.findViewById<TextView>(R.id.number).text = if (Store.showNumbers && c.number > 0) c.number.toString() else ""
         overlay.findViewById<View>(R.id.fav).visibility = if (Store.isFavourite(c.id)) View.VISIBLE else View.GONE
         overlay.findViewById<TextView>(R.id.initials).text = Ui.initials(c.name)
         Logos.load(overlay.findViewById<ImageView>(R.id.logo), c.logo, Ui.dp(a, 56), overlay.findViewById(R.id.initials))
@@ -329,7 +329,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         val p = player ?: return
         val items = ArrayList<Pair<String, () -> Unit>>()
         items.add((if (Store.isFavourite(c.id)) "Remove from Favourites" else "Add to Favourites") to { Store.toggleFavourite(c.id); showInfo() })
-        items.add("Audio & subtitles" to { Tracks.choose(a, p) })
+        items.add("Audio & subtitles" to { app.dingus.tv.Tracks.choose(a, p) })
         if (currentBehind() >= 3_000) items.add("Back to live" to { seekBehind(0) })
         items.add("Stream information" to { streamInfo() })
         Dialogs.builder(a).setTitle(c.name).setItems(items.map { it.first }.toTypedArray()) { _, i -> items[i].second() }.show()
