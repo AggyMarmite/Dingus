@@ -19,8 +19,13 @@ adb logcat -s DINGUS-TEST:I AndroidRuntime:E > "$OUT/log-all.txt" &
 adb shell am start -n $PKG/.MainActivity --es dingus_test_m3u http://10.0.2.2:8000/playlist.m3u
 check "channels 3 categories 2" 60 "playlist loaded (3 channels, 2 categories)"
 check "guide 3" 60 "guide read for all 3 channels"
-check "preview Test 1 HD" 40 "the highlighted channel plays in the preview window"
-sleep 2; shot 01-guide
+sleep 3; shot 01-guide
+if adb logcat -d -s DINGUS-TEST:I | grep -q "preview "; then
+  echo "FAIL nothing plays until you choose a channel" >> "$OUT/result.txt"; fail=1
+else echo "PASS nothing plays until you choose a channel" >> "$OUT/result.txt"; fi
+key KEYCODE_DPAD_CENTER 1
+check "preview Test 1 HD" 40 "OK plays the channel in the guide's window"
+sleep 2; shot 01b-guide-playing
 
 key KEYCODE_DPAD_RIGHT; key KEYCODE_DPAD_RIGHT; key KEYCODE_DPAD_DOWN 2; shot 02-guide-later
 fresh
@@ -36,18 +41,24 @@ shot 03-categories
 fresh
 key KEYCODE_DPAD_DOWN 1.5; key KEYCODE_DPAD_DOWN 1.5; key KEYCODE_DPAD_CENTER 3   # Sport
 check "key KEYCODE_DPAD_CENTER on TextView/Sport" 5 "scrolling through categories keeps the highlight where you are"
+key KEYCODE_DPAD_CENTER 1
 check "preview Test 3 Sport" 30 "picking a category shows its channels"
 fresh
 key KEYCODE_DPAD_LEFT 2; key KEYCODE_DPAD_UP 1.5; key KEYCODE_DPAD_CENTER 4        # back to UK: Entertainment
 check "key KEYCODE_DPAD_CENTER on TextView/UK: Entertainment" 5 "moving up a category works too"
+key KEYCODE_DPAD_CENTER 1
 check "preview Test 1 HD" 30 "the guide shows that category's channels"
 fresh
-key KEYCODE_DPAD_DOWN
-check "preview Test 2" 40 "moving down previews the next channel (HLS)"
+key KEYCODE_DPAD_DOWN 2
+if adb logcat -d -s DINGUS-TEST:I | grep -q "preview Test 2"; then
+  echo "FAIL moving down doesn't start the next channel by itself" >> "$OUT/result.txt"; fail=1
+else echo "PASS moving down doesn't start the next channel by itself" >> "$OUT/result.txt"; fi
+key KEYCODE_DPAD_CENTER 1
+check "preview Test 2" 40 "OK plays it in the window (HLS)"
 sleep 2; shot 04-category
 fresh
 key KEYCODE_DPAD_CENTER 2
-check "fullscreen Test 2" 15 "OK grows the preview to full screen (same stream)"
+check "fullscreen Test 2" 15 "OK again on the same channel grows it to full screen (same stream)"
 sleep 3
 if adb logcat -d -s DINGUS-TEST:I | grep -q "playing Test 2"; then
   echo "::error title=android self-test::the stream loaded again going full screen"; echo "FAIL full screen keeps the preview's stream (no second load)" >> "$OUT/result.txt"; fail=1

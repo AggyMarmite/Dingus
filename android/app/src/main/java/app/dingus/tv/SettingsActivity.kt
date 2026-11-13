@@ -35,7 +35,7 @@ class SettingsActivity : BaseActivity() {
         row("How much TV guide to keep", { "${hoursName(Store.guideHours)} ahead  ·  less is lighter on memory" }) { guideLength() }
 
         header("TV guide")
-        toggle("Preview in the guide", "The highlighted channel plays in the small window", { Store.preview }) { Store.preview = it }
+        toggle("Watch in the guide first", "OK on a channel plays it in the guide's window, OK again for full screen (off: straight to full screen)", { Store.preview }) { Store.preview = it }
         toggle("Colour-coded programmes", "A coloured line for sport, films, news, kids…", { Store.genreColours }) { Store.genreColours = it }
         toggle("Merge duplicate channels", "Show a channel's HD, FHD and backup versions as one, and try the next if one fails",
             { Store.mergeChannels }) { Store.mergeChannels = it; Repo.reapply() }

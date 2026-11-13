@@ -52,6 +52,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     private lateinit var guideArea: ViewGroup
     private lateinit var live: LiveTv
     private var pendingPlay: Pair<String, String>? = null
+    private var resumePreview: String? = null
     private val hintText by lazy { hint.text }
 
     private val catAdapter = CategoryAdapter()
@@ -77,6 +78,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         hint = findViewById(R.id.hint)
         clock = findViewById(R.id.clock)
         previewText = findViewById(R.id.previewText)
+        previewText.text = if (Store.preview) "Press OK on a channel\nto watch it here" else ""
         previewBox = findViewById(R.id.previewBox)
         stage = findViewById(R.id.stage)
         guideArea = findViewById(R.id.guideArea)
@@ -274,8 +276,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
 
     override fun onSelected(c: Channel, p: Programme?) {
         setInfo(c, p)
-        handler.removeCallbacks(startPreview)
-        if (!live.fullScreen && live.current?.id != c.id) handler.postDelayed(startPreview, 900)
+        // Moving around the guide doesn't start anything: OK plays a channel in the window, OK again goes full screen.
     }
 
     private fun setInfo(c: Channel?, p: Programme?) {
@@ -390,7 +391,8 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
                 listOf(VodPlayerActivity.Entry("cu:${c.id}:${p.start}", "${c.name}  ·  ${p.title}", url)), 0, true))
             return
         }
-        goFullScreen(c)
+        // First OK plays the channel in the guide's window; OK again on the same channel goes full screen.
+        if (Store.preview && live.current?.id != c.id) preview(c) else goFullScreen(c)
     }
 
     override fun onFavourite(c: Channel) {
@@ -523,7 +525,8 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             when {
                 pendingPlay != null -> runPendingPlay()
                 live.fullScreen -> live.resume() // back to the app while watching: carry on
-                else -> grid.current?.let { if (live.current == null) preview(it) }
+                // Back from another screen: carry on with the channel that was playing in the window (if one was).
+                else -> resumePreview?.let { id -> Repo.channel(id)?.let { preview(it) } }
             }
             if (!live.fullScreen && menu.visibility != View.VISIBLE && catPanel.visibility != View.VISIBLE) grid.requestFocus()
         }
@@ -538,6 +541,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     override fun onPause() {
         super.onPause()
         handler.removeCallbacks(tick)
+        resumePreview = live.current?.id
         stopPreview() // (in full screen too: it picks up again when you come back)
     }
 
