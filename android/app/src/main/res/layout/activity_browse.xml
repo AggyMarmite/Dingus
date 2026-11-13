@@ -3,11 +3,18 @@
      LEFT at the edge brings in the categories panel, like Live TV. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent" android:background="?attr/dBg">
+    <!-- Like Home: the highlighted title's picture behind the whole screen (a soft glow in a category). -->
+    <View android:id="@+id/browseGlow" android:layout_width="match_parent" android:layout_height="match_parent" />
+    <ImageView android:id="@+id/browseArt" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:scaleType="centerCrop" android:contentDescription="@null" />
+    <View android:id="@+id/browseShade" android:layout_width="match_parent" android:layout_height="match_parent" />
+    <View android:id="@+id/browseDim" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:background="?attr/dBg" android:alpha="0" />
     <LinearLayout android:id="@+id/browseRoot" android:layout_width="match_parent" android:layout_height="match_parent"
         android:orientation="horizontal">
 
         <LinearLayout android:id="@+id/catPanel" android:layout_width="280dp" android:layout_height="match_parent"
-            android:orientation="vertical" android:background="?attr/dSurface" android:visibility="gone"
+            android:orientation="vertical" android:background="#F5141923" android:visibility="gone"
             android:paddingStart="18dp" android:paddingEnd="12dp" android:paddingTop="26dp" android:paddingBottom="16dp">
             <TextView android:id="@+id/heading" android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:paddingStart="14dp" android:paddingBottom="12dp" android:textSize="22sp" android:textStyle="bold"
@@ -21,6 +28,10 @@
             android:orientation="vertical">
             <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content">
                 <include layout="@layout/hero" />
+                <!-- Featured: which screen this is, top left (the clock's on the right). -->
+                <TextView android:id="@+id/screenName" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_gravity="top|start" android:layout_marginStart="48dp" android:layout_marginTop="22dp"
+                    android:textSize="18sp" android:textStyle="bold" android:textColor="?attr/dText" />
                 <!-- In a category (no banner): its name and how many. -->
                 <LinearLayout android:id="@+id/gridHead" android:layout_width="wrap_content" android:layout_height="wrap_content"
                     android:layout_marginStart="44dp" android:layout_marginTop="26dp" android:layout_marginBottom="10dp"

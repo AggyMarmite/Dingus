@@ -11,8 +11,14 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /** The banner above the rows: shows what's highlighted, fetching a film's or show's plot after a short pause. */
-class Hero(private val a: Activity, private val scope: CoroutineScope) {
-    private val art: ImageView = a.findViewById(R.id.heroArt)
+class Hero(
+    private val a: Activity,
+    private val scope: CoroutineScope,
+    /** Where the picture goes (Films and TV Shows: behind the whole screen); the banner's own otherwise. */
+    private val art: ImageView = a.findViewById(R.id.heroArt),
+    /** The picture's height to fetch at. */
+    private val artH: Int = a.resources.displayMetrics.heightPixels / 2,
+) {
     private val kicker: TextView = a.findViewById(R.id.heroKicker)
     private val title: TextView = a.findViewById(R.id.heroTitle)
     private val meta: TextView = a.findViewById(R.id.heroMeta)
@@ -21,7 +27,6 @@ class Hero(private val a: Activity, private val scope: CoroutineScope) {
     private val handler = Handler(Looper.getMainLooper())
     private var job: Job? = null
     private var showing: Card? = null
-    private val artH = a.resources.displayMetrics.heightPixels / 2
 
     init {
         // Fades the artwork into the background colour (left and bottom), drawn in code so it suits every theme.

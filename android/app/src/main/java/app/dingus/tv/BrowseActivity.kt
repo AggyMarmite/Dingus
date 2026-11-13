@@ -42,6 +42,7 @@ class BrowseActivity : BaseActivity() {
     private lateinit var adapter: RowsAdapter
     private lateinit var hero: Hero
     private lateinit var heroView: View
+    private lateinit var browseArt: ImageView
     private lateinit var gridHead: View
     private lateinit var gridTitle: TextView
     private lateinit var gridCount: TextView
@@ -75,7 +76,26 @@ class BrowseActivity : BaseActivity() {
         gridCount = findViewById(R.id.gridCount)
         heroText = findViewById(R.id.heroText)
         findViewById<TextView>(R.id.heading).text = if (kind == Vod.MOVIES) "Films" else "TV Shows"
-        hero = Hero(this, scope)
+        // The picture behind the whole screen, darker on the left and at the bottom (like Home).
+        val bgc = Themes.color(this, R.attr.dBg); val clear = bgc and 0x00FFFFFF
+        findViewById<View>(R.id.heroArt).visibility = View.GONE
+        findViewById<View>(R.id.heroShade).visibility = View.GONE
+        findViewById<View>(R.id.browseShade).background = android.graphics.drawable.LayerDrawable(arrayOf(
+            android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+                intArrayOf((bgc and 0x00FFFFFF) or (0xEB shl 24), (bgc and 0x00FFFFFF) or (0x8C shl 24), clear, clear)),
+            android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.BOTTOM_TOP,
+                intArrayOf(bgc, (bgc and 0x00FFFFFF) or (0xB3 shl 24), clear, clear)),
+        ))
+        val accent = Themes.color(this, R.attr.dAccent)
+        findViewById<View>(R.id.browseGlow).background = android.graphics.drawable.GradientDrawable().apply {
+            gradientType = android.graphics.drawable.GradientDrawable.RADIAL_GRADIENT
+            colors = intArrayOf((accent and 0x00FFFFFF) or (0x44 shl 24), (accent and 0x00FFFFFF) or (0x12 shl 24), 0)
+            gradientRadius = resources.displayMetrics.widthPixels * 0.42f
+            setGradientCenter(0.75f, 0.25f)
+        }
+        browseArt = findViewById(R.id.browseArt)
+        hero = Hero(this, scope, browseArt, resources.displayMetrics.heightPixels * 2 / 3)
+        findViewById<TextView>(R.id.screenName).text = if (kind == Vod.MOVIES) "Films" else "TV Shows"
         heroBody = findViewById(R.id.heroBody)
         compact = true; setCompact(false) // (the full size banner: taller here than Home's)
 
@@ -85,6 +105,14 @@ class BrowseActivity : BaseActivity() {
         rows.adapter = adapter
         rows.itemAnimator = null
         rows.setItemViewCacheSize(4)
+        // Further down the rows, the picture behind dims (the rows stay easy to read).
+        val dim = findViewById<View>(R.id.browseDim)
+        rows.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
+                val a = if ((rv.layoutManager as LinearLayoutManager).findFirstVisibleItemPosition() > 0) 0.55f else 0f
+                if (dim.alpha != a) dim.animate().alpha(a).setDuration(if (Ui.lite) 0 else 200).start()
+            }
+        })
 
         cats = CategoryList(
             onShow = { show(it.id) },
@@ -168,6 +196,8 @@ class BrowseActivity : BaseActivity() {
             rows.visibility = View.VISIBLE
             heroView.visibility = View.VISIBLE
             gridHead.visibility = View.GONE
+            browseArt.visibility = View.VISIBLE
+            findViewById<View>(R.id.screenName).visibility = View.VISIBLE
             build()
             if (changed) rows.scrollToPosition(0)
             Ui.test("browse-cat Featured ${adapter.itemCount}")
@@ -180,6 +210,8 @@ class BrowseActivity : BaseActivity() {
             // No banner here: the category's name and how many, then the posters (more of them showing).
             heroView.visibility = View.GONE
             gridHead.visibility = View.VISIBLE
+            browseArt.visibility = View.INVISIBLE // (just the glow behind a grid)
+            findViewById<View>(R.id.screenName).visibility = View.GONE
             gridTitle.text = name
             gridCount.text = "${items.size} ${if (kind == Vod.MOVIES) (if (items.size == 1) "film" else "films") else (if (items.size == 1) "show" else "shows")}"
             empty.text = "Nothing here."
@@ -276,10 +308,10 @@ class BrowseActivity : BaseActivity() {
         // (No animation: the grid resizing under the remote while moving would throw the highlight about.)
         val lp = heroView.layoutParams
         val d = resources.displayMetrics.density
-        lp.height = ((if (on) 150 else 282) * d).toInt()
+        lp.height = ((if (on) 150 else 300) * d).toInt()
         heroView.layoutParams = lp
         // Room above the logo for the picture behind (less when it's small).
-        heroBody.setPadding(heroBody.paddingLeft, ((if (on) 14 else 46) * d).toInt(), heroBody.paddingRight, heroBody.paddingBottom)
+        heroBody.setPadding(heroBody.paddingLeft, ((if (on) 14 else 62) * d).toInt(), heroBody.paddingRight, heroBody.paddingBottom)
         // Everything has to fit the smaller banner (nothing cut off): a smaller logo, no description.
         heroText.visibility = if (on) View.GONE else View.VISIBLE
         val logo = findViewById<View>(R.id.heroLogo)
