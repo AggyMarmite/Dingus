@@ -92,6 +92,6 @@ class Hero(private val a: Activity, private val scope: CoroutineScope) {
         ).joinToString("   ·   ")
         text.text = d?.plot ?: ""
         val pic = d?.backdrop ?: d?.poster ?: m.poster
-        if (art.tag != pic) Posters.load(art, pic, artH)
+        if (art.tag != pic) Posters.load(art, pic, artH, wide = true)
     }
 }

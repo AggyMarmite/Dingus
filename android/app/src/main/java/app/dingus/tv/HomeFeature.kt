@@ -145,7 +145,7 @@ class HomeFeature(private val a: Activity, private val scope: kotlinx.coroutines
             val url = TitleLogos.find(t.first, t.second, Vod.cachedDetails(t.first, t.second.id)?.tmdbId)
             if (slides.getOrNull(index) !== s) return@launch
             if (url != null) TitleLogos.show(h.logo, h.title, url)
-            if (needArt) TitleLogos.cachedBackdrop(t.first, t.second)?.let { Posters.load(h.art, it, artH) }
+            if (needArt) TitleLogos.cachedBackdrop(t.first, t.second)?.let { Posters.load(h.art, it, artH, wide = true) }
         }
         h.meta.text = s.meta
         h.text.text = s.text ?: ""
@@ -153,7 +153,7 @@ class HomeFeature(private val a: Activity, private val scope: kotlinx.coroutines
         h.progress.visibility = if (s.progress >= 0) View.VISIBLE else View.GONE
         if (s.progress >= 0) h.progress.progress = (s.progress * 1000).toInt()
         val bg = t?.let { TitleLogos.cachedBackdrop(it.first, it.second) } ?: s.art
-        if (bg != null) Posters.load(h.art, bg, artH) else { h.art.setImageDrawable(null); h.art.tag = null }
+        if (bg != null) Posters.load(h.art, bg, artH, wide = true) else { h.art.setImageDrawable(null); h.art.tag = null }
         h.second.visibility = if (s.second != null) View.VISIBLE else View.GONE
         h.second.text = s.second?.first ?: ""
         h.next.visibility = if (slides.size > 1) View.VISIBLE else View.GONE

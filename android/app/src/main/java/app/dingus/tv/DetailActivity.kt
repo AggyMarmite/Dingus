@@ -114,7 +114,7 @@ class DetailActivity : BaseActivity() {
         val people = findViewById<TextView>(R.id.people)
         people.text = listOfNotNull(d.director?.let { "Director: $it" }, d.cast?.let { "Cast: $it" }).joinToString("\n")
         if (d.poster != null && d.poster != m.poster) Posters.load(findViewById(R.id.poster), d.poster, (294 * resources.displayMetrics.density).toInt(), findViewById(R.id.fallback))
-        d.backdrop?.let { Posters.load(findViewById<ImageView>(R.id.backdrop), it, resources.displayMetrics.heightPixels / 2) }
+        d.backdrop?.let { Posters.load(findViewById<ImageView>(R.id.backdrop), it, resources.displayMetrics.heightPixels, wide = true) } // (full screen: full size)
         // The official title logo (from TMDB), in place of the plain title.
         TitleLogos.cached(kind, m)?.let { TitleLogos.show(findViewById(R.id.titleLogo), findViewById(R.id.title), it) }
         // The cast on films only: on a show, its row took the room the seasons and episodes need.
@@ -262,7 +262,7 @@ class DetailActivity : BaseActivity() {
             holder.num.text = "E${e.number}"
             holder.title.text = (if (Vod.watched(e.id)) "✓  " else "") + epLabel(e)
             holder.plot.text = e.plot ?: e.duration?.let { niceDuration(it) } ?: ""
-            Posters.load(holder.image, e.image, h, holder.num)
+            Posters.load(holder.image, e.image, h, holder.num, wide = true)
             val pos = Vod.position(e.id)
             if (pos != null && pos.second > 0) {
                 holder.progress.visibility = View.VISIBLE

@@ -68,7 +68,7 @@ class ImageCache(private val name: String, megabytes: Int, private val config: B
     private fun key(url: String, h: Int) = "$url#$h"
 
     /** Fetches [url] once however many ask; [wanted] says whether it's still needed when its turn comes. */
-    private fun request(url: String, heightPx: Int, wanted: () -> Boolean, later: Boolean = false, done: (Bitmap?) -> Unit) {
+    private fun request(url: String, heightPx: Int, wanted: () -> Boolean, later: Boolean = false, wide: Boolean = false, done: (Bitmap?) -> Unit) {
         val k = key(url, heightPx)
         synchronized(waiting) {
             waiting[k]?.let { it.add(done); return }
@@ -77,12 +77,12 @@ class ImageCache(private val name: String, megabytes: Int, private val config: B
         val job = Runnable {
             val skip = synchronized(waiting) { waiting[k]?.size == 1 } && !wanted()
             if (skip) { synchronized(waiting) { waiting.remove(k) }; return@Runnable } // scrolled away: not now
-            val bmp = try { fetch(url, heightPx) } catch (e: Exception) { null }
+            val bmp = try { fetch(url, heightPx, wide) } catch (e: Exception) { null }
             if (bmp == null) synchronized(failed) { failed[url] = System.currentTimeMillis() } else cache.put(k, bmp)
             val all = synchronized(waiting) { waiting.remove(k) } ?: return@Runnable
             main.post { all.forEach { it(bmp) } }
         }
-        val saved = File(dir, hash(src(url, heightPx))).let { it.exists() && it.length() > 0 }
+        val saved = File(dir, hash(src(url, heightPx, wide))).let { it.exists() && it.length() > 0 }
         (if (saved) disk else pool).execute(if (later) Later(job) else job)
     }
 
@@ -106,7 +106,7 @@ class ImageCache(private val name: String, megabytes: Int, private val config: B
     }
 
     /** Shows the logo in [view]; [fallback] (e.g. the channel's initials) is shown only while there's no logo. */
-    fun load(view: ImageView, url: String?, heightPx: Int, fallback: View? = null) {
+    fun load(view: ImageView, url: String?, heightPx: Int, fallback: View? = null, wide: Boolean = false) {
         view.tag = url
         view.setImageDrawable(null)
         fallback?.visibility = View.VISIBLE
@@ -114,7 +114,7 @@ class ImageCache(private val name: String, megabytes: Int, private val config: B
         cache.get(key(url, heightPx))?.let { view.setImageBitmap(it); fallback?.visibility = View.GONE; return }
         val ref = WeakReference(view)
         val fb = WeakReference(fallback)
-        request(url, heightPx, { ref.get()?.tag == url }) { bmp ->
+        request(url, heightPx, { ref.get()?.tag == url }, wide = wide) { bmp ->
             val v = ref.get()
             if (v != null && v.tag == url && bmp != null) { v.setImageBitmap(bmp); fb.get()?.visibility = View.GONE }
         }
@@ -126,14 +126,16 @@ class ImageCache(private val name: String, megabytes: Int, private val config: B
      * Where to get [url] from: artwork on TMDB (which most providers use) comes in several sizes, so the one
      * nearest what's shown is fetched rather than the full size original – far less to download.
      */
-    private fun src(url: String, heightPx: Int): String {
+    private fun src(url: String, heightPx: Int, wide: Boolean): String {
         if (exact || !url.contains("image.tmdb.org/t/p/")) return url
-        val w = when { heightPx <= 185 -> "w185"; heightPx <= 342 -> "w342"; heightPx <= 500 -> "w500"; heightPx <= 780 -> "w780"; else -> "w1280" }
+        // The width needed: posters are 2:3, [wide] pictures (backdrops, episode stills) 16:9.
+        val need = if (wide) heightPx * 16 / 9 else heightPx * 2 / 3
+        val w = when { need <= 185 -> "w185"; need <= 342 -> "w342"; need <= 500 -> "w500"; need <= 780 -> "w780"; need <= 1280 -> "w1280"; else -> "original" }
         return tmdbSize.replace(url) { it.groupValues[1] + w + "/" }
     }
 
-    private fun fetch(original: String, heightPx: Int): Bitmap? {
-        val url = src(original, heightPx)
+    private fun fetch(original: String, heightPx: Int, wide: Boolean): Bitmap? {
+        val url = src(original, heightPx, wide)
         val f = File(dir, hash(url))
         if (!f.exists() || f.length() == 0L) {
             val tmp = File(dir, f.name + ".tmp." + Thread.currentThread().id)
