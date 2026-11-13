@@ -49,6 +49,9 @@ class SettingsActivity : BaseActivity() {
             Repo.reapply(); update()
         }
 
+        header("VPN")
+        row("Built-in VPN", { vpnSummary() }) { startActivity(Intent(this, VpnActivity::class.java)) }
+
         header("Playback")
         toggle("Pause & rewind live TV", "Keeps the last 15 minutes while you watch (MPEG-TS channels)", { Store.timeshift }) { Store.timeshift = it }
         row("Stream format", { if (Store.streamFormat == "hls") "HLS" else "MPEG-TS (recommended)" }) { streamFormat() }
@@ -98,6 +101,12 @@ class SettingsActivity : BaseActivity() {
         Dialogs.builder(this).setTitle(title)
             .setSingleChoiceItems(options.toTypedArray(), current) { d, i -> d.dismiss(); done(i) }
             .show()
+    }
+
+    private fun vpnSummary(): String = when (Vpn.status) {
+        Vpn.Status.ON -> "On  ·  ${Vpn.connectedTo?.label ?: ""}  ·  Dingus only"
+        Vpn.Status.CONNECTING -> "Connecting…"
+        else -> if (Vpn.ready) "Off  ·  ${if (Vpn.provider == Vpn.SURFSHARK) "Surfshark" else "${Vpn.configs.size} config files"}" else "Off  ·  Surfshark or any WireGuard VPN, for Dingus only"
     }
 
     // ------------------------------------------------------------------ playlists

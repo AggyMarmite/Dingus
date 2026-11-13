@@ -62,6 +62,24 @@ jobs:
           cp android/app/build/outputs/apk/debug/app-debug.apk $RUNNER_TEMP/www/Dingus.apk
           nohup python3 tests/android/server.py $RUNNER_TEMP/www > /dev/null 2>&1 &
           sleep 1; curl -sf http://127.0.0.1:8000/playlist.m3u | head -3
+      # A real WireGuard server for the VPN test: the emulator reaches it at 10.0.2.2, and the test playlist is
+      # then only reachable through the tunnel (10.66.0.1).
+      - name: WireGuard test server
+        continue-on-error: true
+        run: |
+          sudo apt-get install -y -q wireguard-tools >/dev/null 2>&1
+          mkdir -p $RUNNER_TEMP/wg && cd $RUNNER_TEMP/wg && umask 077
+          wg genkey | tee server.key | wg pubkey > server.pub
+          wg genkey | tee client.key | wg pubkey > client.pub
+          sudo ip link add wg0 type wireguard
+          sudo ip addr add 10.66.0.1/24 dev wg0
+          sudo wg set wg0 listen-port 51820 private-key server.key peer "$(cat client.pub)" allowed-ips 10.66.0.2/32
+          sudo ip link set wg0 up
+          printf '[Interface]\nPrivateKey = %s\nAddress = 10.66.0.2/32\n\n[Peer]\nPublicKey = %s\nEndpoint = 10.0.2.2:51820\nAllowedIPs = 10.66.0.0/24\nPersistentKeepalive = 15\n' "$(cat client.key)" "$(cat server.pub)" > client.conf
+          echo "WG_CONF=$RUNNER_TEMP/wg/client.conf" >> $GITHUB_ENV
+          sudo wg show
+          # Surfshark's public server list (what the app shows as locations)
+          curl -s https://api.surfshark.com/v4/server/clusters/generic | python3 -c "import json,sys; d=json.load(sys.stdin); print(len(d), 'Surfshark locations, e.g.', [(x.get('country'), x.get('location'), x.get('connectionName')) for x in d[:3]])" || true
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules

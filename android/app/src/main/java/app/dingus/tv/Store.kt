@@ -197,6 +197,10 @@ object Store {
         setCategoryOrder(kind, l)
     }
 
+    /** Plain settings shared by every playlist (e.g. the VPN). */
+    fun prefsString(key: String, def: String): String = prefs.getString(key, def) ?: def
+    fun putString(key: String, v: String) = prefs.edit().putString(key, v).apply()
+
     /** Play the highlighted channel in the small window above the guide. */
     var preview: Boolean
         get() = prefs.getBoolean("preview", true)

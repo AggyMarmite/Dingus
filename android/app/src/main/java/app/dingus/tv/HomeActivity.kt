@@ -86,6 +86,7 @@ class HomeActivity : BaseActivity() {
         loading = true
         scope.launch {
             try {
+                Vpn.startup() // "connect when Dingus starts": before anything loads
                 if (Repo.channels.isEmpty()) Repo.loadSaved()
                 build()
                 val p = Store.playlist ?: return@launch

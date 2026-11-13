@@ -15,5 +15,6 @@ class DingusApp : Application() {
         Logos.init(this)
         Posters.init(this)
         Vod.init(this)
+        Vpn.init(this)
     }
 }

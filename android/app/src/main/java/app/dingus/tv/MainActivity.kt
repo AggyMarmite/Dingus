@@ -114,6 +114,12 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             current = Repo.ALL
             Repo.clear(); Vod.clear()
         }
+        if (i.getBooleanExtra("dingus_test_vpn_phone", false)) startActivity(Intent(this, VpnActivity::class.java).putExtra(VpnActivity.PHONE, true))
+        i.getStringExtra("dingus_test_vpn_connect")?.let { name ->
+            Vpn.provider = Vpn.CONFIGS
+            scope.launch { Vpn.connect(Vpn.locations().firstOrNull { it.country == name }) }
+        }
+        if (i.getBooleanExtra("dingus_test_vpn_off", false)) scope.launch { Vpn.disconnect() }
         i.getStringExtra("dingus_test_search")?.let { q ->
             startActivity(Intent(this, SearchActivity::class.java).putExtra("dingus_test_query", q))
         }
@@ -133,6 +139,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             return
         }
         scope.launch {
+            Vpn.startup()
             if (Repo.channels.isEmpty()) Repo.loadSaved()
             // The category may belong to another playlist (after switching).
             val cats = Repo.sideCategories()

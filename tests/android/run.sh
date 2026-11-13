@@ -150,6 +150,32 @@ check "library movies 3" 30 "Films opens from Home"
 sleep 3; shot 18-films-rows
 key KEYCODE_DPAD_DOWN 3; shot 19-films-rows-2
 
+# ---- Built-in VPN (a real WireGuard server runs on the test machine)
+if [ -n "${WG_CONF:-}" ] && [ -f "$WG_CONF" ]; then
+  adb shell appops set $PKG ACTIVATE_VPN allow
+  fresh
+  adb shell am start -n $PKG/.MainActivity --ez dingus_test_vpn_phone true
+  check "phone-setup code" 15 "VPN: the phone setup page starts"
+  line=$(adb logcat -d -s DINGUS-TEST:I | grep -o "phone-setup code [0-9]* port [0-9]*" | tail -1)
+  CODE=$(echo "$line" | awk '{print $3}'); PORT=$(echo "$line" | awk '{print $5}')
+  sleep 1; shot 20-vpn-phone
+  adb forward tcp:18765 tcp:$PORT
+  curl -s -m 10 http://127.0.0.1:18765/ > "$OUT/phone-page.html"
+  curl -s -m 10 -X POST http://127.0.0.1:18765/save --data-urlencode "code=$CODE" --data-urlencode "name=Test" --data-urlencode "conf@$WG_CONF" > "$OUT/phone-reply.html"
+  check "vpn-imported Test" 10 "VPN: a config file sent from a phone is saved"
+  sleep 1; key KEYCODE_BACK 2; shot 21-vpn-settings
+  fresh
+  adb shell am start -n $PKG/.MainActivity --es dingus_test_vpn_connect Test
+  check "vpn on Test" 30 "VPN: connects"
+  fresh
+  adb shell am start -n $PKG/.MainActivity --es dingus_test_m3u http://10.66.0.1:8000/playlist.m3u
+  check "channels 3 categories 2" 60 "VPN: the playlist loads through the tunnel"
+  sleep 4; shot 22-guide-vpn
+  fresh
+  adb shell am start -n $PKG/.MainActivity --ez dingus_test_vpn_off true
+  check "vpn off" 15 "VPN: disconnects"
+fi
+
 adb shell dumpsys meminfo $PKG | grep -E "TOTAL( PSS)?:" | head -1 | sed 's/^/memory: /' | tee -a "$OUT/result.txt"
 adb logcat -d -s DINGUS-TEST:I AndroidRuntime:E > "$OUT/log.txt"
 adb logcat -d -v brief '*:W' | grep -v "com.android.tv\|AsyncDvr" | tail -1500 > "$OUT/log-warnings.txt"

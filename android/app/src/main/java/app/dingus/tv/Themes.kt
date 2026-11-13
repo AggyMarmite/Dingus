@@ -60,9 +60,22 @@ abstract class BaseActivity : Activity() {
         super.onResume()
         if (themeVersion != Themes.version) { recreate(); return }
         Reminders.attach(this)
+        Vpn.onChanged(vpnBadge)
+        showVpnBadge()
+    }
+
+    /** Screens with a "vpnBadge" view show the VPN's state there. */
+    private val vpnBadge: () -> Unit = { showVpnBadge() }
+    private fun showVpnBadge() {
+        val v = findViewById<android.widget.TextView>(R.id.vpnBadge) ?: return
+        val b = Vpn.badge()
+        v.text = b ?: ""
+        v.setTextColor(if (Vpn.status == Vpn.Status.ON) 0xFF4ADE80.toInt() else 0xFFFCA5A5.toInt())
+        v.visibility = if (b == null) android.view.View.GONE else android.view.View.VISIBLE
     }
 
     override fun onPause() {
+        Vpn.removeListener(vpnBadge)
         Reminders.detach(this)
         super.onPause()
     }

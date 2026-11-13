@@ -18,6 +18,9 @@ android {
         targetSdk = 34
         versionCode = versionParts[0] * 1_000_000 + versionParts[1] * 1_000 + versionParts[2]
         versionName = desktopVersion
+        // Fire TV sticks are ARM; x86 is only for the emulator the self-test runs on. (Keeps the VPN's
+        // WireGuard engine from adding every phone architecture to the download.)
+        ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86") }
     }
 
     signingConfigs {
@@ -43,6 +46,7 @@ android {
     }
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true // the WireGuard library uses newer Java on older Fire OS
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -59,4 +63,7 @@ dependencies {
     implementation("androidx.core:core:1.13.1")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    // Built-in VPN (WireGuard), used by Dingus only.
+    implementation("com.wireguard.android:tunnel:1.0.20230706")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }
