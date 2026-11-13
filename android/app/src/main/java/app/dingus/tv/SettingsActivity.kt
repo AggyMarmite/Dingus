@@ -88,10 +88,10 @@ class SettingsActivity : BaseActivity() {
 
     override fun onResume() {
         super.onResume(); update(); Ui.test("settings-shown")
-        // Keep the expiry date fresh (at most once a day).
+        // Expiry, connections in use and whether the server's online, fresh each time (at most every 20 seconds).
         val p = Store.playlist
-        if (p != null && System.currentTimeMillis() - (Account.saved()?.checkedAt ?: 0) > 86_400_000L)
-            scope.launch { try { Account.refresh(p); update() } catch (_: Exception) {} }
+        if (p != null && System.currentTimeMillis() - Account.lastCheck > 20_000L)
+            scope.launch { Account.check(p); update() }
     }
     override fun onDestroy() { scope.cancel(); super.onDestroy() }
 
@@ -139,7 +139,8 @@ class SettingsActivity : BaseActivity() {
         val all = Store.playlists
         val p = Store.playlist ?: return "Add your playlist"
         return "${p.name}  ·  ${typeName(p)}" + (if (all.size > 1) "  ·  ${all.size} playlists" else "") +
-            (Account.saved()?.let { "\n" + it.summary() } ?: "")
+            (Account.saved()?.let { "\n" + it.summary() } ?: "") +
+            when (Account.online(p)) { true -> "\nStatus: online"; false -> "\nStatus: offline"; null -> "" }
     }
 
     private fun playlists() {
@@ -176,8 +177,8 @@ class SettingsActivity : BaseActivity() {
         val row = accountRow ?: return
         sub(row, "${p.name}\nChecking your subscription…")
         scope.launch {
-            val msg = try { Account.refresh(p)?.summary() ?: "Your provider doesn't share an expiry date for this playlist" }
-                      catch (e: Exception) { "Couldn't check: ${Net.friendly(e)}" }
+            val info = Account.check(p)
+            val msg = info?.summary() ?: if (Account.online(p) == false) "Couldn't reach the server (offline)" else "Your provider doesn't share an expiry date for this playlist"
             sub(row, "${p.name}  ·  ${typeName(p)}\n$msg")
         }
     }

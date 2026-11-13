@@ -18,14 +18,14 @@
                 android:textColor="?attr/dText" />
         </LinearLayout>
         <!-- The playlist in use (OK to switch, when there's more than one) and the subscription. -->
-        <LinearLayout android:id="@+id/sideHeader" android:layout_width="match_parent" android:layout_height="58dp"
+        <LinearLayout android:id="@+id/sideHeader" android:layout_width="match_parent" android:layout_height="80dp"
             android:orientation="vertical" android:layout_marginTop="4dp">
             <TextView android:id="@+id/navPlaylist" style="@style/SideRow" android:layout_height="wrap_content"
                 android:paddingTop="3dp" android:paddingBottom="3dp" android:textSize="14sp" android:textColor="?attr/dMuted"
                 android:singleLine="true" android:ellipsize="end" />
             <TextView android:id="@+id/navAccount" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:paddingStart="19dp" android:paddingEnd="8dp" android:textSize="12sp" android:textColor="?attr/dMuted"
-                android:maxLines="2" />
+                android:maxLines="3" android:lineSpacingExtra="1dp" />
         </LinearLayout>
 
         <TextView android:id="@+id/navHome" style="@style/SideRow" android:layout_marginTop="8dp" android:text="Home"

@@ -1,6 +1,7 @@
 package app.dingus.tv
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.URI
@@ -16,21 +17,63 @@ object Account {
                 expires < System.currentTimeMillis() -> "Expired on ${date(expires)}"
                 else -> "Expires ${date(expires)} (in ${((expires - System.currentTimeMillis()) / 86_400_000L) + 1} days)"
             })
-            if (maxConnections > 0) parts.add("$maxConnections connection${if (maxConnections == 1) "" else "s"}")
+            if (maxConnections > 0) parts.add("Active connections $activeConnections/$maxConnections")
             if (status.isNotBlank()) parts.add(status.replaceFirstChar { it.uppercase() })
             return parts.joinToString("  ·  ")
         }
     }
 
-    /** For the menu: "Expires 12 Mar 2027  ·  2 connections" */
-    fun short(i: Info): String {
-        val e = when {
-            i.expires <= 0 -> "No expiry date"
-            i.expires < System.currentTimeMillis() -> "Expired ${date(i.expires)}"
-            else -> "Expires ${date(i.expires)}"
+    /** Whether the provider's server answered the last time it was asked (per playlist; null = not asked yet). */
+    @Volatile private var online: Pair<String, Boolean>? = null
+    @Volatile var lastCheck = 0L; private set
+    fun online(p: Playlist?): Boolean? = online?.takeIf { it.first == p?.id }?.second
+
+    /** For the menu, one per line: expiry, connections in use, and whether the server's online. */
+    fun lines(i: Info?, p: Playlist?): List<Pair<String, Int>> {
+        val out = ArrayList<Pair<String, Int>>()
+        if (i != null) {
+            out.add(when {
+                i.expires <= 0 -> "No expiry date"
+                i.expires < System.currentTimeMillis() -> "Expired ${date(i.expires)}"
+                else -> "Expires ${date(i.expires)}"
+            } to 0)
+            if (i.maxConnections > 0) out.add("Active connections ${i.activeConnections}/${i.maxConnections}" to 0)
         }
-        val m = i.maxConnections
-        return if (m > 0) "$e  ·  $m connection${if (m == 1) "" else "s"}" else e
+        out.add(when (online(p)) {
+            true -> "Status  ● Online" to 0xFF4ADE80.toInt()
+            false -> "Status  ● Offline" to 0xFFF87171.toInt()
+            null -> "Status  checking…" to 0
+        })
+        return out
+    }
+
+    /** Asks the provider (subscription, connections in use) – which also says whether the server's online. */
+    suspend fun check(p: Playlist): Info? {
+        lastCheck = System.currentTimeMillis()
+        return try {
+            val info = if (login(p) != null) refresh(p) else { ping(p); saved() }
+            online = p.id to true
+            Ui.test("account ${info?.activeConnections}/${info?.maxConnections} online")
+            info
+        } catch (e: Exception) {
+            online = p.id to false
+            Ui.test("account offline ${e.message}")
+            null
+        }
+    }
+
+    /** Something started or stopped playing: ask again in a few seconds, so "Active connections" keeps up. */
+    fun soon() {
+        val p = Store.playlist ?: return
+        Background.scope.launch {
+            kotlinx.coroutines.delay(5_000)
+            if (System.currentTimeMillis() - lastCheck > 4_000) check(p)
+        }
+    }
+
+    /** A playlist that isn't from an Xtream panel: is its address answering? */
+    private suspend fun ping(p: Playlist) = withContext(Dispatchers.IO) {
+        Net.open(p.m3uUrl.trim(), 10_000).use { it.read() }
     }
 
     private fun date(ms: Long) = java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale.UK).format(java.util.Date(ms))

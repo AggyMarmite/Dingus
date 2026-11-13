@@ -146,17 +146,30 @@ class SideMenu(
         val several = Store.playlists.size > 1
         playlistRow.text = (Store.playlist?.name ?: "") + if (several) "  ▾" else ""
         playlistRow.tag = several
-        val info = Account.saved()
-        accountRow.text = info?.let { Account.short(it) } ?: ""
         val p = Store.playlist
-        if (p != null && System.currentTimeMillis() - (info?.checkedAt ?: 0) > 86_400_000L && !checking) {
+        showAccount()
+        // Asked again whenever the menu opens (at most every 20 seconds): connections in use change while you watch.
+        if (p != null && System.currentTimeMillis() - Account.lastCheck > 20_000L && !checking) {
             checking = true
             Background.scope.launch {
-                try { Account.refresh(p)?.let { if (Store.playlist?.id == p.id) accountRow.text = Account.short(it) } }
-                catch (_: Exception) {}
-                finally { checking = false }
+                try { Account.check(p) } finally { checking = false }
+                if (Store.playlist?.id == p.id) showAccount()
             }
         }
+    }
+
+    /** Expiry, "Active connections 1/2" and "Status ● Online", one per line (the status in green or red). */
+    private fun showAccount() {
+        val p = Store.playlist
+        if (p == null) { accountRow.text = ""; return }
+        val sb = android.text.SpannableStringBuilder()
+        for ((line, colour) in Account.lines(Account.saved(), p)) {
+            if (sb.isNotEmpty()) sb.append('\n')
+            val start = sb.length
+            sb.append(line)
+            if (colour != 0) sb.setSpan(android.text.style.ForegroundColorSpan(colour), start + line.indexOf('●'), sb.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        accountRow.text = sb
     }
 
     fun open() {

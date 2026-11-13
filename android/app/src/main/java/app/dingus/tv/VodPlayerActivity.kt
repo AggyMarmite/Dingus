@@ -84,6 +84,7 @@ class VodPlayerActivity : BaseActivity() {
                         retries = 0
                         message.text = ""
                         Ui.test("vod-playing ${titles[index]}")
+                        Account.soon()
                     }
                     Player.STATE_ENDED -> finishedOne()
                     else -> {}

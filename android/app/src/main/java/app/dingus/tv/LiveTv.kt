@@ -78,6 +78,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
 
     /** Stops and lets go of the stream (leaving the screen). */
     fun release() {
+        if (player != null) Account.soon()
         handler.removeCallbacksAndMessages(null)
         player?.release()
         player = null
@@ -99,6 +100,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
                         message.text = ""
                         val name = list.getOrNull(index)?.name
                         Ui.test(if (fullScreen) "playing $name ${p.videoSize.width}x${p.videoSize.height}" else "preview $name")
+                        Account.soon()
                     }
                     Player.STATE_ENDED -> scheduleRetry("Reconnecting…") // a live stream "ending" means the connection dropped
                     else -> {}
