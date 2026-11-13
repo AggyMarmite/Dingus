@@ -204,6 +204,7 @@ check "home rows [1-9]" 30 "Home opens by itself"
 sleep 3
 key KEYCODE_DPAD_LEFT 1.5; key KEYCODE_DPAD_DOWN 0.5; key KEYCODE_DPAD_CENTER 3     # menu → Live TV
 check "guide-filled [1-9]" 15 "Live TV from Home shows the channels"
+check "categories-open" 10 "…with the categories open first"
 shot 19aa-live-from-home
 
 # ---- Channel numbers off

@@ -32,6 +32,8 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         /** Open straight into full screen on this channel (from Home, Search, reminders). */
         const val PLAY = "play"
         const val PLAY_CATEGORY = "playCategory"
+        /** Opened from the side menu: show the categories first. */
+        const val CATEGORIES = "categories"
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -62,6 +64,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     private var loadAttempts = 0
     /** The guide has been filled in at least once (Home may have loaded the channels before this screen opened). */
     private var started = false
+    private var showCategoriesFirst = false
     private var updateChecked = false
     private val repoListener: () -> Unit = { handler.post { onRepoChanged() } }
 
@@ -71,7 +74,8 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         side = SideMenu(this, SideMenu.Page.LIVE, findViewById(R.id.guideScreen), leftOpens = false)
-        side.onNavigate = { if (catPanel.visibility == View.VISIBLE) closeCategories() }
+        // Live TV chosen again: the categories stay (or open). Anything else: back to the guide first.
+        side.onNavigate = { p -> if (p == SideMenu.Page.LIVE) openCategories() else if (catPanel.visibility == View.VISIBLE) closeCategories() }
         grid = findViewById(R.id.grid)
         catPanel = findViewById(R.id.catPanel)
         categories = findViewById(R.id.categories)
@@ -110,6 +114,11 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     }
 
     private fun takePlayRequest(i: Intent) {
+        if (i.getBooleanExtra(CATEGORIES, false)) {
+            i.removeExtra(CATEGORIES)
+            // Already showing the guide: straight to the categories. Otherwise once it's filled in (start()).
+            if (started && Repo.channels.isNotEmpty() && !live.fullScreen) handler.post { openCategories() } else showCategoriesFirst = true
+        }
         val id = i.getStringExtra(PLAY) ?: return
         pendingPlay = id to (i.getStringExtra(PLAY_CATEGORY) ?: Repo.ALL)
         i.removeExtra(PLAY)
@@ -176,6 +185,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             if (cats.none { it.id == current }) current = Store.lastCategory?.takeIf { id -> cats.any { it.id == id } } ?: Repo.ALL
             showCategory(current, Store.lastChannel)
             grid.requestFocus()
+            if (showCategoriesFirst && pendingPlay == null && Repo.channels.isNotEmpty()) { showCategoriesFirst = false; openCategories() }
             runPendingPlay()
             if (Repo.channels.isEmpty()) refresh(p, true)
             else if (Store.refreshDue) refresh(p, false)
