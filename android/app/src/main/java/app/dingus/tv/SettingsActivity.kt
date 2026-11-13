@@ -424,7 +424,17 @@ class SettingsActivity : BaseActivity() {
         super.onBackPressed()
     }
 
-    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean = side.onKey(event) || super.dispatchKeyEvent(event)
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        if (side.onKey(event)) return true
+        // RIGHT from a section: its first option (not whichever one is level with the section).
+        if (event.action == android.view.KeyEvent.ACTION_DOWN && event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT &&
+            currentFocus in sectionViews) {
+            findViewById<View>(R.id.pane).scrollTo(0, 0)
+            list.getChildAt(firstRow())?.requestFocus()
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
 }
 
 /** Switching between and removing playlists. */
