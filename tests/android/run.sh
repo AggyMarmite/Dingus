@@ -196,7 +196,16 @@ key KEYCODE_DPAD_UP 0.5; key KEYCODE_DPAD_UP 0.5; key KEYCODE_DPAD_LEFT 1.5
 for _ in 1 2 3 4 5; do key KEYCODE_DPAD_DOWN 0.4; done                                 # … → Settings
 key KEYCODE_DPAD_CENTER 2
 check "settings-shown" 10 "Settings opens from the side menu on Home"
-key KEYCODE_BACK 1
+# Settings → side menu → Live TV: the guide should be there straight away (not empty for a while).
+fresh
+key KEYCODE_DPAD_LEFT 1.5
+for _ in 1 2 3 4; do key KEYCODE_DPAD_UP 0.4; done                                     # Settings → … → Live TV
+adb shell input keyevent KEYCODE_DPAD_CENTER; sleep 0.6; shot 19ab-live-from-settings-0s
+sleep 1.5; shot 19ac-live-from-settings-2s
+check "guide-filled [1-9]" 10 "Live TV from Settings shows the channels"
+key KEYCODE_BACK 1; key KEYCODE_BACK 1
+adb shell am start -n $PKG/.HomeActivity
+sleep 2
 # Live TV from a freshly opened Home (the channels are already loaded by Home)
 fresh
 adb shell am force-stop $PKG

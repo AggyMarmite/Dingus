@@ -16,14 +16,14 @@ sealed class Card {
     class Live(val channel: Channel) : Card()
     /** A programme on a channel: what's on now (with progress) or coming up ([label] e.g. "In 30 min", "20:45"). */
     class Show(val channel: Channel, val programme: Programme?, val label: String? = null) : Card()
-    class SeeAll(val kind: String, val categoryId: String, val name: String) : Card()
+    class SeeAll(val kind: String, val categoryId: String, val name: String, val chip: Boolean = false) : Card()
 
     /** What the card shows, to tell whether a row really changed. */
     fun sig(): String = when (this) {
         is Title -> "t${item.id}|${(progress * 100).toInt()}|$label|$isNew"
         is Live -> "l${channel.id}"
         is Show -> "s${channel.id}|${programme?.start}|$label"
-        is SeeAll -> "a$categoryId"
+        is SeeAll -> "a$categoryId|$name"
     }
 }
 
@@ -100,10 +100,10 @@ class RowsAdapter(
         }
 
         override fun getItemCount() = cards.size
-        override fun getItemViewType(position: Int) = when (cards[position]) { is Card.Title -> 0; is Card.Live, is Card.Show -> 1; is Card.SeeAll -> 2 }
+        override fun getItemViewType(position: Int) = when (cards[position]) { is Card.Title -> 0; is Card.Live, is Card.Show -> 1; is Card.SeeAll -> if ((cards[position] as Card.SeeAll).chip) 3 else 2 }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): C {
-            val layout = when (viewType) { 0 -> R.layout.item_poster_row; 1 -> R.layout.item_channel_card; else -> R.layout.item_see_all }
+            val layout = when (viewType) { 0 -> R.layout.item_poster_row; 1 -> R.layout.item_channel_card; 3 -> R.layout.item_category_chip; else -> R.layout.item_see_all }
             val v = LayoutInflater.from(ctx).inflate(layout, parent, false)
             val c = C(v)
             // Card views are shared between rows, so always look the card up in the row it's in now
@@ -158,7 +158,7 @@ class RowsAdapter(
                         if (on) progress = Ui.progress(p!!)
                     }
                 }
-                is Card.SeeAll -> {}
+                is Card.SeeAll -> if (card.chip) (c.itemView as TextView).text = card.name
             }
         }
     }

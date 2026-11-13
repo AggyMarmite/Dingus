@@ -74,8 +74,9 @@ class Hero(private val a: Activity, private val scope: CoroutineScope) {
             is Card.SeeAll -> {
                 kicker.visibility = View.VISIBLE
                 kicker.text = if (card.kind == Vod.MOVIES) "FILMS" else "TV SHOWS"
-                title.text = card.name
-                meta.text = "See everything in this category"
+                title.text = if (card.chip) card.name.substringBefore("  ·  ") else card.name
+                val n = Vod.cached(card.kind)?.let { Vod.itemsIn(card.kind, it, card.categoryId).size } ?: 0
+                meta.text = (if (n > 0) "$n ${if (card.kind == Vod.MOVIES) "films" else "shows"}  ·  " else "") + "OK to see them all"
                 text.text = ""
             }
         }

@@ -40,10 +40,6 @@ class BrowseActivity : BaseActivity() {
         rows.adapter = adapter
         rows.itemAnimator = null
         rows.setItemViewCacheSize(4)
-        findViewById<TextView>(R.id.heading).text = if (kind == Vod.MOVIES) "Films" else "TV Shows"
-        findViewById<View>(R.id.allCategories).setOnClickListener {
-            startActivity(Intent(this, LibraryActivity::class.java).putExtra(LibraryActivity.KIND, kind))
-        }
         load()
     }
 
@@ -73,6 +69,14 @@ class BrowseActivity : BaseActivity() {
         if (cont.isNotEmpty()) out.add(Row("Continue watching", cont.take(20)))
         if (l.newest.isNotEmpty()) out.add(Row("Recently added", l.newest.take(30).map { Card.Title(kind, it) } +
             (if (l.items.size > 30) listOf(Card.SeeAll(kind, Vod.RECENT, "Recently added")) else emptyList())))
+        // Every category, as a row of its own near the top (instead of a "Categories" button up there).
+        val chips = ArrayList<Card>()
+        chips.add(Card.SeeAll(kind, Vod.ALL, "${if (kind == Vod.MOVIES) "All films" else "All shows"}  ·  ${l.items.size}", chip = true))
+        for (c in Store.ordered(kind, l.categories) { it.id }) {
+            val n = l.byCategory[c.id]?.size ?: 0
+            if (n > 0 && !Store.isHidden("$kind:${c.id}")) chips.add(Card.SeeAll(kind, c.id, c.name, chip = true))
+        }
+        if (chips.size > 1) out.add(minOf(1, out.size), Row("Categories", chips))
         for (c in Store.ordered(kind, l.categories) { it.id }) {
             if (Store.isHidden("$kind:${c.id}")) continue
             val items = l.byCategory[c.id] ?: continue
@@ -83,7 +87,6 @@ class BrowseActivity : BaseActivity() {
             out.add(Row(c.name, cards))
         }
         adapter.set(out)
-        findViewById<TextView>(R.id.count).text = "${l.items.size} ${if (kind == Vod.MOVIES) "films" else "shows"}"
         empty.visibility = if (out.isEmpty()) View.VISIBLE else View.GONE
         if (out.isEmpty()) empty.text = "Nothing here yet."
         if (!focusedOnce && out.isNotEmpty()) {
@@ -97,6 +100,10 @@ class BrowseActivity : BaseActivity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (side.onKey(event)) return true
+        // ≡ : every category, with the films in a grid.
+        if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_MENU) {
+            startActivity(Intent(this, LibraryActivity::class.java).putExtra(LibraryActivity.KIND, kind)); return true
+        }
         if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_DPAD_UP && RowNav.up(rows, currentFocus)) return true
         return super.dispatchKeyEvent(event)
     }
