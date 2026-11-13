@@ -164,12 +164,17 @@ class RowsAdapter(
     }
 }
 
-/** The vertical list of rows: the row you're on always moves to the top (title and all), like Netflix. */
-class RowsLayoutManager(ctx: Context) : LinearLayoutManager(ctx) {
+/**
+ * The vertical list of rows: the row you're on moves to the top (title and all), like Netflix – or, [centered],
+ * to the middle of the screen (Home), with the rows either side peeking in. A big feature (Home's) always goes to
+ * the top.
+ */
+class RowsLayoutManager(ctx: Context, private val centered: Boolean = false) : LinearLayoutManager(ctx) {
     init { initialPrefetchItemCount = 3 }
 
     override fun requestChildRectangleOnScreen(parent: RecyclerView, child: View, rect: android.graphics.Rect, immediate: Boolean, focusedChildVisible: Boolean): Boolean {
-        val dy = child.top - parent.paddingTop
+        val dy = if (centered && child.findViewById<View>(R.id.heroWatch) == null) (child.top + child.height / 2) - parent.height / 2
+            else child.top - parent.paddingTop
         if (dy == 0) return false
         if (immediate || Ui.lite) parent.scrollBy(0, dy) else parent.smoothScrollBy(0, dy)
         return true

@@ -43,7 +43,8 @@ class HomeActivity : BaseActivity() {
         empty = findViewById(R.id.empty)
         hero = Hero(this, scope)
         adapter = RowsAdapter(this, onFocus = { if (lite) hero.show(it) }, onClick = { open(it) })
-        rows.layoutManager = RowsLayoutManager(this)
+        rows.layoutManager = RowsLayoutManager(this, centered = true)
+        setUpCentredRows()
         if (lite) rows.adapter = adapter
         else {
             // The big feature scrolls with the rows, as the first item.
@@ -129,6 +130,41 @@ class HomeActivity : BaseActivity() {
             if (p > 0) { focusItem(p - 1); return true }
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    /**
+     * The row you're on sits in the middle of the screen: room below the last row so it can, the other rows
+     * dimmed, and a fade under the clock once the feature has scrolled away.
+     */
+    private fun setUpCentredRows() {
+        rows.post { rows.setPadding(rows.paddingLeft, rows.paddingTop, rows.paddingRight, rows.height / 2) }
+        val fade = findViewById<View>(R.id.topFade)
+        val bg = Themes.color(this, R.attr.dBg)
+        fade.background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(bg, bg, bg and 0x00FFFFFF))
+        fun dim(item: View, animate: Boolean) {
+            if (item.findViewById<View>(R.id.heroWatch) != null) { item.alpha = 1f; return }
+            val f = currentFocus
+            val on = f == null || rows.findContainingItemView(f) == null || rows.findContainingItemView(f) === item
+            val a = if (on) 1f else 0.45f
+            if (item.alpha == a) return
+            if (animate && !Ui.lite) item.animate().alpha(a).setDuration(160).start() else { item.animate().cancel(); item.alpha = a }
+        }
+        window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, _ ->
+            for (i in 0 until rows.childCount) dim(rows.getChildAt(i), true)
+        }
+        rows.addOnChildAttachStateChangeListener(object : RecyclerView.OnChildAttachStateChangeListener {
+            override fun onChildViewAttachedToWindow(v: View) = dim(v, false)
+            override fun onChildViewDetachedFromWindow(v: View) { v.animate().cancel(); v.alpha = 1f }
+        })
+        rows.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
+                val first = rv.getChildAt(0) ?: return
+                // The feature (the first item) still showing at the top: no fade needed.
+                val featureTop = feature != null && rv.getChildAdapterPosition(first) == 0 && first.top > -Ui.dp(this@HomeActivity, 60)
+                fade.visibility = if (featureTop || feature == null) View.GONE else View.VISIBLE
+            }
+        })
     }
 
     /** BACK steps out: down in the rows → back to the top; at the top → the menu; with the menu open → leave. */
