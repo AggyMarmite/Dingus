@@ -80,7 +80,8 @@ class BrowseActivity : BaseActivity() {
         compact = true; setCompact(false) // (the full size banner: taller here than Home's)
 
         adapter = RowsAdapter(this, onFocus = { hero.show(it) }, onClick = { open(it) })
-        rows.layoutManager = RowsLayoutManager(this)
+        rows.layoutManager = RowsLayoutManager(this, centered = true) // (the row you're on in the middle, like Home)
+        CentredRows.attach(this, rows)
         rows.adapter = adapter
         rows.itemAnimator = null
         rows.setItemViewCacheSize(4)

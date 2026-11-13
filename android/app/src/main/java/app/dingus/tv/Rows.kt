@@ -181,6 +181,28 @@ class RowsLayoutManager(ctx: Context, private val centered: Boolean = false) : L
     }
 }
 
+/** Rows kept centred ([RowsLayoutManager] centered): room below the last row so it can be, and the other rows dimmed. */
+object CentredRows {
+    fun attach(a: android.app.Activity, rows: RecyclerView) {
+        rows.post { rows.setPadding(rows.paddingLeft, rows.paddingTop, rows.paddingRight, rows.height / 2) }
+        fun dim(item: View, animate: Boolean) {
+            if (item.findViewById<View>(R.id.heroWatch) != null) { item.alpha = 1f; return }
+            val f = a.currentFocus
+            val holder = f?.let { rows.findContainingItemView(it) }
+            val a1 = if (holder == null || holder === item) 1f else 0.45f
+            if (item.alpha == a1) return
+            if (animate && !Ui.lite) item.animate().alpha(a1).setDuration(160).start() else { item.animate().cancel(); item.alpha = a1 }
+        }
+        a.window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, _ ->
+            for (i in 0 until rows.childCount) dim(rows.getChildAt(i), true)
+        }
+        rows.addOnChildAttachStateChangeListener(object : RecyclerView.OnChildAttachStateChangeListener {
+            override fun onChildViewAttachedToWindow(v: View) = dim(v, false)
+            override fun onChildViewDetachedFromWindow(v: View) { v.animate().cancel(); v.alpha = 1f }
+        })
+    }
+}
+
 /**
  * UP in a list of rows goes to the row above, every time. Left to itself, focus search can skip rows or stay put
  * when the row above has scrolled out of sight.
