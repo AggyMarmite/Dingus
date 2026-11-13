@@ -117,7 +117,8 @@ class DetailActivity : BaseActivity() {
         d.backdrop?.let { Posters.load(findViewById<ImageView>(R.id.backdrop), it, resources.displayMetrics.heightPixels / 2) }
         // The official title logo (from TMDB), in place of the plain title.
         TitleLogos.cached(kind, m)?.let { TitleLogos.show(findViewById(R.id.titleLogo), findViewById(R.id.title), it) }
-        showCast(m, d.tmdbId)
+        // The cast on films only: on a show, its row took the room the seasons and episodes need.
+        if (kind == Vod.MOVIES) showCast(m, d.tmdbId)
         if (TitleLogos.enabled) scope.launch {
             TitleLogos.find(kind, m, d.tmdbId)?.let { TitleLogos.show(findViewById(R.id.titleLogo), findViewById(R.id.title), it) }
         }
