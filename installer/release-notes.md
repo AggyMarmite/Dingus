@@ -1,3 +1,8 @@
+## What's new in Dingus 0.15.4
+
+* Fire TV: see your active connections and whether the server is online.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.3
 
 * Fire TV: faster Home and Search.
