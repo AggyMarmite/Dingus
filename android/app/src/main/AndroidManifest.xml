@@ -25,6 +25,9 @@
         <activity
             android:name=".HomeActivity"
             android:exported="true"
+            android:theme="@style/Theme.Dingus.Launch"
+            android:icon="@mipmap/ic_launcher"
+            android:banner="@drawable/banner"
             android:screenOrientation="landscape"
             android:configChanges="keyboard|keyboardHidden|navigation|screenSize|smallestScreenSize|screenLayout|orientation"
             android:launchMode="singleTask">
@@ -68,7 +71,6 @@
         </service>
 
         <activity android:name=".ChannelEditorActivity" android:exported="false" android:screenOrientation="landscape" />
-        <activity android:name=".LibraryActivity" android:exported="false" android:screenOrientation="landscape" />
         <activity android:name=".DetailActivity" android:exported="false" android:screenOrientation="landscape" />
         <activity android:name=".PersonActivity" android:exported="false" android:screenOrientation="landscape" />
         <activity android:name=".SearchActivity" android:exported="false" android:screenOrientation="landscape"

@@ -158,6 +158,8 @@ key KEYCODE_BACK 3
 check "detail-button .*Resume from" 10 "coming back offers to resume"
 shot 13-film-resume
 key KEYCODE_BACK 2; key KEYCODE_BACK 2
+check "browse-panel shown" 5 "BACK from the films brings in their categories"
+key KEYCODE_BACK 2
 fresh
 key KEYCODE_BACK 1; key KEYCODE_DPAD_LEFT 2
 for _ in 1 2; do key KEYCODE_DPAD_DOWN 0.5; done; key KEYCODE_DPAD_CENTER 3    # menu → TV Shows
@@ -189,14 +191,16 @@ check "library movies 3" 30 "Films opens from the side menu"
 sleep 3; shot 18-films-rows
 key KEYCODE_DPAD_DOWN 3; shot 19-films-rows-2
 fresh
-key KEYCODE_MENU 2
-check "library movies" 15 "≡ on Films opens all its categories"
-key KEYCODE_DPAD_RIGHT 1.5
-check "library-side hidden" 5 "into the films, the categories step aside"
-shot 19-library-films
 key KEYCODE_DPAD_LEFT 1.5
-check "library-side shown" 5 "LEFT from the first column brings them back"
-key KEYCODE_BACK 1.5
+check "browse-panel shown" 5 "LEFT from the first film brings in the categories panel"
+shot 19-films-panel
+key KEYCODE_DPAD_DOWN 0.6; key KEYCODE_DPAD_DOWN 1.5
+check "browse-cat (Recently added|Continue watching|Top rated) [0-9]" 5 "moving through the categories shows each one"
+key KEYCODE_DPAD_RIGHT 1.5
+check "browse-panel hidden" 5 "RIGHT goes into the films, the categories step aside"
+shot 19-films-grid
+key KEYCODE_DPAD_LEFT 1.5
+check "browse-panel shown" 5 "LEFT from the first column brings them back"
 fresh
 key KEYCODE_DPAD_LEFT 1.5
 check "menu-open" 5 "the side menu opens on Films too"

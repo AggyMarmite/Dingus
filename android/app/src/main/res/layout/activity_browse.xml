@@ -1,14 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Films or TV shows, Netflix-style: a banner for the highlighted title, then rows (one of them: every category). -->
+<!-- Films or TV shows: a banner for the highlighted title over rows (Featured) or a poster grid (a category).
+     LEFT at the edge brings in the categories panel, like Live TV. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent" android:background="?attr/dBg">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
-        <include layout="@layout/hero" />
-        <androidx.recyclerview.widget.RecyclerView android:id="@+id/rows" android:layout_width="match_parent"
-            android:layout_height="0dp" android:layout_weight="1" android:clipToPadding="false" android:paddingBottom="60dp"
-            android:scrollbars="none" android:descendantFocusability="afterDescendants" />
+    <LinearLayout android:id="@+id/browseRoot" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:orientation="horizontal">
+
+        <LinearLayout android:id="@+id/catPanel" android:layout_width="280dp" android:layout_height="match_parent"
+            android:orientation="vertical" android:background="?attr/dSurface" android:visibility="gone"
+            android:paddingStart="18dp" android:paddingEnd="12dp" android:paddingTop="26dp" android:paddingBottom="16dp">
+            <TextView android:id="@+id/heading" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:paddingStart="14dp" android:paddingBottom="12dp" android:textSize="22sp" android:textStyle="bold"
+                android:textColor="?attr/dText" />
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/categories"
+                android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+                android:scrollbars="none" android:descendantFocusability="afterDescendants" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+            android:orientation="vertical">
+            <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content">
+                <include layout="@layout/hero" />
+                <TextView android:id="@+id/crumb" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_gravity="top|end" android:layout_marginTop="14dp" android:layout_marginEnd="28dp"
+                    android:maxLines="1" android:textSize="14sp" android:textColor="?attr/dMuted" />
+            </FrameLayout>
+            <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+                <androidx.recyclerview.widget.RecyclerView android:id="@+id/rows" android:layout_width="match_parent"
+                    android:layout_height="match_parent" android:clipToPadding="false" android:paddingBottom="60dp"
+                    android:scrollbars="none" android:descendantFocusability="afterDescendants" />
+                <androidx.recyclerview.widget.RecyclerView android:id="@+id/grid" android:layout_width="match_parent"
+                    android:layout_height="match_parent" android:clipToPadding="false" android:visibility="gone"
+                    android:paddingStart="40dp" android:paddingEnd="16dp" android:paddingTop="4dp" android:paddingBottom="40dp"
+                    android:scrollbars="none" android:descendantFocusability="afterDescendants" />
+                <TextView android:id="@+id/empty" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_gravity="center" android:gravity="center" android:textSize="18sp"
+                    android:textColor="?attr/dMuted" android:visibility="gone" />
+            </FrameLayout>
+        </LinearLayout>
     </LinearLayout>
-    <TextView android:id="@+id/empty" android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:layout_gravity="center" android:gravity="center" android:textSize="18sp"
-        android:textColor="?attr/dMuted" android:visibility="gone" />
 </FrameLayout>

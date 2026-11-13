@@ -47,6 +47,9 @@ object Vod {
     const val CONTINUE = "\u0001continue"
     const val RECENT = "\u0001recent"
     const val ALL = "\u0001all"
+    const val TOP = "\u0001top"
+    /** Films/TV Shows: the rows view (not a category of its own). */
+    const val FEATURED = "\u0001featured"
 
     class Library(val categories: List<Category>, val items: List<VodItem>, val loadedAt: Long) {
         val byCategory: Map<String, List<VodItem>> by lazy { items.groupBy { it.categoryId } }
@@ -123,17 +126,29 @@ object Vod {
 
     fun categoriesFor(kind: String, lib: Library): List<Category> {
         val out = ArrayList<Category>()
-        if (continueList(kind, lib).isNotEmpty()) out.add(Category(CONTINUE, "Continue watching"))
+        out.add(Category(FEATURED, "Featured"))
+        continueList(kind, lib).size.let { if (it > 0) out.add(Category(CONTINUE, "Continue watching", it)) }
         out.add(Category(RECENT, "Recently added"))
-        out.add(Category(ALL, if (kind == MOVIES) "All films" else "All shows"))
-        out.addAll(Store.ordered(kind, lib.categories.filter { lib.byCategory[it.id]?.isNotEmpty() == true && !Store.isHidden("$kind:${it.id}") }) { it.id })
+        topRated(lib).size.let { if (it > 0) out.add(Category(TOP, "Top rated", it)) }
+        out.add(Category(ALL, if (kind == MOVIES) "All films" else "All shows", lib.items.size))
+        for (c in Store.ordered(kind, lib.categories.filter { lib.byCategory[it.id]?.isNotEmpty() == true && !Store.isHidden("$kind:${it.id}") }) { it.id })
+            out.add(Category(c.id, c.name, lib.byCategory[c.id]?.size ?: 0))
         return out
+    }
+
+    private var topFor: Library? = null
+    private var top: List<VodItem> = emptyList()
+    /** The best rated (by the provider's rating), up to 200. */
+    fun topRated(lib: Library): List<VodItem> {
+        if (topFor !== lib) { top = lib.items.filter { it.rating > 0 }.sortedByDescending { it.rating }.take(200); topFor = lib }
+        return top
     }
 
     fun itemsIn(kind: String, lib: Library, categoryId: String): List<VodItem> = when (categoryId) {
         CONTINUE -> continueList(kind, lib)
         RECENT -> lib.newest
         ALL -> lib.items
+        TOP -> topRated(lib)
         else -> lib.byCategory[categoryId] ?: emptyList()
     }
 

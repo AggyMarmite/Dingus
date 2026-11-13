@@ -1,7 +1,7 @@
 package app.dingus.tv
 
 /** A playlist category ("UK Sport", "News"…). */
-class Category(val id: String, val name: String)
+class Category(val id: String, val name: String, val count: Int = -1)
 
 /** A live channel from the playlist. [epgId] is the playlist's guide id (Xtream epg_channel_id / M3U tvg-id). */
 class Channel(

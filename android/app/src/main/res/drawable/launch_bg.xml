@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What shows the moment Dingus is opened, before anything has loaded (e.g. the first start after an update):
+     the logo in the middle, so it's never a blank screen. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item><color android:color="#0B0E14" /></item>
+    <item><bitmap android:gravity="center" android:src="@drawable/splash_logo" /></item>
+</layer-list>

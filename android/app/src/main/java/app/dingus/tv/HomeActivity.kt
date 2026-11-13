@@ -36,6 +36,7 @@ class HomeActivity : BaseActivity() {
     private lateinit var side: SideMenu
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(R.style.Theme_Dingus) // (from the launch theme: the logo shown while Dingus starts)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
         rows = findViewById(R.id.rows)
@@ -301,7 +302,7 @@ class HomeActivity : BaseActivity() {
                         .show()
                 } else watch(card.channel)
             }
-            is Card.SeeAll -> startActivity(Intent(this, LibraryActivity::class.java).putExtra(LibraryActivity.KIND, card.kind).putExtra(LibraryActivity.CATEGORY, card.categoryId))
+            is Card.SeeAll -> startActivity(Intent(this, BrowseActivity::class.java).putExtra(BrowseActivity.KIND, card.kind).putExtra(BrowseActivity.CATEGORY, card.categoryId))
         }
     }
 

@@ -57,6 +57,10 @@
     <style name="Accent.Pink" parent=""><item name="dAccent">#EC4899</item><item name="dAccentSoft">#26EC4899</item></style>
     <style name="Accent.Red" parent=""><item name="dAccent">#EF4444</item><item name="dAccentSoft">#26EF4444</item></style>
     <style name="Accent.Gold" parent=""><item name="dAccent">#EAB308</item><item name="dAccentSoft">#26EAB308</item></style>
+    <!-- Home, while Dingus starts: the logo straight away (swapped for the normal theme once it's running). -->
+    <style name="Theme.Dingus.Launch">
+        <item name="android:windowBackground">@drawable/launch_bg</item>
+    </style>
     <style name="Theme.Dingus.Player">
         <item name="android:windowBackground">@android:color/black</item>
         <item name="android:windowFullscreen">true</item>

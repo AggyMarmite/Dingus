@@ -73,7 +73,11 @@ class CategoryList(
 
     override fun onBindViewHolder(h: H, position: Int) {
         val c = items[position]
-        h.v.text = c.name
+        h.v.text = if (c.count < 0) c.name else android.text.SpannableStringBuilder(c.name).apply {
+            val st = length; append("   ${c.count}")
+            setSpan(android.text.style.ForegroundColorSpan(Themes.color(h.v.context, R.attr.dMuted)), st, length, 0)
+            setSpan(android.text.style.RelativeSizeSpan(0.8f), st, length, 0)
+        }
         h.v.isActivated = c.id == sel
     }
 }

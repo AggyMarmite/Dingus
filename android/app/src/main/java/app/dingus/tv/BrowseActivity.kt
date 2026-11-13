@@ -3,8 +3,13 @@ package app.dingus.tv
 import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.CoroutineScope
@@ -13,49 +18,159 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
-/** Films or TV shows, Netflix-style: a banner for what's highlighted, then Continue watching, Recently added and a row per category. */
+/**
+ * Films or TV shows. A banner for the highlighted title over either rows (Featured: Continue watching, Recently
+ * added, Top rated and a row per category) or a poster grid (one category). LEFT at the left edge brings in the
+ * categories panel, like Live TV; moving through it changes what's showing, RIGHT or OK goes back into the titles.
+ */
 class BrowseActivity : BaseActivity() {
     private lateinit var side: SideMenu
-    companion object { const val KIND = "kind" }
+    companion object {
+        const val KIND = "kind"
+        /** Open on this category (in the grid) rather than Featured. */
+        const val CATEGORY = "category"
+    }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var kind: String
+    private lateinit var root: ViewGroup
+    private lateinit var panel: View
+    private lateinit var categories: RecyclerView
+    private lateinit var cats: CategoryList
     private lateinit var rows: RecyclerView
+    private lateinit var grid: RecyclerView
     private lateinit var adapter: RowsAdapter
     private lateinit var hero: Hero
+    private lateinit var heroView: View
+    private lateinit var heroText: TextView
+    private lateinit var crumb: TextView
     private lateinit var empty: TextView
+    private val posters = PosterAdapter()
     private var lib: Vod.Library? = null
+    private var current = Vod.FEATURED
     private var focusedOnce = false
+    private var colsNarrow = 4
+    private var colsWide = 6
+    private var compact = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_browse)
         kind = intent.getStringExtra(KIND) ?: Vod.MOVIES
         side = SideMenu.attach(this, if (kind == Vod.MOVIES) SideMenu.Page.FILMS else SideMenu.Page.SHOWS)
+        root = findViewById(R.id.browseRoot)
+        panel = findViewById(R.id.catPanel)
+        categories = findViewById(R.id.categories)
         rows = findViewById(R.id.rows)
+        grid = findViewById(R.id.grid)
         empty = findViewById(R.id.empty)
+        crumb = findViewById(R.id.crumb)
+        heroView = findViewById(R.id.hero)
+        heroText = findViewById(R.id.heroText)
+        findViewById<TextView>(R.id.heading).text = if (kind == Vod.MOVIES) "Films" else "TV Shows"
         hero = Hero(this, scope)
+
         adapter = RowsAdapter(this, onFocus = { hero.show(it) }, onClick = { open(it) })
         rows.layoutManager = RowsLayoutManager(this)
         rows.adapter = adapter
         rows.itemAnimator = null
         rows.setItemViewCacheSize(4)
+
+        cats = CategoryList(
+            onShow = { show(it.id) },
+            onPick = { show(it.id); focusContent() },
+            onMenu = { c ->
+                if (!c.id.startsWith("\u0001")) Dialogs.categoryOptions(this, kind, cats.items.map { it.id }.filter { !it.startsWith("\u0001") }, c.id, c.name) {
+                    setCategories()
+                    if (current == Vod.FEATURED) build()
+                    focusCategory(c.id)
+                }
+            },
+        )
+        categories.layoutManager = LinearLayoutManager(this)
+        categories.adapter = cats
+        categories.itemAnimator = null
+
+        val wdp = resources.displayMetrics.widthPixels / resources.displayMetrics.density - 60 - 56
+        colsWide = (wdp / 146).toInt().coerceIn(3, 10)
+        colsNarrow = ((wdp - 280) / 146).toInt().coerceIn(3, colsWide)
+        grid.layoutManager = GridLayoutManager(this, colsWide)
+        grid.adapter = posters
+        grid.itemAnimator = null
+        grid.setHasFixedSize(true)
+        grid.setItemViewCacheSize(colsWide * 3)
+
+        // Into the titles: the categories step aside. Back onto them: they come back.
+        window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, n ->
+            if (n == null) return@addOnGlobalFocusChangeListener
+            if (inside(n, rows) || inside(n, grid)) hidePanel() else if (inside(n, panel)) showPanel()
+        }
+
+        current = intent.getStringExtra(CATEGORY) ?: Vod.FEATURED
         load()
     }
 
     private fun load() {
-        if (Vod.cached(kind) == null) { empty.text = "Loading ${if (kind == Vod.MOVIES) "films" else "TV shows"}…"; empty.visibility = View.VISIBLE }
+        val cached = Vod.cached(kind)
+        if (cached == null) { empty.text = "Loading ${if (kind == Vod.MOVIES) "films" else "TV shows"}…"; empty.visibility = View.VISIBLE }
+        else got(cached)
         scope.launch {
             try {
                 val l = Vod.library(kind)
-                lib = l
-                build()
-                Ui.test("library $kind ${l.items.size}")
-                if (System.currentTimeMillis() - l.loadedAt > Store.refreshHours * 3600_000L) { lib = Vod.library(kind, fresh = true); build() }
+                if (lib !== l) got(l)
+                if (System.currentTimeMillis() - l.loadedAt > Store.refreshHours * 3600_000L) {
+                    val f = Vod.library(kind, fresh = true)
+                    if (f !== lib) { lib = f; setCategories(); show(current, force = true) }
+                }
             } catch (e: Exception) {
                 if (lib == null) { empty.text = "Couldn't load the library.\n${Net.friendly(e)}"; empty.visibility = View.VISIBLE }
                 Ui.test("library-failed ${e.message}")
             }
+        }
+    }
+
+    private fun got(l: Vod.Library) {
+        lib = l
+        setCategories()
+        show(current, force = true)
+        if (!focusedOnce) { focusedOnce = true; focusContent() }
+        Ui.test("library $kind ${l.items.size}")
+    }
+
+    private fun setCategories() {
+        val l = lib ?: return
+        val list = Vod.categoriesFor(kind, l)
+        if (list.none { it.id == current }) current = Vod.FEATURED
+        cats.set(list, current)
+    }
+
+    /** Show a category: Featured as rows, anything else as a grid of posters. */
+    private fun show(id: String, force: Boolean = false) {
+        val l = lib ?: return
+        if (id == current && !force) return
+        val changed = id != current
+        current = id
+        cats.select(id)
+        setCompact(false)
+        val name = cats.items.firstOrNull { it.id == id }?.name ?: ""
+        if (id == Vod.FEATURED) {
+            grid.visibility = View.GONE
+            rows.visibility = View.VISIBLE
+            build()
+            crumb.text = "◀  Categories"
+            if (changed) rows.scrollToPosition(0)
+            Ui.test("browse-cat Featured ${adapter.itemCount}")
+        } else {
+            val items = Vod.itemsIn(kind, l, id)
+            rows.visibility = View.GONE
+            grid.visibility = View.VISIBLE
+            posters.set(items)
+            if (changed) grid.scrollToPosition(0)
+            crumb.text = "◀  $name  ·  ${items.size}"
+            empty.text = "Nothing here."
+            empty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
+            items.firstOrNull()?.let { hero.show(Card.Title(kind, it)) }
+            Ui.test("browse-cat $name ${items.size}")
         }
     }
 
@@ -69,14 +184,9 @@ class BrowseActivity : BaseActivity() {
         if (cont.isNotEmpty()) out.add(Row("Continue watching", cont.take(20)))
         if (l.newest.isNotEmpty()) out.add(Row("Recently added", l.newest.take(30).map { Card.Title(kind, it) } +
             (if (l.items.size > 30) listOf(Card.SeeAll(kind, Vod.RECENT, "Recently added")) else emptyList())))
-        // Every category, as a row of its own near the top (instead of a "Categories" button up there).
-        val chips = ArrayList<Card>()
-        chips.add(Card.SeeAll(kind, Vod.ALL, "${if (kind == Vod.MOVIES) "All films" else "All shows"}  ·  ${l.items.size}", chip = true))
-        for (c in Store.ordered(kind, l.categories) { it.id }) {
-            val n = l.byCategory[c.id]?.size ?: 0
-            if (n > 0 && !Store.isHidden("$kind:${c.id}")) chips.add(Card.SeeAll(kind, c.id, c.name, chip = true))
-        }
-        if (chips.size > 1) out.add(minOf(1, out.size), Row("Categories", chips))
+        val top = Vod.topRated(l)
+        if (top.size >= 5) out.add(Row("Top rated", top.take(24).map { Card.Title(kind, it) } +
+            (if (top.size > 24) listOf(Card.SeeAll(kind, Vod.TOP, "Top rated")) else emptyList())))
         for (c in Store.ordered(kind, l.categories) { it.id }) {
             if (Store.isHidden("$kind:${c.id}")) continue
             val items = l.byCategory[c.id] ?: continue
@@ -87,30 +197,122 @@ class BrowseActivity : BaseActivity() {
             out.add(Row(c.name, cards))
         }
         adapter.set(out)
-        empty.visibility = if (out.isEmpty()) View.VISIBLE else View.GONE
-        if (out.isEmpty()) empty.text = "Nothing here yet."
-        if (!focusedOnce && out.isNotEmpty()) {
-            focusedOnce = true
-            rows.post {
-                val first = (rows.findViewHolderForAdapterPosition(0) as? RowsAdapter.H)?.list
-                first?.post { first.getChildAt(0)?.requestFocus() }
-            }
+        if (current == Vod.FEATURED) {
+            empty.visibility = if (out.isEmpty()) View.VISIBLE else View.GONE
+            if (out.isEmpty()) empty.text = "Nothing here yet."
         }
     }
 
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (side.onKey(event)) return true
-        // ≡ : every category, with the films in a grid.
-        if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_MENU) {
-            startActivity(Intent(this, LibraryActivity::class.java).putExtra(LibraryActivity.KIND, kind)); return true
+    // ------------------------------------------------------------------ focus and the panel
+
+    private fun focusContent() {
+        if (current == Vod.FEATURED) rows.post {
+            val first = (rows.findViewHolderForAdapterPosition(0) as? RowsAdapter.H)?.list
+            if (first != null) first.post { first.getChildAt(0)?.requestFocus() }
+            else rows.post { (rows.findViewHolderForAdapterPosition(0) as? RowsAdapter.H)?.list?.getChildAt(0)?.requestFocus() }
+        } else if (posters.itemCount > 0) grid.post {
+            (grid.findViewHolderForAdapterPosition(0)?.itemView ?: grid.getChildAt(0))?.requestFocus()
         }
-        if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_DPAD_UP && RowNav.up(rows, currentFocus)) return true
+    }
+
+    private fun focusCategory(id: String = current) {
+        val i = cats.indexOf(id).coerceAtLeast(0)
+        val v = categories.findViewHolderForAdapterPosition(i)?.itemView
+        if (v != null && v.isShown) { v.requestFocus(); return }
+        categories.scrollToPosition(i)
+        categories.post { categories.findViewHolderForAdapterPosition(i)?.itemView?.requestFocus() }
+    }
+
+    private fun smoothly() {
+        if (!Ui.lite) android.transition.TransitionManager.beginDelayedTransition(root,
+            android.transition.ChangeBounds().setDuration(200).setInterpolator(android.view.animation.DecelerateInterpolator()))
+    }
+
+    private fun showPanel() {
+        if (panel.visibility == View.VISIBLE) return
+        smoothly()
+        panel.visibility = View.VISIBLE
+        (grid.layoutManager as GridLayoutManager).spanCount = colsNarrow
+        Ui.test("browse-panel shown")
+    }
+
+    private fun hidePanel() {
+        if (panel.visibility != View.VISIBLE) return
+        smoothly()
+        panel.visibility = View.GONE
+        (grid.layoutManager as GridLayoutManager).spanCount = colsWide
+        Ui.test("browse-panel hidden")
+    }
+
+    /** Scrolled down the grid: a smaller banner, so more posters show. */
+    private fun setCompact(on: Boolean) {
+        if (on == compact) return
+        compact = on
+        if (!Ui.lite) android.transition.TransitionManager.beginDelayedTransition(heroView.parent.parent as ViewGroup,
+            android.transition.ChangeBounds().setDuration(180))
+        val lp = heroView.layoutParams
+        lp.height = ((if (on) 150 else 250) * resources.displayMetrics.density).toInt()
+        heroView.layoutParams = lp
+        heroText.maxLines = if (on) 1 else 4
+    }
+
+    private fun inside(v: View, parent: View): Boolean {
+        var p: Any? = v
+        while (p is View) { if (p === parent) return true; p = p.parent }
+        return false
+    }
+
+    /** The highlighted title is as far left as it goes (so LEFT should bring in the categories). */
+    private fun atLeftEdge(f: View): Boolean {
+        if (inside(f, grid)) {
+            val item = grid.findContainingItemView(f) ?: return false
+            val pos = grid.getChildAdapterPosition(item)
+            return pos >= 0 && pos % (grid.layoutManager as GridLayoutManager).spanCount == 0
+        }
+        if (inside(f, rows)) {
+            val list = f.parent as? RecyclerView ?: return false
+            return list !== rows && list.getChildAdapterPosition(f) == 0
+        }
+        return false
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val f = currentFocus
+        val down = event.action == KeyEvent.ACTION_DOWN
+        if (!side.isOpen && f != null) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_LEFT -> if (down && atLeftEdge(f)) { showPanel(); focusCategory(); return true }
+                KeyEvent.KEYCODE_DPAD_RIGHT -> if (down && inside(f, panel)) { cats.flush(); focusContent(); return true }
+                KeyEvent.KEYCODE_MENU -> if (!inside(f, panel)) {
+                    if (down) { showPanel(); focusCategory() }
+                    return true
+                }
+            }
+        }
+        if (side.onKey(event)) return true
+        if (down && event.keyCode == KeyEvent.KEYCODE_DPAD_UP && current == Vod.FEATURED && RowNav.up(rows, currentFocus)) return true
         return super.dispatchKeyEvent(event)
+    }
+
+    /** BACK steps out, like Live TV: titles → categories → leave. */
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        val f = currentFocus
+        if (!side.isOpen && f != null && (inside(f, rows) || inside(f, grid))) { showPanel(); focusCategory(); return }
+        super.onBackPressed()
     }
 
     override fun onResume() {
         super.onResume()
-        if (lib != null) build() // progress and Continue watching may have changed
+        // Coming back from watching: Continue watching and the progress bars may have changed.
+        if (lib != null) {
+            setCategories()
+            when (current) {
+                Vod.FEATURED -> build()
+                Vod.CONTINUE -> show(current, force = true)
+                else -> posters.notifyItemRangeChanged(0, posters.itemCount)
+            }
+        }
     }
 
     override fun onStop() { super.onStop(); Posters.trim() }
@@ -119,8 +321,55 @@ class BrowseActivity : BaseActivity() {
     private fun open(card: Card) {
         when (card) {
             is Card.Title -> startActivity(Intent(this, DetailActivity::class.java).putExtra(DetailActivity.KIND, card.kind).putExtra(DetailActivity.ID, card.item.id))
-            is Card.SeeAll -> startActivity(Intent(this, LibraryActivity::class.java).putExtra(LibraryActivity.KIND, card.kind).putExtra(LibraryActivity.CATEGORY, card.categoryId))
+            is Card.SeeAll -> { show(card.categoryId); focusContent() }
             is Card.Live, is Card.Show -> {}
+        }
+    }
+
+    private inner class PosterAdapter : RecyclerView.Adapter<PosterAdapter.H>() {
+        var items: List<VodItem> = emptyList()
+        fun set(list: List<VodItem>) { items = list; notifyDataSetChanged() }
+        private val h by lazy { (189 * resources.displayMetrics.density).toInt() }
+
+        inner class H(v: View) : RecyclerView.ViewHolder(v) {
+            val poster: ImageView = v.findViewById(R.id.poster)
+            val fallback: TextView = v.findViewById(R.id.fallback)
+            val title: TextView = v.findViewById(R.id.title)
+            val meta: TextView = v.findViewById(R.id.meta)
+            val progress: ProgressBar = v.findViewById(R.id.progress)
+        }
+
+        override fun getItemCount() = items.size
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): H {
+            val v = LayoutInflater.from(parent.context).inflate(R.layout.item_poster, parent, false)
+            val holder = H(v)
+            v.setOnClickListener {
+                val p = holder.bindingAdapterPosition
+                if (p >= 0) startActivity(Intent(this@BrowseActivity, DetailActivity::class.java)
+                    .putExtra(DetailActivity.KIND, kind).putExtra(DetailActivity.ID, items[p].id))
+            }
+            v.setOnFocusChangeListener { view, has ->
+                Ui.grow(view, has, 120)
+                val p = holder.bindingAdapterPosition
+                if (has && p >= 0) {
+                    hero.show(Card.Title(kind, items[p]))
+                    setCompact(p >= (grid.layoutManager as GridLayoutManager).spanCount)
+                }
+            }
+            return holder
+        }
+
+        override fun onBindViewHolder(holder: H, position: Int) {
+            val m = items[position]
+            holder.title.text = m.name
+            holder.fallback.text = m.name
+            holder.meta.text = listOfNotNull(m.year.takeIf { it > 0 }?.toString(), m.rating.takeIf { it > 0 }?.let { "★ %.1f".format(it) }).joinToString("   ")
+            Posters.load(holder.poster, m.poster, h, holder.fallback)
+            val pos = if (kind == Vod.MOVIES) Vod.position(m.id) else null
+            if (pos != null && pos.second > 0) {
+                holder.progress.visibility = View.VISIBLE
+                holder.progress.progress = (pos.first * 1000 / pos.second).toInt()
+            } else holder.progress.visibility = View.GONE
         }
     }
 }
