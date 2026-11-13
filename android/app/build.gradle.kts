@@ -63,6 +63,7 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-hls:$media3")
     implementation("androidx.media3:media3-ui:$media3")
     implementation("androidx.core:core:1.13.1")
+    implementation("com.google.zxing:core:3.5.3") // QR codes (adding a playlist from your phone)
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     // Built-in VPN (WireGuard), used by Dingus only.

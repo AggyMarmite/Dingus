@@ -51,7 +51,9 @@ class PhoneSetup(private val onPlaylist: ((Map<String, String>) -> Unit)? = null
             val body = if (method == "POST" && length in 1..200_000) ByteArray(length).also { b ->
                 var got = 0; while (got < length) { val n = input.read(b, got, length - got); if (n < 0) break; got += n }
             }.toString(Charsets.UTF_8) else ""
-            val reply = if (method == "POST" && path.startsWith("/save")) save(form(body)) else page(null)
+            // Opened from the QR code: the address carries the code, so there's nothing to type for it.
+            val fromQr = Regex("""[?&]c=(\d+)""").find(path)?.groupValues?.get(1) == code
+            val reply = if (method == "POST" && path.startsWith("/save")) save(form(body)) else page(null, prefill = fromQr)
             val bytes = reply.toByteArray()
             s.getOutputStream().apply {
                 write("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: ${bytes.size}\r\nConnection: close\r\n\r\n".toByteArray())
@@ -102,7 +104,11 @@ class PhoneSetup(private val onPlaylist: ((Map<String, String>) -> Unit)? = null
     private fun guessName(c: String) = Regex("""Endpoint\s*=\s*([^:\s]+)""", RegexOption.IGNORE_CASE).find(c)?.groupValues?.get(1)
         ?.substringBefore('.')?.ifEmpty { null } ?: "Location ${Vpn.configs.size + 1}"
 
-    private fun page(note: String?, ok: Boolean = false) = if (forPlaylist) playlistPage(note, ok) else vpnPage(note, ok)
+    private fun page(note: String?, ok: Boolean = false, prefill: Boolean = false) = (if (forPlaylist) playlistPage(note, ok) else vpnPage(note, ok))
+        .let { if (prefill) it.replace("<label>Code shown on the TV</label><input name=code inputmode=numeric autocomplete=off required>", "<input type=hidden name=code value=$code>") else it }
+
+    /** The address to put in a QR code: opens the page with the code already in. */
+    fun qrAddress(base: String) = "$base/?c=$code"
 
     private fun playlistPage(note: String?, ok: Boolean) = """<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Dingus – add a playlist</title>

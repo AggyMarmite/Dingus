@@ -132,11 +132,13 @@ class AddPlaylistActivity : BaseActivity() {
         val ps = PhoneSetup(onSaved = {}, onPlaylist = { f -> fromPhone(f) })
         val url = ps.start()
         phone = ps
-        findViewById<TextView>(R.id.phoneHint).apply {
-            if (url == null) { visibility = View.GONE; return@apply }
-            text = "📱  Easier on your phone: on the same Wi-Fi, open  $url  and enter the code  ${ps.code}"
-            visibility = View.VISIBLE
-        }
+        val box = findViewById<View>(R.id.phoneBox)
+        if (url == null) { box.visibility = View.GONE; return }
+        // A QR code to scan with the phone's camera: opens the form with the code already filled in.
+        findViewById<android.widget.ImageView>(R.id.phoneQr).setImageBitmap(Qr.bitmap(ps.qrAddress(url), Ui.dp(this, 150)))
+        findViewById<TextView>(R.id.phoneHint).text =
+            "Easier on your phone: scan this with its camera (on the same Wi-Fi) and fill in your playlist there.\n\nOr open  $url  and enter the code  ${ps.code}"
+        box.visibility = View.VISIBLE
     }
 
     override fun onPause() { super.onPause(); phone?.stop(); phone = null }
