@@ -1,3 +1,9 @@
+## What's new in Dingus 0.15.0
+
+* New Fire TV app, with a Home page, Live TV guide, Films and TV Shows.
+* Smoother browsing and playback.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.14.0
 
 * Reorder and hide categories.
