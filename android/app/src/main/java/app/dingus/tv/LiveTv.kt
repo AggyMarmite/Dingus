@@ -401,7 +401,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         if (fps > 1) parts.add("${Math.round(fps)} fps")
         if (mbps > 0.05) parts.add("%.1f Mbps".format(mbps))
         parts.add(if (dropped == 0) "no dropped frames" else "$dropped dropped")
-        if (Vpn.status == Vpn.Status.ON) parts.add("VPN · ${Vpn.connectedTo?.label ?: "on"}")
+        if (Vpn.status == Vpn.Status.ON) parts.add("VPN connected")
         return parts.joinToString("  ·  ")
     }
 
