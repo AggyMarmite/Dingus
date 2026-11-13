@@ -240,6 +240,7 @@ if [ -n "${WG_CONF:-}" ] && [ -f "$WG_CONF" ]; then
   check "vpn off" 15 "VPN: disconnects"
 fi
 
+adb shell dumpsys gfxinfo $PKG | grep -E "Total frames rendered|Janky frames|90th percentile" | sed 's/^ */frames: /' | tee -a "$OUT/result.txt"
 adb shell dumpsys meminfo $PKG | grep -E "TOTAL( PSS)?:" | head -1 | sed 's/^/memory: /' | tee -a "$OUT/result.txt"
 adb logcat -d -s DINGUS-TEST:I AndroidRuntime:E > "$OUT/log.txt"
 adb logcat -d -v brief '*:W' | grep -v "com.android.tv\|AsyncDvr" | tail -1500 > "$OUT/log-warnings.txt"
