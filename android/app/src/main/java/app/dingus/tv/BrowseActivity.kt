@@ -248,8 +248,7 @@ class BrowseActivity : BaseActivity() {
     private fun setCompact(on: Boolean) {
         if (on == compact) return
         compact = on
-        if (!Ui.lite) android.transition.TransitionManager.beginDelayedTransition(heroView.parent.parent as ViewGroup,
-            android.transition.ChangeBounds().setDuration(180))
+        // (No animation: the grid resizing under the remote while moving would throw the highlight about.)
         val lp = heroView.layoutParams
         lp.height = ((if (on) 150 else 250) * resources.displayMetrics.density).toInt()
         heroView.layoutParams = lp
@@ -289,9 +288,37 @@ class BrowseActivity : BaseActivity() {
                 }
             }
         }
+        if (down && !side.isOpen && f != null && inside(f, grid) &&
+            (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN || event.keyCode == KeyEvent.KEYCODE_DPAD_UP)) { gridStep(f, event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN); return true }
         if (side.onKey(event)) return true
         if (down && event.keyCode == KeyEvent.KEYCODE_DPAD_UP && current == Vod.FEATURED && RowNav.up(rows, currentFocus)) return true
         return super.dispatchKeyEvent(event)
+    }
+
+    /**
+     * Up and down the grid one row at a time, straight up or down from where you are (left to itself, focus could
+     * jump to another column, skip a row or get stuck at the bottom of what's showing).
+     */
+    private fun gridStep(f: View, downwards: Boolean) {
+        val item = grid.findContainingItemView(f) ?: return
+        val pos = grid.getChildAdapterPosition(item)
+        if (pos < 0) return
+        val span = (grid.layoutManager as GridLayoutManager).spanCount
+        val n = posters.itemCount
+        var t = if (downwards) pos + span else pos - span
+        if (downwards && t >= n) { if (pos / span == (n - 1) / span) return; t = n - 1 } // the last row, shorter: its last one
+        if (t < 0) return
+        setCompact(t >= span)
+        val lm = grid.layoutManager as GridLayoutManager
+        val v = grid.findViewHolderForAdapterPosition(t)?.itemView
+        if (v != null) v.requestFocus() // (the grid scrolls it fully into view)
+        else {
+            // Not laid out yet: bring its row in (at the bottom going down, the top going up), then move there.
+            val rowH = item.height + Ui.dp(this, 12)
+            lm.scrollToPositionWithOffset(t, if (downwards) maxOf(0, grid.height - grid.paddingBottom - rowH) else 0)
+            grid.post { grid.findViewHolderForAdapterPosition(t)?.itemView?.requestFocus() }
+        }
+        Ui.test("grid-step $t")
     }
 
     /** BACK steps out, like Live TV: titles → categories → leave. */

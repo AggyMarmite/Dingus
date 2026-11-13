@@ -146,7 +146,7 @@ check "menu-open" 5 "then the main menu"
 key KEYCODE_DPAD_DOWN 0.5                                # Films (under Live TV)
 shot 09-menu-xtream
 key KEYCODE_DPAD_CENTER 3
-check "library movies 3" 40 "Films load"
+check "library movies 23" 40 "Films load"
 sleep 3; shot 10-films
 fresh
 key KEYCODE_DPAD_RIGHT 1; key KEYCODE_DPAD_CENTER 3
@@ -191,7 +191,7 @@ key KEYCODE_DPAD_LEFT 1.5
 check "menu-open" 5 "LEFT at the left edge of Home opens the side menu"
 shot 17b-home-menu
 key KEYCODE_DPAD_DOWN 0.5; key KEYCODE_DPAD_DOWN 0.5; key KEYCODE_DPAD_CENTER 3     # Home → Live TV → Films
-check "library movies 3" 30 "Films opens from the side menu"
+check "library movies 23" 30 "Films opens from the side menu"
 sleep 3; shot 18-films-rows
 key KEYCODE_DPAD_DOWN 3; shot 19-films-rows-2
 fresh
@@ -203,6 +203,11 @@ check "browse-cat (Recently added|Continue watching|Top rated) [0-9]" 5 "moving 
 key KEYCODE_DPAD_RIGHT 1.5
 check "browse-panel hidden" 5 "RIGHT goes into the films, the categories step aside"
 shot 19-films-grid
+key KEYCODE_DPAD_DOWN 0.8; key KEYCODE_DPAD_DOWN 0.8; key KEYCODE_DPAD_DOWN 1.5
+check "grid-step 1[0-9]" 5 "DOWN steps down the grid a row at a time"
+shot 19-films-grid-down
+key KEYCODE_DPAD_UP 1.5
+check "grid-step [5-9]" 5 "UP steps back up a row"
 key KEYCODE_DPAD_LEFT 1.5
 check "browse-panel shown" 5 "LEFT from the first column brings them back"
 fresh
