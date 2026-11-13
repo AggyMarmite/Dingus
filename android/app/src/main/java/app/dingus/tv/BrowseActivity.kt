@@ -169,7 +169,6 @@ class BrowseActivity : BaseActivity() {
             heroView.visibility = View.VISIBLE
             gridHead.visibility = View.GONE
             build()
-            crumb.text = "◀  Categories"
             if (changed) rows.scrollToPosition(0)
             Ui.test("browse-cat Featured ${adapter.itemCount}")
         } else {
@@ -183,7 +182,6 @@ class BrowseActivity : BaseActivity() {
             gridHead.visibility = View.VISIBLE
             gridTitle.text = name
             gridCount.text = "${items.size} ${if (kind == Vod.MOVIES) (if (items.size == 1) "film" else "films") else (if (items.size == 1) "show" else "shows")}"
-            crumb.text = "◀  Categories"
             empty.text = "Nothing here."
             empty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
             Ui.test("browse-cat $name ${items.size}")
@@ -375,7 +373,17 @@ class BrowseActivity : BaseActivity() {
         }
     }
 
-    override fun onStop() { super.onStop(); Posters.trim() }
+    /** The time, top right (like Home). */
+    private val tick = object : Runnable {
+        override fun run() {
+            crumb.text = Ui.time(System.currentTimeMillis())
+            crumb.postDelayed(this, 60_000L - System.currentTimeMillis() % 60_000L + 50)
+        }
+    }
+
+    override fun onStart() { super.onStart(); crumb.removeCallbacks(tick); tick.run() }
+
+    override fun onStop() { super.onStop(); crumb.removeCallbacks(tick); Posters.trim() }
     override fun onDestroy() { scope.cancel(); super.onDestroy() }
 
     private fun open(card: Card) {
