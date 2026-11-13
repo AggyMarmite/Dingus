@@ -128,8 +128,9 @@ class HomeFeature(private val a: Activity, private val scope: kotlinx.coroutines
                 v.translationX = shift
                 v.animate().alpha(1f).translationX(0f).setDuration(380).setInterpolator(ease).start()
             }
-            h.art.animate().alpha(1f).setDuration(520).setInterpolator(ease).withEndAction { moving = false }.start()
+            h.art.animate().alpha(1f).setDuration(520).setInterpolator(ease).start()
         }, 210)
+        h.itemView.postDelayed({ moving = false; h.art.alpha = 1f; parts.forEach { it.alpha = 1f; it.translationX = 0f } }, 800)
     }
 
     private fun bind(h: H) {
