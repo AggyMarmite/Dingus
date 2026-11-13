@@ -60,6 +60,7 @@ abstract class BaseActivity : Activity() {
         super.onResume()
         if (themeVersion != Themes.version) { recreate(); return }
         Reminders.attach(this)
+        Notice.attach(this)
         Vpn.onChanged(vpnBadge)
         showVpnBadge()
     }
@@ -77,6 +78,7 @@ abstract class BaseActivity : Activity() {
     override fun onPause() {
         Vpn.removeListener(vpnBadge)
         Reminders.detach(this)
+        Notice.detach(this)
         super.onPause()
     }
 }

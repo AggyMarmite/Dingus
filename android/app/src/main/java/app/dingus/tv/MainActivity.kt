@@ -61,6 +61,8 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     private var loading = false
     private var askedForPlaylist = false
     private var loadAttempts = 0
+    /** The guide has been filled in at least once (Home may have loaded the channels before this screen opened). */
+    private var started = false
     private var updateChecked = false
     private val repoListener: () -> Unit = { handler.post { onRepoChanged() } }
 
@@ -103,6 +105,22 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             startActivity(Intent(this, HomeActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP))
         }
         findViewById<View>(R.id.navPlaylist).setOnClickListener { switchPlaylist() }
+        findViewById<View>(R.id.navRefresh).setOnClickListener {
+            val p = Store.playlist ?: return@setOnClickListener
+            closeMenu(toGuide = true)
+            scope.launch { refresh(p, false); Vod.reset() }
+            Ui.test("menu-refresh")
+        }
+        // The menu's icons, in the theme's text colour.
+        val iconSize = Ui.dp(this, 22)
+        val iconColour = Themes.color(this, R.attr.dText)
+        for (id in intArrayOf(R.id.navHome, R.id.navGuide, R.id.navFilms, R.id.navShows, R.id.navSearch, R.id.settings, R.id.navRefresh)) {
+            val t = findViewById<TextView>(id)
+            t.compoundDrawablesRelative[0]?.mutate()?.let { d ->
+                d.setTint(iconColour); d.setBounds(0, 0, iconSize, iconSize)
+                t.setCompoundDrawablesRelative(d, null, null, null)
+            }
+        }
         findViewById<View>(R.id.settings).setOnClickListener { go(Intent(this, SettingsActivity::class.java)) }
         findViewById<View>(R.id.navSearch).setOnClickListener { go(Intent(this, SearchActivity::class.java)) }
         findViewById<View>(R.id.navFilms).setOnClickListener {
@@ -175,6 +193,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     }
 
     private fun start() {
+        started = true
         val p = Store.playlist
         if (p == null) {
             grid.setChannels(emptyList(), null)
@@ -204,6 +223,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         loading = true
         try {
             setStatus("Updating channels…")
+            Notice.working("Updating playlist & TV guide…")
             if (firstTime) showEmpty("Loading your channels…")
             try {
                 Repo.refreshChannels(p)
@@ -219,6 +239,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
                 }
                 if (Repo.channels.isEmpty()) showEmpty("Couldn't load your playlist.\n${Net.friendly(e)}\n\nPress ◀ for settings.")
                 setStatus(Net.friendly(e))
+                Notice.done("Couldn't update the playlist: ${Net.friendly(e)}", 6_000)
                 return
             }
             Ui.test("channels ${Repo.channels.size} categories ${Repo.categories.size}")
@@ -226,9 +247,11 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             try {
                 Repo.refreshGuide()
                 setStatus("")
+                Notice.done("Playlist & TV guide updated")
                 Ui.test("guide ${Repo.guideChannels}")
             } catch (e: Exception) {
                 setStatus("TV guide: ${Net.friendly(e)}")
+                Notice.done("Playlist updated  ·  TV guide: ${Net.friendly(e)}", 6_000)
                 Ui.test("guide-failed ${e.message}")
             }
         } finally {
@@ -268,6 +291,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         gridIds = list.map { it.id }
         grid.title = cats.firstOrNull { it.id == id }?.name ?: "All channels"
         grid.setChannels(list, focusId)
+        Ui.test("guide-filled ${list.size}")
         when {
             list.isNotEmpty() -> showEmpty(null)
             Repo.channels.isNotEmpty() -> { showEmpty("Nothing here yet."); setInfo(null, null) }
@@ -480,8 +504,15 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         findViewById<View>(R.id.navShows).visibility = vod
         findViewById<View>(R.id.navGuide).isActivated = true
         findViewById<TextView>(R.id.navPlaylist).apply {
-            visibility = if (Store.playlists.size > 1) View.VISIBLE else View.GONE
-            text = "Playlist: ${Store.playlist?.name ?: ""}"
+            val several = Store.playlists.size > 1
+            visibility = if (Store.playlist != null) View.VISIBLE else View.GONE
+            text = (Store.playlist?.name ?: "") + if (several) "  ▾" else ""
+            isFocusable = several; isClickable = several
+        }
+        findViewById<TextView>(R.id.navAccount).apply {
+            val a = Account.saved()
+            text = a?.let { Account.short(it) } ?: ""
+            visibility = if (a == null) View.GONE else View.VISIBLE
         }
         menu.visibility = View.VISIBLE
         scrim.visibility = View.VISIBLE
@@ -528,8 +559,11 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         if (loading) return
         loading = true
         scope.launch {
-            try { setStatus("Updating the TV guide…"); Repo.refreshGuide(); setStatus(""); Ui.test("guide ${Repo.guideChannels}") }
-            catch (e: Exception) { setStatus("TV guide: ${Net.friendly(e)}") }
+            try {
+                setStatus("Updating the TV guide…"); Notice.working("Updating TV guide…")
+                Repo.refreshGuide(); setStatus(""); Notice.done("TV guide updated"); Ui.test("guide ${Repo.guideChannels}")
+            }
+            catch (e: Exception) { setStatus("TV guide: ${Net.friendly(e)}"); Notice.done("TV guide: ${Net.friendly(e)}", 6_000) }
             finally { loading = false }
         }
     }
@@ -559,7 +593,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         Ui.test("main-shown")
         grid.genreColours = Store.genreColours
         grid.showNumbers = Store.showNumbers
-        if (Repo.channels.isEmpty() && !loading) start()
+        if ((!started || Repo.channels.isEmpty()) && !loading) start()
         else if (Repo.channels.isNotEmpty()) {
             grid.refresh()
             when {

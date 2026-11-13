@@ -18,6 +18,7 @@ fresh
 adb logcat -s DINGUS-TEST:I AndroidRuntime:E > "$OUT/log-all.txt" &
 adb shell am start -n $PKG/.MainActivity --es dingus_test_m3u http://10.0.2.2:8000/playlist.m3u
 check "channels 3 categories 2" 60 "playlist loaded (3 channels, 2 categories)"
+check "notice-done Playlist & TV guide updated" 60 "a note says when the playlist and guide have updated"
 check "guide 3" 60 "guide read for all 3 channels"
 sleep 3; shot 01-guide
 if adb logcat -d -s DINGUS-TEST:I | grep -q "preview "; then
@@ -90,6 +91,7 @@ key KEYCODE_BACK 1; key KEYCODE_DPAD_LEFT 2
 check "menu-open" 5 "LEFT from the categories opens the main menu"
 shot 06b-menu
 for _ in 1 2 3 4 5 6 7; do key KEYCODE_DPAD_DOWN 0.5; done
+key KEYCODE_DPAD_UP 0.5                                                               # (Refresh playlist is at the bottom)
 key KEYCODE_DPAD_CENTER 2
 check "settings-shown" 10 "Settings opens from the menu"
 shot 07-settings
@@ -181,6 +183,15 @@ shot 19a-home-cog
 key KEYCODE_DPAD_CENTER 2
 check "settings-shown" 10 "the cog on Home opens Settings"
 key KEYCODE_BACK 1
+# Live TV from a freshly opened Home (the channels are already loaded by Home)
+fresh
+adb shell am force-stop $PKG
+adb shell am start -n $PKG/.HomeActivity
+check "home rows [1-9]" 30 "Home opens by itself"
+sleep 3
+key KEYCODE_DPAD_UP 1; key KEYCODE_DPAD_RIGHT 0.5; key KEYCODE_DPAD_CENTER 3     # tab: Live TV
+check "guide-filled [1-9]" 15 "Live TV from Home shows the channels"
+shot 19aa-live-from-home
 
 # ---- Channel numbers off
 fresh

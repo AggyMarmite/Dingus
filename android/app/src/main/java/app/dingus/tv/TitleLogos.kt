@@ -22,7 +22,7 @@ object TitleLogos {
     fun init(ctx: Context) { file = File(ctx.filesDir, "title-logos.json") }
 
     /** Your own key from Settings, otherwise the one built in. */
-    private val key: String get() = Store.prefsString("tmdbKey", "").ifBlank { BuildConfig.TMDB_KEY }
+    private val key: String get() = BuildConfig.TMDB_KEY
     val enabled: Boolean get() = key.isNotBlank() && Store.titleLogos
 
     private fun load() {

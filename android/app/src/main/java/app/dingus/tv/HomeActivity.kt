@@ -145,20 +145,24 @@ class HomeActivity : BaseActivity() {
                 val p = Store.playlist ?: return@launch
                 if (Repo.channels.isEmpty()) {
                     empty.text = "Loading your channels…"; empty.visibility = View.VISIBLE
+                    Notice.working("Updating playlist & TV guide…")
                     var tries = 0
                     while (true) {
                         try { Repo.refreshChannels(p); break } catch (e: Exception) {
                             // The network may not be up yet (just after waking): try again a few times by itself.
-                            if (++tries > 4) { empty.text = "Couldn't load your playlist.\n${Net.friendly(e)}"; return@launch }
+                            if (++tries > 4) { empty.text = "Couldn't load your playlist.\n${Net.friendly(e)}"; Notice.clear(); return@launch }
                             empty.text = "Waiting for the network…"
                             kotlinx.coroutines.delay(3_000L * tries)
                         }
                     }
                     build()
-                    try { Repo.refreshGuide() } catch (_: Exception) {}
+                    try { Repo.refreshGuide(); Notice.done("Playlist & TV guide updated") }
+                    catch (e: Exception) { Notice.done("Playlist updated  ·  TV guide: ${Net.friendly(e)}", 6_000) }
                     build()
                 } else if (Store.refreshDue) {
-                    try { Repo.refreshChannels(p); Repo.refreshGuide() } catch (_: Exception) {}
+                    Notice.working("Updating playlist & TV guide…")
+                    try { Repo.refreshChannels(p); Repo.refreshGuide(); Notice.done("Playlist & TV guide updated") }
+                    catch (e: Exception) { Notice.done("Couldn't update: ${Net.friendly(e)}", 6_000) }
                     build()
                 }
                 if (Vod.available) {

@@ -22,6 +22,17 @@ object Account {
         }
     }
 
+    /** For the menu: "Expires 12 Mar 2027  ·  2 connections" */
+    fun short(i: Info): String {
+        val e = when {
+            i.expires <= 0 -> "No expiry date"
+            i.expires < System.currentTimeMillis() -> "Expired ${date(i.expires)}"
+            else -> "Expires ${date(i.expires)}"
+        }
+        val m = i.maxConnections
+        return if (m > 0) "$e  ·  $m connection${if (m == 1) "" else "s"}" else e
+    }
+
     private fun date(ms: Long) = java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale.UK).format(java.util.Date(ms))
 
     fun saved(): Info? = try {

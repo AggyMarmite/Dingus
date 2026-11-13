@@ -31,10 +31,10 @@ class SettingsActivity : BaseActivity() {
 
         header("Playlist & TV guide")
         val first = row("Playlists", { playlistsSummary() }) { playlists() }
-        accountRow = row("Subscription", { Account.saved()?.summary() ?: "Press OK to check your expiry date" }) { checkAccount() }
+        accountRow = first
         row("TV guide sources", { guideSummary() }) { guideSources() }
         refreshRow = row("Update channels and TV guide now", { refreshSummary() }) { refresh() }
-        row("Update playlist and guide", { "Every ${hoursName(Store.refreshHours)}  ·  also when you choose \"Update now\"" }) { refreshInterval() }
+        row("Playlist update interval", { "Every ${hoursName(Store.refreshHours)}  ·  also when you choose \"Update now\"" }) { refreshInterval() }
         row("How much TV guide to keep", { "${hoursName(Store.guideHours)} ahead  ·  less is lighter on memory" }) { guideLength() }
 
         header("Live TV")
@@ -81,9 +81,6 @@ class SettingsActivity : BaseActivity() {
             Updater.check(this, manual = true) { msg -> updateRow?.let { sub(it, msg) } }
         }
         row("About Dingus", { "Version ${BuildConfig.VERSION_NAME}  ·  Film and show logos from TMDB (not endorsed or certified by TMDB)" }) {}
-        row("Your own TMDB key (optional)", { if (Store.prefsString("tmdbKey", "").isBlank()) "Using the built-in one" else "Using yours" }) {
-            Dialogs.input(this, "TMDB API key or read access token", Store.prefsString("tmdbKey", ""), "Leave empty to use the built-in one") { Store.putString("tmdbKey", it); update() }
-        }
         first.requestFocus()
     }
 
@@ -139,7 +136,8 @@ class SettingsActivity : BaseActivity() {
     private fun playlistsSummary(): String {
         val all = Store.playlists
         val p = Store.playlist ?: return "Add your playlist"
-        return "${p.name}  ·  ${typeName(p)}" + if (all.size > 1) "  ·  ${all.size} playlists" else ""
+        return "${p.name}  ·  ${typeName(p)}" + (if (all.size > 1) "  ·  ${all.size} playlists" else "") +
+            (Account.saved()?.let { "\n" + it.summary() } ?: "")
     }
 
     private fun playlists() {
@@ -155,11 +153,12 @@ class SettingsActivity : BaseActivity() {
 
     private fun playlistOptions(p: Playlist) {
         val active = p.id == Store.activeId
-        val opts = listOfNotNull(if (!active) "Use this playlist" else null, "Edit", "Remove")
+        val opts = listOfNotNull(if (!active) "Use this playlist" else null, if (active) "Check subscription" else null, "Edit", "Remove")
         Dialogs.builder(this).setTitle(p.name)
             .setItems(opts.toTypedArray()) { _, i ->
                 when (opts[i]) {
                     "Use this playlist" -> { Playlists.switchTo(p.id); update() }
+                    "Check subscription" -> checkAccount()
                     "Edit" -> startActivity(Intent(this, AddPlaylistActivity::class.java).putExtra(AddPlaylistActivity.ID, p.id))
                     "Remove" -> Dialogs.builder(this).setTitle("Remove “${p.name}”?")
                         .setMessage("Its channels, favourites and history on this device are removed too.")
@@ -173,11 +172,11 @@ class SettingsActivity : BaseActivity() {
     private fun checkAccount() {
         val p = Store.playlist ?: return
         val row = accountRow ?: return
-        sub(row, "Checking…")
+        sub(row, "${p.name}\nChecking your subscription…")
         scope.launch {
             val msg = try { Account.refresh(p)?.summary() ?: "Your provider doesn't share an expiry date for this playlist" }
                       catch (e: Exception) { "Couldn't check: ${Net.friendly(e)}" }
-            sub(row, msg)
+            sub(row, "${p.name}  ·  ${typeName(p)}\n$msg")
         }
     }
 
@@ -239,7 +238,7 @@ class SettingsActivity : BaseActivity() {
 
     private fun refreshInterval() {
         val opts = listOf(4, 8, 12, 24, 48, 72)
-        choose("Update the playlist and guide every…", opts.map { hoursName(it) + if (it == 12) "  (recommended)" else "" }, opts.indexOf(Store.refreshHours)) {
+        choose("Update the playlist and guide every…", opts.map { hoursName(it) + if (it == 24) "  (recommended)" else "" }, opts.indexOf(Store.refreshHours)) {
             Store.refreshHours = opts[it]
             update()
         }
@@ -269,14 +268,17 @@ class SettingsActivity : BaseActivity() {
             val row = refreshRow ?: return@launch
             try {
                 sub(row, "Updating channels…")
+                Notice.working("Updating playlist & TV guide…")
                 Repo.refreshChannels(p)
                 sub(row, "Updating the TV guide…")
                 Repo.refreshGuide()
                 Vod.reset()
                 refreshing = false
+                Notice.done("Playlist & TV guide updated")
                 update()
             } catch (e: Exception) {
                 refreshing = false
+                Notice.done("Couldn't update: ${Net.friendly(e)}", 6_000)
                 sub(row, Net.friendly(e))
             }
         }

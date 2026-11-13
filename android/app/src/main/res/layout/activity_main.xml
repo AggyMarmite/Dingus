@@ -91,34 +91,43 @@
     <View android:id="@+id/scrim" android:layout_width="match_parent" android:layout_height="match_parent"
         android:background="#99000000" android:visibility="gone" />
     <LinearLayout android:id="@+id/menu"
-        android:layout_width="300dp" android:layout_height="match_parent"
+        android:layout_width="232dp" android:layout_height="match_parent"
         android:orientation="vertical" android:background="?attr/dSurface" android:elevation="12dp"
         android:visibility="gone"
-        android:paddingStart="34dp" android:paddingEnd="18dp" android:paddingTop="28dp" android:paddingBottom="24dp">
+        android:paddingStart="20dp" android:paddingEnd="14dp" android:paddingTop="26dp" android:paddingBottom="20dp">
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="horizontal" android:gravity="center_vertical">
-            <ImageView android:layout_width="36dp" android:layout_height="36dp" android:src="@mipmap/ic_launcher"
+            android:orientation="horizontal" android:gravity="center_vertical" android:paddingStart="12dp">
+            <ImageView android:layout_width="30dp" android:layout_height="30dp" android:src="@mipmap/ic_launcher"
                 android:contentDescription="@null" />
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginStart="12dp" android:text="Dingus" android:textSize="24sp" android:textStyle="bold"
+                android:layout_marginStart="10dp" android:text="Dingus" android:textSize="21sp" android:textStyle="bold"
                 android:textColor="?attr/dText" />
         </LinearLayout>
+        <!-- The playlist in use (OK to switch, when there's more than one) and the subscription. -->
+        <TextView android:id="@+id/navPlaylist" style="@style/NavRow" android:layout_marginTop="6dp"
+            android:paddingTop="4dp" android:paddingBottom="4dp" android:textSize="14sp" android:textColor="?attr/dMuted"
+            android:singleLine="true" android:ellipsize="end" android:nextFocusUp="@id/navPlaylist" android:nextFocusLeft="@id/navPlaylist" />
+        <TextView android:id="@+id/navAccount" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:paddingStart="12dp" android:paddingEnd="8dp" android:textSize="12sp" android:textColor="?attr/dMuted"
+            android:visibility="gone" />
 
-        <TextView android:id="@+id/navHome" style="@style/NavRow" android:layout_marginTop="18dp" android:text="Home"
-            android:nextFocusUp="@id/navHome" android:nextFocusLeft="@id/navHome" />
-        <TextView android:id="@+id/navGuide" style="@style/NavRow" android:text="Live TV" android:nextFocusLeft="@id/navGuide" />
-        <TextView android:id="@+id/navSearch" style="@style/NavRow" android:text="Search" />
-        <TextView android:id="@+id/navFilms" style="@style/NavRow" android:text="Films" />
-        <TextView android:id="@+id/navShows" style="@style/NavRow" android:text="TV Shows" />
-        <TextView android:id="@+id/navPlaylist" style="@style/NavRow" android:text="Switch playlist" android:visibility="gone" />
-        <TextView android:id="@+id/settings" style="@style/NavRow" android:text="Settings"
-            android:nextFocusDown="@id/settings" android:nextFocusLeft="@id/settings" />
+        <TextView android:id="@+id/navHome" style="@style/NavRow" android:layout_marginTop="14dp" android:text="Home"
+            android:drawableStart="@drawable/ic_home" android:nextFocusLeft="@id/navHome" />
+        <TextView android:id="@+id/navGuide" style="@style/NavRow" android:text="Live TV" android:drawableStart="@drawable/ic_live_tv"
+            android:nextFocusLeft="@id/navGuide" />
+        <TextView android:id="@+id/navFilms" style="@style/NavRow" android:text="Films" android:drawableStart="@drawable/ic_film" />
+        <TextView android:id="@+id/navShows" style="@style/NavRow" android:text="TV Shows" android:drawableStart="@drawable/ic_tv_shows" />
+        <TextView android:id="@+id/navSearch" style="@style/NavRow" android:text="Search" android:drawableStart="@drawable/ic_search" />
+        <TextView android:id="@+id/settings" style="@style/NavRow" android:text="Settings" android:drawableStart="@drawable/ic_settings"
+            android:nextFocusLeft="@id/settings" />
 
         <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
 
+        <TextView android:id="@+id/navRefresh" style="@style/NavRow" android:text="Refresh playlist" android:textSize="14sp"
+            android:drawableStart="@drawable/ic_refresh" android:nextFocusDown="@id/navRefresh" android:nextFocusLeft="@id/navRefresh" />
         <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="10dp" android:paddingStart="14dp" android:textSize="13sp" android:textColor="?attr/dMuted"
+            android:layout_marginTop="6dp" android:paddingStart="12dp" android:textSize="12sp" android:textColor="?attr/dMuted"
             android:visibility="gone" />
 
     </LinearLayout>

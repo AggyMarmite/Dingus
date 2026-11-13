@@ -203,12 +203,12 @@ object Store {
 
     /** Show channel numbers in the guide and elsewhere. */
     var showNumbers: Boolean
-        get() = prefs.getBoolean("showNumbers", true)
+        get() = prefs.getBoolean("showNumbers", false)
         set(v) = prefs.edit().putBoolean("showNumbers", v).apply()
 
     /** How often channels and the guide update by themselves, in hours. */
     var refreshHours: Int
-        get() = prefs.getInt("refreshHours", 12)
+        get() = prefs.getInt("refreshHours", 24)
         set(v) = prefs.edit().putInt("refreshHours", v).apply()
     val refreshDue: Boolean get() = System.currentTimeMillis() - guideLoadedAt > refreshHours * 3600_000L
 
