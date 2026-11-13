@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 /**
@@ -133,7 +134,13 @@ class HomeActivity : BaseActivity() {
             try {
                 // What's saved on the device first – no network needed, so Home fills in straight away – and the
                 // saved guide just after, so the rows don't wait for a big one.
-                if (Repo.channels.isEmpty() && Repo.loadSavedChannels()) { build(); Repo.loadSavedGuide() }
+                if (Repo.channels.isEmpty() && Repo.loadSavedChannels()) build()
+                // The saved guide and saved films/shows are read side by side.
+                val reads = listOf(
+                    async { if (!Repo.hasGuide && Repo.channels.isNotEmpty()) Repo.loadSavedGuide() },
+                    async { if (Vod.available) for (k in listOf(Vod.MOVIES, Vod.SERIES)) Vod.loadSaved(k) },
+                )
+                reads.forEach { it.await() }
                 build()
                 Vpn.startup() // "connect when Dingus starts": before anything goes online
                 val p = Store.playlist ?: return@launch
@@ -167,9 +174,26 @@ class HomeActivity : BaseActivity() {
         }
     }
 
-    private fun build() { if (lite) buildLite() else buildFull() }
+    private var buildJob: kotlinx.coroutines.Job? = null
 
-    private fun buildLite() {
+    /** Works the rows out off the main thread (so moving around stays smooth), then shows them; the latest call wins. */
+    private fun build() {
+        buildJob?.cancel()
+        buildJob = scope.launch {
+            val (slides, out) = kotlinx.coroutines.withContext(Dispatchers.Default) { if (lite) computeLite() else computeFull() }
+            show(slides, out)
+        }
+    }
+
+    private fun show(slides: List<Slide>, out: List<Row>) {
+        if (!lite) feature?.set(slides)
+        adapter.set(out)
+        empty.visibility = if (out.isEmpty() && slides.isEmpty() && Repo.channels.isEmpty()) View.VISIBLE else View.GONE
+        Ui.test(if (lite) "home rows ${out.size}" else "home rows ${out.size} slides ${slides.size}")
+        if (!focusedOnce && (slides.isNotEmpty() || out.isNotEmpty())) { focusedOnce = true; focusFirstCard() }
+    }
+
+    private fun computeLite(): Pair<List<Slide>, List<Row>> {
         val out = ArrayList<Row>()
         val cont = ArrayList<Card>()
         Vod.cached(Vod.MOVIES)?.let { lib ->
@@ -189,10 +213,7 @@ class HomeActivity : BaseActivity() {
         // Nothing personal yet: start people off with some channels.
         if (favs.isEmpty() && recent.isEmpty() && Repo.channels.isNotEmpty())
             out.add(1.coerceAtMost(out.size), Row("Channels", Repo.channelsIn(Repo.ALL).take(30).map { Card.Live(it) }))
-        adapter.set(out)
-        empty.visibility = if (out.isEmpty() && Repo.channels.isEmpty()) View.VISIBLE else View.GONE
-        Ui.test("home rows ${out.size}")
-        if (!focusedOnce && out.isNotEmpty()) { focusedOnce = true; focusFirstCard() }
+        return emptyList<Slide>() to out
     }
 
     private fun focusFirstCard() {
@@ -251,7 +272,7 @@ class HomeActivity : BaseActivity() {
     }
 
     /** The full Home: the feature slides, then the rows. */
-    private fun buildFull() {
+    private fun computeFull(): Pair<List<Slide>, List<Row>> {
         val now = System.currentTimeMillis()
         val slides = ArrayList<Slide>()
         val out = ArrayList<Row>()
@@ -297,8 +318,17 @@ class HomeActivity : BaseActivity() {
         for (c in scan) {
             val (p, _) = Repo.nowNext(c)
             if (p != null && p.genre == Genres.SPORT && sport.size < 20) sport.add(Card.Show(c, p, left(p, now)))
-            if (tonight.size < 40) for (q in Repo.programmes(c)) {
-                if (q.start in eveningFrom..eveningTo && (q.genre == Genres.SPORT || q.genre == Genres.FILM)) { tonight.add(c to q); break }
+            if (tonight.size < 40) {
+                // Straight to this evening's programmes (they're in time order) rather than reading the whole day.
+                val ps = Repo.programmes(c)
+                var lo = 0; var hi = ps.size
+                while (lo < hi) { val m = (lo + hi) ushr 1; if (ps[m].start < eveningFrom) lo = m + 1 else hi = m }
+                var i = lo
+                while (i < ps.size && ps[i].start <= eveningTo) {
+                    val q = ps[i]
+                    if (q.genre == Genres.SPORT || q.genre == Genres.FILM) { tonight.add(c to q); break }
+                    i++
+                }
             }
             if (sport.size >= 20 && tonight.size >= 40) break
         }
@@ -331,10 +361,6 @@ class HomeActivity : BaseActivity() {
         Vod.cached(Vod.MOVIES)?.let { lib -> if (lib.items.isNotEmpty()) out.add(Row("New films", lib.newest.take(24).map { Card.Title(Vod.MOVIES, it, isNew = true) })) }
         Vod.cached(Vod.SERIES)?.let { lib -> if (lib.items.isNotEmpty()) out.add(Row("New TV shows", lib.newest.take(24).map { Card.Title(Vod.SERIES, it, isNew = true) })) }
 
-        feature?.set(slides.take(5))
-        adapter.set(out)
-        empty.visibility = if (out.isEmpty() && slides.isEmpty() && Repo.channels.isEmpty()) View.VISIBLE else View.GONE
-        Ui.test("home rows ${out.size} slides ${slides.size}")
-        if (!focusedOnce && (slides.isNotEmpty() || out.isNotEmpty())) { focusedOnce = true; focusFirstCard() }
+        return slides.take(5) to out
     }
 }

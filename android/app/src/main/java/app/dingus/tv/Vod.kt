@@ -77,6 +77,14 @@ object Vod {
 
     fun cached(kind: String): Library? = libs[kind]
 
+    /** The saved copy only (never the network): quick, for showing something straight away. */
+    suspend fun loadSaved(kind: String): Library? = withContext(Dispatchers.IO) {
+        val lib = locks.getValue(kind).withLock {
+            libs[kind] ?: try { read(kind)?.also { libs = HashMap(libs).apply { put(kind, it) } } } catch (e: Exception) { null }
+        }
+        lib?.also { it.byCategory; it.byId; it.newest }
+    }
+
     /** The library, from memory, the saved copy, or the provider (in that order). [fresh] forces the provider. */
     suspend fun library(kind: String, fresh: Boolean = false): Library = withContext(Dispatchers.IO) {
         val lib = load(kind, fresh)

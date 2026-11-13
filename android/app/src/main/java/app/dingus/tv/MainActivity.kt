@@ -398,6 +398,13 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         val items = ArrayList<Pair<String, () -> Unit>>()
         if (p != null && p.start > now) items.add((if (Reminders.has(c, p)) "Cancel reminder" else "Remind me") to { onPlay(c, p) })
         if (p != null && p.stop <= now && Repo.canCatchUp(c, p)) items.add("Watch from the start (catch-up)" to { onPlay(c, p) })
+        val past = Repo.programmes(c).filter { Repo.canCatchUp(c, it, now) }.asReversed().take(60)
+        if (past.isNotEmpty()) items.add(0, "Catch up…" to {
+            Dialogs.builder(this).setTitle("Catch up: ${c.name}")
+                .setItems(past.map { q -> "${Ui.day(q.start)}  ${Ui.time(q.start)}   ${q.title}" }.toTypedArray()) { _, i -> onPlay(c, past[i]) }
+                .show()
+            Ui.test("catchup-list ${c.name} ${past.size}")
+        })
         if (Store.preview && live.current?.id != c.id) items.add("Watch here" to { preview(c) })
         items.add("Watch full screen" to { goFullScreen(c) })
         items.add((if (Store.isFavourite(c.id)) "Remove from Favourites" else "Add to Favourites") to { onFavourite(c) })

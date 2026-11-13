@@ -117,9 +117,14 @@ check "guide 3" 60 "Xtream login: guide read"
 sleep 3
 fresh
 key KEYCODE_DPAD_LEFT 2
+check "categories-open" 5 "LEFT from what's on now opens the categories (even on a catch-up channel)"
+key KEYCODE_DPAD_RIGHT 2
+fresh
+key KEYCODE_MENU 2; key KEYCODE_DPAD_CENTER 2                                         # ≡ → Catch up…
+check "catchup-list Test 1 HD [1-9]" 10 "≡ on a catch-up channel lists its past programmes"
 shot 08b-catchup-guide
 key KEYCODE_DPAD_CENTER 3
-check "catchup Test 1 HD" 10 "LEFT into earlier programmes and OK starts catch-up"
+check "catchup Test 1 HD" 10 "picking one starts catch-up"
 check "vod-playing" 40 "the catch-up programme plays"
 sleep 2; shot 08c-catchup-playing
 key KEYCODE_BACK 3

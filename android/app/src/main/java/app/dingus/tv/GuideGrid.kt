@@ -229,8 +229,10 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
                 if (c == null) { listener?.onLeftEdge(); return true }
                 val list = Repo.programmes(c)
                 val prev = list.getOrNull(selIdx - 1)
-                // Back in time only as far as catch-up allows; past that, LEFT shows the categories.
-                if (sel == null || prev == null || (prev.stop <= now() && !Repo.canCatchUp(c, prev))) { listener?.onLeftEdge(); return true }
+                // From what's on now, LEFT shows the categories (past programmes are under ≡ → Catch up). Already
+                // back in the past (from there), LEFT keeps going back as far as catch-up allows.
+                val inPast = sel != null && sel.stop <= now()
+                if (sel == null || prev == null || (prev.stop <= now() && !(inPast && Repo.canCatchUp(c, prev)))) { listener?.onLeftEdge(); return true }
                 selIdx--; sel = prev; anchor = if (prev.stop <= now()) prev.start else maxOf(prev.start, now())
                 ensureVisible(prev); invalidate(); listener?.onSelected(c, prev)
                 return true

@@ -34,6 +34,7 @@ object Repo {
     @Volatile private var byCategory: Map<String, List<Channel>> = emptyMap()
     @Volatile private var guide: Map<String, Array<Programme>> = emptyMap()
     @Volatile var guideUrl: String? = null; private set
+    val hasGuide: Boolean get() = guide.isNotEmpty()
 
     private val listeners = mutableListOf<() -> Unit>()
     fun onChanged(l: () -> Unit) { synchronized(listeners) { listeners.add(l) } }
