@@ -1,3 +1,10 @@
+## What's new in Dingus 0.15.11
+
+* Fire TV: sized for the TV, with a cleaner Live TV screen and info bar.
+* Fire TV: faster channel logos and actor pages.
+* Fire TV: TV shows show their episodes again.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.10
 
 * Fire TV: redesigned Films and TV Shows, with a categories panel like Live TV.
