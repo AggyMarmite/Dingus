@@ -148,7 +148,7 @@ object Repo {
 
     /** Just the saved channels (quick), so a screen can show something before the saved guide's read. */
     suspend fun loadSavedChannels(): Boolean = withContext(Dispatchers.IO) {
-        try { readChannels() } catch (e: Exception) { Log.w("Dingus", "saved channels", e); false }
+        (try { readChannels() } catch (e: Exception) { Log.w("Dingus", "saved channels", e); false }).also { if (it) channelsIn(ALL) }
     }
 
     /** Then the saved guide (can take a moment for a big one). */
@@ -164,6 +164,7 @@ object Repo {
         val oldKeys = channels.associate { it.id to it.guideKey }
         r.channels.forEach { it.guideKey = oldKeys[it.id] }
         set(r.categories, r.channels, r.guideUrl)
+        channelsIn(ALL) // (worked out here, in the background, not when the guide first draws)
         try { writeChannels() } catch (e: Exception) { Log.w("Dingus", "save channels", e) }
         changed()
     }
