@@ -1,3 +1,9 @@
+## What's new in Dingus 0.15.3
+
+* Fire TV: faster Home and Search.
+* Easier catch-up and categories in Live TV.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.2
 
 * Fire TV: new side menu on every screen.
