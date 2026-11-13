@@ -1,3 +1,9 @@
+## What's new in Dingus 0.15.9
+
+* Fire TV: add a playlist by scanning a QR code with your phone.
+* Faster start with big TV guides.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.8
 
 * Fire TV: Home opens instantly, with programme pictures.
