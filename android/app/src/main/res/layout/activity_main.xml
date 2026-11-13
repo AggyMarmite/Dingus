@@ -120,12 +120,12 @@
         <TextView android:id="@+id/navShows" style="@style/NavRow" android:text="TV Shows" android:drawableStart="@drawable/ic_tv_shows" />
         <TextView android:id="@+id/navSearch" style="@style/NavRow" android:text="Search" android:drawableStart="@drawable/ic_search" />
         <TextView android:id="@+id/settings" style="@style/NavRow" android:text="Settings" android:drawableStart="@drawable/ic_settings"
-            android:nextFocusLeft="@id/settings" />
+            android:nextFocusLeft="@id/settings" android:nextFocusDown="@+id/navRefresh" />
 
         <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
 
-        <TextView android:id="@+id/navRefresh" style="@style/NavRow" android:text="Refresh playlist" android:textSize="14sp"
-            android:drawableStart="@drawable/ic_refresh" android:nextFocusDown="@id/navRefresh" android:nextFocusLeft="@id/navRefresh" />
+        <TextView android:id="@id/navRefresh" style="@style/NavRow" android:text="Refresh playlist" android:textSize="14sp"
+            android:drawableStart="@drawable/ic_refresh" android:nextFocusDown="@id/navRefresh" android:nextFocusUp="@id/settings" android:nextFocusLeft="@id/navRefresh" />
         <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="6dp" android:paddingStart="12dp" android:textSize="12sp" android:textColor="?attr/dMuted"
             android:visibility="gone" />

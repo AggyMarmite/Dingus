@@ -520,6 +520,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         menu.animate().translationX(0f).setDuration(160).start()
         grid.isFocusable = false
         categories.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+        categories.isFocusable = false
         menu.post { findViewById<View>(R.id.navGuide).requestFocus() }
         Ui.test("menu-open")
     }
@@ -532,6 +533,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         }.start()
         scrim.visibility = View.GONE
         categories.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+        categories.isFocusable = true
         if (toGuide || catPanel.visibility != View.VISIBLE) {
             if (catPanel.visibility == View.VISIBLE) { smoothly(guideArea, 160); catPanel.visibility = View.GONE }
             grid.isFocusable = true; grid.requestFocus()
