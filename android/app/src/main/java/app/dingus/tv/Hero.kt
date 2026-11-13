@@ -4,6 +4,7 @@ import android.app.Activity
 import android.os.Handler
 import android.os.Looper
 import android.widget.ImageView
+import android.view.View
 import android.widget.TextView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -40,7 +41,8 @@ class Hero(private val a: Activity, private val scope: CoroutineScope) {
         when (card) {
             is Card.Title -> {
                 val m = card.item
-                kicker.text = if (card.kind == Vod.MOVIES) "FILM" else "TV SHOW"
+                // No label above a film or show: the room goes to its description.
+                kicker.text = ""; kicker.visibility = View.GONE
                 title.text = m.name
                 val d = Vod.cachedDetails(card.kind, m.id)
                 bindTitle(card, d)
@@ -55,6 +57,7 @@ class Hero(private val a: Activity, private val scope: CoroutineScope) {
             is Card.Live -> {
                 val c = card.channel
                 val (now, next) = Repo.nowNext(c)
+                kicker.visibility = View.VISIBLE
                 kicker.text = if (now != null) "ON NOW  ·  ${c.name.uppercase()}" else c.name.uppercase()
                 title.text = now?.title ?: c.name
                 val t = System.currentTimeMillis()
@@ -69,6 +72,7 @@ class Hero(private val a: Activity, private val scope: CoroutineScope) {
             }
             is Card.Show -> show(Card.Live(card.channel))
             is Card.SeeAll -> {
+                kicker.visibility = View.VISIBLE
                 kicker.text = if (card.kind == Vod.MOVIES) "FILMS" else "TV SHOWS"
                 title.text = card.name
                 meta.text = "See everything in this category"
