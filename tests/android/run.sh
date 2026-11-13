@@ -128,7 +128,7 @@ key KEYCODE_BACK 1
 check "categories-open" 5 "BACK shows the categories"
 key KEYCODE_DPAD_LEFT 2
 check "menu-open" 5 "then the main menu"
-key KEYCODE_DPAD_DOWN 0.5; key KEYCODE_DPAD_DOWN 0.5   # Search, then Films
+key KEYCODE_DPAD_DOWN 0.5                                # Films (under Live TV)
 shot 09-menu-xtream
 key KEYCODE_DPAD_CENTER 3
 check "library movies 3" 40 "Films load"
@@ -149,7 +149,7 @@ shot 13-film-resume
 key KEYCODE_BACK 2; key KEYCODE_BACK 2
 fresh
 key KEYCODE_BACK 1; key KEYCODE_DPAD_LEFT 2
-for _ in 1 2 3; do key KEYCODE_DPAD_DOWN 0.5; done; key KEYCODE_DPAD_CENTER 3    # menu → TV Shows
+for _ in 1 2; do key KEYCODE_DPAD_DOWN 0.5; done; key KEYCODE_DPAD_CENTER 3    # menu → TV Shows
 check "library series 2" 40 "TV shows load"
 sleep 2
 fresh
