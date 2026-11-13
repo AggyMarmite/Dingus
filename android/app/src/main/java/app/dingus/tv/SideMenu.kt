@@ -122,6 +122,7 @@ class SideMenu(
 
     private fun animateTo(target: Float, ms: Long, end: (() -> Unit)? = null) {
         anim?.cancel()
+        if (Ui.lite) { fraction = target; apply(); end?.invoke(); return } // lite mode: open and shut at once
         anim = ValueAnimator.ofFloat(fraction, target).apply {
             duration = ms
             interpolator = DecelerateInterpolator()

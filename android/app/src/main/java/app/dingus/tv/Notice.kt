@@ -53,7 +53,8 @@ object Notice {
         if (t == null || (!working && SystemClock.uptimeMillis() > until)) {
             val old = view ?: return
             view = null
-            old.animate().alpha(0f).setDuration(200).withEndAction { (old.parent as? ViewGroup)?.removeView(old) }.start()
+            if (Ui.lite) (old.parent as? ViewGroup)?.removeView(old)
+            else old.animate().alpha(0f).setDuration(200).withEndAction { (old.parent as? ViewGroup)?.removeView(old) }.start()
             return
         }
         val v = view ?: build(a).also { view = it }

@@ -73,7 +73,7 @@ class SettingsActivity : BaseActivity() {
                 Store.startScreen = if (it == 1) "live" else "home"; update()
             }
         }
-        toggle("Lite home page", "A simpler Home, if the full one feels slow", { Store.homeLite }) { Store.homeLite = it }
+        toggle("Lite mode", "A simpler Home and fewer animations, if Dingus feels slow", { Store.homeLite }) { Store.homeLite = it }
         toggle("Title logos for films and shows", "The official logo in place of the plain title, where TMDB has one", { Store.titleLogos }) { Store.titleLogos = it }
         row("Theme", { "${Themes.background().name}  ·  ${Themes.accent().name}" }) { theme() }
 

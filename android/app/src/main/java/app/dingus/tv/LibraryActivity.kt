@@ -169,7 +169,7 @@ class LibraryActivity : BaseActivity() {
                 if (p >= 0) startActivity(Intent(this@LibraryActivity, DetailActivity::class.java)
                     .putExtra(DetailActivity.KIND, kind).putExtra(DetailActivity.ID, items[p].id))
             }
-            v.setOnFocusChangeListener { view, has -> view.animate().scaleX(if (has) 1.06f else 1f).scaleY(if (has) 1.06f else 1f).setDuration(120).start() }
+            v.setOnFocusChangeListener { view, has -> Ui.grow(view, has, 120) }
             return holder
         }
 

@@ -8,6 +8,15 @@ import java.util.Locale
 
 /** Small shared bits for the screens. */
 object Ui {
+    /** Lite mode (Settings): a simpler Home and next to no animation, for when Dingus feels slow. */
+    val lite: Boolean get() = Store.homeLite
+
+    /** A card growing when the remote's on it – straight away in lite mode. */
+    fun grow(v: android.view.View, has: Boolean, ms: Long = 110) {
+        val s = if (has) 1.06f else 1f
+        if (lite) { v.animate().cancel(); v.scaleX = s; v.scaleY = s } else v.animate().scaleX(s).scaleY(s).setDuration(ms).start()
+    }
+
     private val hm = SimpleDateFormat("HH:mm", Locale.UK)
     fun time(ms: Long): String = synchronized(hm) { hm.format(Date(ms)) }
     private val wd = SimpleDateFormat("EEE d MMM", Locale.UK)

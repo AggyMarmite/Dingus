@@ -44,7 +44,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     private var versionTry = 0
     private var version: Channel? = null
     private var zapPending: Runnable? = null
-    private val hideInfo = Runnable { info.animate().alpha(0f).setDuration(250).withEndAction { info.visibility = View.GONE } }
+    private val hideInfo = Runnable { info.animate().alpha(0f).setDuration(if (Ui.lite) 0 else 250).withEndAction { info.visibility = View.GONE } }
     private val retry = Runnable { startChannel() }
 
     private var buffer: LiveBuffer? = null

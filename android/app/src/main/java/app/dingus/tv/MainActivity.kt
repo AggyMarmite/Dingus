@@ -326,8 +326,10 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         stage.layoutParams = lp
     }
 
-    private fun smoothly(target: ViewGroup, ms: Long) =
+    private fun smoothly(target: ViewGroup, ms: Long) {
+        if (Ui.lite) return // lite mode: things just move, no animation
         TransitionManager.beginDelayedTransition(target, ChangeBounds().setDuration(ms).setInterpolator(DecelerateInterpolator()))
+    }
 
     /** The preview grows to fill the screen; if it's already showing this channel, the stream just carries on. */
     private fun goFullScreen(c: Channel, list: List<Channel> = Repo.channelsIn(current), animate: Boolean = true) {

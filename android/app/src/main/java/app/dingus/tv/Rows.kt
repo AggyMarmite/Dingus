@@ -97,7 +97,7 @@ class RowsAdapter(
             fun card(): Card? = (c.bindingAdapter as? CardsAdapter)?.cards?.getOrNull(c.bindingAdapterPosition)
             v.setOnClickListener { card()?.let(onClick) }
             v.setOnFocusChangeListener { view, has ->
-                view.animate().scaleX(if (has) 1.06f else 1f).scaleY(if (has) 1.06f else 1f).setDuration(110).start()
+                Ui.grow(view, has)
                 if (has) card()?.let(onFocus)
             }
             return c
@@ -157,7 +157,7 @@ class RowsLayoutManager(ctx: Context) : LinearLayoutManager(ctx) {
     override fun requestChildRectangleOnScreen(parent: RecyclerView, child: View, rect: android.graphics.Rect, immediate: Boolean, focusedChildVisible: Boolean): Boolean {
         val dy = child.top - parent.paddingTop
         if (dy == 0) return false
-        if (immediate) parent.scrollBy(0, dy) else parent.smoothScrollBy(0, dy)
+        if (immediate || Ui.lite) parent.scrollBy(0, dy) else parent.smoothScrollBy(0, dy)
         return true
     }
 }
