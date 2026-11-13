@@ -234,6 +234,20 @@ adb shell am start -n $PKG/.MainActivity --ez dingus_test_numbers_off true
 check "numbers false" 10 "channel numbers can be turned off"
 sleep 3; shot 19b-guide-no-numbers
 
+# ---- Adding a playlist from a phone
+fresh
+adb shell am start -n $PKG/.MainActivity --ez dingus_test_add_playlist true
+check "phone-setup code" 15 "Add playlist: the phone page starts"
+line=$(adb logcat -d -s DINGUS-TEST:I | grep -o "phone-setup code [0-9]* port [0-9]*" | tail -1)
+PCODE=$(echo "$line" | awk '{print $3}'); PPORT=$(echo "$line" | awk '{print $5}')
+sleep 1; shot 19c-add-playlist-phone
+adb forward tcp:18766 tcp:$PPORT
+curl -s -m 10 http://127.0.0.1:18766/ > "$OUT/phone-playlist-page.html"
+curl -s -m 20 -X POST http://127.0.0.1:18766/save --data-urlencode "code=$PCODE" --data-urlencode "type=m3u" \
+  --data-urlencode "name=Phone" --data-urlencode "m3u=http://10.0.2.2:8000/playlist.m3u" > "$OUT/phone-playlist-reply.html"
+check "playlist-added Phone" 40 "Add playlist: one typed on a phone is checked and added"
+sleep 2
+
 # ---- Built-in VPN (a real WireGuard server runs on the test machine)
 if [ -n "${WG_CONF:-}" ] && [ -f "$WG_CONF" ]; then
   adb shell appops set $PKG ACTIVATE_VPN allow

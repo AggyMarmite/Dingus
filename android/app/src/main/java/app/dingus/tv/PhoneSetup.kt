@@ -14,7 +14,9 @@ import kotlin.random.Random
  * Wi-Fi and paste your VPN key, address or WireGuard config files there. Only runs while that screen is open,
  * and only accepts the code shown on the TV.
  */
-class PhoneSetup(private val onSaved: (String) -> Unit) {
+class PhoneSetup(private val onSaved: (String) -> Unit, private val onPlaylist: ((Map<String, String>) -> Unit)? = null) {
+    /** Adding a playlist (rather than setting up the VPN). */
+    private val forPlaylist get() = onPlaylist != null
     val code = (1000 + Random.nextInt(9000)).toString()
     private var server: ServerSocket? = null
     private val main = Handler(Looper.getMainLooper())
@@ -65,6 +67,13 @@ class PhoneSetup(private val onSaved: (String) -> Unit) {
 
     private fun save(f: Map<String, String>): String {
         if (f["code"]?.trim() != code) return page("That code doesn't match the one on the TV.")
+        if (forPlaylist) {
+            val type = f["type"]
+            if (type == "m3u" && f["m3u"].isNullOrBlank()) return page("Enter the M3U address.")
+            if (type != "m3u" && (f["server"].isNullOrBlank() || f["user"].isNullOrBlank())) return page("Enter the server address, username and password.")
+            main.post { onPlaylist?.invoke(f) }
+            return page("✓ Sent to the TV – it's checking the playlist now. Look at the TV to see how it went.", ok = true)
+        }
         val done = ArrayList<String>()
         try {
             f["key"]?.trim()?.takeIf { it.isNotEmpty() }?.let { Vpn.privateKey = it; done.add("private key") }
@@ -93,7 +102,33 @@ class PhoneSetup(private val onSaved: (String) -> Unit) {
     private fun guessName(c: String) = Regex("""Endpoint\s*=\s*([^:\s]+)""", RegexOption.IGNORE_CASE).find(c)?.groupValues?.get(1)
         ?.substringBefore('.')?.ifEmpty { null } ?: "Location ${Vpn.configs.size + 1}"
 
-    private fun page(note: String?, ok: Boolean = false) = """<!doctype html><html><head><meta charset="utf-8">
+    private fun page(note: String?, ok: Boolean = false) = if (forPlaylist) playlistPage(note, ok) else vpnPage(note, ok)
+
+    private fun playlistPage(note: String?, ok: Boolean) = """<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Dingus – add a playlist</title>
+<style>body{font-family:system-ui,sans-serif;background:#0b0e14;color:#e8ecf3;margin:0;padding:20px;max-width:640px}
+h1{font-size:22px}label{display:block;margin:16px 0 6px;color:#8b94a7;font-size:14px}
+input{width:100%;box-sizing:border-box;background:#141923;color:#e8ecf3;border:1px solid #262e3d;border-radius:8px;padding:12px;font-size:16px}
+.t label{display:inline-block;margin-right:18px;color:#e8ecf3;font-size:16px}.t input{width:auto}
+button{margin-top:22px;background:#3b82f6;color:#fff;border:0;border-radius:8px;padding:14px 22px;font-size:16px}
+.note{padding:12px;border-radius:8px;background:${if (ok) "#14532d" else "#7f1d1d"};margin:12px 0}small{color:#8b94a7}
+#m3u{display:none}</style></head><body>
+<h1>Add a playlist to Dingus</h1>${if (note != null) "<div class=note>${esc(note)}</div>" else ""}
+<form method=post action=/save>
+<label>Code shown on the TV</label><input name=code inputmode=numeric autocomplete=off required>
+<div class=t style="margin-top:18px"><label><input type=radio name=type value=xtream checked onchange="sw()"> Xtream Codes login</label>
+<label><input type=radio name=type value=m3u onchange="sw()"> M3U link</label></div>
+<label>Name</label><input name=name placeholder="e.g. Home">
+<div id=xt><label>Server address</label><input name=server inputmode=url autocomplete=off placeholder="http://provider.example:8080">
+<label>Username</label><input name=user autocomplete=off autocapitalize=none>
+<label>Password</label><input name=pass autocomplete=off autocapitalize=none></div>
+<div id=m3u><label>M3U address</label><input name=m3u inputmode=url autocomplete=off placeholder="http://provider.example/get.php?…"></div>
+<label>Your own TV guide (EPG) address – optional</label><input name=epg inputmode=url autocomplete=off placeholder="Leave empty to use the provider's">
+<button type=submit>Send to the TV</button></form>
+<script>function sw(){var m=document.querySelector('input[name=type]:checked').value=='m3u';document.getElementById('m3u').style.display=m?'block':'none';document.getElementById('xt').style.display=m?'none':'block'}</script>
+</body></html>"""
+
+    private fun vpnPage(note: String?, ok: Boolean) = """<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Dingus VPN setup</title>
 <style>body{font-family:system-ui,sans-serif;background:#0b0e14;color:#e8ecf3;margin:0;padding:20px;max-width:640px}
 h1{font-size:22px}label{display:block;margin:16px 0 6px;color:#8b94a7;font-size:14px}

@@ -112,6 +112,7 @@ class AddPlaylistActivity : BaseActivity() {
                 Vod.clear()
                 Repo.refreshChannels(p, r)
                 Store.guideLoadedAt = 0
+                Ui.test("playlist-added ${p.name}")
                 finish()
             } catch (e: Exception) {
                 showError(Net.friendly(e))
@@ -120,6 +121,35 @@ class AddPlaylistActivity : BaseActivity() {
                 save.text = "Save"
             }
         }
+    }
+
+    // ------------------------------------------------------------------ from your phone
+
+    private var phone: PhoneSetup? = null
+
+    override fun onResume() {
+        super.onResume()
+        val ps = PhoneSetup(onSaved = {}, onPlaylist = { f -> fromPhone(f) })
+        val url = ps.start()
+        phone = ps
+        findViewById<TextView>(R.id.phoneHint).apply {
+            if (url == null) { visibility = View.GONE; return@apply }
+            text = "📱  Easier on your phone: on the same Wi-Fi, open  $url  and enter the code  ${ps.code}"
+            visibility = View.VISIBLE
+        }
+    }
+
+    override fun onPause() { super.onPause(); phone?.stop(); phone = null }
+
+    /** The form filled in on a phone: put it in the boxes here and check it, as if you'd typed it. */
+    private fun fromPhone(f: Map<String, String>) {
+        setType(f["type"] ?: "xtream")
+        f["name"]?.trim()?.takeIf { it.isNotEmpty() }?.let { name.setText(it) }
+        server.setText(f["server"]?.trim() ?: ""); user.setText(f["user"]?.trim() ?: ""); pass.setText(f["pass"] ?: "")
+        m3uUrl.setText(f["m3u"]?.trim() ?: "")
+        f["epg"]?.trim()?.takeIf { it.isNotEmpty() }?.let { epg.setText(it) }
+        Ui.test("playlist-from-phone ${f["type"]}")
+        trySave()
     }
 
     override fun onDestroy() { scope.cancel(); super.onDestroy() }

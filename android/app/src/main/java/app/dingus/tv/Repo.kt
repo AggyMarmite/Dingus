@@ -300,15 +300,27 @@ object Repo {
         return channels.isNotEmpty()
     }
 
+    /**
+     * The guide on the device, version 3: each programme's times, title and genre, with the descriptions kept in one
+     * block at the end – so reading it at start doesn't make thousands of description strings nobody's looked at.
+     */
     private fun writeGuide() {
+        val descs = java.io.ByteArrayOutputStream(1 shl 20)
         out("guide.bin").use { o ->
-            o.writeInt(2)
+            o.writeInt(3)
             o.writeInt(guide.size)
             for ((k, list) in guide) {
                 o.writeUTF(k)
                 o.writeInt(list.size)
-                for (p in list) { o.writeLong(p.start); o.writeLong(p.stop); o.writeUTF(p.title); o.str(p.desc); o.writeByte(p.genre.toInt()) }
+                for (p in list) {
+                    o.writeLong(p.start); o.writeLong(p.stop); o.writeUTF(p.title); o.writeByte(p.genre.toInt())
+                    val b = p.desc?.takeIf { it.isNotEmpty() }?.toByteArray(Charsets.UTF_8)
+                    o.writeInt(if (b == null) 0 else descs.size()); o.writeInt(b?.size ?: 0)
+                    if (b != null) descs.write(b)
+                }
             }
+            o.writeInt(descs.size())
+            descs.writeTo(o)
         }
         commit("guide.bin")
     }
@@ -318,18 +330,26 @@ object Repo {
         if (!f.exists()) return
         val cutoff = System.currentTimeMillis() - backHours * 60 * 60_000L
         val g = HashMap<String, Array<Programme>>()
-        DataInputStream(BufferedInputStream(FileInputStream(f), 1 shl 16)).use { i ->
+        val titles = HashMap<String, String>() // the same titles over and over: one copy each
+        DataInputStream(BufferedInputStream(FileInputStream(f), 1 shl 17)).use { i ->
             val version = i.readInt()
-            if (version != 1 && version != 2) return
+            if (version !in 1..3) return
+            val blob = DescBlob()
             repeat(i.readInt()) {
                 val k = i.readUTF()
                 val list = ArrayList<Programme>()
                 repeat(i.readInt()) {
-                    val p = Programme(i.readLong(), i.readLong(), i.readUTF(), i.str(), if (version >= 2) i.readByte() else 0)
+                    val start = i.readLong(); val stop = i.readLong()
+                    val t = i.readUTF().let { titles.getOrPut(it) { it } }
+                    val p = if (version >= 3) {
+                        val genre = i.readByte(); val off = i.readInt(); val len = i.readInt()
+                        Programme(start, stop, t, DescRef(blob, off, len), genre)
+                    } else Programme(start, stop, t, i.str(), if (version >= 2) i.readByte() else 0)
                     if (p.stop > cutoff) list.add(p)
                 }
                 if (list.isNotEmpty()) g[k] = list.toTypedArray()
             }
+            if (version >= 3) { val n = i.readInt(); val b = ByteArray(n); i.readFully(b); blob.bytes = b }
         }
         // (A fresh guide from the provider may have arrived while this was being read: keep that one.)
         if (guide.isEmpty()) guide = g

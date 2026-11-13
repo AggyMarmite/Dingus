@@ -20,7 +20,21 @@ class Channel(
 }
 
 /** A programme in the TV guide (times in milliseconds since 1970, UTC). */
-class Programme(val start: Long, val stop: Long, val title: String, val desc: String?, val genre: Byte = 0)
+class Programme(val start: Long, val stop: Long, val title: String, desc: String?, val genre: Byte = 0) {
+    /** The description, or where it is in the saved guide (read only when it's shown – most never are). */
+    private var d: Any? = desc
+    val desc: String? get() {
+        val v = d
+        return if (v is DescRef) v.read().also { d = it } else v as String?
+    }
+    constructor(start: Long, stop: Long, title: String, ref: DescRef, genre: Byte) : this(start, stop, title, null as String?, genre) { d = ref }
+}
+
+/** All the saved guide's descriptions in one block of bytes (half the memory of separate strings), read on demand. */
+class DescBlob { @Volatile var bytes: ByteArray = ByteArray(0) }
+class DescRef(private val blob: DescBlob, private val off: Int, private val len: Int) {
+    fun read(): String? = if (len <= 0 || off + len > blob.bytes.size) null else String(blob.bytes, off, len, Charsets.UTF_8)
+}
 
 /** Your playlist: an Xtream Codes login, or an M3U link. */
 data class Playlist(

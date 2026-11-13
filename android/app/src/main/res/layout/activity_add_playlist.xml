@@ -11,6 +11,10 @@
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp"
                 android:text="Xtream Codes logins and M3U links are both supported." android:textSize="16sp"
                 android:textColor="?attr/dMuted" />
+            <!-- Typing with a remote is slow: the same form on your phone. -->
+            <TextView android:id="@+id/phoneHint" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="18dp" android:background="@drawable/pill_bg" android:padding="16dp"
+                android:textSize="17sp" android:textColor="?attr/dText" android:lineSpacingExtra="3dp" android:visibility="gone" />
 
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="24dp" android:orientation="horizontal">

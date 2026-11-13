@@ -151,6 +151,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             current = Repo.ALL
             Repo.clear(); Vod.clear()
         }
+        if (i.getBooleanExtra("dingus_test_add_playlist", false)) startActivity(Intent(this, AddPlaylistActivity::class.java).putExtra(AddPlaylistActivity.NEW, true))
         if (i.getBooleanExtra("dingus_test_vpn_phone", false)) startActivity(Intent(this, VpnActivity::class.java).putExtra(VpnActivity.PHONE, true))
         i.getStringExtra("dingus_test_vpn_connect")?.let { name ->
             Vpn.provider = Vpn.CONFIGS
