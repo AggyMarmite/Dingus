@@ -1,3 +1,8 @@
+## What's new in Dingus 0.15.8
+
+* Fire TV: Home opens instantly, with programme pictures.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.7
 
 * Fire TV: tidier Settings, stream stats while watching, and a loading screen.
