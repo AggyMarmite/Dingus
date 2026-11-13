@@ -79,9 +79,8 @@ object Vod {
 
     /** The saved copy only (never the network): quick, for showing something straight away. */
     suspend fun loadSaved(kind: String): Library? = withContext(Dispatchers.IO) {
-        val lib = locks.getValue(kind).withLock {
-            libs[kind] ?: try { read(kind)?.also { libs = HashMap(libs).apply { put(kind, it) } } } catch (e: Exception) { null }
-        }
+        // (No lock: the saved file is swapped in whole, so it can be read while an update is downloading.)
+        val lib = libs[kind] ?: try { read(kind)?.also { r -> if (libs[kind] == null) libs = HashMap(libs).apply { put(kind, r) } } } catch (e: Exception) { null }
         lib?.also { it.byCategory; it.byId; it.newest }
     }
 
@@ -95,7 +94,11 @@ object Vod {
 
     private suspend fun load(kind: String, fresh: Boolean): Library {
         // Already in memory: straight back, without waiting behind an update that's downloading (it holds the lock).
-        if (!fresh) libs[kind]?.let { return it }
+        if (!fresh) {
+            libs[kind]?.let { return it }
+            try { read(kind)?.let { r -> libs[kind]?.let { return it }; libs = HashMap(libs).apply { put(kind, r) }; return r } }
+            catch (e: Exception) { Log.w("Dingus", "saved $kind", e) }
+        }
         return locks.getValue(kind).withLock {
             // Another screen asked for a fresh copy a moment ago: that one will do (no second download).
             if (fresh) libs[kind]?.takeIf { System.currentTimeMillis() - it.loadedAt < 120_000L }?.let { return@withLock it }

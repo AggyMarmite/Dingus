@@ -50,7 +50,8 @@ object TitleLogos {
             val id = tmdbId?.takeIf { it.isNotBlank() && it != "0" } ?: search(type, item)
             id?.let { logo(type, it) }
         } catch (e: Exception) { return@withContext null } // not remembered: try again another time
-        synchronized(known) { known[k] = url ?: ""; save() }
+        val copy = synchronized(known) { known[k] = url ?: ""; HashMap(known) }
+        synchronized(this) { try { file.writeText(JSONObject(copy as Map<*, *>).toString()) } catch (_: Exception) {} }
         Ui.test("title-logo ${item.name} ${if (url != null) "found" else "none"}")
         url
     }

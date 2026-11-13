@@ -3,6 +3,7 @@ package app.dingus.tv
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
@@ -159,7 +160,22 @@ object Repo {
     }
 
     /** Fetches the playlist from the provider (throws with a message to show if it can't). */
+    // One update at a time: two screens asking at once share it (the second waits, then finds it just done).
+    private val channelsLock = kotlinx.coroutines.sync.Mutex()
+    private val guideLock = kotlinx.coroutines.sync.Mutex()
+    @Volatile private var channelsDone = 0L to ""
+    @Volatile private var guideDone = 0L to ""
+
     suspend fun refreshChannels(p: Playlist, already: Sources.Result? = null) = withContext(Dispatchers.IO) {
+        val asked = System.currentTimeMillis()
+        channelsLock.withLock {
+            if (already == null && channelsDone.first >= asked && channelsDone.second == p.id) return@withLock
+            refreshChannelsNow(p, already)
+            channelsDone = System.currentTimeMillis() to p.id
+        }
+    }
+
+    private fun refreshChannelsNow(p: Playlist, already: Sources.Result?) {
         val r = already ?: Sources.load(p)
         Sources.accountInfo?.let { Account.remember(it); Sources.accountInfo = null }
         // Keep guide matches from before, so now/next shows straight away until the guide's read again.
@@ -173,10 +189,20 @@ object Repo {
 
     /** Reads the TV guide (in the background; can take a while for big guides). */
     suspend fun refreshGuide() = withContext(Dispatchers.IO) {
+        val asked = System.currentTimeMillis()
+        val id = Store.activeId
+        guideLock.withLock {
+            if (guideDone.first >= asked && guideDone.second == id) return@withLock
+            refreshGuideNow()
+            guideDone = System.currentTimeMillis() to id
+        }
+    }
+
+    private fun refreshGuideNow() {
         val p = Store.playlist
         // Your own guide addresses first (in your order), then the provider's: each fills in channels the earlier ones missed.
         val sources = (p?.epgUrls ?: emptyList()) + listOfNotNull(guideUrl.takeIf { p?.useProviderGuide != false })
-        if (sources.isEmpty()) return@withContext
+        if (sources.isEmpty()) return
         val chans = channels
         val keys = HashMap<String, String>()
         val programmes = HashMap<String, Array<Programme>>()
