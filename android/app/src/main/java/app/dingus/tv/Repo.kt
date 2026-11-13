@@ -130,6 +130,8 @@ object Repo {
         byCategory = edited.groupBy { it.categoryId }
         guideUrl = url
         synchronized(listCache) { listCache.clear() }
+        Merge.clear()
+        if (Store.mergeChannels) edited.forEach { Merge.key(it) } // worked out now (in the background when loading)
     }
 
     /** What was saved last time (instant start). False when there's nothing yet. */

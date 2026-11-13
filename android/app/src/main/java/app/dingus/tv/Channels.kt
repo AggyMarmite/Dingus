@@ -14,8 +14,15 @@ object Merge {
     private val fhdRx = Regex("""\b(?:fhd|1080[pi]?|full\s*hd)\b|ᶠᴴᴰ""", RegexOption.IGNORE_CASE)
     private val sdRx = Regex("""\b(?:sd|576[pi]?|480p?|lq|low)\b""", RegexOption.IGNORE_CASE)
 
-    /** Same key = same channel; empty = never merged. */
-    fun key(c: Channel): String {
+    private val keys = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /** Forget worked-out keys (the channel list changed). */
+    fun clear() = keys.clear()
+
+    /** Same key = same channel; empty = never merged. Worked out once per channel name. */
+    fun key(c: Channel): String = keys.getOrPut(c.name) { computeKey(c) }
+
+    private fun computeKey(c: Channel): String {
         val m = countryRx.find(c.name)
         val country = m?.groupValues?.drop(1)?.firstOrNull { it.isNotEmpty() }?.lowercase() ?: ""
         val core = Guide.norm(backupRx.replace(c.name, " "))

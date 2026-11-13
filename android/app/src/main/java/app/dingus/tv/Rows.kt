@@ -128,3 +128,15 @@ class RowsAdapter(
         }
     }
 }
+
+/** The vertical list of rows: the row you're on always moves to the top (title and all), like Netflix. */
+class RowsLayoutManager(ctx: Context) : LinearLayoutManager(ctx) {
+    init { initialPrefetchItemCount = 3 }
+
+    override fun requestChildRectangleOnScreen(parent: RecyclerView, child: View, rect: android.graphics.Rect, immediate: Boolean, focusedChildVisible: Boolean): Boolean {
+        val dy = child.top - parent.paddingTop
+        if (dy == 0) return false
+        if (immediate) parent.scrollBy(0, dy) else parent.smoothScrollBy(0, dy)
+        return true
+    }
+}

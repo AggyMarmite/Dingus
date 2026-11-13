@@ -33,7 +33,7 @@ class BrowseActivity : BaseActivity() {
         empty = findViewById(R.id.empty)
         hero = Hero(this, scope)
         adapter = RowsAdapter(this, onFocus = { hero.show(it) }, onClick = { open(it) })
-        rows.layoutManager = LinearLayoutManager(this).apply { initialPrefetchItemCount = 3 }
+        rows.layoutManager = RowsLayoutManager(this)
         rows.adapter = adapter
         rows.itemAnimator = null
         rows.setItemViewCacheSize(4)

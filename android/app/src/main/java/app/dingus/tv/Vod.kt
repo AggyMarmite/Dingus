@@ -77,6 +77,13 @@ object Vod {
 
     /** The library, from memory, the saved copy, or the provider (in that order). [fresh] forces the provider. */
     suspend fun library(kind: String, fresh: Boolean = false): Library = withContext(Dispatchers.IO) {
+        val lib = load(kind, fresh)
+        // Sorting and grouping a big library happens here, off screen, not when a row is first drawn.
+        lib.byCategory; lib.byId; lib.newest
+        lib
+    }
+
+    private suspend fun load(kind: String, fresh: Boolean): Library =
         locks.getValue(kind).withLock {
             if (!fresh) {
                 libs[kind]?.let { return@withLock it }
@@ -89,7 +96,6 @@ object Vod {
             try { write(kind, lib) } catch (e: Exception) { Log.w("Dingus", "save $kind", e) }
             lib
         }
-    }
 
     fun clear() {
         libs = HashMap()
