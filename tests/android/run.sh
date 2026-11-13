@@ -96,11 +96,11 @@ key KEYCODE_DPAD_UP 0.5                                                         
 key KEYCODE_DPAD_CENTER 2
 check "settings-shown" 10 "Settings opens from the menu"
 shot 07-settings
-for _ in $(seq 1 9); do key KEYCODE_DPAD_DOWN 0.4; done
-sleep 1; shot 07b-settings-more
-for _ in $(seq 1 8); do key KEYCODE_DPAD_DOWN 0.4; done
-sleep 1; shot 07c-settings-end
-key KEYCODE_BACK 2
+key KEYCODE_DPAD_DOWN 1
+check "settings-section Live TV" 5 "Settings: moving down the sections shows each one's options"
+shot 07b-settings-live
+key KEYCODE_DPAD_RIGHT 1; key KEYCODE_DPAD_DOWN 1; shot 07c-settings-live-rows
+key KEYCODE_BACK 1; key KEYCODE_BACK 2
 
 fresh
 adb shell am start -n $PKG/.MainActivity --es dingus_test_update_api http://10.0.2.2:8000/release.json
