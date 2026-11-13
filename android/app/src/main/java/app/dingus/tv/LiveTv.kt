@@ -91,10 +91,48 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         player?.release()
         player = null
         video.player = null
+        sdrPreview = false
+        previewTexture?.visibility = View.GONE
         buffer?.close()
         buffer = null
         message.text = ""
         shift.visibility = View.GONE
+    }
+
+    // ------------------------------------------------------------------ HDR channels in the guide's preview
+
+    /** The small preview of an HDR channel is drawn here instead (see [updateSurface]). */
+    private var previewTexture: android.view.TextureView? = null
+    private var sdrPreview = false
+
+    private fun isHdr(p: ExoPlayer): Boolean {
+        val t = p.videoFormat?.colorInfo?.colorTransfer
+        return t == androidx.media3.common.C.COLOR_TRANSFER_ST2084 || t == androidx.media3.common.C.COLOR_TRANSFER_HLG
+    }
+
+    /**
+     * An HDR channel shown on the TV's video layer switches the whole screen into HDR, which turns the guide
+     * around a small preview grey. So the preview of an HDR channel is drawn like the rest of the screen (no
+     * switch), and full screen goes back to the video layer for proper HDR.
+     */
+    private fun updateSurface() {
+        val p = player ?: return
+        val want = !fullScreen && isHdr(p)
+        if (want == sdrPreview) return
+        sdrPreview = want
+        if (want) {
+            val tv = previewTexture ?: android.view.TextureView(a).also {
+                video.addView(it, android.widget.FrameLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT))
+                previewTexture = it
+            }
+            tv.visibility = View.VISIBLE
+            video.player = null
+            p.setVideoTextureView(tv)
+            Ui.test("preview-sdr")
+        } else {
+            previewTexture?.let { p.clearVideoTextureView(it); it.visibility = View.GONE }
+            video.player = p
+        }
     }
 
     private fun makePlayer() {
@@ -121,7 +159,10 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
 
             override fun onTracksChanged(tracks: Tracks) {
                 if (fullScreen) p.videoFormat?.frameRate?.let { FrameRate.match(a, it) }
+                updateSurface()
             }
+
+            override fun onVideoSizeChanged(size: androidx.media3.common.VideoSize) = updateSurface()
 
             override fun onPlayerError(error: PlaybackException) {
                 Ui.test("error ${error.errorCodeName}")
@@ -182,6 +223,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
 
     fun enterFullScreen() {
         fullScreen = true
+        updateSurface()
         a.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         message.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
         list.getOrNull(index)?.let { Store.noteWatched(it.id); Ui.test("fullscreen ${it.name}") }
@@ -193,6 +235,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
 
     fun leaveFullScreen() {
         fullScreen = false
+        updateSurface()
         handler.removeCallbacks(statsTick)
         statsBadge.visibility = View.GONE
         a.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
