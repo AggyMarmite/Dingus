@@ -161,3 +161,36 @@ class RowsLayoutManager(ctx: Context) : LinearLayoutManager(ctx) {
         return true
     }
 }
+
+/**
+ * UP in a list of rows goes to the row above, every time. Left to itself, focus search can skip rows or stay put
+ * when the row above has scrolled out of sight.
+ */
+object RowNav {
+    /** The adapter position of the row (or Home's feature) holding [focus], or -1 when it's not in [rows]. */
+    fun position(rows: RecyclerView, focus: View?): Int {
+        val item = focus?.let { rows.findContainingItemView(it) } ?: return -1
+        return rows.getChildAdapterPosition(item)
+    }
+
+    private fun target(rows: RecyclerView, pos: Int): View? {
+        val v = rows.findViewHolderForAdapterPosition(pos)?.itemView ?: return null
+        v.findViewById<View>(R.id.heroWatch)?.let { return it }
+        val list = (rows.getChildViewHolder(v) as? RowsAdapter.H)?.list ?: return null
+        for (i in 0 until list.childCount) { val c = list.getChildAt(i); if (c.right > 0 && c.isFocusable) return c }
+        return list.getChildAt(0)
+    }
+
+    fun focus(rows: RecyclerView, pos: Int) {
+        target(rows, pos)?.let { if (it.requestFocus()) return }
+        rows.scrollToPosition(pos)
+        rows.post { if (target(rows, pos)?.requestFocus() != true) rows.postDelayed({ target(rows, pos)?.requestFocus() }, 80) }
+    }
+
+    /** Handles UP when the focus is in a row below the first; true when it did. */
+    fun up(rows: RecyclerView, focus: View?): Boolean {
+        val p = position(rows, focus)
+        if (p <= 0) return false
+        focus(rows, p - 1); return true
+    }
+}

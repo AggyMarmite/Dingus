@@ -2,6 +2,7 @@ package app.dingus.tv
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.View
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -91,6 +92,11 @@ class BrowseActivity : BaseActivity() {
                 first?.post { first.getChildAt(0)?.requestFocus() }
             }
         }
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_DPAD_UP && RowNav.up(rows, currentFocus)) return true
+        return super.dispatchKeyEvent(event)
     }
 
     override fun onResume() {

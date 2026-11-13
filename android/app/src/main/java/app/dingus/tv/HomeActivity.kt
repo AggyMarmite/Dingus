@@ -54,6 +54,11 @@ class HomeActivity : BaseActivity() {
             setOnClickListener { Store.homeLite = !lite; Ui.test("home-lite ${!lite}"); recreate() }
         }
         rows.itemAnimator = null
+        if (BuildConfig.DEBUG) window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, n ->
+            val id = n?.takeIf { it.id != View.NO_ID }?.let { try { resources.getResourceEntryName(it.id) } catch (_: Exception) { null } }
+            val row = n?.let { v -> rows.findContainingItemView(v) }?.let { "row " + rows.getChildAdapterPosition(it) + " " } ?: ""
+            Ui.test("home-focus $row${id ?: "?"}")
+        }
         rows.setItemViewCacheSize(4)
 
         // Opening the app straight into Live TV (Settings → Open Dingus on). Home stays underneath for BACK.
@@ -97,7 +102,29 @@ class HomeActivity : BaseActivity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) feature?.noteKey()
+        // UP always goes to the row above (or the tabs from the top one): left to itself, focus can skip rows or
+        // stay put when the row above has scrolled out of sight.
+        if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+            val p = focusedItem()
+            if (p == 0) { toTabs(); return true }
+            if (p > 0) { focusItem(p - 1); return true }
+        }
         return super.dispatchKeyEvent(event)
+    }
+
+    /** BACK from anywhere in the rows goes back up to the tabs first; BACK on the tabs leaves as usual. */
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        if (focusedItem() >= 0) toTabs() else super.onBackPressed()
+    }
+
+    private fun focusedItem() = RowNav.position(rows, currentFocus)
+    private fun focusItem(pos: Int) = RowNav.focus(rows, pos)
+
+    private fun toTabs() {
+        rows.scrollToPosition(0)
+        findViewById<View>(R.id.tabHome).requestFocus()
+        Ui.test("home-tabs")
     }
 
     override fun onDestroy() { scope.cancel(); super.onDestroy() }

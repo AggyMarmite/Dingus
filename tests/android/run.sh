@@ -167,6 +167,7 @@ sleep 4; shot 16-home
 key KEYCODE_DPAD_DOWN 3; shot 17-home-row2
 fresh
 key KEYCODE_DPAD_UP 1; key KEYCODE_DPAD_UP 1; key KEYCODE_DPAD_UP 1
+check "home-tabs" 5 "UP from the rows goes back up to the tabs"
 for _ in 1 2 3 4 5 6; do key KEYCODE_DPAD_LEFT 0.4; done                              # to the first tab (Home)
 key KEYCODE_DPAD_RIGHT 0.5; key KEYCODE_DPAD_RIGHT 0.5; key KEYCODE_DPAD_CENTER 3   # tab: Films
 check "library movies 3" 30 "Films opens from Home"
