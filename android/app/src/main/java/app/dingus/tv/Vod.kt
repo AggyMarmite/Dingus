@@ -351,7 +351,8 @@ object Vod {
             val at = i.readLong()
             val cats = List(i.readInt()) { Category(i.readUTF(), i.readUTF()) }
             val items = List(i.readInt()) {
-                VodItem(i.readUTF(), clean(i.readUTF()), i.readUTF().ifEmpty { null }, i.readUTF(), i.readFloat(),
+                // (Names are saved already tidied: no tidying again here, which made a big library slow to open.)
+                VodItem(i.readUTF(), i.readUTF(), i.readUTF().ifEmpty { null }, i.readUTF(), i.readFloat(),
                     i.readShort().toInt(), i.readUTF(), i.readLong())
             }
             return Library(cats, items, at)

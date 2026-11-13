@@ -82,7 +82,7 @@ class ImageCache(private val name: String, megabytes: Int, private val config: B
             val all = synchronized(waiting) { waiting.remove(k) } ?: return@Runnable
             main.post { all.forEach { it(bmp) } }
         }
-        val saved = File(dir, hash(url)).let { it.exists() && it.length() > 0 }
+        val saved = File(dir, hash(src(url, heightPx))).let { it.exists() && it.length() > 0 }
         (if (saved) disk else pool).execute(if (later) Later(job) else job)
     }
 
@@ -120,7 +120,20 @@ class ImageCache(private val name: String, megabytes: Int, private val config: B
         }
     }
 
-    private fun fetch(url: String, heightPx: Int): Bitmap? {
+    private val tmdbSize = Regex("""(image\.tmdb\.org/t/p/)(original|w\d+)/""")
+
+    /**
+     * Where to get [url] from: artwork on TMDB (which most providers use) comes in several sizes, so the one
+     * nearest what's shown is fetched rather than the full size original – far less to download.
+     */
+    private fun src(url: String, heightPx: Int): String {
+        if (exact || !url.contains("image.tmdb.org/t/p/")) return url
+        val w = when { heightPx <= 185 -> "w185"; heightPx <= 342 -> "w342"; heightPx <= 500 -> "w500"; heightPx <= 780 -> "w780"; else -> "w1280" }
+        return tmdbSize.replace(url) { it.groupValues[1] + w + "/" }
+    }
+
+    private fun fetch(original: String, heightPx: Int): Bitmap? {
+        val url = src(original, heightPx)
         val f = File(dir, hash(url))
         if (!f.exists() || f.length() == 0L) {
             val tmp = File(dir, f.name + ".tmp." + Thread.currentThread().id)
