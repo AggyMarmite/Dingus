@@ -15,11 +15,13 @@
             <TextView android:id="@+id/tabFilms" style="@style/Tab" android:text="Films" />
             <TextView android:id="@+id/tabShows" style="@style/Tab" android:text="TV Shows" />
             <TextView android:id="@+id/tabSearch" style="@style/Tab" android:text="Search" />
-            <TextView android:id="@+id/tabSettings" style="@style/Tab" android:text="Settings" />
             <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
-            <TextView android:id="@+id/tabLite" style="@style/Tab" android:nextFocusRight="@id/tabLite" android:layout_marginEnd="16dp" android:textSize="14sp" android:text="Lite" />
             <TextView android:id="@+id/vpnBadge" android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:layout_marginEnd="18dp" android:textSize="14sp" android:textColor="#4ADE80" android:visibility="gone" />
+            <ImageView android:id="@+id/tabSettings" style="@style/Tab" android:layout_width="44dp"
+                android:layout_height="40dp" android:layout_marginEnd="14dp" android:paddingStart="10dp" android:paddingEnd="10dp"
+                android:src="@drawable/ic_settings" android:tint="?attr/dText" android:scaleType="fitCenter"
+                android:contentDescription="Settings" android:nextFocusRight="@id/tabSettings" />
             <TextView android:id="@+id/clock" android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:textSize="18sp" android:textColor="?attr/dMuted" />
         </LinearLayout>

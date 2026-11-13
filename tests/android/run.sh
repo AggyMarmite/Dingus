@@ -173,6 +173,14 @@ key KEYCODE_DPAD_RIGHT 0.5; key KEYCODE_DPAD_RIGHT 0.5; key KEYCODE_DPAD_CENTER 
 check "library movies 3" 30 "Films opens from Home"
 sleep 3; shot 18-films-rows
 key KEYCODE_DPAD_DOWN 3; shot 19-films-rows-2
+fresh
+key KEYCODE_BACK 2
+check "home-shown" 10 "BACK from Films returns to Home"
+for _ in 1 2 3 4 5 6 7 8; do key KEYCODE_DPAD_RIGHT 0.4; done                        # to the cog by the clock
+shot 19a-home-cog
+key KEYCODE_DPAD_CENTER 2
+check "settings-shown" 10 "the cog on Home opens Settings"
+key KEYCODE_BACK 1
 
 # ---- Channel numbers off
 fresh

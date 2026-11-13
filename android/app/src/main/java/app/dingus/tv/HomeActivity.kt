@@ -17,8 +17,8 @@ import kotlinx.coroutines.launch
 
 /**
  * Home, like the Windows app: a big feature at the top (carry on watching, what's on, live sport, new films), then
- * favourite channels, coming up next, live sport now, tonight's picks, new films and shows. "Lite" swaps it for a
- * simpler page (a banner and rows) for devices that struggle.
+ * favourite channels, coming up next, live sport now, tonight's picks, new films and shows. Settings → Lite home page swaps it
+ * for a simpler page (a banner and rows) for devices that struggle.
  */
 class HomeActivity : BaseActivity() {
     private val lite = Store.homeLite
@@ -49,10 +49,6 @@ class HomeActivity : BaseActivity() {
             feature = f
             rows.adapter = ConcatAdapter(f, adapter)
         }
-        findViewById<TextView>(R.id.tabLite).apply {
-            text = if (lite) "Full home" else "Lite"
-            setOnClickListener { Store.homeLite = !lite; Ui.test("home-lite ${!lite}"); recreate() }
-        }
         rows.itemAnimator = null
         if (BuildConfig.DEBUG) window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, n ->
             val id = n?.takeIf { it.id != View.NO_ID }?.let { try { resources.getResourceEntryName(it.id) } catch (_: Exception) { null } }
@@ -76,6 +72,7 @@ class HomeActivity : BaseActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (Store.homeLite != lite) { recreate(); return } // switched in Settings
         Ui.test("home-shown")
         val vod = if (Vod.available) View.VISIBLE else View.GONE
         findViewById<View>(R.id.tabFilms).visibility = vod
