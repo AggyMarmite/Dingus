@@ -55,7 +55,7 @@ class HomeFeature(private val a: Activity, private val scope: kotlinx.coroutines
             val h = holder
             // Only while a button here is highlighted and nothing's been pressed for a while.
             if (h != null && slides.size > 1 && h.itemView.hasFocus() && System.currentTimeMillis() - lastKey > 8_000) {
-                index = (index + 1) % slides.size; bind(h)
+                moveTo(h, (index + 1) % slides.size)
             }
             handler.postDelayed(this, 9_000)
         }
@@ -101,11 +101,36 @@ class HomeFeature(private val a: Activity, private val scope: kotlinx.coroutines
         val h = H(v)
         h.watch.setOnClickListener { slides.getOrNull(index)?.watch?.invoke() }
         h.second.setOnClickListener { slides.getOrNull(index)?.second?.second?.invoke() }
-        h.next.setOnClickListener { if (slides.isNotEmpty()) { index = (index + 1) % slides.size; bind(h); noteKey() } }
+        h.next.setOnClickListener { if (slides.isNotEmpty()) { moveTo(h, (index + 1) % slides.size); noteKey() } }
         return h
     }
 
     override fun onBindViewHolder(h: H, position: Int) { holder = h; bind(h) }
+
+    private var moving = false
+
+    /**
+     * On to slide [next], smoothly: the words slide out to the left and the next slide's slide in from the right,
+     * while the background picture fades across. (Straight swap in lite mode.)
+     */
+    private fun moveTo(h: H, next: Int) {
+        if (Ui.lite || slides.size < 2) { index = next; bind(h); return }
+        if (moving) return
+        moving = true
+        val shift = 28 * a.resources.displayMetrics.density
+        val parts = listOf<View>(h.kicker, h.logo, h.title, h.meta, h.progress, h.text, h.dots)
+        val ease = android.view.animation.DecelerateInterpolator(1.6f)
+        h.art.animate().alpha(0f).setDuration(240).start()
+        parts.forEach { it.animate().alpha(0f).translationX(-shift).setDuration(200).setInterpolator(android.view.animation.AccelerateInterpolator()).start() }
+        h.itemView.postDelayed({
+            index = next; bind(h)
+            parts.forEach { v ->
+                v.translationX = shift
+                v.animate().alpha(1f).translationX(0f).setDuration(380).setInterpolator(ease).start()
+            }
+            h.art.animate().alpha(1f).setDuration(520).setInterpolator(ease).withEndAction { moving = false }.start()
+        }, 210)
+    }
 
     private fun bind(h: H) {
         val s = slides.getOrNull(index) ?: return
