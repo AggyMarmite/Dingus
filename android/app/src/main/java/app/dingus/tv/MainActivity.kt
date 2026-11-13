@@ -178,8 +178,9 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             return
         }
         scope.launch {
-            if (Repo.channels.isEmpty()) Repo.loadSaved()
-            Vpn.startup() // (before anything goes online)
+            // The saved channels first (quick) so the guide appears, then the saved guide fills it in.
+            val readGuide = Repo.channels.isEmpty() && Repo.loadSavedChannels() || (Repo.channels.isNotEmpty() && !Repo.hasGuide)
+            if (readGuide) launch { Repo.loadSavedGuide() }
             // The category may belong to another playlist (after switching).
             val cats = Repo.sideCategories()
             if (cats.none { it.id == current }) current = Store.lastCategory?.takeIf { id -> cats.any { it.id == id } } ?: Repo.ALL
@@ -187,6 +188,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             grid.requestFocus()
             if (showCategoriesFirst && pendingPlay == null && Repo.channels.isNotEmpty()) { showCategoriesFirst = false; openCategories() }
             runPendingPlay()
+            Vpn.startup() // (before anything goes online)
             if (Repo.channels.isEmpty()) refresh(p, true)
             else if (Store.refreshDue) refresh(p, false)
             runPendingPlay()

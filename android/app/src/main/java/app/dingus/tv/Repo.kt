@@ -302,6 +302,7 @@ object Repo {
                 if (list.isNotEmpty()) g[k] = list.toTypedArray()
             }
         }
-        guide = g
+        // (A fresh guide from the provider may have arrived while this was being read: keep that one.)
+        if (guide.isEmpty()) guide = g
     }
 }
