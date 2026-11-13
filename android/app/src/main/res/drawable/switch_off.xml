@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- An "off" switch: grey track, knob on the left. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true"><layer-list>
+        <item><shape><solid android:color="#66FFFFFF" /><corners android:radius="13dp" /><size android:width="46dp" android:height="26dp" /></shape></item>
+        <item android:left="3dp" android:top="3dp" android:right="23dp" android:bottom="3dp"><shape android:shape="oval"><solid android:color="#FFFFFFFF" /></shape></item>
+    </layer-list></item>
+    <item><layer-list>
+        <item><shape><solid android:color="#3A4152" /><corners android:radius="13dp" /><size android:width="46dp" android:height="26dp" /></shape></item>
+        <item android:left="3dp" android:top="3dp" android:right="23dp" android:bottom="3dp"><shape android:shape="oval"><solid android:color="#C9D1E0" /></shape></item>
+    </layer-list></item>
+</selector>

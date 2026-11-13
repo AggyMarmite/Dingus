@@ -25,65 +25,105 @@ class SettingsActivity : BaseActivity() {
     private var updateRow: View? = null
     private var accountRow: View? = null
 
+    private val sections = listOf(
+        "Playlist & TV guide" to { playlistSection() },
+        "Live TV" to { liveSection() },
+        "Playback" to { playbackSection() },
+        "Look" to { lookSection() },
+        "VPN" to { vpnSection() },
+        "About" to { aboutSection() },
+    )
+    private var section = -1
+    private val sectionViews = ArrayList<TextView>()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_settings)
+        setContentView(R.layout.activity_settings_split)
         side = SideMenu.attach(this, SideMenu.Page.SETTINGS)
         list = findViewById(R.id.list)
-
-        header("Playlist & TV guide")
-        val first = row("Playlists", { playlistsSummary() }) { playlists() }
-        accountRow = first
-        row("TV guide sources", { guideSummary() }) { guideSources() }
-        refreshRow = row("Update channels and TV guide now", { refreshSummary() }) { refresh() }
-        row("Playlist update interval", { "Every ${hoursName(Store.refreshHours)}  ·  also when you choose \"Update now\"" }) { refreshInterval() }
-        row("How much TV guide to keep", { "${hoursName(Store.guideHours)} ahead  ·  less is lighter on memory" }) { guideLength() }
-
-        header("Live TV")
-        toggle("Watch in the guide first", "OK on a channel plays it in the guide's window, OK again for full screen (off: straight to full screen)", { Store.preview }) { Store.preview = it }
-        toggle("Channel numbers", "Show each channel's number beside its name", { Store.showNumbers }) { Store.showNumbers = it }
-        toggle("Colour-coded programmes", "A coloured line for sport, films, news, kids…", { Store.genreColours }) { Store.genreColours = it }
-        toggle("Merge duplicate channels", "Show a channel's HD, FHD and backup versions as one, and try the next if one fails",
-            { Store.mergeChannels }) { Store.mergeChannels = it; Repo.reapply() }
-        row("Edit channels", { "Rename, renumber or hide channels" }) { startActivity(Intent(this, ChannelEditorActivity::class.java)) }
-        row("Hidden categories", { hiddenSummary() }) { unhide() }
-        row("Category order", {
-            if (listOf("live", "movies", "series").any { Store.categoryOrder(it).isNotEmpty() }) "Your own order  ·  press OK to go back to the playlist's"
-            else "The playlist's order  ·  press ≡ on a category to move it"
-        }) {
-            listOf("live", "movies", "series").forEach { Store.setCategoryOrder(it, emptyList()) }
-            Repo.reapply(); update()
+        val holder = findViewById<LinearLayout>(R.id.sections)
+        for ((i, s) in sections.withIndex()) {
+            val t = LayoutInflater.from(this).inflate(R.layout.item_settings_section, holder, false) as TextView
+            t.text = s.first
+            t.id = View.generateViewId()
+            // Moving onto a section shows its options; OK (or RIGHT) goes into them.
+            t.setOnFocusChangeListener { _, has -> if (has) showSection(i) }
+            t.setOnClickListener { list.getChildAt(firstRow())?.requestFocus() }
+            t.nextFocusRightId = View.NO_ID
+            holder.addView(t)
+            sectionViews.add(t)
         }
+        showSection(0)
+        sectionViews[0].requestFocus()
+    }
 
-        header("VPN")
-        row("Built-in VPN", { vpnSummary() }) { startActivity(Intent(this, VpnActivity::class.java)) }
+    private fun firstRow(): Int { for (i in 0 until list.childCount) if (list.getChildAt(i).isFocusable) return i; return 0 }
 
-        header("Playback")
-        toggle("Pause & rewind live TV", "Keeps the last 15 minutes while you watch (MPEG-TS channels)", { Store.timeshift }) { Store.timeshift = it }
-        row("Stream format", { if (Store.streamFormat == "hls") "HLS" else "MPEG-TS (recommended)" }) { streamFormat() }
-        toggle("Subtitles automatically", "On: subtitles in your language whenever there are some. Off: subtitles start off (films, shows and live TV)",
-            { Store.autoSubtitles }) { Store.autoSubtitles = it }
-        row("Subtitle language", { java.util.Locale(Store.subtitleLanguage).displayLanguage.ifEmpty { Store.subtitleLanguage } }) { subtitleLanguage() }
-        toggle("Match the TV's frame rate", "Switches the TV to suit the video (50 Hz for UK TV, 24 Hz for films) for smoother motion",
-            { Store.matchFrameRate }) { Store.matchFrameRate = it }
+    private fun showSection(i: Int) {
+        if (i == section) return
+        section = i
+        sectionViews.forEachIndexed { n, v -> v.isActivated = n == i }
+        list.removeAllViews(); subtitles.clear(); values.clear(); switches.clear()
+        refreshRow = null; updateRow = null; accountRow = null
+        header(sections[i].first)
+        sections[i].second()
+        findViewById<View>(R.id.pane).scrollTo(0, 0)
+        update()
+        Ui.test("settings-section ${sections[i].first}")
+    }
 
-        header("Look")
-        row("Open Dingus on", { if (Store.startScreen == "live") "Live TV" else "Home" }) {
+    private fun playlistSection() {
+        accountRow = row("Playlists", { playlistsSummary() }, { Store.playlist?.name ?: "" }) { playlists() }
+        refreshRow = row("Update now", { refreshSummary() }) { refresh() }
+        row("Update every", { "" }, { hoursName(Store.refreshHours) }) { refreshInterval() }
+        row("TV guide sources", { guideSummary() }) { guideSources() }
+        row("Keep TV guide for", { "Less is lighter on memory" }, { "${hoursName(Store.guideHours)} ahead" }) { guideLength() }
+    }
+
+    private fun liveSection() {
+        toggle("Watch in the guide first", "OK plays in the guide window, OK again for full screen", { Store.preview }) { Store.preview = it }
+        toggle("Channel numbers", "", { Store.showNumbers }) { Store.showNumbers = it }
+        toggle("Colour-coded programmes", "Sport, films, news, kids…", { Store.genreColours }) { Store.genreColours = it }
+        toggle("Merge duplicate channels", "HD, FHD and backups shown as one", { Store.mergeChannels }) { Store.mergeChannels = it; Repo.reapply() }
+        row("Edit channels", { "Rename, renumber or hide" }, { "›" }) { startActivity(Intent(this, ChannelEditorActivity::class.java)) }
+        row("Categories", { hiddenSummary() + "  ·  " + (if (listOf("live", "movies", "series").any { Store.categoryOrder(it).isNotEmpty() }) "your own order" else "the playlist's order") }, { "›" }) {
+            val opts = listOf("Show hidden categories", "Put them back in the playlist's order")
+            choose("Categories", opts, -1) { n ->
+                if (n == 0) unhide()
+                else { listOf("live", "movies", "series").forEach { Store.setCategoryOrder(it, emptyList()) }; Repo.reapply(); update() }
+            }
+        }
+    }
+
+    private fun playbackSection() {
+        toggle("Pause & rewind live TV", "Keeps the last 15 minutes (MPEG-TS channels)", { Store.timeshift }) { Store.timeshift = it }
+        row("Stream format", { "" }, { if (Store.streamFormat == "hls") "HLS" else "MPEG-TS" }) { streamFormat() }
+        toggle("Subtitles automatically", "In your language, when there are some", { Store.autoSubtitles }) { Store.autoSubtitles = it }
+        row("Subtitle language", { "" }, { java.util.Locale(Store.subtitleLanguage).displayLanguage.ifEmpty { Store.subtitleLanguage } }) { subtitleLanguage() }
+        toggle("Match the TV's frame rate", "Smoother motion (50 Hz for UK TV, 24 Hz for films)", { Store.matchFrameRate }) { Store.matchFrameRate = it }
+    }
+
+    private fun lookSection() {
+        row("Open Dingus on", { "" }, { if (Store.startScreen == "live") "Live TV" else "Home" }) {
             choose("Open Dingus on", listOf("Home", "Live TV"), if (Store.startScreen == "live") 1 else 0) {
                 Store.startScreen = if (it == 1) "live" else "home"; update()
             }
         }
-        toggle("Lite mode", "A simpler Home and fewer animations, if Dingus feels slow", { Store.homeLite }) { Store.homeLite = it }
-        toggle("Title logos for films and shows", "The official logo in place of the plain title, where TMDB has one", { Store.titleLogos }) { Store.titleLogos = it }
-        row("Theme", { "${Themes.background().name}  ·  ${Themes.accent().name}" }) { theme() }
+        toggle("Lite mode", "Simpler Home, fewer animations", { Store.homeLite }) { Store.homeLite = it }
+        toggle("Title logos", "Official film and show logos, from TMDB", { Store.titleLogos }) { Store.titleLogos = it }
+        row("Theme", { "" }, { "${Themes.background().name}  ·  ${Themes.accent().name}" }) { theme() }
+    }
 
-        header("Dingus")
-        updateRow = row("Check for updates", { "You have version ${BuildConfig.VERSION_NAME}" }) {
+    private fun vpnSection() {
+        row("Built-in VPN", { vpnSummary() }, { "›" }) { startActivity(Intent(this, VpnActivity::class.java)) }
+    }
+
+    private fun aboutSection() {
+        updateRow = row("Check for updates", { "" }, { "Version ${BuildConfig.VERSION_NAME}" }) {
             updateRow?.let { sub(it, "Checking…") }
             Updater.check(this, manual = true) { msg -> updateRow?.let { sub(it, msg) } }
         }
-        row("About Dingus", { "Version ${BuildConfig.VERSION_NAME}  ·  Film and show logos from TMDB (not endorsed or certified by TMDB)" }) {}
-        first.requestFocus()
+        row("About Dingus", { "Film and show logos from TMDB (not endorsed or certified by TMDB)" }, { "Version ${BuildConfig.VERSION_NAME}" }) {}
     }
 
     override fun onResume() {
@@ -95,7 +135,11 @@ class SettingsActivity : BaseActivity() {
     }
     override fun onDestroy() { scope.cancel(); super.onDestroy() }
 
-    private fun update() { for ((v, f) in subtitles) sub(v, f()) }
+    private fun update() {
+        for ((v, f) in subtitles) sub(v, f())
+        for ((v, f) in values) if (v.parent != null) v.findViewById<TextView>(R.id.value).text = f()
+        for ((v, f) in switches) if (v.parent != null) v.findViewById<android.widget.ImageView>(R.id.switchIcon).setImageResource(if (f()) R.drawable.switch_on else R.drawable.switch_off)
+    }
 
     // ------------------------------------------------------------------ rows
 
@@ -105,19 +149,32 @@ class SettingsActivity : BaseActivity() {
         list.addView(v)
     }
 
-    private fun row(title: String, subtitle: () -> String, click: () -> Unit): View {
-        val v = LayoutInflater.from(this).inflate(R.layout.item_setting, list, false)
+    private val values = HashMap<View, () -> String>()
+    private val switches = HashMap<View, () -> Boolean>()
+
+    private fun row(title: String, subtitle: () -> String, value: (() -> String)? = null, click: () -> Unit): View {
+        val v = LayoutInflater.from(this).inflate(R.layout.item_setting_row, list, false)
         v.findViewById<TextView>(R.id.title).text = title
         v.setOnClickListener { click() }
         list.addView(v)
+        if (section >= 0) v.nextFocusLeftId = sectionViews[section].id // LEFT: back to this section, not a neighbour
         subtitles.add(v to subtitle)
+        if (value != null) values[v] = value
         return v
     }
 
-    private fun toggle(title: String, about: String, get: () -> Boolean, set: (Boolean) -> Unit): View =
-        row(title, { (if (get()) "On" else "Off") + "  ·  " + about }) { set(!get()); update() }
+    private fun toggle(title: String, about: String, get: () -> Boolean, set: (Boolean) -> Unit): View {
+        val v = row(title, { about }) { set(!get()); update() }
+        v.findViewById<View>(R.id.switchIcon).visibility = View.VISIBLE
+        switches[v] = get
+        return v
+    }
 
-    private fun sub(v: View, s: String) { v.findViewById<TextView>(R.id.subtitle).text = s }
+    private fun sub(v: View, s: String) {
+        val t = v.findViewById<TextView>(R.id.subtitle)
+        t.text = s
+        t.visibility = if (s.isEmpty()) View.GONE else View.VISIBLE
+    }
 
     private fun choose(title: String, options: List<String>, current: Int, done: (Int) -> Unit) {
         Dialogs.builder(this).setTitle(title)
@@ -357,6 +414,14 @@ class SettingsActivity : BaseActivity() {
                 recreate()
             }
         }
+    }
+
+    /** BACK from a section's options goes back to the sections first. */
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        var v: Any? = currentFocus
+        while (v is View) { if (v === list) { sectionViews.getOrNull(section)?.requestFocus(); return }; v = v.parent }
+        super.onBackPressed()
     }
 
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean = side.onKey(event) || super.dispatchKeyEvent(event)
