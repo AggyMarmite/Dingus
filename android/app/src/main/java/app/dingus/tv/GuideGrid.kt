@@ -21,6 +21,10 @@ import androidx.core.content.ContextCompat
  * Left on the programme that's on now asks for the categories menu.
  */
 class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
+    companion object {
+        /** How tall the channel logos are drawn, in pixels (also what Home fetches them at, ahead of time). */
+        fun logoHeight(c: Context) = ((46 - 14) * c.resources.displayMetrics.density).toInt()
+    }
     interface Listener {
         fun onSelected(c: Channel, p: Programme?)
         fun onPlay(c: Channel, p: Programme?)
@@ -299,7 +303,7 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         canvas.drawRoundRect(r, 6 * d, 6 * d, fill)
         val mid = (y0 + y1) / 2
         if (showNumbers && c.number > 0) canvas.drawText(c.number.toString(), 38 * d, mid + 4 * d, numP)
-        val logoX = if (showNumbers) 46 * d else 8 * d; val logoW = 60 * d; val logoH = rowH - 14 * d
+        val logoX = if (showNumbers) 46 * d else 8 * d; val logoW = 60 * d; val logoH = logoHeight(context).toFloat()
         val bmp = Logos.get(c.logo, logoH.toInt()) { invalidate() }
         if (bmp != null) {
             val scale = minOf(logoW / bmp.width, logoH / bmp.height)

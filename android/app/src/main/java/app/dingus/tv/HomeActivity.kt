@@ -169,6 +169,8 @@ class HomeActivity : BaseActivity() {
                 )
                 reads.forEach { it.await() }
                 build()
+                // The guide's channel logos, ready before Live TV is opened (at the size the guide draws them).
+                Logos.prefetch(Repo.channelsIn(Repo.ALL).take(150).map { it.logo }, GuideGrid.logoHeight(this@HomeActivity))
                 Vpn.startup() // "connect when Dingus starts": before anything goes online
                 val p = Store.playlist ?: return@launch
                 if (Repo.channels.isEmpty()) {
