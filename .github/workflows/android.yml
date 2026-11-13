@@ -70,7 +70,7 @@ jobs:
           set -x
           sudo timeout 120 apt-get install -y -q wireguard-tools || { sudo timeout 120 apt-get update -q; sudo timeout 180 apt-get install -y -q wireguard-tools; }
           which wg
-          mkdir -p $RUNNER_TEMP/wg && cd $RUNNER_TEMP/wg
+          mkdir -p $RUNNER_TEMP/wg && cd $RUNNER_TEMP/wg && umask 077
           wg genkey > server.key; wg pubkey < server.key > server.pub
           wg genkey > client.key; wg pubkey < client.key > client.pub
           # Kernel WireGuard if allowed, otherwise the userspace engine (wireguard-go).
@@ -78,7 +78,7 @@ jobs:
             (cd /tmp && GOBIN=/tmp/wgbin go install golang.zx2c4.com/wireguard@latest) && sudo /tmp/wgbin/wireguard wg0
           fi
           sudo ip addr add 10.66.0.1/24 dev wg0
-          sudo wg set wg0 listen-port 51820 private-key server.key peer "$(cat client.pub)" allowed-ips 10.66.0.2/32
+          cat server.key | sudo wg set wg0 listen-port 51820 private-key /dev/stdin peer "$(cat client.pub)" allowed-ips 10.66.0.2/32
           sudo ip link set wg0 up
           printf '[Interface]\nPrivateKey = %s\nAddress = 10.66.0.2/32\n\n[Peer]\nPublicKey = %s\nEndpoint = 10.0.2.2:51820\nAllowedIPs = 10.66.0.0/24\nPersistentKeepalive = 15\n' "$(cat client.key)" "$(cat server.pub)" > client.conf
           echo "WG_CONF=$RUNNER_TEMP/wg/client.conf" >> $GITHUB_ENV
