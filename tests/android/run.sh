@@ -41,7 +41,7 @@ shot 03-categories
 fresh
 key KEYCODE_DPAD_DOWN 1.5; key KEYCODE_DPAD_DOWN 1.5; key KEYCODE_DPAD_CENTER 3   # Sport
 check "key KEYCODE_DPAD_CENTER on TextView/Sport" 5 "scrolling through categories keeps the highlight where you are"
-key KEYCODE_DPAD_CENTER 1
+key KEYCODE_DPAD_CENTER 3; shot 03b-sport
 check "preview Test 3 Sport" 30 "picking a category shows its channels"
 fresh
 key KEYCODE_DPAD_LEFT 2; key KEYCODE_DPAD_UP 1.5; key KEYCODE_DPAD_CENTER 4        # back to UK: Entertainment

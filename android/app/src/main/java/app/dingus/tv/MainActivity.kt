@@ -369,6 +369,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     // ------------------------------------------------------------------ actions
 
     override fun onPlay(c: Channel, p: Programme?) {
+        Ui.test("ok ${c.name} programme=${p?.title} playing=${live.current?.name} full=${live.fullScreen}")
         // A programme still to come: set a reminder (or watch the channel now).
         if (p != null && p.start > System.currentTimeMillis()) {
             val set = Reminders.has(c, p)

@@ -145,6 +145,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     private fun startChannel() {
         val p = player ?: return
         val c = version ?: list.getOrNull(index) ?: return
+        Ui.test("load ${c.name}")
         message.text = if (fullScreen) "" else "Loading…"
         buffer?.close()
         buffer = null
