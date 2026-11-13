@@ -58,7 +58,8 @@ object TitleLogos {
         url
     }
 
-    private fun get(path: String): JSONObject {
+    /** A TMDB look-up (also used for cast and people). */
+    fun get(path: String): JSONObject {
         val k = key
         // The short "API key" goes in the address; the long "read access token" in a header. Either works.
         val bearer = k.length > 60
@@ -73,6 +74,10 @@ object TitleLogos {
             return JSONObject(c.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
         } finally { c.disconnect() }
     }
+
+    /** The TMDB id of a film or show (from the provider if it says, otherwise a search). */
+    fun tmdbIdFor(kind: String, item: VodItem, known: String?): String? =
+        known?.takeIf { it.isNotBlank() && it != "0" } ?: search(if (kind == Vod.MOVIES) "movie" else "tv", item)
 
     private fun search(type: String, item: VodItem): String? {
         val q = URLEncoder.encode(item.name, "UTF-8")

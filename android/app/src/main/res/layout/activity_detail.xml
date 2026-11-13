@@ -44,6 +44,12 @@
                     android:text="Mark as watched" android:visibility="gone" />
             </LinearLayout>
 
+            <!-- The cast (from TMDB): OK on someone for their page. -->
+            <HorizontalScrollView android:id="@+id/castScroll" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="16dp" android:scrollbars="none" android:visibility="gone">
+                <LinearLayout android:id="@+id/castRow" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
             <HorizontalScrollView android:id="@+id/seasonsScroll" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="18dp" android:scrollbars="none" android:visibility="gone">
                 <LinearLayout android:id="@+id/seasons" android:layout_width="wrap_content" android:layout_height="wrap_content"

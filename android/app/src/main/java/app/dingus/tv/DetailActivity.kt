@@ -117,6 +117,7 @@ class DetailActivity : BaseActivity() {
         d.backdrop?.let { Posters.load(findViewById<ImageView>(R.id.backdrop), it, resources.displayMetrics.heightPixels / 2) }
         // The official title logo (from TMDB), in place of the plain title.
         TitleLogos.cached(kind, m)?.let { TitleLogos.show(findViewById(R.id.titleLogo), findViewById(R.id.title), it) }
+        showCast(m, d.tmdbId)
         if (TitleLogos.enabled) scope.launch {
             TitleLogos.find(kind, m, d.tmdbId)?.let { TitleLogos.show(findViewById(R.id.titleLogo), findViewById(R.id.title), it) }
         }
@@ -268,4 +269,42 @@ class DetailActivity : BaseActivity() {
             } else holder.progress.visibility = View.GONE
         }
     }
+
+    // ------------------------------------------------------------------ cast
+
+    private var castShown = false
+
+    /** A row of who's in it (photos from TMDB); OK on someone opens their page. */
+    private fun showCast(m: VodItem, tmdbId: String?) {
+        if (castShown) return
+        castShown = true
+        scope.launch {
+            val cast = People.cast(kind, m, tmdbId)
+            if (cast.isEmpty() || isFinishing) return@launch
+            val row = findViewById<LinearLayout>(R.id.castRow)
+            row.removeAllViews()
+            for (a in cast) {
+                val v = layoutInflater.inflate(R.layout.item_cast, row, false)
+                v.findViewById<TextView>(R.id.name).text = a.name
+                v.findViewById<TextView>(R.id.role).text = a.role
+                v.findViewById<TextView>(R.id.initials).text = Ui.initials(a.name)
+                val photo = v.findViewById<ImageView>(R.id.photo)
+                photo.clipToOutline = true
+                photo.outlineProvider = object : android.view.ViewOutlineProvider() {
+                    override fun getOutline(view: View, o: android.graphics.Outline) { o.setOval(0, 0, view.width, view.height) }
+                }
+                (photo.parent as View).apply {
+                    clipToOutline = true
+                    background = android.graphics.drawable.GradientDrawable().apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(Themes.color(this@DetailActivity, R.attr.dSurface2)) }
+                }
+                Posters.load(photo, a.photo, Ui.dp(this@DetailActivity, 84), v.findViewById(R.id.initials))
+                v.setOnClickListener {
+                    startActivity(Intent(this@DetailActivity, PersonActivity::class.java).putExtra(PersonActivity.ID, a.id).putExtra(PersonActivity.NAME, a.name))
+                }
+                row.addView(v)
+            }
+            findViewById<View>(R.id.castScroll).visibility = View.VISIBLE
+        }
+    }
+
 }

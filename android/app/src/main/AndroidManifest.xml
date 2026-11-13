@@ -70,6 +70,7 @@
         <activity android:name=".ChannelEditorActivity" android:exported="false" android:screenOrientation="landscape" />
         <activity android:name=".LibraryActivity" android:exported="false" android:screenOrientation="landscape" />
         <activity android:name=".DetailActivity" android:exported="false" android:screenOrientation="landscape" />
+        <activity android:name=".PersonActivity" android:exported="false" android:screenOrientation="landscape" />
         <activity android:name=".SearchActivity" android:exported="false" android:screenOrientation="landscape"
             android:windowSoftInputMode="adjustResize|stateVisible" />
         <activity
