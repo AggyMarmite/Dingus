@@ -428,9 +428,11 @@ class SettingsActivity : BaseActivity() {
         if (side.onKey(event)) return true
         // RIGHT from a section: its first option (not whichever one is level with the section).
         if (event.action == android.view.KeyEvent.ACTION_DOWN && event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT &&
-            currentFocus in sectionViews) {
+            sectionViews.any { it === currentFocus }) {
             findViewById<View>(R.id.pane).scrollTo(0, 0)
-            list.getChildAt(firstRow())?.requestFocus()
+            val first = list.getChildAt(firstRow())
+            first?.requestFocus()
+            Ui.test("settings-into ${sections[section].first}: ${first?.findViewById<TextView>(R.id.title)?.text}")
             return true
         }
         return super.dispatchKeyEvent(event)
