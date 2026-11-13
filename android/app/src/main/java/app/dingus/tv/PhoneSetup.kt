@@ -14,7 +14,7 @@ import kotlin.random.Random
  * Wi-Fi and paste your VPN key, address or WireGuard config files there. Only runs while that screen is open,
  * and only accepts the code shown on the TV.
  */
-class PhoneSetup(private val onSaved: (String) -> Unit, private val onPlaylist: ((Map<String, String>) -> Unit)? = null) {
+class PhoneSetup(private val onPlaylist: ((Map<String, String>) -> Unit)? = null, private val onSaved: (String) -> Unit = {}) {
     /** Adding a playlist (rather than setting up the VPN). */
     private val forPlaylist get() = onPlaylist != null
     val code = (1000 + Random.nextInt(9000)).toString()
