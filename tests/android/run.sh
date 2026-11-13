@@ -212,6 +212,10 @@ adb shell am force-stop $PKG
 adb shell am start -n $PKG/.HomeActivity
 check "home rows [1-9]" 30 "Home opens by itself"
 check "home-loading-done" 30 "the loading screen gives way to Home"
+fresh
+adb shell am start -n $PKG/.HomeActivity --ez dingus_test_loading true
+sleep 2; shot 16a-loading-screen
+check "home-loading-done" 15 "…and goes once Home's ready"
 sleep 3
 key KEYCODE_DPAD_LEFT 1.5; key KEYCODE_DPAD_DOWN 0.5; key KEYCODE_DPAD_CENTER 3     # menu → Live TV
 check "guide-filled [1-9]" 15 "Live TV from Home shows the channels"

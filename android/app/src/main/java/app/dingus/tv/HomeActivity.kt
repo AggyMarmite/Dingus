@@ -70,6 +70,13 @@ class HomeActivity : BaseActivity() {
         super.onResume()
         if (Store.homeLite != lite) { recreate(); return } // switched in Settings
         Ui.test("home-shown")
+        // (Self-test: hold the loading screen up for a screenshot.)
+        if (BuildConfig.DEBUG && intent.getBooleanExtra("dingus_test_loading", false)) {
+            intent.removeExtra("dingus_test_loading")
+            holdLoadingUntil = System.currentTimeMillis() + 6_000
+            loadingText("Getting your channels ready…")
+            handler.postDelayed({ hideLoading() }, 6_100)
+        }
         if (PlaylistUpdate.askAfterSwitch) PlaylistUpdate.ask(this)
         side.refresh()
         tick.run()
@@ -193,7 +200,12 @@ class HomeActivity : BaseActivity() {
         findViewById<TextView>(R.id.loadingText)?.text = t
     }
 
+    private var holdLoadingUntil = 0L
+
+    override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent) }
+
     private fun hideLoading() {
+        if (System.currentTimeMillis() < holdLoadingUntil) return
         val v = findViewById<View>(R.id.loadingScreen) ?: return
         if (v.visibility != View.VISIBLE) return
         Ui.test("home-loading-done")
