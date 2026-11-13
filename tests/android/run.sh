@@ -168,20 +168,28 @@ check "home rows [1-9]" 30 "Home shows its rows"
 sleep 4; shot 16-home
 key KEYCODE_DPAD_DOWN 3; shot 17-home-row2
 fresh
-key KEYCODE_DPAD_UP 1; key KEYCODE_DPAD_UP 1; key KEYCODE_DPAD_UP 1
-check "home-tabs" 5 "UP from the rows goes back up to the tabs"
-for _ in 1 2 3 4 5 6; do key KEYCODE_DPAD_LEFT 0.4; done                              # to the first tab (Home)
-key KEYCODE_DPAD_RIGHT 0.5; key KEYCODE_DPAD_RIGHT 0.5; key KEYCODE_DPAD_CENTER 3   # tab: Films
-check "library movies 3" 30 "Films opens from Home"
+key KEYCODE_DPAD_UP 1
+check "home-focus row 0 heroWatch" 5 "UP from the rows goes back up to the top"
+key KEYCODE_DPAD_LEFT 1.5
+check "menu-open" 5 "LEFT at the left edge of Home opens the side menu"
+shot 17b-home-menu
+key KEYCODE_DPAD_DOWN 0.5; key KEYCODE_DPAD_DOWN 0.5; key KEYCODE_DPAD_CENTER 3     # Home → Live TV → Films
+check "library movies 3" 30 "Films opens from the side menu"
 sleep 3; shot 18-films-rows
 key KEYCODE_DPAD_DOWN 3; shot 19-films-rows-2
 fresh
+key KEYCODE_DPAD_LEFT 1.5
+check "menu-open" 5 "the side menu opens on Films too"
+shot 19a-films-menu
+key KEYCODE_DPAD_RIGHT 1
+check "menu-closed" 5 "RIGHT closes it"
+fresh
 key KEYCODE_BACK 2
 check "home-shown" 10 "BACK from Films returns to Home"
-for _ in 1 2 3 4 5 6 7 8; do key KEYCODE_DPAD_RIGHT 0.4; done                        # to the cog by the clock
-shot 19a-home-cog
+key KEYCODE_DPAD_UP 0.5; key KEYCODE_DPAD_UP 0.5; key KEYCODE_DPAD_LEFT 1.5
+for _ in 1 2 3 4 5; do key KEYCODE_DPAD_DOWN 0.4; done                                 # … → Settings
 key KEYCODE_DPAD_CENTER 2
-check "settings-shown" 10 "the cog on Home opens Settings"
+check "settings-shown" 10 "Settings opens from the side menu on Home"
 key KEYCODE_BACK 1
 # Live TV from a freshly opened Home (the channels are already loaded by Home)
 fresh
@@ -189,7 +197,7 @@ adb shell am force-stop $PKG
 adb shell am start -n $PKG/.HomeActivity
 check "home rows [1-9]" 30 "Home opens by itself"
 sleep 3
-key KEYCODE_DPAD_UP 1; key KEYCODE_DPAD_RIGHT 0.5; key KEYCODE_DPAD_CENTER 3     # tab: Live TV
+key KEYCODE_DPAD_LEFT 1.5; key KEYCODE_DPAD_DOWN 0.5; key KEYCODE_DPAD_CENTER 3     # menu → Live TV
 check "guide-filled [1-9]" 15 "Live TV from Home shows the channels"
 shot 19aa-live-from-home
 

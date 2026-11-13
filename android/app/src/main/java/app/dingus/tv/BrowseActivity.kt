@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 
 /** Films or TV shows, Netflix-style: a banner for what's highlighted, then Continue watching, Recently added and a row per category. */
 class BrowseActivity : BaseActivity() {
+    private lateinit var side: SideMenu
     companion object { const val KIND = "kind" }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -30,6 +31,7 @@ class BrowseActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_browse)
         kind = intent.getStringExtra(KIND) ?: Vod.MOVIES
+        side = SideMenu.attach(this, if (kind == Vod.MOVIES) SideMenu.Page.FILMS else SideMenu.Page.SHOWS)
         rows = findViewById(R.id.rows)
         empty = findViewById(R.id.empty)
         hero = Hero(this, scope)
@@ -39,7 +41,6 @@ class BrowseActivity : BaseActivity() {
         rows.itemAnimator = null
         rows.setItemViewCacheSize(4)
         findViewById<TextView>(R.id.heading).text = if (kind == Vod.MOVIES) "Films" else "TV Shows"
-        findViewById<View>(R.id.search).setOnClickListener { startActivity(Intent(this, SearchActivity::class.java)) }
         findViewById<View>(R.id.allCategories).setOnClickListener {
             startActivity(Intent(this, LibraryActivity::class.java).putExtra(LibraryActivity.KIND, kind))
         }
@@ -95,6 +96,7 @@ class BrowseActivity : BaseActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (side.onKey(event)) return true
         if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_DPAD_UP && RowNav.up(rows, currentFocus)) return true
         return super.dispatchKeyEvent(event)
     }

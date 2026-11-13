@@ -3,32 +3,18 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent" android:background="?attr/dBg">
     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
-            android:gravity="center_vertical" android:paddingStart="42dp" android:paddingEnd="48dp" android:paddingTop="18dp">
-            <ImageView android:layout_width="32dp" android:layout_height="32dp" android:src="@mipmap/ic_launcher"
-                android:contentDescription="@null" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="10dp"
-                android:layout_marginEnd="22dp" android:text="Dingus" android:textSize="22sp" android:textStyle="bold"
-                android:textColor="?attr/dText" />
-            <TextView android:id="@+id/tabHome" style="@style/Tab" android:nextFocusLeft="@id/tabHome" android:text="Home" />
-            <TextView android:id="@+id/tabGuide" style="@style/Tab" android:text="Live TV" />
-            <TextView android:id="@+id/tabFilms" style="@style/Tab" android:text="Films" />
-            <TextView android:id="@+id/tabShows" style="@style/Tab" android:text="TV Shows" />
-            <TextView android:id="@+id/tabSearch" style="@style/Tab" android:text="Search" />
-            <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
-            <TextView android:id="@+id/vpnBadge" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginEnd="18dp" android:textSize="14sp" android:textColor="#4ADE80" android:visibility="gone" />
-            <ImageView android:id="@+id/tabSettings" style="@style/Tab" android:layout_width="44dp"
-                android:layout_height="40dp" android:layout_marginEnd="14dp" android:paddingStart="10dp" android:paddingEnd="10dp"
-                android:src="@drawable/ic_settings" android:tint="?attr/dText" android:scaleType="fitCenter"
-                android:contentDescription="Settings" android:nextFocusRight="@id/tabSettings" />
-            <TextView android:id="@+id/clock" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:textSize="18sp" android:textColor="?attr/dMuted" />
-        </LinearLayout>
         <include layout="@layout/hero" />
         <androidx.recyclerview.widget.RecyclerView android:id="@+id/rows" android:layout_width="match_parent"
             android:layout_height="0dp" android:layout_weight="1" android:clipToPadding="false" android:paddingBottom="60dp"
             android:scrollbars="none" android:descendantFocusability="afterDescendants" />
+    </LinearLayout>
+    <!-- The clock (and the VPN's state), top right. The menu is down the left (SideMenu). -->
+    <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="top|end"
+        android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="22dp" android:paddingEnd="48dp">
+        <TextView android:id="@+id/vpnBadge" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginEnd="18dp" android:textSize="14sp" android:textColor="#4ADE80" android:visibility="gone" />
+        <TextView android:id="@+id/clock" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:textSize="18sp" android:textColor="?attr/dMuted" />
     </LinearLayout>
     <TextView android:id="@+id/empty" android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:layout_gravity="center" android:layout_marginTop="80dp" android:gravity="center" android:textSize="18sp"

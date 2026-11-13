@@ -15,6 +15,7 @@ import java.io.File
 
 /** Settings: playlists, TV guide, playback, look, updates. */
 class SettingsActivity : BaseActivity() {
+    private lateinit var side: SideMenu
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var list: LinearLayout
     private var refreshing = false
@@ -27,6 +28,7 @@ class SettingsActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
+        side = SideMenu.attach(this, SideMenu.Page.SETTINGS)
         list = findViewById(R.id.list)
 
         header("Playlist & TV guide")
@@ -157,7 +159,7 @@ class SettingsActivity : BaseActivity() {
         Dialogs.builder(this).setTitle(p.name)
             .setItems(opts.toTypedArray()) { _, i ->
                 when (opts[i]) {
-                    "Use this playlist" -> { Playlists.switchTo(p.id); update() }
+                    "Use this playlist" -> { Playlists.switchTo(p.id); update(); checkAccount() }
                     "Check subscription" -> checkAccount()
                     "Edit" -> startActivity(Intent(this, AddPlaylistActivity::class.java).putExtra(AddPlaylistActivity.ID, p.id))
                     "Remove" -> Dialogs.builder(this).setTitle("Remove “${p.name}”?")
@@ -355,6 +357,8 @@ class SettingsActivity : BaseActivity() {
             }
         }
     }
+
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean = side.onKey(event) || super.dispatchKeyEvent(event)
 }
 
 /** Switching between and removing playlists. */
@@ -374,4 +378,5 @@ object Playlists {
         if (android.os.Build.VERSION.SDK_INT >= 24) a.deleteSharedPreferences("progress_$id")
         if (wasActive) { Repo.reset(); Vod.reset() }
     }
+
 }

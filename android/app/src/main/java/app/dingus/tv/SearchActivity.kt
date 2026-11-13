@@ -29,6 +29,7 @@ import java.text.Normalizer
 
 /** One search box for channels, what's on, films and TV shows. */
 class SearchActivity : BaseActivity() {
+    private lateinit var side: SideMenu
     private sealed class Row {
         class Heading(val text: String) : Row()
         class Live(val c: Channel, val p: Programme?) : Row()
@@ -45,6 +46,7 @@ class SearchActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_search)
+        side = SideMenu.attach(this, SideMenu.Page.SEARCH)
         query = findViewById(R.id.query)
         status = findViewById(R.id.status)
         results = findViewById(R.id.results)
@@ -182,4 +184,7 @@ class SearchActivity : BaseActivity() {
             }
         }
     }
+
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean = side.onKey(event) || super.dispatchKeyEvent(event)
+
 }

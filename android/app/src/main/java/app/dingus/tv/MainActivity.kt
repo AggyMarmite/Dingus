@@ -38,8 +38,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     private val handler = Handler(Looper.getMainLooper())
 
     private lateinit var grid: GuideGrid
-    private lateinit var menu: View
-    private lateinit var scrim: View
+    private lateinit var side: SideMenu
     private lateinit var categories: RecyclerView
     private lateinit var empty: TextView
     private lateinit var status: TextView
@@ -71,10 +70,9 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        side = SideMenu(this, SideMenu.Page.LIVE, findViewById(R.id.guideScreen), leftOpens = false)
         grid = findViewById(R.id.grid)
-        menu = findViewById(R.id.menu)
         catPanel = findViewById(R.id.catPanel)
-        scrim = findViewById(R.id.scrim)
         categories = findViewById(R.id.categories)
         empty = findViewById(R.id.empty)
         status = findViewById(R.id.status)
@@ -97,39 +95,6 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         categories.layoutManager = LinearLayoutManager(this)
         categories.adapter = catAdapter
         categories.itemAnimator = null
-        // Going to another screen closes the menu, so you come back to the guide.
-        fun go(i: Intent) { closeMenu(toGuide = true); startActivity(i) }
-        findViewById<View>(R.id.navGuide).setOnClickListener { closeMenu(toGuide = true) }
-        findViewById<View>(R.id.navHome).setOnClickListener {
-            closeMenu(toGuide = true)
-            startActivity(Intent(this, HomeActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP))
-        }
-        findViewById<View>(R.id.navPlaylist).setOnClickListener { switchPlaylist() }
-        findViewById<View>(R.id.navRefresh).setOnClickListener {
-            val p = Store.playlist ?: return@setOnClickListener
-            closeMenu(toGuide = true)
-            scope.launch { refresh(p, false); Vod.reset() }
-            Ui.test("menu-refresh")
-        }
-        // The menu's icons, in the theme's text colour.
-        val iconSize = Ui.dp(this, 22)
-        val iconColour = Themes.color(this, R.attr.dText)
-        for (id in intArrayOf(R.id.navHome, R.id.navGuide, R.id.navFilms, R.id.navShows, R.id.navSearch, R.id.settings, R.id.navRefresh)) {
-            val t = findViewById<TextView>(id)
-            t.compoundDrawablesRelative[0]?.mutate()?.let { d ->
-                d.setTint(iconColour); d.setBounds(0, 0, iconSize, iconSize)
-                t.setCompoundDrawablesRelative(d, null, null, null)
-            }
-        }
-        findViewById<View>(R.id.settings).setOnClickListener { go(Intent(this, SettingsActivity::class.java)) }
-        findViewById<View>(R.id.navSearch).setOnClickListener { go(Intent(this, SearchActivity::class.java)) }
-        findViewById<View>(R.id.navFilms).setOnClickListener {
-            go(Intent(this, BrowseActivity::class.java).putExtra(BrowseActivity.KIND, Vod.MOVIES))
-        }
-        findViewById<View>(R.id.navShows).setOnClickListener {
-            go(Intent(this, BrowseActivity::class.java).putExtra(BrowseActivity.KIND, Vod.SERIES))
-        }
-
         current = Store.lastCategory ?: Repo.ALL
         Repo.onChanged(repoListener)
         handleTestExtras(intent)
@@ -155,7 +120,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         val c = Repo.channel(id) ?: return
         pendingPlay = null
         if (catPanel.visibility == View.VISIBLE) { catPanel.visibility = View.GONE; grid.isFocusable = true }
-        if (menu.visibility == View.VISIBLE) closeMenu(toGuide = true)
+        side.close(restore = false)
         val list = Repo.channelsIn(cat).let { l -> if (l.any { it.id == id }) l else Repo.channelsIn(Repo.ALL) }
         val useCat = if (Repo.channelsIn(cat).any { it.id == id }) cat else Repo.ALL
         if (useCat != current || !gridIds.contains(id)) showCategory(useCat, id) else grid.focusChannel(id)
@@ -203,8 +168,8 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             return
         }
         scope.launch {
-            Vpn.startup()
             if (Repo.channels.isEmpty()) Repo.loadSaved()
+            Vpn.startup() // (before anything goes online)
             // The category may belong to another playlist (after switching).
             val cats = Repo.sideCategories()
             if (cats.none { it.id == current }) current = Store.lastCategory?.takeIf { id -> cats.any { it.id == id } } ?: Repo.ALL
@@ -373,6 +338,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         if (animate && live.current != null) smoothly(root, 280)
         stage.layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         stage.setBackgroundColor(0xFF000000.toInt())
+        side.setHidden(true)
         live.enterFullScreen()
     }
 
@@ -380,6 +346,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     private fun leaveFullScreen() {
         val c = live.current
         live.leaveFullScreen()
+        side.setHidden(false)
         stage.background = null
         smoothly(root, 260)
         placeStage()
@@ -480,7 +447,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     /** The list may not be laid out yet the moment it appears: try again on the next frames. */
     private fun focusCategory(i: Int, attempt: Int) {
         categories.post {
-            if (catPanel.visibility != View.VISIBLE || menu.visibility == View.VISIBLE) return@post
+            if (catPanel.visibility != View.VISIBLE || side.isOpen) return@post
             val v = categories.findViewHolderForAdapterPosition(i)?.itemView
             if (v != null) v.requestFocus() else if (attempt < 10) handler.postDelayed({ focusCategory(i, attempt + 1) }, 30)
         }
@@ -496,66 +463,8 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         grid.requestFocus()
     }
 
-    /** LEFT again (from the categories): the main menu – TV guide, search, films, TV shows, settings. */
-    private fun openMenu() {
-        if (menu.visibility == View.VISIBLE) return
-        val vod = if (Vod.available) View.VISIBLE else View.GONE
-        findViewById<View>(R.id.navFilms).visibility = vod
-        findViewById<View>(R.id.navShows).visibility = vod
-        findViewById<View>(R.id.navGuide).isActivated = true
-        findViewById<TextView>(R.id.navPlaylist).apply {
-            val several = Store.playlists.size > 1
-            visibility = if (Store.playlist != null) View.VISIBLE else View.GONE
-            text = (Store.playlist?.name ?: "") + if (several) "  ▾" else ""
-            isFocusable = several; isClickable = several
-        }
-        findViewById<TextView>(R.id.navAccount).apply {
-            val a = Account.saved()
-            text = a?.let { Account.short(it) } ?: ""
-            visibility = if (a == null) View.GONE else View.VISIBLE
-        }
-        menu.visibility = View.VISIBLE
-        scrim.visibility = View.VISIBLE
-        menu.translationX = -menu.width.toFloat().coerceAtLeast(300f)
-        menu.animate().translationX(0f).setDuration(160).start()
-        grid.isFocusable = false
-        categories.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
-        categories.isFocusable = false
-        menu.post { findViewById<View>(R.id.navGuide).requestFocus() }
-        Ui.test("menu-open")
-    }
-
-    /** Close the main menu, back to the categories ([toGuide] = straight to the guide). */
-    private fun closeMenu(toGuide: Boolean = false) {
-        if (menu.visibility != View.VISIBLE) return
-        menu.animate().translationX(-menu.width.toFloat()).setDuration(140).withEndAction {
-            menu.visibility = View.GONE
-        }.start()
-        scrim.visibility = View.GONE
-        categories.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
-        categories.isFocusable = true
-        if (toGuide || catPanel.visibility != View.VISIBLE) {
-            if (catPanel.visibility == View.VISIBLE) { smoothly(guideArea, 160); catPanel.visibility = View.GONE }
-            grid.isFocusable = true; grid.requestFocus()
-        }
-        else focusCategory(catAdapter.items.indexOfFirst { it.id == current }.coerceAtLeast(0), 0)
-    }
-
-    private fun switchPlaylist() {
-        val all = Store.playlists
-        Dialogs.builder(this).setTitle("Switch playlist")
-            .setSingleChoiceItems(all.map { it.name }.toTypedArray(), all.indexOfFirst { it.id == Store.activeId }) { d, i ->
-                d.dismiss()
-                if (all[i].id != Store.activeId) {
-                    closeMenu(toGuide = true)
-                    stopPreview()
-                    Playlists.switchTo(all[i].id)
-                    current = Store.lastCategory ?: Repo.ALL
-                    start()
-                }
-            }
-            .show()
-    }
+    /** LEFT again (from the categories): the side menu opens, over the categories. */
+    private fun openMenu() = side.open()
 
     private fun refreshGuideOnly() {
         if (loading) return
@@ -604,7 +513,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
                 // Back from another screen: carry on with the channel that was playing in the window (if one was).
                 else -> resumePreview?.let { id -> Repo.channel(id)?.let { preview(it) } }
             }
-            if (!live.fullScreen && menu.visibility != View.VISIBLE && catPanel.visibility != View.VISIBLE) grid.requestFocus()
+            if (!live.fullScreen && !side.isOpen && catPanel.visibility != View.VISIBLE) grid.requestFocus()
         }
         if (Repo.channels.isNotEmpty() && Store.guideLoadedAt == 0L) refreshGuideOnly()
         tick.run()
@@ -639,14 +548,12 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             Ui.test("key ${KeyEvent.keyCodeToString(event.keyCode)} on ${if (live.fullScreen) "full screen" else currentFocus?.let { it.javaClass.simpleName + "/" + ((it as? TextView)?.text ?: "") }}")
         // Full screen: the remote controls live TV.
         if (live.fullScreen && event.keyCode != KeyEvent.KEYCODE_BACK && live.onKey(event.keyCode, event)) return true
+        if (!live.fullScreen && side.onKey(event)) return true
         if (event.action == KeyEvent.ACTION_DOWN && event.keyCode != KeyEvent.KEYCODE_BACK) {
             val f = currentFocus
             when {
-                // The main menu keeps the remote's presses while it's open.
-                menu.visibility == View.VISIBLE -> {
-                    if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) { closeMenu(); return true }
-                    if (!inside(f, menu)) { findViewById<View>(R.id.navGuide).requestFocus(); return true }
-                }
+                // The side menu keeps the remote's presses while it's open (see side.onKey above).
+                side.isOpen -> {}
                 catPanel.visibility == View.VISIBLE -> {
                     when (event.keyCode) {
                         KeyEvent.KEYCODE_DPAD_RIGHT -> { closeCategories(); return true }
@@ -660,7 +567,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (menu.visibility != View.VISIBLE && catPanel.visibility != View.VISIBLE) {
+        if (!side.isOpen && catPanel.visibility != View.VISIBLE) {
             if (Store.playlist == null && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
                 startActivity(Intent(this, AddPlaylistActivity::class.java)); return true
             }
@@ -673,7 +580,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     override fun onBackPressed() {
         if (live.fullScreen) { if (!live.onBack()) leaveFullScreen(); return }
         when {
-            menu.visibility == View.VISIBLE -> super.onBackPressed()
+            side.isOpen -> super.onBackPressed()
             catPanel.visibility == View.VISIBLE -> openMenu()
             grid.current == null -> openMenu()
             else -> openCategories()

@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 
 /** Films or TV shows: categories down the left, posters on the right. */
 class LibraryActivity : BaseActivity() {
+    private lateinit var side: SideMenu
     companion object {
         const val KIND = "kind"
         /** Open on this category. */
@@ -42,6 +43,7 @@ class LibraryActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_library)
         kind = intent.getStringExtra(KIND) ?: Vod.MOVIES
+        side = SideMenu.attach(this, if (kind == Vod.MOVIES) SideMenu.Page.FILMS else SideMenu.Page.SHOWS)
         categories = findViewById(R.id.categories)
         grid = findViewById(R.id.grid)
         empty = findViewById(R.id.empty)
@@ -184,4 +186,7 @@ class LibraryActivity : BaseActivity() {
             } else holder.progress.visibility = View.GONE
         }
     }
+
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean = side.onKey(event) || super.dispatchKeyEvent(event)
+
 }

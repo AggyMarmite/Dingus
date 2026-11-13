@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The side menu on every screen. Closed, only its left edge shows: a strip of icons. LEFT stretches the same
+     panel open (SideMenu.kt clips it), so the icons stay put and their names, the playlist and the
+     subscription fade in beside them. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/sideMenu" android:layout_width="232dp" android:layout_height="match_parent"
+    android:background="?attr/dSurface" android:clickable="true">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical"
+        android:paddingTop="22dp" android:paddingBottom="18dp">
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical" android:paddingStart="15dp">
+            <ImageView android:layout_width="30dp" android:layout_height="30dp" android:src="@mipmap/ic_launcher"
+                android:contentDescription="@null" />
+            <TextView android:id="@+id/sideName" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="12dp" android:text="Dingus" android:textSize="21sp" android:textStyle="bold"
+                android:textColor="?attr/dText" />
+        </LinearLayout>
+        <!-- The playlist in use (OK to switch, when there's more than one) and the subscription. -->
+        <LinearLayout android:id="@+id/sideHeader" android:layout_width="match_parent" android:layout_height="58dp"
+            android:orientation="vertical" android:layout_marginTop="4dp">
+            <TextView android:id="@+id/navPlaylist" style="@style/SideRow" android:layout_height="wrap_content"
+                android:paddingTop="3dp" android:paddingBottom="3dp" android:textSize="14sp" android:textColor="?attr/dMuted"
+                android:singleLine="true" android:ellipsize="end" />
+            <TextView android:id="@+id/navAccount" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:paddingStart="19dp" android:paddingEnd="8dp" android:textSize="12sp" android:textColor="?attr/dMuted"
+                android:maxLines="2" />
+        </LinearLayout>
+
+        <TextView android:id="@+id/navHome" style="@style/SideRow" android:layout_marginTop="8dp" android:text="Home"
+            android:drawableStart="@drawable/ic_home" />
+        <TextView android:id="@+id/navGuide" style="@style/SideRow" android:text="Live TV" android:drawableStart="@drawable/ic_live_tv" />
+        <TextView android:id="@+id/navFilms" style="@style/SideRow" android:text="Films" android:drawableStart="@drawable/ic_film" />
+        <TextView android:id="@+id/navShows" style="@style/SideRow" android:text="TV Shows" android:drawableStart="@drawable/ic_tv_shows" />
+        <TextView android:id="@+id/navSearch" style="@style/SideRow" android:text="Search" android:drawableStart="@drawable/ic_search" />
+        <TextView android:id="@+id/settings" style="@style/SideRow" android:text="Settings" android:drawableStart="@drawable/ic_settings"
+            android:nextFocusDown="@+id/navRefresh" />
+
+        <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+
+        <TextView android:id="@id/navRefresh" style="@style/SideRow" android:text="Refresh playlist" android:textSize="14sp"
+            android:drawableStart="@drawable/ic_refresh" android:nextFocusUp="@id/settings" android:nextFocusDown="@id/navRefresh" />
+        <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="4dp" android:paddingStart="19dp" android:paddingEnd="8dp" android:textSize="12sp"
+            android:textColor="?attr/dMuted" android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- The panel's right edge: a thin line that moves with it. -->
+    <View android:id="@+id/sideEdge" android:layout_width="1dp" android:layout_height="match_parent" android:background="?attr/dLine" />
+</FrameLayout>

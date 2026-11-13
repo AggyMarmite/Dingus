@@ -32,6 +32,7 @@ class HomeActivity : BaseActivity() {
     private var askedForPlaylist = false
     private var loading = false
     private var focusedOnce = false
+    private lateinit var side: SideMenu
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,28 +62,20 @@ class HomeActivity : BaseActivity() {
         if (savedInstanceState == null && intent?.action == Intent.ACTION_MAIN && Store.startScreen == "live" && Store.playlist != null)
             startActivity(Intent(this, MainActivity::class.java))
 
-        findViewById<View>(R.id.tabHome).isActivated = true
-        findViewById<View>(R.id.tabHome).setOnClickListener { focusFirstCard() }
-        findViewById<View>(R.id.tabGuide).setOnClickListener { startActivity(Intent(this, MainActivity::class.java)) }
-        findViewById<View>(R.id.tabFilms).setOnClickListener { startActivity(Intent(this, BrowseActivity::class.java).putExtra(BrowseActivity.KIND, Vod.MOVIES)) }
-        findViewById<View>(R.id.tabShows).setOnClickListener { startActivity(Intent(this, BrowseActivity::class.java).putExtra(BrowseActivity.KIND, Vod.SERIES)) }
-        findViewById<View>(R.id.tabSearch).setOnClickListener { startActivity(Intent(this, SearchActivity::class.java)) }
-        findViewById<View>(R.id.tabSettings).setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
+        side = SideMenu(this, SideMenu.Page.HOME, findViewById<View>(android.R.id.content).let { (it as android.view.ViewGroup).getChildAt(0) })
     }
 
     override fun onResume() {
         super.onResume()
         if (Store.homeLite != lite) { recreate(); return } // switched in Settings
         Ui.test("home-shown")
-        val vod = if (Vod.available) View.VISIBLE else View.GONE
-        findViewById<View>(R.id.tabFilms).visibility = vod
-        findViewById<View>(R.id.tabShows).visibility = vod
+        side.refresh()
         tick.run()
         if (Store.playlist == null) {
             empty.text = "Welcome to Dingus.\nAdd your playlist to get started."
             empty.visibility = View.VISIBLE
             adapter.set(emptyList())
-            findViewById<View>(R.id.tabSettings).requestFocus()
+            side.open()
             if (!askedForPlaylist) { askedForPlaylist = true; startActivity(Intent(this, AddPlaylistActivity::class.java)) }
             return
         }
@@ -99,30 +92,29 @@ class HomeActivity : BaseActivity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) feature?.noteKey()
-        // UP always goes to the row above (or the tabs from the top one): left to itself, focus can skip rows or
-        // stay put when the row above has scrolled out of sight.
+        if (side.onKey(event)) return true
+        // UP always goes to the row above: left to itself, focus can skip rows or stay put when the row above has
+        // scrolled out of sight.
         if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_DPAD_UP) {
             val p = focusedItem()
-            if (p == 0) { toTabs(); return true }
+            if (p == 0) return true
             if (p > 0) { focusItem(p - 1); return true }
         }
         return super.dispatchKeyEvent(event)
     }
 
-    /** BACK from anywhere in the rows goes back up to the tabs first; BACK on the tabs leaves as usual. */
+    /** BACK steps out: down in the rows → back to the top; at the top → the menu; with the menu open → leave. */
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        if (focusedItem() >= 0) toTabs() else super.onBackPressed()
+        when {
+            side.isOpen -> super.onBackPressed()
+            focusedItem() > 0 -> { focusFirstCard(); Ui.test("home-top") }
+            else -> side.open()
+        }
     }
 
     private fun focusedItem() = RowNav.position(rows, currentFocus)
     private fun focusItem(pos: Int) = RowNav.focus(rows, pos)
-
-    private fun toTabs() {
-        rows.scrollToPosition(0)
-        findViewById<View>(R.id.tabHome).requestFocus()
-        Ui.test("home-tabs")
-    }
 
     override fun onDestroy() { scope.cancel(); super.onDestroy() }
 
@@ -139,9 +131,11 @@ class HomeActivity : BaseActivity() {
         loading = true
         scope.launch {
             try {
-                Vpn.startup() // "connect when Dingus starts": before anything loads
-                if (Repo.channels.isEmpty()) Repo.loadSaved()
+                // What's saved on the device first – no network needed, so Home fills in straight away – and the
+                // saved guide just after, so the rows don't wait for a big one.
+                if (Repo.channels.isEmpty() && Repo.loadSavedChannels()) { build(); Repo.loadSavedGuide() }
                 build()
+                Vpn.startup() // "connect when Dingus starts": before anything goes online
                 val p = Store.playlist ?: return@launch
                 if (Repo.channels.isEmpty()) {
                     empty.text = "Loading your channels…"; empty.visibility = View.VISIBLE

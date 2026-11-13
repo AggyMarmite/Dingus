@@ -143,6 +143,16 @@ object Repo {
         ok
     }
 
+    /** Just the saved channels (quick), so a screen can show something before the saved guide's read. */
+    suspend fun loadSavedChannels(): Boolean = withContext(Dispatchers.IO) {
+        try { readChannels() } catch (e: Exception) { Log.w("Dingus", "saved channels", e); false }
+    }
+
+    /** Then the saved guide (can take a moment for a big one). */
+    suspend fun loadSavedGuide() = withContext(Dispatchers.IO) {
+        try { readGuide(); changed() } catch (e: Exception) { Log.w("Dingus", "saved guide", e) }
+    }
+
     /** Fetches the playlist from the provider (throws with a message to show if it can't). */
     suspend fun refreshChannels(p: Playlist, already: Sources.Result? = null) = withContext(Dispatchers.IO) {
         val r = already ?: Sources.load(p)

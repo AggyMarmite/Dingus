@@ -5,12 +5,9 @@
     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
             android:gravity="center_vertical" android:paddingStart="42dp" android:paddingEnd="48dp" android:paddingTop="18dp">
-            <include layout="@layout/brand" />
-            <View android:layout_width="1dp" android:layout_height="22dp" android:layout_marginStart="18dp" android:layout_marginEnd="12dp" android:background="?attr/dLine" />
             <TextView android:id="@+id/heading" android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:layout_marginEnd="22dp" android:textSize="22sp" android:textStyle="bold"
                 android:textColor="?attr/dText" />
-            <TextView android:id="@+id/search" style="@style/Tab" android:nextFocusLeft="@id/search" android:text="Search" />
             <TextView android:id="@+id/allCategories" style="@style/Tab" android:nextFocusRight="@id/allCategories" android:text="Categories" />
             <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
             <TextView android:id="@+id/count" android:layout_width="wrap_content" android:layout_height="wrap_content"
