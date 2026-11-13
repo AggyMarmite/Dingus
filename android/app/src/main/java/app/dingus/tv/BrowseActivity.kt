@@ -105,7 +105,7 @@ class BrowseActivity : BaseActivity() {
         when (card) {
             is Card.Title -> startActivity(Intent(this, DetailActivity::class.java).putExtra(DetailActivity.KIND, card.kind).putExtra(DetailActivity.ID, card.item.id))
             is Card.SeeAll -> startActivity(Intent(this, LibraryActivity::class.java).putExtra(LibraryActivity.KIND, card.kind).putExtra(LibraryActivity.CATEGORY, card.categoryId))
-            is Card.Live -> {}
+            is Card.Live, is Card.Show -> {}
         }
     }
 }

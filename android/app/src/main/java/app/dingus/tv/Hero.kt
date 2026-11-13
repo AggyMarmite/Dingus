@@ -64,6 +64,7 @@ class Hero(private val a: Activity, private val scope: CoroutineScope) {
                 art.setImageDrawable(null)
                 art.tag = null
             }
+            is Card.Show -> show(Card.Live(card.channel))
             is Card.SeeAll -> {
                 kicker.text = if (card.kind == Vod.MOVIES) "FILMS" else "TV SHOWS"
                 title.text = card.name

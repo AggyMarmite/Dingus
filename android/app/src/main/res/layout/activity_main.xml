@@ -107,7 +107,7 @@
 
         <TextView android:id="@+id/navHome" style="@style/NavRow" android:layout_marginTop="18dp" android:text="Home"
             android:nextFocusUp="@id/navHome" android:nextFocusLeft="@id/navHome" />
-        <TextView android:id="@+id/navGuide" style="@style/NavRow" android:text="TV Guide" android:nextFocusLeft="@id/navGuide" />
+        <TextView android:id="@+id/navGuide" style="@style/NavRow" android:text="Live TV" android:nextFocusLeft="@id/navGuide" />
         <TextView android:id="@+id/navSearch" style="@style/NavRow" android:text="Search" />
         <TextView android:id="@+id/navFilms" style="@style/NavRow" android:text="Films" />
         <TextView android:id="@+id/navShows" style="@style/NavRow" android:text="TV Shows" />

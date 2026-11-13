@@ -12,8 +12,10 @@ import androidx.recyclerview.widget.RecyclerView
 
 /** Something shown as a card in a row on Home or in Films / TV Shows. */
 sealed class Card {
-    class Title(val kind: String, val item: VodItem, val progress: Float = -1f, val label: String? = null) : Card()
+    class Title(val kind: String, val item: VodItem, val progress: Float = -1f, val label: String? = null, val isNew: Boolean = false) : Card()
     class Live(val channel: Channel) : Card()
+    /** A programme on a channel: what's on now (with progress) or coming up ([label] e.g. "In 30 min", "20:45"). */
+    class Show(val channel: Channel, val programme: Programme?, val label: String? = null) : Card()
     class SeeAll(val kind: String, val categoryId: String, val name: String) : Card()
 }
 
@@ -80,19 +82,23 @@ class RowsAdapter(
             val meta: TextView? = v.findViewById(R.id.meta)
             val progress: ProgressBar? = v.findViewById(R.id.progress)
             val badge: TextView? = v.findViewById(R.id.badge)
+            val newBadge: TextView? = v.findViewById(R.id.newBadge)
         }
 
         override fun getItemCount() = cards.size
-        override fun getItemViewType(position: Int) = when (cards[position]) { is Card.Title -> 0; is Card.Live -> 1; is Card.SeeAll -> 2 }
+        override fun getItemViewType(position: Int) = when (cards[position]) { is Card.Title -> 0; is Card.Live, is Card.Show -> 1; is Card.SeeAll -> 2 }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): C {
             val layout = when (viewType) { 0 -> R.layout.item_poster_row; 1 -> R.layout.item_channel_card; else -> R.layout.item_see_all }
             val v = LayoutInflater.from(ctx).inflate(layout, parent, false)
             val c = C(v)
-            v.setOnClickListener { cards.getOrNull(c.bindingAdapterPosition)?.let(onClick) }
+            // Card views are shared between rows, so always look the card up in the row it's in now
+            // (not the row that first made the view) – otherwise it can show and open another row's title.
+            fun card(): Card? = (c.bindingAdapter as? CardsAdapter)?.cards?.getOrNull(c.bindingAdapterPosition)
+            v.setOnClickListener { card()?.let(onClick) }
             v.setOnFocusChangeListener { view, has ->
                 view.animate().scaleX(if (has) 1.06f else 1f).scaleY(if (has) 1.06f else 1f).setDuration(110).start()
-                if (has) cards.getOrNull(c.bindingAdapterPosition)?.let(onFocus)
+                if (has) card()?.let(onFocus)
             }
             return c
         }
@@ -110,6 +116,7 @@ class RowsAdapter(
                         progress = (card.progress * 1000).toInt()
                     }
                     c.badge?.visibility = if (card.kind == Vod.MOVIES && Vod.watched(m.id)) View.VISIBLE else View.GONE
+                    c.newBadge?.visibility = if (card.isNew) View.VISIBLE else View.GONE
                 }
                 is Card.Live -> {
                     val ch = card.channel
@@ -121,6 +128,20 @@ class RowsAdapter(
                     c.progress?.apply {
                         visibility = if (now != null) View.VISIBLE else View.GONE
                         if (now != null) progress = Ui.progress(now)
+                    }
+                }
+                is Card.Show -> {
+                    val ch = card.channel
+                    val p = card.programme
+                    c.title?.text = p?.title ?: ch.name
+                    c.meta?.text = listOfNotNull(ch.name, card.label).joinToString("  ·  ")
+                    c.fallback?.text = Ui.initials(ch.name)
+                    c.poster?.let { Logos.load(it, ch.logo, (76 * d).toInt(), c.fallback) }
+                    val now = System.currentTimeMillis()
+                    c.progress?.apply {
+                        val on = p != null && p.start <= now && now < p.stop
+                        visibility = if (on) View.VISIBLE else View.GONE
+                        if (on) progress = Ui.progress(p!!)
                     }
                 }
                 is Card.SeeAll -> {}

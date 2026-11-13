@@ -35,7 +35,7 @@ class SettingsActivity : BaseActivity() {
         row("Update playlist and guide", { "Every ${hoursName(Store.refreshHours)}  ·  also when you choose \"Update now\"" }) { refreshInterval() }
         row("How much TV guide to keep", { "${hoursName(Store.guideHours)} ahead  ·  less is lighter on memory" }) { guideLength() }
 
-        header("TV guide")
+        header("Live TV")
         toggle("Watch in the guide first", "OK on a channel plays it in the guide's window, OK again for full screen (off: straight to full screen)", { Store.preview }) { Store.preview = it }
         toggle("Channel numbers", "Show each channel's number beside its name", { Store.showNumbers }) { Store.showNumbers = it }
         toggle("Colour-coded programmes", "A coloured line for sport, films, news, kids…", { Store.genreColours }) { Store.genreColours = it }
@@ -61,6 +61,12 @@ class SettingsActivity : BaseActivity() {
             { Store.matchFrameRate }) { Store.matchFrameRate = it }
 
         header("Look")
+        row("Open Dingus on", { if (Store.startScreen == "live") "Live TV" else "Home" }) {
+            choose("Open Dingus on", listOf("Home", "Live TV"), if (Store.startScreen == "live") 1 else 0) {
+                Store.startScreen = if (it == 1) "live" else "home"; update()
+            }
+        }
+        toggle("Lite home page", "A simpler Home, if the full one feels slow", { Store.homeLite }) { Store.homeLite = it }
         row("Theme", { "${Themes.background().name}  ·  ${Themes.accent().name}" }) { theme() }
 
         header("Dingus")
@@ -283,7 +289,7 @@ class SettingsActivity : BaseActivity() {
                 "live" -> Repo.categories.firstOrNull { it.id == id }?.name
                 else -> Vod.cached(kind)?.categories?.firstOrNull { it.id == id }?.name
             } ?: "Category $id"
-            name + when (kind) { "movies" -> "  (Films)"; "series" -> "  (TV Shows)"; else -> "  (TV guide)" }
+            name + when (kind) { "movies" -> "  (Films)"; "series" -> "  (TV Shows)"; else -> "  (Live TV)" }
         }
         val show = BooleanArray(keys.size)
         Dialogs.builder(this).setTitle("Show again")

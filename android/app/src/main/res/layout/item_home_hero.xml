@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The big feature at the top of Home (like the Windows app): a slide at a time, with Watch / second action / next. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="388dp">
+    <View android:id="@+id/heroGlow" android:layout_width="match_parent" android:layout_height="match_parent" />
+    <ImageView android:id="@+id/heroArt" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:scaleType="centerCrop" android:alpha="0.5" android:contentDescription="@null" />
+    <View android:id="@+id/heroShade" android:layout_width="match_parent" android:layout_height="match_parent" />
+
+    <LinearLayout android:layout_width="700dp" android:layout_height="match_parent" android:orientation="vertical"
+        android:gravity="bottom" android:paddingStart="48dp" android:paddingBottom="34dp">
+        <TextView android:id="@+id/heroKicker" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:background="@drawable/pill_bg" android:paddingStart="10dp" android:paddingEnd="10dp"
+            android:paddingTop="3dp" android:paddingBottom="3dp" android:textSize="12sp" android:textColor="?attr/dText" />
+        <TextView android:id="@+id/heroTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:maxLines="2" android:ellipsize="end" android:textSize="40sp"
+            android:textStyle="bold" android:textColor="?attr/dText" android:lineSpacingMultiplier="0.95" />
+        <TextView android:id="@+id/heroMeta" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="4dp" android:maxLines="1" android:ellipsize="end" android:textSize="16sp"
+            android:textStyle="bold" android:textColor="?attr/dText" />
+        <ProgressBar android:id="@+id/heroProgress" style="@android:style/Widget.ProgressBar.Horizontal"
+            android:layout_width="220dp" android:layout_height="3dp" android:layout_marginTop="8dp"
+            android:max="1000" android:progressDrawable="@drawable/progress_white" />
+        <TextView android:id="@+id/heroText" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="10dp" android:maxLines="2" android:ellipsize="end" android:textSize="15sp"
+            android:textColor="?attr/dText" android:alpha="0.85" />
+        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="18dp" android:orientation="horizontal" android:gravity="center_vertical">
+            <TextView android:id="@+id/heroWatch" android:layout_width="wrap_content" android:layout_height="46dp"
+                android:minWidth="150dp" android:background="@drawable/hero_primary" android:focusable="true" android:clickable="true"
+                android:gravity="center" android:paddingStart="24dp" android:paddingEnd="24dp"
+                android:text="▶   Watch" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/hero_primary_text" />
+            <TextView android:id="@+id/heroSecond" android:layout_width="wrap_content" android:layout_height="46dp"
+                android:layout_marginStart="12dp" android:background="@drawable/hero_secondary" android:focusable="true"
+                android:clickable="true" android:gravity="center" android:paddingStart="22dp" android:paddingEnd="22dp"
+                android:textSize="16sp" android:textColor="#FFFFFF" />
+            <TextView android:id="@+id/heroNext" android:layout_width="46dp" android:layout_height="46dp"
+                android:layout_marginStart="12dp" android:background="@drawable/hero_round" android:focusable="true"
+                android:clickable="true" android:gravity="center" android:text="›" android:textSize="24sp" android:textColor="#FFFFFF" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/heroDots" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal" android:layout_marginBottom="12dp" android:orientation="horizontal" />
+</FrameLayout>

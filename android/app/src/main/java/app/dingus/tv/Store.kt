@@ -212,6 +212,16 @@ object Store {
         set(v) = prefs.edit().putInt("refreshHours", v).apply()
     val refreshDue: Boolean get() = System.currentTimeMillis() - guideLoadedAt > refreshHours * 3600_000L
 
+    /** The simpler Home page (for devices that struggle with the full one). */
+    var homeLite: Boolean
+        get() = prefs.getBoolean("homeLite", false)
+        set(v) = prefs.edit().putBoolean("homeLite", v).apply()
+
+    /** The screen Dingus opens on: "home" or "live". */
+    var startScreen: String
+        get() = prefs.getString("startScreen", "home")!!
+        set(v) = prefs.edit().putString("startScreen", v).apply()
+
     /** Play the highlighted channel in the small window above the guide. */
     var preview: Boolean
         get() = prefs.getBoolean("preview", true)
