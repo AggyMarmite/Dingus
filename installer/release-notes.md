@@ -1,3 +1,8 @@
+## What's new in Dingus 0.15.5
+
+* Fire TV: smoother guide and Home, quicker to open Live TV.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.4
 
 * Fire TV: see your active connections and whether the server is online.
