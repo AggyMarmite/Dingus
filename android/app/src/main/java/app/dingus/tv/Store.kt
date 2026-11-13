@@ -222,6 +222,15 @@ object Store {
         get() = prefs.getString("startScreen", "home")!!
         set(v) = prefs.edit().putString("startScreen", v).apply()
 
+    /** Turn subtitles on automatically (in [subtitleLanguage]) when there are some; otherwise they start off. */
+    var autoSubtitles: Boolean
+        get() = prefs.getBoolean("autoSubtitles", false)
+        set(v) = prefs.edit().putBoolean("autoSubtitles", v).apply()
+    /** Two-letter language code, e.g. "en". */
+    var subtitleLanguage: String
+        get() = prefs.getString("subtitleLanguage", java.util.Locale.getDefault().language.ifEmpty { "en" })!!
+        set(v) = prefs.edit().putString("subtitleLanguage", v).apply()
+
     /** Play the highlighted channel in the small window above the guide. */
     var preview: Boolean
         get() = prefs.getBoolean("preview", true)

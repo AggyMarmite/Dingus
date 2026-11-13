@@ -57,6 +57,9 @@ class SettingsActivity : BaseActivity() {
         header("Playback")
         toggle("Pause & rewind live TV", "Keeps the last 15 minutes while you watch (MPEG-TS channels)", { Store.timeshift }) { Store.timeshift = it }
         row("Stream format", { if (Store.streamFormat == "hls") "HLS" else "MPEG-TS (recommended)" }) { streamFormat() }
+        toggle("Subtitles automatically", "On: subtitles in your language whenever there are some. Off: subtitles start off (films, shows and live TV)",
+            { Store.autoSubtitles }) { Store.autoSubtitles = it }
+        row("Subtitle language", { java.util.Locale(Store.subtitleLanguage).displayLanguage.ifEmpty { Store.subtitleLanguage } }) { subtitleLanguage() }
         toggle("Match the TV's frame rate", "Switches the TV to suit the video (50 Hz for UK TV, 24 Hz for films) for smoother motion",
             { Store.matchFrameRate }) { Store.matchFrameRate = it }
 
@@ -305,6 +308,13 @@ class SettingsActivity : BaseActivity() {
     private fun streamFormat() {
         choose("Stream format (Xtream logins)", listOf("MPEG-TS  (recommended – needed for pause & rewind)", "HLS  (try this if channels stutter or won't play)"),
             if (Store.streamFormat == "hls") 1 else 0) { Store.streamFormat = if (it == 1) "hls" else "ts"; update() }
+    }
+
+    private fun subtitleLanguage() {
+        val codes = listOf("en", "es", "fr", "de", "it", "pt", "nl", "pl", "sv", "da", "no", "fi", "el", "tr", "ro", "hu", "cs",
+            "ru", "uk", "ar", "he", "hi", "ur", "bn", "pa", "ta", "zh", "ja", "ko", "th", "vi", "id", "ms", "fa")
+        val names = codes.map { java.util.Locale(it).displayLanguage.ifEmpty { it } }
+        choose("Subtitle language", names, codes.indexOf(Store.subtitleLanguage)) { Store.subtitleLanguage = codes[it]; update() }
     }
 
     private fun theme() {

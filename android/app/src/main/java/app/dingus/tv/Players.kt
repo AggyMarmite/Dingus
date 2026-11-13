@@ -32,7 +32,23 @@ object Players {
             .build()
         p.videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
         if (!small && Store.matchFrameRate) noAutoFrameRate(p)
+        subtitles(p)
         return p
+    }
+
+    /**
+     * Subtitles for films, episodes and live TV: in your language when that's switched on (and there are some
+     * in it), otherwise off to start with. You can still pick others while watching (≡ → Audio & subtitles).
+     */
+    fun subtitles(p: ExoPlayer) {
+        val b = p.trackSelectionParameters.buildUpon()
+        if (Store.autoSubtitles) {
+            b.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                .setPreferredTextLanguage(Store.subtitleLanguage)
+                .setSelectUndeterminedTextLanguage(false)
+                .setIgnoredTextSelectionFlags(C.SELECTION_FLAG_DEFAULT) // only your language, not whatever the file marks as default
+        } else b.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+        p.trackSelectionParameters = b.build()
     }
 
     fun item(c: Channel): MediaItem = item(liveUrl(c))
