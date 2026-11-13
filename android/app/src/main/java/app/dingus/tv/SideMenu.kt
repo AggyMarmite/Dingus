@@ -86,6 +86,7 @@ class SideMenu(
     val panel: View = LayoutInflater.from(a).inflate(R.layout.side_menu, root, false)
     private val panelBg = android.graphics.drawable.ColorDrawable(Themes.color(a, R.attr.dSurface))
     private var floating: Boolean? = null
+    private val rowPad = HashMap<View, IntArray>()
     private val edge: View = panel.findViewById(R.id.sideEdge)
     private val fading = listOf<View>(panel.findViewById(R.id.sideName), panel.findViewById(R.id.sideHeader), panel.findViewById(R.id.status))
     private val rows: List<TextView> = listOf(R.id.navHome, R.id.navGuide, R.id.navFilms, R.id.navShows, R.id.navSearch, R.id.settings, R.id.navRefresh)
@@ -150,7 +151,12 @@ class SideMenu(
         floating = f
         val txt = Themes.color(a, R.attr.dText)
         for (t in rows) {
+            // (Setting a background can change the row's padding – the circle's insets would push the name out of
+            // sight – so the padding is put back as it was.)
+            val pad = intArrayOf(t.paddingStart, t.paddingTop, t.paddingEnd, t.paddingBottom)
+            val base = rowPad.getOrPut(t) { pad }
             t.background = if (f) bubble(t.isActivated) else androidx.core.content.ContextCompat.getDrawable(a, R.drawable.side_row_bg)
+            t.setPaddingRelative(base[0], base[1], base[2], base[3])
             t.compoundDrawablesRelative[0]?.setTint(if (f && t.isActivated) 0xFFFFFFFF.toInt() else txt)
         }
     }
