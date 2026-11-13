@@ -22,6 +22,7 @@ class SettingsActivity : BaseActivity() {
     private val subtitles = ArrayList<Pair<View, () -> String>>()
     private var refreshRow: View? = null
     private var updateRow: View? = null
+    private var accountRow: View? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,6 +31,7 @@ class SettingsActivity : BaseActivity() {
 
         header("Playlist & TV guide")
         val first = row("Playlists", { playlistsSummary() }) { playlists() }
+        accountRow = row("Subscription", { Account.saved()?.summary() ?: "Press OK to check your expiry date" }) { checkAccount() }
         row("TV guide sources", { guideSummary() }) { guideSources() }
         refreshRow = row("Update channels and TV guide now", { refreshSummary() }) { refresh() }
         row("Update playlist and guide", { "Every ${hoursName(Store.refreshHours)}  ·  also when you choose \"Update now\"" }) { refreshInterval() }
@@ -81,7 +83,13 @@ class SettingsActivity : BaseActivity() {
         first.requestFocus()
     }
 
-    override fun onResume() { super.onResume(); update(); Ui.test("settings-shown") }
+    override fun onResume() {
+        super.onResume(); update(); Ui.test("settings-shown")
+        // Keep the expiry date fresh (at most once a day).
+        val p = Store.playlist
+        if (p != null && System.currentTimeMillis() - (Account.saved()?.checkedAt ?: 0) > 86_400_000L)
+            scope.launch { try { Account.refresh(p); update() } catch (_: Exception) {} }
+    }
     override fun onDestroy() { scope.cancel(); super.onDestroy() }
 
     private fun update() { for ((v, f) in subtitles) sub(v, f()) }
@@ -156,6 +164,17 @@ class SettingsActivity : BaseActivity() {
                 }
             }
             .show()
+    }
+
+    private fun checkAccount() {
+        val p = Store.playlist ?: return
+        val row = accountRow ?: return
+        sub(row, "Checking…")
+        scope.launch {
+            val msg = try { Account.refresh(p)?.summary() ?: "Your provider doesn't share an expiry date for this playlist" }
+                      catch (e: Exception) { "Couldn't check: ${Net.friendly(e)}" }
+            sub(row, msg)
+        }
     }
 
     // ------------------------------------------------------------------ TV guide

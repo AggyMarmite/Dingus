@@ -146,6 +146,7 @@ object Repo {
     /** Fetches the playlist from the provider (throws with a message to show if it can't). */
     suspend fun refreshChannels(p: Playlist, already: Sources.Result? = null) = withContext(Dispatchers.IO) {
         val r = already ?: Sources.load(p)
+        Sources.accountInfo?.let { Account.remember(it); Sources.accountInfo = null }
         // Keep guide matches from before, so now/next shows straight away until the guide's read again.
         val oldKeys = channels.associate { it.id to it.guideKey }
         r.channels.forEach { it.guideKey = oldKeys[it.id] }

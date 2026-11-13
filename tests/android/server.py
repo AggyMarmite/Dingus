@@ -35,7 +35,7 @@ def xtream(q):
     """A stand-in Xtream Codes panel: 3 live channels, 3 films, 2 shows."""
     a = q.get("action", [""])[0]
     if not a:
-        return {"user_info": {"auth": 1, "username": "test", "status": "Active"}, "server_info": {"timezone": "Europe/London"}}
+        return {"user_info": {"auth": 1, "username": "test", "status": "Active", "exp_date": "1893456000", "max_connections": "2", "active_cons": "0"}, "server_info": {"timezone": "Europe/London"}}
     if a == "get_live_categories": return [{"category_id": "1", "category_name": "UK: Entertainment"}, {"category_id": "2", "category_name": "Sport"}]
     if a == "get_live_streams":
         return [{"num": 101, "name": "Test 1 HD", "stream_id": 1, "category_id": "1", "epg_channel_id": "test1.uk", "stream_icon": "", "tv_archive": 1, "tv_archive_duration": "3"},

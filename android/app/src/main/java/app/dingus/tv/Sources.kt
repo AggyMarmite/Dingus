@@ -8,6 +8,9 @@ import java.net.URLEncoder
 
 /** Reads a playlist's categories and live channels (Xtream Codes login, or an M3U link). */
 object Sources {
+    /** The account details from the last Xtream login (saved by whoever stores the playlist). */
+    @Volatile var accountInfo: org.json.JSONObject? = null
+
     class Result(val categories: List<Category>, val channels: List<Channel>, val guideUrl: String?)
 
     fun load(p: Playlist): Result = if (p.type == "xtream") xtream(p) else m3u(p)
@@ -41,11 +44,18 @@ object Sources {
                             r.endObject()
                         }
                         "user_info" -> {
+                            // Also keeps the expiry date, connections and status for Settings.
+                            val info = org.json.JSONObject()
                             r.beginObject()
                             while (r.hasNext()) {
-                                if (r.nextName() == "auth" && r.peek() != JsonToken.NULL) ok = r.nextString() != "0" else r.skipValue()
+                                when (val n = r.nextName()) {
+                                    "auth" -> if (r.peek() != JsonToken.NULL) ok = r.nextString() != "0" else r.skipValue()
+                                    "exp_date", "max_connections", "active_cons", "status" -> info.put(n, str(r))
+                                    else -> r.skipValue()
+                                }
                             }
                             r.endObject()
+                            accountInfo = info
                         }
                         else -> r.skipValue()
                     }

@@ -231,6 +231,10 @@ object Store {
         get() = prefs.getString("subtitleLanguage", java.util.Locale.getDefault().language.ifEmpty { "en" })!!
         set(v) = prefs.edit().putString("subtitleLanguage", v).apply()
 
+    var accountJson: String
+        get() = prefs.getString(k("account"), "")!!
+        set(v) = prefs.edit().putString(k("account"), v).apply()
+
     /** Play the highlighted channel in the small window above the guide. */
     var preview: Boolean
         get() = prefs.getBoolean("preview", true)
