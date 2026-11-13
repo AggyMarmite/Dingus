@@ -7,10 +7,10 @@
 
     <LinearLayout android:id="@+id/guideScreen" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
 
-        <LinearLayout android:layout_width="match_parent" android:layout_height="230dp" android:orientation="horizontal"
-            android:paddingStart="40dp" android:paddingEnd="40dp" android:paddingTop="24dp" android:paddingBottom="10dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="182dp" android:orientation="horizontal"
+            android:paddingStart="40dp" android:paddingEnd="40dp" android:paddingTop="20dp" android:paddingBottom="8dp">
 
-            <FrameLayout android:id="@+id/previewBox" android:layout_width="350dp" android:layout_height="197dp"
+            <FrameLayout android:id="@+id/previewBox" android:layout_width="270dp" android:layout_height="152dp"
                 android:background="@drawable/logo_bg">
                 <TextView android:id="@+id/previewText" android:layout_width="match_parent" android:layout_height="match_parent"
                     android:gravity="center" android:padding="16dp" android:textSize="16sp" android:textColor="?attr/dMuted" />
@@ -22,32 +22,32 @@
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:orientation="horizontal" android:gravity="center_vertical">
                     <TextView android:id="@+id/infoChannel" android:layout_width="0dp" android:layout_height="wrap_content"
-                        android:layout_weight="1" android:maxLines="1" android:ellipsize="end" android:textSize="16sp"
+                        android:layout_weight="1" android:maxLines="1" android:ellipsize="end" android:textSize="14sp"
                         android:textColor="?attr/dMuted" />
                     <TextView android:id="@+id/vpnBadge" android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:layout_marginEnd="14dp" android:textSize="13sp" android:textColor="#4ADE80" android:visibility="gone" />
                     <TextView android:id="@+id/clock" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:textSize="16sp" android:textColor="?attr/dMuted" />
+                        android:textSize="14sp" android:textColor="?attr/dMuted" />
                 </LinearLayout>
                 <TextView android:id="@+id/infoTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp" android:maxLines="1" android:ellipsize="end" android:textSize="28sp"
+                    android:layout_marginTop="2dp" android:maxLines="1" android:ellipsize="end" android:textSize="22sp"
                     android:textStyle="bold" android:textColor="?attr/dText" />
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:layout_marginTop="6dp" android:orientation="horizontal" android:gravity="center_vertical">
                     <TextView android:id="@+id/infoTime" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:textSize="16sp" android:textColor="?attr/dText" />
+                        android:textSize="15sp" android:textColor="?attr/dText" />
                     <ProgressBar android:id="@+id/infoProgress" style="@android:style/Widget.ProgressBar.Horizontal"
-                        android:layout_width="160dp" android:layout_height="4dp" android:layout_marginStart="14dp"
+                        android:layout_width="130dp" android:layout_height="4dp" android:layout_marginStart="14dp"
                         android:max="1000" android:progressDrawable="@drawable/progress_track" />
                     <TextView android:id="@+id/infoLive" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginStart="14dp" android:text="ON NOW" android:textSize="12sp" android:textStyle="bold"
+                        android:layout_marginStart="14dp" android:text="LIVE" android:textSize="11sp" android:textStyle="bold"
                         android:letterSpacing="0.08" android:textColor="@color/live" />
                 </LinearLayout>
                 <TextView android:id="@+id/infoDesc" android:layout_width="match_parent" android:layout_height="0dp"
-                    android:layout_weight="1" android:layout_marginTop="10dp" android:maxLines="3" android:ellipsize="end"
-                    android:textSize="15sp" android:lineSpacingExtra="2dp" android:textColor="?attr/dMuted" />
+                    android:layout_weight="1" android:layout_marginTop="7dp" android:maxLines="2" android:ellipsize="end"
+                    android:textSize="14sp" android:lineSpacingExtra="2dp" android:textColor="?attr/dMuted" />
                 <TextView android:id="@+id/hint" android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:maxLines="1" android:textSize="13sp" android:textColor="#5B6477"
+                    android:maxLines="1" android:textSize="12sp" android:textColor="#5B6477"
                     android:text="OK  watch here  ·  OK again  full screen     ◀  categories     ◀ ◀  menu     ≡  channel options" />
             </LinearLayout>
 
@@ -79,7 +79,7 @@
     </LinearLayout>
 
     <!-- The player: over the preview spot while browsing, the whole screen when watching. -->
-    <FrameLayout android:id="@+id/stage" android:layout_width="350dp" android:layout_height="197dp" android:visibility="invisible">
+    <FrameLayout android:id="@+id/stage" android:layout_width="270dp" android:layout_height="152dp" android:visibility="invisible">
         <androidx.media3.ui.PlayerView android:id="@+id/video"
             android:layout_width="match_parent" android:layout_height="match_parent"
             app:use_controller="false" app:resize_mode="fit" app:surface_type="surface_view"
