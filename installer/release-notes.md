@@ -1,3 +1,9 @@
+## What's new in Dingus 0.15.2
+
+* Fire TV: new side menu on every screen.
+* Faster start and a lighter Lite mode.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.1
 
 * Fire TV: tidier menu and screens.
