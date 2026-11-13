@@ -43,6 +43,7 @@ class BrowseActivity : BaseActivity() {
     private lateinit var hero: Hero
     private lateinit var heroView: View
     private lateinit var heroText: TextView
+    private lateinit var heroBody: View
     private lateinit var crumb: TextView
     private lateinit var empty: TextView
     private val posters = PosterAdapter()
@@ -69,6 +70,8 @@ class BrowseActivity : BaseActivity() {
         heroText = findViewById(R.id.heroText)
         findViewById<TextView>(R.id.heading).text = if (kind == Vod.MOVIES) "Films" else "TV Shows"
         hero = Hero(this, scope)
+        heroBody = findViewById(R.id.heroBody)
+        compact = true; setCompact(false) // (the full size banner: taller here than Home's)
 
         adapter = RowsAdapter(this, onFocus = { hero.show(it) }, onClick = { open(it) })
         rows.layoutManager = RowsLayoutManager(this)
@@ -250,8 +253,11 @@ class BrowseActivity : BaseActivity() {
         compact = on
         // (No animation: the grid resizing under the remote while moving would throw the highlight about.)
         val lp = heroView.layoutParams
-        lp.height = ((if (on) 150 else 250) * resources.displayMetrics.density).toInt()
+        val d = resources.displayMetrics.density
+        lp.height = ((if (on) 150 else 282) * d).toInt()
         heroView.layoutParams = lp
+        // Room above the logo for the picture behind (less when it's small).
+        heroBody.setPadding(heroBody.paddingLeft, ((if (on) 14 else 46) * d).toInt(), heroBody.paddingRight, heroBody.paddingBottom)
         // Everything has to fit the smaller banner (nothing cut off): a smaller logo, no description.
         heroText.visibility = if (on) View.GONE else View.VISIBLE
         val logo = findViewById<View>(R.id.heroLogo)
