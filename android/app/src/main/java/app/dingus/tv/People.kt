@@ -1,6 +1,11 @@
 package app.dingus.tv
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
@@ -33,38 +38,68 @@ object People {
         list
     }
 
-    suspend fun person(id: String): Person? = withContext(Dispatchers.IO) {
-        try {
-            val p = TitleLogos.get("/person/$id")
-            val credits = TitleLogos.get("/person/$id/combined_credits").optJSONArray("cast")
-            val works = ArrayList<Work>()
-            if (credits != null) for (i in 0 until credits.length()) {
-                val c = credits.getJSONObject(i)
-                val tv = c.optString("media_type") == "tv"
-                val t = c.optString(if (tv) "name" else "title")
-                if (t.isEmpty()) continue
-                val date = c.optString(if (tv) "first_air_date" else "release_date")
-                works.add(Work(t, date.take(4).toIntOrNull() ?: 0, tv))
-            }
-            val born = listOfNotNull(p.optString("birthday").takeIf { it.length >= 4 }?.let { "Born ${it.take(4)}" },
-                p.optString("place_of_birth").ifEmpty { null }).joinToString("  ·  ")
-            Person(p.optString("name"), p.optString("biography"), born, p.optString("profile_path").takeIf { it.startsWith("/") }?.let { "https://image.tmdb.org/t/p/w342$it" }, works)
-        } catch (e: Exception) { null }
+    private val io = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val people = HashMap<String, Deferred<Person?>>()
+
+    /** Start getting someone's page (e.g. when they're highlighted), so opening it is quick. */
+    fun prefetch(id: String) { synchronized(people) { people.getOrPut(id) { io.async { fetch(id) } } } }
+
+    /** Someone's page: from what's already been fetched (or is being), else fetched now. */
+    suspend fun person(id: String): Person? {
+        prefetch(id)
+        val d = synchronized(people) { people[id]!! }
+        val p = d.await()
+        if (p == null) synchronized(people) { if (people[id] === d) people.remove(id) } // (try again next time)
+        return p
     }
 
-    private fun key(s: String) = SearchIndex.norm(s).replace(Regex("[^a-z0-9]+"), "")
+    private fun fetch(id: String): Person? = try {
+        // One request: the person and everything they've been in.
+        val p = TitleLogos.get("/person/$id?append_to_response=combined_credits")
+        val credits = p.optJSONObject("combined_credits")?.optJSONArray("cast")
+        val works = ArrayList<Work>()
+        if (credits != null) for (i in 0 until credits.length()) {
+            val c = credits.getJSONObject(i)
+            val tv = c.optString("media_type") == "tv"
+            val t = c.optString(if (tv) "name" else "title")
+            if (t.isEmpty()) continue
+            val date = c.optString(if (tv) "first_air_date" else "release_date")
+            works.add(Work(t, date.take(4).toIntOrNull() ?: 0, tv))
+        }
+        val born = listOfNotNull(p.optString("birthday").takeIf { it.length >= 4 }?.let { "Born ${it.take(4)}" },
+            p.optString("place_of_birth").ifEmpty { null }).joinToString("  ·  ")
+        Person(p.optString("name"), p.optString("biography"), born, p.optString("profile_path").takeIf { it.startsWith("/") }?.let { "https://image.tmdb.org/t/p/w342$it" }, works)
+    } catch (e: Exception) { null }
+
+    // ------------------------------------------------------------------ matching against the playlist
+
+    /** Each library's titles by their matching key, built once per library (so matching someone is instant). */
+    private class Index(val lib: Vod.Library, val byKey: Map<String, List<VodItem>>)
+    private val indexes = HashMap<String, Index>()
+
+    private fun index(kind: String): Map<String, List<VodItem>> {
+        val lib = Vod.cached(kind) ?: return emptyMap()
+        synchronized(indexes) { indexes[kind]?.takeIf { it.lib === lib }?.let { return it.byKey } }
+        val m = HashMap<String, ArrayList<VodItem>>(lib.items.size)
+        for (v in lib.items) m.getOrPut(key(Vod.clean(v.name))) { ArrayList(1) }.add(v)
+        synchronized(indexes) { indexes[kind] = Index(lib, m) }
+        return m
+    }
+
+    /** Build the matching indexes ahead of time (a film's page does this when it shows the cast). */
+    fun warm() { io.launch(Dispatchers.Default) { index(Vod.MOVIES); index(Vod.SERIES) } }
+
+    private val notAlnum = Regex("[^a-z0-9]+")
+    private fun key(s: String) = SearchIndex.norm(s).replace(notAlnum, "")
 
     /** What of [works] is in the playlist: films and shows, matched by name (and year, when both are known). */
     suspend fun inPlaylist(works: List<Work>): Pair<List<VodItem>, List<VodItem>> = withContext(Dispatchers.Default) {
         fun match(kind: String, tv: Boolean): List<VodItem> {
-            val lib = Vod.cached(kind) ?: return emptyList()
-            val wanted = works.filter { it.tv == tv }.groupBy { key(it.title) }
-            if (wanted.isEmpty()) return emptyList()
+            val idx = index(kind)
+            if (idx.isEmpty()) return emptyList()
             val out = ArrayList<VodItem>(); val seen = HashSet<String>()
-            for (m in lib.items) {
-                val k = key(Vod.clean(m.name))
-                val ws = wanted[k] ?: continue
-                if (m.year > 0 && ws.none { it.year == 0 || kotlin.math.abs(it.year - m.year) <= 1 }) continue
+            for ((k, ws) in works.filter { it.tv == tv }.groupBy { key(it.title) }) {
+                val m = idx[k]?.firstOrNull { m -> m.year <= 0 || ws.any { it.year == 0 || kotlin.math.abs(it.year - m.year) <= 1 } } ?: continue
                 if (seen.add(k)) out.add(m)
             }
             return out.sortedByDescending { it.year }

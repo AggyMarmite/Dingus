@@ -299,12 +299,16 @@ class DetailActivity : BaseActivity() {
                     background = android.graphics.drawable.GradientDrawable().apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(Themes.color(this@DetailActivity, R.attr.dSurface2)) }
                 }
                 Posters.load(photo, a.photo, Ui.dp(this@DetailActivity, 84), v.findViewById(R.id.initials))
+                v.setOnFocusChangeListener { _, has -> if (has) People.prefetch(a.id) }
                 v.setOnClickListener {
                     startActivity(Intent(this@DetailActivity, PersonActivity::class.java).putExtra(PersonActivity.ID, a.id).putExtra(PersonActivity.NAME, a.name))
                 }
                 row.addView(v)
             }
             findViewById<View>(R.id.castScroll).visibility = View.VISIBLE
+            // Get ready for someone being picked: the first few people's pages, and the playlist to match against.
+            cast.take(3).forEach { People.prefetch(it.id) }
+            People.warm()
         }
     }
 

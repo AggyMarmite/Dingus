@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
@@ -41,7 +42,9 @@ class PersonActivity : BaseActivity() {
             findViewById<TextView>(R.id.born).text = p.born
             findViewById<TextView>(R.id.bio).text = p.bio.ifEmpty { "No biography yet." }
             Posters.load(findViewById<ImageView>(R.id.photo), p.photo, Ui.dp(this@PersonActivity, 210))
-            if (Vod.available) for (k in listOf(Vod.MOVIES, Vod.SERIES)) try { Vod.library(k) } catch (_: Exception) {}
+            // (Usually already loaded; if not, both at once.)
+            if (Vod.available) listOf(Vod.MOVIES, Vod.SERIES).filter { Vod.cached(it) == null }
+                .map { k -> async { try { Vod.library(k) } catch (_: Exception) {} } }.forEach { it.await() }
             val (films, shows) = People.inPlaylist(p.works)
             val out = ArrayList<Row>()
             if (films.isNotEmpty()) out.add(Row("Films in your playlist", films.map { Card.Title(Vod.MOVIES, it) }))
