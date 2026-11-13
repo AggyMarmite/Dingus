@@ -533,7 +533,10 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
                 pendingPlay != null -> runPendingPlay()
                 live.fullScreen -> live.resume() // back to the app while watching: carry on
                 // Back from another screen: carry on with the channel that was playing in the window (if one was).
-                else -> resumePreview?.let { id -> Repo.channel(id)?.let { preview(it) } }
+                // (A moment later, so the guide's on screen and answering the remote first.)
+                else -> resumePreview?.let { id ->
+                    handler.postDelayed({ if (!isFinishing && live.current == null && !live.fullScreen) Repo.channel(id)?.let { preview(it) } }, 600)
+                }
             }
             if (!live.fullScreen && !side.isOpen && catPanel.visibility != View.VISIBLE) grid.requestFocus()
         }
