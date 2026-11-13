@@ -202,7 +202,7 @@ key KEYCODE_DPAD_LEFT 1.5
 for _ in 1 2 3 4; do key KEYCODE_DPAD_UP 0.4; done                                     # Settings → … → Live TV
 adb shell input keyevent KEYCODE_DPAD_CENTER; sleep 0.6; shot 19ab-live-from-settings-0s
 sleep 1.5; shot 19ac-live-from-settings-2s
-check "guide-filled [1-9]" 10 "Live TV from Settings shows the channels"
+check "guide-(filled|showing) [1-9]" 10 "Live TV from Settings shows the channels"
 key KEYCODE_BACK 1; key KEYCODE_BACK 1
 adb shell am start -n $PKG/.HomeActivity
 sleep 2

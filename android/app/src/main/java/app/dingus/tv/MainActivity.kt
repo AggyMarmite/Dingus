@@ -524,6 +524,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     override fun onResume() {
         super.onResume()
         Ui.test("main-shown")
+        if (started) Ui.test("guide-showing ${gridIds.size}")
         grid.genreColours = Store.genreColours
         grid.showNumbers = Store.showNumbers
         if ((!started || Repo.channels.isEmpty()) && !loading) start()
