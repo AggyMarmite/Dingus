@@ -79,6 +79,8 @@ class SideMenu(
     var isOpen = false; private set
     /** Called once the menu has closed by itself (RIGHT / BACK), for screens that put the focus somewhere special. */
     var onClosed: (() -> Unit)? = null
+    /** Called when something in the menu is chosen (Live TV: back to the guide itself, categories closed). */
+    var onNavigate: (() -> Unit)? = null
 
     init {
         content.setPaddingRelative(content.paddingStart + strip, content.paddingTop, content.paddingEnd, content.paddingBottom)
@@ -236,8 +238,9 @@ class SideMenu(
     }
 
     private fun go(p: Page) {
-        if (p == here) { close(); return }
+        if (p == here) { close(); onNavigate?.invoke(); return }
         close() // (the focus goes back where it was, for when you come back to this screen)
+        onNavigate?.invoke()
         val i = when (p) {
             Page.HOME -> Intent(a, HomeActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             Page.LIVE -> Intent(a, MainActivity::class.java)

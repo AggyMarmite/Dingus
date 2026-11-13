@@ -71,6 +71,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         side = SideMenu(this, SideMenu.Page.LIVE, findViewById(R.id.guideScreen), leftOpens = false)
+        side.onNavigate = { if (catPanel.visibility == View.VISIBLE) closeCategories() }
         grid = findViewById(R.id.grid)
         catPanel = findViewById(R.id.catPanel)
         categories = findViewById(R.id.categories)
