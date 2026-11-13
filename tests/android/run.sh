@@ -32,15 +32,27 @@ fresh
 key KEYCODE_DPAD_LEFT; key KEYCODE_DPAD_LEFT; key KEYCODE_DPAD_LEFT 2
 check "categories-open" 5 "LEFT from what's on now shows the categories"
 shot 03-categories
-key KEYCODE_DPAD_DOWN; key KEYCODE_DPAD_CENTER 4   # UK: Entertainment
-check "preview Test 1 HD" 20 "picking a category shows its channels"
+# Scrolling slowly through the categories (each one shows behind) mustn't jump back to "All channels".
+fresh
+key KEYCODE_DPAD_DOWN 1.5; key KEYCODE_DPAD_DOWN 1.5; key KEYCODE_DPAD_CENTER 3   # Sport
+check "key KEYCODE_DPAD_CENTER on TextView/Sport" 5 "scrolling through categories keeps the highlight where you are"
+check "preview Test 3 Sport" 30 "picking a category shows its channels"
+fresh
+key KEYCODE_DPAD_LEFT 2; key KEYCODE_DPAD_UP 1.5; key KEYCODE_DPAD_CENTER 4        # back to UK: Entertainment
+check "key KEYCODE_DPAD_CENTER on TextView/UK: Entertainment" 5 "moving up a category works too"
+check "preview Test 1 HD" 30 "the guide shows that category's channels"
 fresh
 key KEYCODE_DPAD_DOWN
 check "preview Test 2" 40 "moving down previews the next channel (HLS)"
 sleep 2; shot 04-category
 fresh
 key KEYCODE_DPAD_CENTER 2
-check "playing Test 2" 45 "OK plays the channel full screen"
+check "fullscreen Test 2" 15 "OK grows the preview to full screen (same stream)"
+sleep 3
+if adb logcat -d -s DINGUS-TEST:I | grep -q "playing Test 2"; then
+  echo "::error title=android self-test::the stream loaded again going full screen"; echo "FAIL full screen keeps the preview's stream (no second load)" >> "$OUT/result.txt"; fail=1
+else echo "PASS full screen keeps the preview's stream (no second load)" >> "$OUT/result.txt"; fi
+shot 04b-fullscreen
 fresh
 key KEYCODE_DPAD_UP
 check "playing Test 1 HD" 45 "changing channel in full screen"
@@ -59,8 +71,7 @@ key KEYCODE_MENU 2; shot 05d-options
 key KEYCODE_DPAD_CENTER 2   # Add to Favourites
 fresh
 key KEYCODE_BACK; key KEYCODE_BACK 2
-check "main-shown" 10 "BACK returns to the guide"
-check "preview Test 1 HD" 30 "the guide lands on the channel just watched"
+check "guide-shown Test 1 HD" 10 "BACK shrinks back to the guide, on the channel just watched"
 sleep 2; shot 06-guide-after
 
 fresh

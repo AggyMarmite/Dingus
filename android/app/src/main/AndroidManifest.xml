@@ -87,11 +87,5 @@
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
 
-        <activity
-            android:name=".PlayerActivity"
-            android:exported="false"
-            android:screenOrientation="landscape"
-            android:configChanges="keyboard|keyboardHidden|navigation|screenSize|smallestScreenSize|screenLayout|orientation"
-            android:theme="@style/Theme.Dingus.Player" />
     </application>
 </manifest>

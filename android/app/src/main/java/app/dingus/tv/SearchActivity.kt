@@ -145,8 +145,8 @@ class SearchActivity : BaseActivity() {
             val h = H(v)
             v.setOnClickListener {
                 when (val r = rows.getOrNull(h.bindingAdapterPosition)) {
-                    is Row.Live -> startActivity(Intent(this@SearchActivity, PlayerActivity::class.java)
-                        .putExtra(PlayerActivity.CHANNEL, r.c.id).putExtra(PlayerActivity.CATEGORY, Repo.ALL))
+                    is Row.Live -> startActivity(Intent(this@SearchActivity, MainActivity::class.java)
+                        .putExtra(MainActivity.PLAY, r.c.id).putExtra(MainActivity.PLAY_CATEGORY, Repo.ALL))
                     is Row.Item -> startActivity(Intent(this@SearchActivity, DetailActivity::class.java)
                         .putExtra(DetailActivity.KIND, r.kind).putExtra(DetailActivity.ID, r.m.id))
                     else -> {}

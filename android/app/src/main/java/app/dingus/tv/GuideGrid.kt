@@ -106,6 +106,16 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         pick()
     }
 
+    /** Highlight a channel in the current list (e.g. the one you were just watching). */
+    fun focusChannel(id: String) {
+        val i = channels.indexOfFirst { it.id == id }
+        if (i < 0 || i == row) return
+        row = i
+        anchor = maxOf(anchor, now())
+        keepRowVisible(centre = true)
+        pick()
+    }
+
     /** Called every minute (and when the guide's been read again): move on with the clock. */
     fun refresh() {
         // Move on with the clock – unless you're looking back at earlier programmes (catch-up).

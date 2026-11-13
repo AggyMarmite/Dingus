@@ -70,8 +70,8 @@ object Reminders {
             .setTitle(if (started) "Started: ${due.title}" else "Starting soon: ${due.title}")
             .setMessage("${due.channelName}  ·  ${Ui.time(due.start)}")
             .setPositiveButton("Watch") { _, _ ->
-                if (Repo.channel(due.channelId) != null) a.startActivity(Intent(a, PlayerActivity::class.java)
-                    .putExtra(PlayerActivity.CHANNEL, due.channelId).putExtra(PlayerActivity.CATEGORY, Repo.ALL))
+                if (Repo.channel(due.channelId) != null) a.startActivity(Intent(a, MainActivity::class.java)
+                    .putExtra(MainActivity.PLAY, due.channelId).putExtra(MainActivity.PLAY_CATEGORY, Repo.ALL))
             }
             .setNegativeButton("Dismiss", null)
             .show().also { it.getButton(AlertDialog.BUTTON_POSITIVE)?.requestFocus() }

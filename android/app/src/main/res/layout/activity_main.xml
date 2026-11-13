@@ -14,10 +14,7 @@
                 android:background="@drawable/logo_bg">
                 <TextView android:id="@+id/previewText" android:layout_width="match_parent" android:layout_height="match_parent"
                     android:gravity="center" android:padding="16dp" android:textSize="16sp" android:textColor="?attr/dMuted" />
-                <androidx.media3.ui.PlayerView android:id="@+id/preview"
-                    android:layout_width="match_parent" android:layout_height="match_parent"
-                    app:use_controller="false" app:resize_mode="fit" app:surface_type="surface_view"
-                    app:shutter_background_color="@android:color/transparent" />
+                <!-- The player sits over this spot (see "stage" below) and grows to full screen from here. -->
             </FrameLayout>
 
             <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
@@ -56,16 +53,11 @@
 
         </LinearLayout>
 
-        <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
-            <app.dingus.tv.GuideGrid android:id="@+id/grid" android:layout_width="match_parent" android:layout_height="match_parent"
-                android:paddingStart="0dp" />
-            <TextView android:id="@+id/empty" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_gravity="center" android:gravity="center" android:textSize="18sp"
-                android:textColor="?attr/dMuted" android:visibility="gone" />
-
-            <!-- Categories: LEFT from the guide shows them over the channel names (the programmes stay in view). -->
+        <LinearLayout android:id="@+id/guideArea" android:layout_width="match_parent" android:layout_height="0dp"
+            android:layout_weight="1" android:orientation="horizontal">
+            <!-- Categories: LEFT from the guide opens this column to its left, moving the guide across. -->
             <LinearLayout android:id="@+id/catPanel" android:layout_width="250dp" android:layout_height="match_parent"
-                android:orientation="vertical" android:background="?attr/dSurface" android:elevation="8dp"
+                android:orientation="vertical" android:background="?attr/dSurface"
                 android:visibility="gone" android:paddingStart="8dp" android:paddingEnd="8dp">
                 <TextView android:layout_width="match_parent" android:layout_height="34dp" android:gravity="center_vertical"
                     android:paddingStart="12dp" android:text="CATEGORIES" android:textSize="12sp" android:textStyle="bold"
@@ -75,8 +67,25 @@
                     android:scrollbars="none" android:clipToPadding="false" android:paddingBottom="16dp"
                     android:descendantFocusability="afterDescendants" />
             </LinearLayout>
-        </FrameLayout>
+            <FrameLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1">
+                <app.dingus.tv.GuideGrid android:id="@+id/grid" android:layout_width="match_parent" android:layout_height="match_parent"
+                    android:paddingStart="0dp" />
+            <TextView android:id="@+id/empty" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_gravity="center" android:gravity="center" android:textSize="18sp"
+                android:textColor="?attr/dMuted" android:visibility="gone" />
+
+            </FrameLayout>
+        </LinearLayout>
     </LinearLayout>
+
+    <!-- The player: over the preview spot while browsing, the whole screen when watching. -->
+    <FrameLayout android:id="@+id/stage" android:layout_width="350dp" android:layout_height="197dp" android:visibility="invisible">
+        <androidx.media3.ui.PlayerView android:id="@+id/video"
+            android:layout_width="match_parent" android:layout_height="match_parent"
+            app:use_controller="false" app:resize_mode="fit" app:surface_type="surface_view"
+            app:shutter_background_color="@android:color/black" />
+        <include layout="@layout/layout_live_overlay" />
+    </FrameLayout>
 
     <!-- Categories menu -->
     <View android:id="@+id/scrim" android:layout_width="match_parent" android:layout_height="match_parent"

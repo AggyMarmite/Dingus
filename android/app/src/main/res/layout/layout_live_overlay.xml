@@ -1,13 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- What shows over live TV: behind-live badge, messages, and the info bar (channel, now and next). -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent" android:layout_height="match_parent" android:background="@android:color/black"
-    android:keepScreenOn="true">
-
-    <androidx.media3.ui.PlayerView android:id="@+id/video"
-        android:layout_width="match_parent" android:layout_height="match_parent"
-        app:use_controller="false" app:resize_mode="fit" app:surface_type="surface_view" app:shutter_background_color="@android:color/black" />
-
+    android:id="@+id/liveOverlay" android:layout_width="match_parent" android:layout_height="match_parent">
     <!-- Behind live / paused -->
     <TextView android:id="@+id/shift" android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:layout_gravity="top|end" android:layout_margin="36dp" android:background="@drawable/badge_bg"
@@ -15,12 +9,12 @@
         android:textSize="18sp" android:textStyle="bold" android:textColor="#FFFFFF" android:visibility="gone" />
 
     <TextView android:id="@+id/message" android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:layout_gravity="center" android:gravity="center" android:padding="20dp" android:textSize="20sp"
+        android:layout_gravity="center" android:gravity="center" android:padding="12dp" android:textSize="14sp"
         android:textColor="?attr/dText" android:shadowColor="#000000" android:shadowRadius="6" />
 
     <!-- The info bar: shown when you change channel or press OK. -->
     <LinearLayout android:id="@+id/info" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_gravity="bottom" android:orientation="vertical" android:background="@drawable/overlay_bg"
+        android:layout_gravity="bottom" android:orientation="vertical" android:background="@drawable/overlay_bg" android:visibility="gone"
         android:paddingStart="56dp" android:paddingEnd="56dp" android:paddingTop="70dp" android:paddingBottom="36dp">
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"

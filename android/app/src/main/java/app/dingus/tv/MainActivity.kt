@@ -9,12 +9,12 @@ import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.transition.ChangeBounds
+import android.transition.TransitionManager
+import android.view.animation.DecelerateInterpolator
+import android.widget.FrameLayout
 import android.widget.ProgressBar
 import android.widget.TextView
-import androidx.media3.common.PlaybackException
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.CoroutineScope
@@ -23,8 +23,17 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
-/** The TV guide, opened on start. Everything works with the remote. */
+/**
+ * The TV guide, with live TV: the preview window grows into full screen (and shrinks back) with the same stream,
+ * so a channel never loads twice. Everything works with the remote.
+ */
 class MainActivity : BaseActivity(), GuideGrid.Listener {
+    companion object {
+        /** Open straight into full screen on this channel (from Home, Search, reminders). */
+        const val PLAY = "play"
+        const val PLAY_CATEGORY = "playCategory"
+    }
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val handler = Handler(Looper.getMainLooper())
 
@@ -36,8 +45,13 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     private lateinit var status: TextView
     private lateinit var hint: TextView
     private lateinit var clock: TextView
-    private lateinit var previewView: PlayerView
     private lateinit var previewText: TextView
+    private lateinit var previewBox: View
+    private lateinit var stage: FrameLayout
+    private lateinit var root: ViewGroup
+    private lateinit var guideArea: ViewGroup
+    private lateinit var live: LiveTv
+    private var pendingPlay: Pair<String, String>? = null
     private val hintText by lazy { hint.text }
 
     private val catAdapter = CategoryAdapter()
@@ -48,10 +62,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     private var updateChecked = false
     private val repoListener: () -> Unit = { handler.post { onRepoChanged() } }
 
-    private var preview: ExoPlayer? = null
-    private var previewing: Channel? = null
-    private var previewRetries = 0
-    private val startPreview = Runnable { grid.current?.let { if (previewing?.id != it.id) preview(it) } }
+    private val startPreview = Runnable { grid.current?.let { if (live.current?.id != it.id) preview(it) } }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,8 +76,16 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         status = findViewById(R.id.status)
         hint = findViewById(R.id.hint)
         clock = findViewById(R.id.clock)
-        previewView = findViewById(R.id.preview)
         previewText = findViewById(R.id.previewText)
+        previewBox = findViewById(R.id.previewBox)
+        stage = findViewById(R.id.stage)
+        guideArea = findViewById(R.id.guideArea)
+        root = findViewById(android.R.id.content)
+        live = LiveTv(this, findViewById(R.id.video), findViewById(R.id.liveOverlay))
+        // Changing channel in full screen moves the guide along with it.
+        live.onChannel = { c -> if (gridIds.contains(c.id)) grid.focusChannel(c.id) }
+        // The player sits exactly over the preview spot while browsing.
+        previewBox.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> if (!live.fullScreen) placeStage() }
         hintText.length
 
         grid.listener = this
@@ -93,11 +112,33 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         current = Store.lastCategory ?: Repo.ALL
         Repo.onChanged(repoListener)
         handleTestExtras(intent)
+        takePlayRequest(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleTestExtras(intent)
+        takePlayRequest(intent)
+        if (Repo.channels.isNotEmpty()) runPendingPlay()
+    }
+
+    private fun takePlayRequest(i: Intent) {
+        val id = i.getStringExtra(PLAY) ?: return
+        pendingPlay = id to (i.getStringExtra(PLAY_CATEGORY) ?: Repo.ALL)
+        i.removeExtra(PLAY)
+    }
+
+    /** Opened to watch a channel: show its category in the guide and go straight to full screen. */
+    private fun runPendingPlay() {
+        val (id, cat) = pendingPlay ?: return
+        val c = Repo.channel(id) ?: return
+        pendingPlay = null
+        if (catPanel.visibility == View.VISIBLE) { catPanel.visibility = View.GONE; grid.isFocusable = true }
+        if (menu.visibility == View.VISIBLE) closeMenu(toGuide = true)
+        val list = Repo.channelsIn(cat).let { l -> if (l.any { it.id == id }) l else Repo.channelsIn(Repo.ALL) }
+        val useCat = if (Repo.channelsIn(cat).any { it.id == id }) cat else Repo.ALL
+        if (useCat != current || !gridIds.contains(id)) showCategory(useCat, id) else grid.focusChannel(id)
+        goFullScreen(c, list, animate = false)
     }
 
     private fun handleTestExtras(i: Intent) {
@@ -146,8 +187,10 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             if (cats.none { it.id == current }) current = Store.lastCategory?.takeIf { id -> cats.any { it.id == id } } ?: Repo.ALL
             showCategory(current, Store.lastChannel)
             grid.requestFocus()
+            runPendingPlay()
             if (Repo.channels.isEmpty()) refresh(p, true)
             else if (System.currentTimeMillis() - Store.guideLoadedAt > 12 * 3600_000L) refresh(p, false)
+            runPendingPlay()
             maybeAutoPlay()
         }
     }
@@ -214,7 +257,8 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         current = id
         Store.lastCategory = id
         val cats = Repo.sideCategories()
-        catAdapter.set(cats)
+        // Rebuilding the list would move the highlight while you're scrolling through it, so only when it changed.
+        if (cats.map { it.id to it.name } != catAdapter.items.map { it.id to it.name }) catAdapter.set(cats)
         catAdapter.selected(id)
         val list = Repo.channelsIn(id)
         gridIds = list.map { it.id }
@@ -231,7 +275,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     override fun onSelected(c: Channel, p: Programme?) {
         setInfo(c, p)
         handler.removeCallbacks(startPreview)
-        if (previewing?.id != c.id) handler.postDelayed(startPreview, 900)
+        if (!live.fullScreen && live.current?.id != c.id) handler.postDelayed(startPreview, 900)
     }
 
     private fun setInfo(c: Channel?, p: Programme?) {
@@ -265,42 +309,58 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         desc.text = p.desc ?: ""
     }
 
+    /** Plays [c] in the preview window (the stream full screen will carry on with). */
     private fun preview(c: Channel) {
-        if (!Store.preview) { stopPreview(); previewText.text = c.name; return }
-        val p = preview ?: Players.create(this, small = true).also { pl ->
-            preview = pl
-            previewView.player = pl
-            pl.addListener(object : Player.Listener {
-                override fun onPlaybackStateChanged(state: Int) {
-                    if (state == Player.STATE_READY) { previewRetries = 0; previewText.text = ""; Ui.test("preview ${previewing?.name}") }
-                    if (state == Player.STATE_ENDED) previewing?.let { retryPreview(it) }
-                }
-                override fun onPlayerError(error: PlaybackException) {
-                    val ch = previewing ?: return
-                    if (previewRetries < 2) retryPreview(ch) else previewText.text = "${ch.name}\nisn't playing right now"
-                }
-            })
-        }
-        previewing = c
-        previewRetries = 0
-        previewText.text = "Loading…"
-        previewView.visibility = View.VISIBLE
-        p.setMediaItem(Players.item(c))
-        p.prepare()
-        p.playWhenReady = true
-    }
-
-    private fun retryPreview(c: Channel) {
-        previewRetries++
-        handler.postDelayed({ if (previewing?.id == c.id) { preview?.prepare(); preview?.playWhenReady = true } }, 1_500)
+        if (live.fullScreen) return
+        if (!Store.preview) { live.release(); stage.visibility = View.INVISIBLE; previewText.text = c.name; return }
+        previewText.text = ""
+        placeStage()
+        stage.visibility = View.VISIBLE
+        live.play(Repo.channelsIn(current), c)
     }
 
     private fun stopPreview() {
         handler.removeCallbacks(startPreview)
-        preview?.release()
-        preview = null
-        previewing = null
-        previewView.player = null
+        live.release()
+    }
+
+    /** Puts the player exactly over the preview spot. */
+    private fun placeStage() {
+        if (previewBox.width == 0) return
+        val a = IntArray(2); val r = IntArray(2)
+        previewBox.getLocationInWindow(a); root.getLocationInWindow(r)
+        val lp = FrameLayout.LayoutParams(previewBox.width, previewBox.height)
+        lp.leftMargin = a[0] - r[0]; lp.topMargin = a[1] - r[1]
+        stage.layoutParams = lp
+    }
+
+    private fun smoothly(target: ViewGroup, ms: Long) =
+        TransitionManager.beginDelayedTransition(target, ChangeBounds().setDuration(ms).setInterpolator(DecelerateInterpolator()))
+
+    /** The preview grows to fill the screen; if it's already showing this channel, the stream just carries on. */
+    private fun goFullScreen(c: Channel, list: List<Channel> = Repo.channelsIn(current), animate: Boolean = true) {
+        handler.removeCallbacks(startPreview)
+        if (live.current?.id != c.id) placeStage()
+        live.play(list, c)
+        stage.visibility = View.VISIBLE
+        if (animate && live.current != null) smoothly(root, 280)
+        stage.layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        stage.setBackgroundColor(0xFF000000.toInt())
+        live.enterFullScreen()
+    }
+
+    /** BACK from full screen: the picture shrinks back into the preview, and the guide is on the channel you were watching. */
+    private fun leaveFullScreen() {
+        val c = live.current
+        live.leaveFullScreen()
+        stage.background = null
+        smoothly(root, 260)
+        placeStage()
+        if (c != null) { if (gridIds.contains(c.id)) grid.focusChannel(c.id) else showCategory(current, c.id) }
+        if (!Store.preview) { live.release(); stage.visibility = View.INVISIBLE }
+        grid.isFocusable = true
+        grid.requestFocus()
+        Ui.test("guide-shown ${c?.name}")
     }
 
     // ------------------------------------------------------------------ actions
@@ -330,10 +390,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
                 listOf(VodPlayerActivity.Entry("cu:${c.id}:${p.start}", "${c.name}  ·  ${p.title}", url)), 0, true))
             return
         }
-        stopPreview()
-        startActivity(Intent(this, PlayerActivity::class.java)
-            .putExtra(PlayerActivity.CHANNEL, c.id)
-            .putExtra(PlayerActivity.CATEGORY, current))
+        goFullScreen(c)
     }
 
     override fun onFavourite(c: Channel) {
@@ -349,12 +406,11 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
 
     private lateinit var catPanel: View
 
-    /** LEFT from the guide: the categories appear over the channel names, with the current one highlighted. */
+    /** LEFT from the guide: the categories open to its left (the guide moves across), on the current one. */
     private fun openCategories() {
         if (catPanel.visibility == View.VISIBLE) return
+        smoothly(guideArea, 180)
         catPanel.visibility = View.VISIBLE
-        catPanel.translationX = -catPanel.width.toFloat().coerceAtLeast(200f)
-        catPanel.animate().translationX(0f).setDuration(140).start()
         grid.isFocusable = false // the guide can't take the remote's presses while the list is open
         val i = catAdapter.items.indexOfFirst { it.id == current }.coerceAtLeast(0)
         categories.scrollToPosition(i)
@@ -375,9 +431,8 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         if (catPanel.visibility != View.VISIBLE) return
         handler.removeCallbacks(catAdapter.pending)
         catAdapter.pending.run()
-        catPanel.animate().translationX(-catPanel.width.toFloat()).setDuration(120).withEndAction {
-            catPanel.visibility = View.GONE
-        }.start()
+        smoothly(guideArea, 160)
+        catPanel.visibility = View.GONE
         grid.isFocusable = true
         grid.requestFocus()
     }
@@ -411,7 +466,10 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         }.start()
         scrim.visibility = View.GONE
         categories.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
-        if (toGuide || catPanel.visibility != View.VISIBLE) { catPanel.visibility = View.GONE; grid.isFocusable = true; grid.requestFocus() }
+        if (toGuide || catPanel.visibility != View.VISIBLE) {
+            if (catPanel.visibility == View.VISIBLE) { smoothly(guideArea, 160); catPanel.visibility = View.GONE }
+            grid.isFocusable = true; grid.requestFocus()
+        }
         else focusCategory(catAdapter.items.indexOfFirst { it.id == current }.coerceAtLeast(0), 0)
     }
 
@@ -444,7 +502,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     private fun maybeAutoPlay() {
         if (!BuildConfig.DEBUG || !intent.getBooleanExtra("dingus_test_play", false)) return
         intent.removeExtra("dingus_test_play")
-        grid.current?.let { onPlay(it, null) }
+        grid.current?.let { goFullScreen(it) }
     }
 
     private val tick = object : Runnable {
@@ -461,12 +519,13 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         grid.genreColours = Store.genreColours
         if (Repo.channels.isEmpty() && !loading) start()
         else if (Repo.channels.isNotEmpty()) {
-            // Back from full screen: land on the channel just watched and preview it straight away.
-            val last = Store.lastChannel
-            if (Repo.channelsIn(current).none { it.id == last } || grid.current?.id != last) showCategory(current, last)
-            else grid.refresh()
-            grid.current?.let { if (previewing == null) preview(it) }
-            if (menu.visibility != View.VISIBLE && catPanel.visibility != View.VISIBLE) grid.requestFocus()
+            grid.refresh()
+            when {
+                pendingPlay != null -> runPendingPlay()
+                live.fullScreen -> live.resume() // back to the app while watching: carry on
+                else -> grid.current?.let { if (live.current == null) preview(it) }
+            }
+            if (!live.fullScreen && menu.visibility != View.VISIBLE && catPanel.visibility != View.VISIBLE) grid.requestFocus()
         }
         if (Repo.channels.isNotEmpty() && Store.guideLoadedAt == 0L) refreshGuideOnly()
         tick.run()
@@ -479,7 +538,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     override fun onPause() {
         super.onPause()
         handler.removeCallbacks(tick)
-        stopPreview()
+        stopPreview() // (in full screen too: it picks up again when you come back)
     }
 
     override fun onDestroy() {
@@ -497,7 +556,9 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (BuildConfig.DEBUG && event.action == KeyEvent.ACTION_DOWN)
-            Ui.test("key ${KeyEvent.keyCodeToString(event.keyCode)} on ${currentFocus?.let { it.javaClass.simpleName + "/" + ((it as? TextView)?.text ?: "") }}")
+            Ui.test("key ${KeyEvent.keyCodeToString(event.keyCode)} on ${if (live.fullScreen) "full screen" else currentFocus?.let { it.javaClass.simpleName + "/" + ((it as? TextView)?.text ?: "") }}")
+        // Full screen: the remote controls live TV.
+        if (live.fullScreen && event.keyCode != KeyEvent.KEYCODE_BACK && live.onKey(event.keyCode, event)) return true
         if (event.action == KeyEvent.ACTION_DOWN && event.keyCode != KeyEvent.KEYCODE_BACK) {
             val f = currentFocus
             when {
@@ -530,6 +591,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
 
     /** BACK steps out: guide → categories → menu → leave the app. */
     override fun onBackPressed() {
+        if (live.fullScreen) { if (!live.onBack()) leaveFullScreen(); return }
         when {
             menu.visibility == View.VISIBLE -> super.onBackPressed()
             catPanel.visibility == View.VISIBLE -> openMenu()
