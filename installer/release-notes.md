@@ -1,3 +1,9 @@
+## What's new in Dingus 0.15.7
+
+* Fire TV: tidier Settings, stream stats while watching, and a loading screen.
+* Programme logos on Home.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.6
 
 * Fire TV: faster Films and TV Shows, with categories as a row.
