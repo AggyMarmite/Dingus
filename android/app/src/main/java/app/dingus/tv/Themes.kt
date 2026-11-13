@@ -50,10 +50,10 @@ object Themes {
 abstract class BaseActivity : Activity() {
     private var themeVersion = -1
 
-    /** Sized for a TV across the room: everything drawn at 95% of the usual Android size (more fits, less "phone"). */
+    /** Sized for a TV across the room: the usual Android TV size, with text a little smaller (less "phone"). */
     override fun attachBaseContext(base: android.content.Context) {
         val c = android.content.res.Configuration(base.resources.configuration)
-        c.densityDpi = (c.densityDpi * 0.95f).toInt()
+        c.fontScale = base.resources.configuration.fontScale * 0.85f
         super.attachBaseContext(base.createConfigurationContext(c))
     }
 
