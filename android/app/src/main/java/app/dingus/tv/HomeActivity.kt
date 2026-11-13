@@ -63,6 +63,23 @@ class HomeActivity : BaseActivity() {
         if (savedInstanceState == null && intent?.action == Intent.ACTION_MAIN && Store.startScreen == "live" && Store.playlist != null)
             startActivity(Intent(this, MainActivity::class.java))
 
+        // What Home showed last time, straight away (no loading screen) while the real thing is read in behind it.
+        if (Store.playlist != null && Repo.channels.isEmpty()) HomeSnapshot.read(
+            action = { ref -> {
+                val parts = ref.split(':')
+                when (parts.getOrNull(0)) {
+                    "ch" -> startActivity(Intent(this, MainActivity::class.java).putExtra(MainActivity.PLAY, ref.substringAfter(':')).putExtra(MainActivity.PLAY_CATEGORY, Repo.ALL))
+                    "vod" -> startActivity(Intent(this, DetailActivity::class.java).putExtra(DetailActivity.KIND, parts[1]).putExtra(DetailActivity.ID, ref.substringAfter(':').substringAfter(':')))
+                    else -> guide()
+                }
+            } },
+            second = { label -> when (label) {
+                "Live TV" -> { { guide() } }
+                "Films" -> { { startActivity(Intent(this, BrowseActivity::class.java).putExtra(BrowseActivity.KIND, Vod.MOVIES)) } }
+                else -> null
+            } },
+        )?.let { (slides, out) -> show(slides, out, saved = true); Ui.test("home-from-saved ${out.size}") }
+
         side = SideMenu(this, SideMenu.Page.HOME, findViewById<View>(android.R.id.content).let { (it as android.view.ViewGroup).getChildAt(0) })
     }
 
@@ -213,7 +230,10 @@ class HomeActivity : BaseActivity() {
         v.animate().alpha(0f).setDuration(250).withEndAction { v.visibility = View.GONE; v.alpha = 1f }.start()
     }
 
-    private fun show(slides: List<Slide>, out: List<Row>) {
+    private fun show(slides: List<Slide>, out: List<Row>, saved: Boolean = false) {
+        // Keep a copy for next time (once everything's loaded).
+        if (!saved && !loading && (slides.isNotEmpty() || out.isNotEmpty()))
+            Background.scope.launch(Dispatchers.IO) { HomeSnapshot.save(slides, out) }
         if (!lite) feature?.set(slides)
         adapter.set(out)
         val nothing = out.isEmpty() && slides.isEmpty()
@@ -315,7 +335,7 @@ class HomeActivity : BaseActivity() {
             val p = Repo.nowNext(c).first
             slides.add(Slide("Carry on watching", p?.title ?: c.name,
                 listOfNotNull(c.name, p?.let { Ui.span(it) }, p?.let { left(it, now) }).joinToString("  ·  "), p?.desc,
-                p?.let { Ui.progress(it) / 1000f } ?: -1f, watch = { watch(c) }, second = "Live TV" to { guide() }, title_ = p?.let { TitleLogos.forProgramme(it) }))
+                p?.let { Ui.progress(it) / 1000f } ?: -1f, watch = { watch(c) }, ref = "ch:${c.id}", second = "Live TV" to { guide() }, title_ = p?.let { TitleLogos.forProgramme(it) }))
         }
         val cont = ArrayList<Card>()
         Vod.cached(Vod.MOVIES)?.let { lib ->
@@ -327,14 +347,14 @@ class HomeActivity : BaseActivity() {
         Vod.cached(Vod.SERIES)?.let { lib -> Vod.continueList(Vod.SERIES, lib).forEach { cont.add(Card.Title(Vod.SERIES, it, label = "Continue")) } }
         (cont.firstOrNull() as? Card.Title)?.let { t ->
             slides.add(Slide("Continue watching", t.item.name, listOfNotNull(if (t.kind == Vod.MOVIES) "Film" else "TV show", t.item.year.takeIf { it > 0 }?.toString()).joinToString("  ·  "),
-                null, t.progress, Vod.cachedDetails(t.kind, t.item.id)?.backdrop ?: t.item.poster, watch = { openTitle(t.kind, t.item) }, title_ = t.kind to t.item))
+                null, t.progress, Vod.cachedDetails(t.kind, t.item.id)?.backdrop ?: t.item.poster, watch = { openTitle(t.kind, t.item) }, ref = "vod:${t.kind}:${t.item.id}", title_ = t.kind to t.item))
         }
 
         // What's on your channels now, and next.
         val onNow = mine.mapNotNull { c -> Repo.nowNext(c).first?.let { c to it } }
         onNow.take(2).forEach { (c, p) ->
             if (slides.none { it.title == p.title }) slides.add(Slide("On now", p.title, "${c.name}  ·  ${Ui.span(p)}  ·  ${left(p, now)}", p.desc,
-                Ui.progress(p) / 1000f, watch = { watch(c) }, second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(p)))
+                Ui.progress(p) / 1000f, watch = { watch(c) }, ref = "ch:${c.id}", second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(p)))
         }
 
         // Live sport now and tonight's picks: from your channels first, then the rest (only so many, to stay quick).
@@ -365,16 +385,16 @@ class HomeActivity : BaseActivity() {
         sport.firstOrNull()?.let { s ->
             val p = s.programme!!
             if (slides.none { it.title == p.title }) slides.add(Slide("Live sport", p.title, "${s.channel.name}  ·  ${Ui.span(p)}  ·  ${left(p, now)}", p.desc,
-                Ui.progress(p) / 1000f, watch = { watch(s.channel) }, second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(p)))
+                Ui.progress(p) / 1000f, watch = { watch(s.channel) }, ref = "ch:${s.channel.id}", second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(p)))
         }
         Vod.cached(Vod.MOVIES)?.newest?.firstOrNull()?.let { m ->
             slides.add(Slide("New film", m.name, listOfNotNull(m.year.takeIf { it > 0 }?.toString(), m.rating.takeIf { it > 0 }?.let { "★ %.1f".format(it) }).joinToString("  ·  "),
-                Vod.cachedDetails(Vod.MOVIES, m.id)?.plot, art = m.poster, watch = { openTitle(Vod.MOVIES, m) },
+                Vod.cachedDetails(Vod.MOVIES, m.id)?.plot, art = m.poster, watch = { openTitle(Vod.MOVIES, m) }, ref = "vod:${Vod.MOVIES}:${m.id}",
                 second = "Films" to { startActivity(Intent(this, BrowseActivity::class.java).putExtra(BrowseActivity.KIND, Vod.MOVIES)) }, title_ = Vod.MOVIES to m))
         }
         // Nothing personal yet: something on now to start with.
         if (slides.isEmpty()) Repo.channelsIn(Repo.ALL).firstNotNullOfOrNull { c -> Repo.nowNext(c).first?.let { c to it } }?.let { (c, p) ->
-            slides.add(Slide("On now", p.title, "${c.name}  ·  ${Ui.span(p)}", p.desc, Ui.progress(p) / 1000f, watch = { watch(c) }, second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(p)))
+            slides.add(Slide("On now", p.title, "${c.name}  ·  ${Ui.span(p)}", p.desc, Ui.progress(p) / 1000f, watch = { watch(c) }, ref = "ch:${c.id}", second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(p)))
         }
 
         if (cont.isNotEmpty()) out.add(Row("Continue watching", cont.take(20)))

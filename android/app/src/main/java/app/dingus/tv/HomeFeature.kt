@@ -22,6 +22,8 @@ class Slide(
     val watch: () -> Unit, val second: Pair<String, () -> Unit>? = null,
     /** A film or show: its title logo is shown when there is one. */
     val title_: Pair<String, VodItem>? = null,
+    /** What Watch opens ("ch:<id>" or "vod:<kind>:<id>"), so a saved copy of Home can be shown at start. */
+    val ref: String = "",
 )
 
 /**

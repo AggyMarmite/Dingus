@@ -212,6 +212,7 @@ fresh
 adb shell am force-stop $PKG
 adb shell am start -n $PKG/.HomeActivity
 check "home rows [1-9]" 30 "Home opens by itself"
+check "home-from-saved [1-9]" 5 "…straight away, from what it showed last time"
 check "home-loading-done" 30 "the loading screen gives way to Home"
 fresh
 adb shell am start -n $PKG/.HomeActivity --ez dingus_test_loading true
