@@ -1,3 +1,10 @@
+## What's new in Dingus 0.15.10
+
+* Fire TV: redesigned Films and TV Shows, with a categories panel like Live TV.
+* Fire TV: see the cast on film pages.
+* Smoother scrolling and a tidier guide.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.9
 
 * Fire TV: add a playlist by scanning a QR code with your phone.
