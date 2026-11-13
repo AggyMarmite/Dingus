@@ -260,8 +260,8 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     private var infoFull = false
 
     /**
-     * The info bar. Changing channel shows a short one (channel, and what's on with its times); OK shows it all:
-     * progress, description, what's next, stream stats and the keys.
+     * The info bar. Opening a stream or changing channel shows the channel, what's on, its description and the
+     * stream stats; OK adds the times and progress, what's next and the keys.
      */
     fun showInfo(full: Boolean = false) {
         val c = list.getOrNull(index) ?: return
@@ -277,19 +277,12 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         val prog = overlay.findViewById<ProgressBar>(R.id.progress)
         val desc = overlay.findViewById<TextView>(R.id.desc)
         val nextV = overlay.findViewById<TextView>(R.id.next)
-        if (now == null) nowV.text = "No guide information"
-        else if (full) nowV.text = now.title
-        else nowV.text = android.text.SpannableStringBuilder(now.title).apply {
-            // Short: the times on the same line, quieter.
-            val st = length; append("    ${Ui.span(now)}")
-            setSpan(android.text.style.ForegroundColorSpan(Themes.color(a, R.attr.dMuted)), st, length, 0)
-            setSpan(android.text.style.RelativeSizeSpan(0.75f), st, length, 0)
-        }
+        nowV.text = now?.title ?: "No guide information"
         times.text = now?.let { Ui.span(it) } ?: ""
         now?.let { prog.progress = Ui.progress(it) }
         (times.parent as View).visibility = if (full && now != null) View.VISIBLE else View.GONE
         desc.text = now?.desc ?: ""
-        desc.visibility = if (full && desc.text.isNotEmpty()) View.VISIBLE else View.GONE
+        desc.visibility = if (desc.text.isNotEmpty()) View.VISIBLE else View.GONE
         nextV.text = next?.let { "Next  ${Ui.time(it.start)}  ${it.title}" } ?: ""
         nextV.visibility = if (full && nextV.text.isNotEmpty()) View.VISIBLE else View.GONE
         overlay.findViewById<View>(R.id.keys).visibility = if (full) View.VISIBLE else View.GONE
@@ -435,7 +428,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
             append(t)
         }
         statsLine.text = if (t.isEmpty()) "" else sb
-        statsLine.visibility = if (t.isEmpty() || !infoFull) View.GONE else View.VISIBLE
+        statsLine.visibility = if (t.isEmpty()) View.GONE else View.VISIBLE
         statsBadge.text = sb
         statsBadge.visibility = if (fullScreen && Store.statsPinned && t.isNotEmpty()) View.VISIBLE else View.GONE
         if (t.isNotEmpty()) Ui.test("stats $t")

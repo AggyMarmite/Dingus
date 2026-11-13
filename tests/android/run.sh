@@ -72,7 +72,7 @@ check "stats HD  ·  " 15 "full screen shows stream stats (HD, fps, Mbps)"
 sleep 1; shot 05-player-info
 fresh
 key KEYCODE_DPAD_CENTER 1
-check "info full" 5 "OK shows the full info (progress, description, next, stats)"
+check "info full" 5 "OK adds the times, progress and what's next"
 shot 05a-player-info-full
 sleep 15
 fresh
