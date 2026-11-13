@@ -1,3 +1,10 @@
+## What's new in Dingus 0.15.12
+
+* Fire TV: better sizing for the TV.
+* Fire TV: films and shows load faster, with sharper pictures.
+* Fire TV: app icon fixes.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.11
 
 * Fire TV: sized for the TV, with a cleaner Live TV screen and info bar.
