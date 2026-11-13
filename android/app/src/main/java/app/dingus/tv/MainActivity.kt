@@ -397,7 +397,37 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         if (Store.preview && live.current?.id != c.id) preview(c) else goFullScreen(c)
     }
 
-    override fun onFavourite(c: Channel) {
+    /** ≡ on a channel in the guide: everything you can do with it. */
+    override fun onMenu(c: Channel, p: Programme?) {
+        val now = System.currentTimeMillis()
+        val items = ArrayList<Pair<String, () -> Unit>>()
+        if (p != null && p.start > now) items.add((if (Reminders.has(c, p)) "Cancel reminder" else "Remind me") to { onPlay(c, p) })
+        if (p != null && p.stop <= now && Repo.canCatchUp(c, p)) items.add("Watch from the start (catch-up)" to { onPlay(c, p) })
+        if (Store.preview && live.current?.id != c.id) items.add("Watch here" to { preview(c) })
+        items.add("Watch full screen" to { goFullScreen(c) })
+        items.add((if (Store.isFavourite(c.id)) "Remove from Favourites" else "Add to Favourites") to { onFavourite(c) })
+        items.add("Rename channel" to {
+            Dialogs.input(this, "New name", c.name, "Channel name") { n ->
+                val e = ChannelEdits.all()[c.id]
+                ChannelEdits.set(c.id, ChannelEdits.Edit(n.ifEmpty { null }, e?.number, e?.hidden == true))
+                Repo.reapply()
+            }
+        })
+        items.add("Hide channel" to {
+            val e = ChannelEdits.all()[c.id]
+            ChannelEdits.set(c.id, ChannelEdits.Edit(e?.name, e?.number, true))
+            Repo.reapply()
+            setStatus("${c.name} hidden  ·  Settings → Edit channels to show it again")
+            handler.postDelayed({ if (!loading) setStatus("") }, 3_500)
+        })
+        Dialogs.builder(this).setTitle(c.name)
+            .setItems(items.map { it.first }.toTypedArray()) { _, i -> items[i].second() }
+            .show()
+        Ui.test("channel-menu ${c.name}")
+    }
+
+    private fun onFavourite(c: Channel) {
+        grid.invalidate()
         val on = Store.toggleFavourite(c.id)
         catAdapter.set(Repo.sideCategories())
         catAdapter.selected(current)

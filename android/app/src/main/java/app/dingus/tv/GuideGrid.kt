@@ -25,7 +25,7 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         fun onSelected(c: Channel, p: Programme?)
         fun onPlay(c: Channel, p: Programme?)
         fun onLeftEdge()
-        fun onFavourite(c: Channel)
+        fun onMenu(c: Channel, p: Programme?)
     }
 
     var listener: Listener? = null
@@ -238,7 +238,7 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
                 c?.let { listener?.onPlay(it, sel) }; return true
             }
-            KeyEvent.KEYCODE_MENU -> { c?.let { listener?.onFavourite(it); invalidate() }; return true }
+            KeyEvent.KEYCODE_MENU -> { if (event.repeatCount == 0) c?.let { listener?.onMenu(it, sel) }; return true }
         }
         return super.onKeyDown(keyCode, event)
     }

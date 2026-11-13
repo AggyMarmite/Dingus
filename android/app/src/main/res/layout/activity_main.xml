@@ -48,7 +48,7 @@
                     android:textSize="15sp" android:lineSpacingExtra="2dp" android:textColor="?attr/dMuted" />
                 <TextView android:id="@+id/hint" android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:maxLines="1" android:textSize="13sp" android:textColor="#5B6477"
-                    android:text="OK  watch here  ·  OK again  full screen     ◀  categories     ◀ ◀  menu     ≡  favourite" />
+                    android:text="OK  watch here  ·  OK again  full screen     ◀  categories     ◀ ◀  menu     ≡  channel options" />
             </LinearLayout>
 
         </LinearLayout>
