@@ -197,8 +197,21 @@ object RowNav {
 
     fun focus(rows: RecyclerView, pos: Int) {
         target(rows, pos)?.let { if (it.requestFocus()) return }
-        rows.scrollToPosition(pos)
-        rows.post { if (target(rows, pos)?.requestFocus() != true) rows.postDelayed({ target(rows, pos)?.requestFocus() }, 80) }
+        if (Ui.lite) {
+            rows.scrollToPosition(pos)
+            rows.post { if (target(rows, pos)?.requestFocus() != true) rows.postDelayed({ target(rows, pos)?.requestFocus() }, 80) }
+            return
+        }
+        // The row above has scrolled out of sight: glide back up to it (as going down does), then move onto it.
+        var done = false
+        fun land() { if (!done) { done = true; target(rows, pos)?.requestFocus() } }
+        rows.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(rv: RecyclerView, state: Int) {
+                if (state == RecyclerView.SCROLL_STATE_IDLE) { rv.removeOnScrollListener(this); land() }
+            }
+        })
+        rows.smoothScrollToPosition(pos)
+        rows.postDelayed({ land() }, 700) // (in case it didn't need to move)
     }
 
     /** Handles UP when the focus is in a row below the first; true when it did. */
