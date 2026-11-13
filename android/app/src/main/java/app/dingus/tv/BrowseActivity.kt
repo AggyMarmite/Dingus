@@ -252,7 +252,10 @@ class BrowseActivity : BaseActivity() {
         val lp = heroView.layoutParams
         lp.height = ((if (on) 150 else 250) * resources.displayMetrics.density).toInt()
         heroView.layoutParams = lp
-        heroText.maxLines = if (on) 1 else 4
+        // Everything has to fit the smaller banner (nothing cut off): a smaller logo, no description.
+        heroText.visibility = if (on) View.GONE else View.VISIBLE
+        val logo = findViewById<View>(R.id.heroLogo)
+        logo.layoutParams = logo.layoutParams.apply { height = ((if (on) 56 else 84) * resources.displayMetrics.density).toInt() }
     }
 
     private fun inside(v: View, parent: View): Boolean {
