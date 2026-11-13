@@ -67,11 +67,16 @@ jobs:
       - name: WireGuard test server
         continue-on-error: true
         run: |
-          sudo apt-get install -y -q wireguard-tools >/dev/null 2>&1
-          mkdir -p $RUNNER_TEMP/wg && cd $RUNNER_TEMP/wg && umask 077
-          wg genkey | tee server.key | wg pubkey > server.pub
-          wg genkey | tee client.key | wg pubkey > client.pub
-          sudo ip link add wg0 type wireguard
+          set -x
+          sudo timeout 120 apt-get install -y -q wireguard-tools || { sudo timeout 120 apt-get update -q; sudo timeout 180 apt-get install -y -q wireguard-tools; }
+          which wg
+          mkdir -p $RUNNER_TEMP/wg && cd $RUNNER_TEMP/wg
+          wg genkey > server.key; wg pubkey < server.key > server.pub
+          wg genkey > client.key; wg pubkey < client.key > client.pub
+          # Kernel WireGuard if allowed, otherwise the userspace engine (wireguard-go).
+          if ! sudo ip link add wg0 type wireguard; then
+            (cd /tmp && GOBIN=/tmp/wgbin go install golang.zx2c4.com/wireguard@latest) && sudo /tmp/wgbin/wireguard wg0
+          fi
           sudo ip addr add 10.66.0.1/24 dev wg0
           sudo wg set wg0 listen-port 51820 private-key server.key peer "$(cat client.pub)" allowed-ips 10.66.0.2/32
           sudo ip link set wg0 up
