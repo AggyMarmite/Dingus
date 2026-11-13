@@ -18,7 +18,12 @@ object Ui {
     }
 
     private val hm = SimpleDateFormat("HH:mm", Locale.UK)
-    fun time(ms: Long): String = synchronized(hm) { hm.format(Date(ms)) }
+    private val times = android.util.LruCache<Long, String>(512)
+    fun time(ms: Long): String {
+        val minute = ms / 60_000L
+        times.get(minute)?.let { return it }
+        return synchronized(hm) { hm.format(Date(ms)) }.also { times.put(minute, it) }
+    }
     private val wd = SimpleDateFormat("EEE d MMM", Locale.UK)
     /** "" for today, otherwise "Tomorrow" or the date, ready to go in front of a time. */
     fun day(ms: Long): String {

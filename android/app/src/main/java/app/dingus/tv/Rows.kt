@@ -17,6 +17,14 @@ sealed class Card {
     /** A programme on a channel: what's on now (with progress) or coming up ([label] e.g. "In 30 min", "20:45"). */
     class Show(val channel: Channel, val programme: Programme?, val label: String? = null) : Card()
     class SeeAll(val kind: String, val categoryId: String, val name: String) : Card()
+
+    /** What the card shows, to tell whether a row really changed. */
+    fun sig(): String = when (this) {
+        is Title -> "t${item.id}|${(progress * 100).toInt()}|$label|$isNew"
+        is Live -> "l${channel.id}"
+        is Show -> "s${channel.id}|${programme?.start}|$label"
+        is SeeAll -> "a$categoryId"
+    }
 }
 
 class Row(val title: String, val cards: List<Card>)
@@ -36,9 +44,15 @@ class RowsAdapter(
     private val d = ctx.resources.displayMetrics.density
 
     fun set(list: List<Row>) {
-        val same = list.size == rows.size && list.indices.all { list[it].title == rows[it].title }
+        val old = rows
+        val same = list.size == old.size && list.indices.all { list[it].title == old[it].title }
         rows = list
-        if (same) notifyItemRangeChanged(0, list.size) else notifyDataSetChanged()
+        if (!same) { notifyDataSetChanged(); return }
+        // Only redraw the rows whose cards changed: redrawing a row under the remote can move the highlight.
+        for (i in list.indices) {
+            val a = old[i].cards; val b = list[i].cards
+            if (a.size != b.size || a.indices.any { a[it].sig() != b[it].sig() }) notifyItemChanged(i)
+        }
     }
 
     class H(v: View) : RecyclerView.ViewHolder(v) {

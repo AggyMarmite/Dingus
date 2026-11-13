@@ -37,6 +37,16 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
 
     /** A channel name split over (at most) two lines to fit [width]; worked out once per name. */
     private val lines = HashMap<String, Pair<String, String?>>()
+    /** Shortened texts ("Programme 2 on…"), kept so scrolling the guide doesn't redo them every frame. */
+    private val fitted = android.util.LruCache<String, String>(800)
+    private fun fit(text: String, paint: Paint, avail: Float, tag: Char): String {
+        val key = "$tag${avail.toInt()}|$text"
+        fitted.get(key)?.let { return it }
+        val out = if (paint.measureText(text) <= avail) text else TextUtils.ellipsize(text, paint, avail, TextUtils.TruncateAt.END).toString()
+        fitted.put(key, out)
+        return out
+    }
+
     private fun twoLines(name: String, width: Float, bold: Boolean): Pair<String, String?> {
         val key = "$bold|${width.toInt()}|$name"
         lines[key]?.let { return it }
@@ -317,7 +327,7 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         // Programmes.
         val list = Repo.programmes(c)
         val rs = Reminders.all()
-        reminder = if (rs.isEmpty()) null else { p -> rs.any { it.channelId == c.id && it.start == p.start } }
+        reminder = if (rs.isEmpty() || rs.none { it.channelId == c.id }) null else { p -> rs.any { it.channelId == c.id && it.start == p.start } }
         var i = indexAt(list, start)
         if (i < 0 || list[i].start >= end) {
             block(canvas, chanW, w, y0, y1, if (list.isEmpty()) "No information" else "", null, selected && sel == null, false)
@@ -351,14 +361,14 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         if (avail < 12 * d || text.isEmpty()) return
         titleP.color = if (past && !on && !catchUp) cMuted else cText
         if (p == null) {
-            canvas.drawText(TextUtils.ellipsize(text, subP, avail, TextUtils.TruncateAt.END).toString(), x0 + pad, (y0 + y1) / 2 + 5 * d, subP)
+            canvas.drawText(fit(text, subP, avail, 's'), x0 + pad, (y0 + y1) / 2 + 5 * d, subP)
             return
         }
         val bell = reminder?.invoke(p) == true
-        canvas.drawText(TextUtils.ellipsize(text, titleP, avail - if (bell) 14 * d else 0f, TextUtils.TruncateAt.END).toString(), x0 + pad, y0 + 22 * d, titleP)
+        canvas.drawText(fit(text, titleP, avail - if (bell) 14 * d else 0f, 't'), x0 + pad, y0 + 22 * d, titleP)
         if (bell) { fill.color = if (on) cText else cAccent; canvas.drawCircle(x1 - gap - 10 * d, y0 + 12 * d, 4 * d, fill) }
         subP.color = if (on) 0xDDFFFFFF.toInt() else cMuted
-        canvas.drawText(TextUtils.ellipsize((if (catchUp) "↺  " else "") + Ui.span(p), subP, avail, TextUtils.TruncateAt.END).toString(), x0 + pad, y0 + 40 * d, subP)
+        canvas.drawText(fit((if (catchUp) "↺  " else "") + Ui.span(p), subP, avail, 's'), x0 + pad, y0 + 40 * d, subP)
         subP.color = cMuted
     }
 }
