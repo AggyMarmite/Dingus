@@ -173,11 +173,23 @@ class RowsLayoutManager(ctx: Context, private val centered: Boolean = false) : L
     init { initialPrefetchItemCount = 3 }
 
     override fun requestChildRectangleOnScreen(parent: RecyclerView, child: View, rect: android.graphics.Rect, immediate: Boolean, focusedChildVisible: Boolean): Boolean {
-        val dy = if (centered && child.findViewById<View>(R.id.heroWatch) == null) (child.top + child.height / 2) - parent.height / 2
-            else child.top - parent.paddingTop
+        val dy = when {
+            !centered || child.findViewById<View>(R.id.heroWatch) != null -> child.top - parent.paddingTop
+            // The first row under Home's feature: up to the top (its title level with the clock), so the feature
+            // goes right off rather than half of it staying above.
+            isJustAfterFeature(parent, child) -> child.top - (16 * parent.resources.displayMetrics.density).toInt()
+            else -> (child.top + child.height / 2) - parent.height / 2
+        }
         if (dy == 0) return false
         if (immediate || Ui.lite) parent.scrollBy(0, dy) else parent.smoothScrollBy(0, dy)
         return true
+    }
+
+    private fun isJustAfterFeature(parent: RecyclerView, child: View): Boolean {
+        val pos = parent.getChildAdapterPosition(child)
+        if (pos != 1) return false
+        return parent.findViewHolderForAdapterPosition(0)?.itemView?.findViewById<View>(R.id.heroWatch) != null ||
+            (parent.adapter is androidx.recyclerview.widget.ConcatAdapter) // (the feature may be scrolled away, unbound)
     }
 }
 
