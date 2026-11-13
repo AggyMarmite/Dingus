@@ -77,8 +77,8 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         set(v) { field = v; invalidate() }
 
     private val d = resources.displayMetrics.density
-    private val chanW = 250 * d
-    private val rowH = 56 * d
+    private val chanW = 224 * d
+    private val rowH = 46 * d // (smaller text: more channels on screen)
     private val headerH = 34 * d
     private val gap = 2 * d
     private val pad = 10 * d
@@ -107,13 +107,13 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
     private val cPast = col(R.attr.dPast)
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val titleP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 16 * d; typeface = Typeface.DEFAULT_BOLD; color = cText }
-    private val subP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 13 * d; color = cMuted }
-    private val numP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 14 * d; color = cMuted; textAlign = Paint.Align.RIGHT }
-    private val nameP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 15 * d; color = cText }
+    private val titleP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 14 * d; typeface = Typeface.DEFAULT_BOLD; color = cText }
+    private val subP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 11.5f * d; color = cMuted }
+    private val numP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 12 * d; color = cMuted; textAlign = Paint.Align.RIGHT }
+    private val nameP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 13 * d; color = cText }
     private val headP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 14 * d; color = cMuted }
     private val headBoldP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 15 * d; color = cText; typeface = Typeface.DEFAULT_BOLD }
-    private val starP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 14 * d; color = 0xFFFBBF24.toInt() }
+    private val starP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 12 * d; color = 0xFFFBBF24.toInt() }
     private val r = RectF()
     private val tri = Path()
 
@@ -298,8 +298,8 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         r.set(0f, y0, chanW - gap * 2, y1)
         canvas.drawRoundRect(r, 6 * d, 6 * d, fill)
         val mid = (y0 + y1) / 2
-        if (showNumbers && c.number > 0) canvas.drawText(c.number.toString(), 44 * d, mid + 5 * d, numP)
-        val logoX = if (showNumbers) 52 * d else 10 * d; val logoW = 70 * d; val logoH = rowH - 16 * d
+        if (showNumbers && c.number > 0) canvas.drawText(c.number.toString(), 38 * d, mid + 4 * d, numP)
+        val logoX = if (showNumbers) 46 * d else 8 * d; val logoW = 60 * d; val logoH = rowH - 14 * d
         val bmp = Logos.get(c.logo, logoH.toInt()) { invalidate() }
         if (bmp != null) {
             val scale = minOf(logoW / bmp.width, logoH / bmp.height)
@@ -311,7 +311,7 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
             r.set(logoX, mid - logoH / 2, logoX + logoW, mid + logoH / 2)
             canvas.drawRoundRect(r, 4 * d, 4 * d, fill)
             subP.textAlign = Paint.Align.CENTER
-            canvas.drawText(Ui.initials(c.name), logoX + logoW / 2, mid + 5 * d, subP)
+            canvas.drawText(Ui.initials(c.name), logoX + logoW / 2, mid + 4 * d, subP)
             subP.textAlign = Paint.Align.LEFT
         }
         val fav = Store.isFavourite(c.id)
@@ -320,9 +320,9 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         nameP.typeface = if (selected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
         // Names get two lines, so long ones aren't cut short.
         val (l1, l2) = twoLines(c.name, nameW, selected)
-        if (l2 == null) canvas.drawText(l1, nameX, mid + 5 * d, nameP)
-        else { canvas.drawText(l1, nameX, mid - 4 * d, nameP); canvas.drawText(l2, nameX, mid + 14 * d, nameP) }
-        if (fav) canvas.drawText("★", chanW - pad - 14 * d, mid + 5 * d, starP)
+        if (l2 == null) canvas.drawText(l1, nameX, mid + 4 * d, nameP)
+        else { canvas.drawText(l1, nameX, mid - 3 * d, nameP); canvas.drawText(l2, nameX, mid + 12 * d, nameP) }
+        if (fav) canvas.drawText("★", chanW - pad - 12 * d, mid + 4 * d, starP)
 
         // Programmes.
         val list = Repo.programmes(c)
@@ -361,14 +361,14 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         if (avail < 12 * d || text.isEmpty()) return
         titleP.color = if (past && !on && !catchUp) cMuted else cText
         if (p == null) {
-            canvas.drawText(fit(text, subP, avail, 's'), x0 + pad, (y0 + y1) / 2 + 5 * d, subP)
+            canvas.drawText(fit(text, subP, avail, 's'), x0 + pad, (y0 + y1) / 2 + 4 * d, subP)
             return
         }
         val bell = reminder?.invoke(p) == true
-        canvas.drawText(fit(text, titleP, avail - if (bell) 14 * d else 0f, 't'), x0 + pad, y0 + 22 * d, titleP)
+        canvas.drawText(fit(text, titleP, avail - if (bell) 14 * d else 0f, 't'), x0 + pad, y0 + 18 * d, titleP)
         if (bell) { fill.color = if (on) cText else cAccent; canvas.drawCircle(x1 - gap - 10 * d, y0 + 12 * d, 4 * d, fill) }
         subP.color = if (on) 0xDDFFFFFF.toInt() else cMuted
-        canvas.drawText(fit((if (catchUp) "↺  " else "") + Ui.span(p), subP, avail, 's'), x0 + pad, y0 + 40 * d, subP)
+        canvas.drawText(fit((if (catchUp) "↺  " else "") + Ui.span(p), subP, avail, 's'), x0 + pad, y0 + 34 * d, subP)
         subP.color = cMuted
     }
 }
