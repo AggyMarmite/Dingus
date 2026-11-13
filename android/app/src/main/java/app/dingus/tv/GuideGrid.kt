@@ -39,7 +39,7 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
     private val lines = HashMap<String, Pair<String, String?>>()
     /** Shortened texts ("Programme 2 on…"), kept so scrolling the guide doesn't redo them every frame. */
     private val fitted = android.util.LruCache<String, String>(800)
-    private fun fit(text: String, paint: Paint, avail: Float, tag: Char): String {
+    private fun fit(text: String, paint: TextPaint, avail: Float, tag: Char): String {
         val key = "$tag${avail.toInt()}|$text"
         fitted.get(key)?.let { return it }
         val out = if (paint.measureText(text) <= avail) text else TextUtils.ellipsize(text, paint, avail, TextUtils.TruncateAt.END).toString()
