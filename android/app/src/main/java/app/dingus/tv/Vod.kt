@@ -208,9 +208,8 @@ object Vod {
                 }
                 r.endObject()
                 if (id.isEmpty()) continue
-                val clean = name.trim().ifEmpty { "Untitled" }
-                if (year == 0) year = yearOf(clean)
-                items.add(VodItem(id, clean, poster.ifBlank { null }, cat, rating, year, ext, added))
+                if (year == 0) year = yearOf(name)
+                items.add(VodItem(id, clean(name).ifEmpty { "Untitled" }, poster.ifBlank { null }, cat, rating, year, ext, added))
             }
             r.endArray()
         }
@@ -218,6 +217,21 @@ object Vod {
     }
 
     private val yearRx = Regex("""(19|20)\d\d""")
+
+    // "EN - ", "UK| ", "[EN] ", "|EN| " at the start; quality tags and "(2021)" at the end (the year is shown separately).
+    private val prefixRx = Regex("""^\s*(?:\[[A-Za-z]{2,5}]\s*[|:\-–]?\s*|\|[A-Za-z]{2,5}\|\s*|[A-Z]{2,5}\s*[|:]\s*|[A-Z]{2,5}\s+[-–]\s+)""")
+    private val suffixRx = Regex("""\s*[\[(]?(?:4k|uhd|2160p|1080p|720p|fhd|hd|multi|sub|dub)[\])]?\s*$|\s*\(\d{4}\)\s*$""", RegexOption.IGNORE_CASE)
+
+    /** "EN - The Long Journey (2021) 4K" → "The Long Journey". Same idea as the desktop app. */
+    fun clean(name: String): String {
+        var s = name.trim()
+        repeat(4) {
+            val t = suffixRx.replace(prefixRx.replace(s, ""), "").trim()
+            if (t == s) return@repeat
+            s = t
+        }
+        return s.ifEmpty { name.trim() }
+    }
     private fun yearOf(s: String) = yearRx.find(s)?.value?.toIntOrNull() ?: 0
 
     private val detailsCache = android.util.LruCache<String, Details>(60)
@@ -255,7 +269,7 @@ object Vod {
         }
         eps.sortWith(compareBy({ it.season }, { it.number }))
         return Details(
-            title = s("name", "title"), plot = s("plot", "description"), cast = s("cast", "actors"),
+            title = s("name", "title")?.let { clean(it) }, plot = s("plot", "description"), cast = s("cast", "actors"),
             director = s("director"), genre = s("genre"),
             year = yearOf(s("releasedate", "releaseDate", "release_date") ?: "").takeIf { it > 0 } ?: item.year,
             duration = s("duration"), rating = s("rating"),
@@ -303,7 +317,7 @@ object Vod {
             val at = i.readLong()
             val cats = List(i.readInt()) { Category(i.readUTF(), i.readUTF()) }
             val items = List(i.readInt()) {
-                VodItem(i.readUTF(), i.readUTF(), i.readUTF().ifEmpty { null }, i.readUTF(), i.readFloat(),
+                VodItem(i.readUTF(), clean(i.readUTF()), i.readUTF().ifEmpty { null }, i.readUTF(), i.readFloat(),
                     i.readShort().toInt(), i.readUTF(), i.readLong())
             }
             return Library(cats, items, at)
