@@ -26,7 +26,7 @@ class SettingsActivity : BaseActivity() {
     private var accountRow: View? = null
 
     private val sections = listOf(
-        "Playlist & TV guide" to { playlistSection() },
+        "Playlists & EPG" to { playlistSection() },
         "Live TV" to { liveSection() },
         "Playback" to { playbackSection() },
         "Look" to { lookSection() },
