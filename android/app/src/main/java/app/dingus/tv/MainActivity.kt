@@ -44,6 +44,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     private var current: String = Repo.ALL
     private var loading = false
     private var askedForPlaylist = false
+    private var loadAttempts = 0
     private var updateChecked = false
     private val repoListener: () -> Unit = { handler.post { onRepoChanged() } }
 
@@ -152,10 +153,18 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             if (firstTime) showEmpty("Loading your channels…")
             try {
                 Repo.refreshChannels(p)
+                loadAttempts = 0
             } catch (e: Exception) {
+                Ui.test("load-failed ${e.message}")
+                // Often the network isn't up yet (e.g. just after the stick wakes): try again a few times by itself.
+                if (Repo.channels.isEmpty() && loadAttempts < 4) {
+                    loadAttempts++
+                    showEmpty("Waiting for the network…")
+                    handler.postDelayed({ if (!isFinishing) scope.launch { refresh(p, true) } }, 3_000L * loadAttempts)
+                    return
+                }
                 if (Repo.channels.isEmpty()) showEmpty("Couldn't load your playlist.\n${Net.friendly(e)}\n\nPress ◀ for settings.")
                 setStatus(Net.friendly(e))
-                Ui.test("load-failed ${e.message}")
                 return
             }
             Ui.test("channels ${Repo.channels.size} categories ${Repo.categories.size}")

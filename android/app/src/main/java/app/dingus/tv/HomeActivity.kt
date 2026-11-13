@@ -91,8 +91,14 @@ class HomeActivity : BaseActivity() {
                 val p = Store.playlist ?: return@launch
                 if (Repo.channels.isEmpty()) {
                     empty.text = "Loading your channels…"; empty.visibility = View.VISIBLE
-                    try { Repo.refreshChannels(p) } catch (e: Exception) {
-                        empty.text = "Couldn't load your playlist.\n${Net.friendly(e)}"; return@launch
+                    var tries = 0
+                    while (true) {
+                        try { Repo.refreshChannels(p); break } catch (e: Exception) {
+                            // The network may not be up yet (just after waking): try again a few times by itself.
+                            if (++tries > 4) { empty.text = "Couldn't load your playlist.\n${Net.friendly(e)}"; return@launch }
+                            empty.text = "Waiting for the network…"
+                            kotlinx.coroutines.delay(3_000L * tries)
+                        }
                     }
                     build()
                     try { Repo.refreshGuide() } catch (_: Exception) {}
