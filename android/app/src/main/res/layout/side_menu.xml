@@ -4,7 +4,7 @@
      subscription fade in beside them. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/sideMenu" android:layout_width="232dp" android:layout_height="match_parent"
-    android:background="?attr/dSurface" android:clickable="true">
+    android:clickable="true">
 
     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical"
         android:paddingTop="22dp" android:paddingBottom="18dp">

@@ -33,7 +33,12 @@ class Slide(
  * live sport, new films), Watch / a second action / next, and dots. Moves on by itself every few seconds
  * while you're on it and not pressing anything.
  */
-class HomeFeature(private val a: Activity, private val scope: kotlinx.coroutines.CoroutineScope? = null) : RecyclerView.Adapter<HomeFeature.H>() {
+class HomeFeature(
+    private val a: Activity,
+    private val scope: kotlinx.coroutines.CoroutineScope? = null,
+    /** The picture behind the whole of Home (it doesn't scroll with the feature). */
+    private val art: ImageView,
+) : RecyclerView.Adapter<HomeFeature.H>() {
     private var slides: List<Slide> = emptyList()
     private var index = 0
     private var holder: H? = null
@@ -65,7 +70,6 @@ class HomeFeature(private val a: Activity, private val scope: kotlinx.coroutines
     fun stop() = handler.removeCallbacks(advance)
 
     inner class H(v: View) : RecyclerView.ViewHolder(v) {
-        val art: ImageView = v.findViewById(R.id.heroArt)
         val kicker: TextView = v.findViewById(R.id.heroKicker)
         val title: TextView = v.findViewById(R.id.heroTitle)
         val meta: TextView = v.findViewById(R.id.heroMeta)
@@ -83,6 +87,8 @@ class HomeFeature(private val a: Activity, private val scope: kotlinx.coroutines
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): H {
         val v = LayoutInflater.from(a).inflate(R.layout.item_home_hero, parent, false)
+        // As tall as the screen, less a peek of the first row underneath.
+        v.layoutParams = v.layoutParams.apply { height = (parent.height.takeIf { it > 0 } ?: a.resources.displayMetrics.heightPixels) - (150 * a.resources.displayMetrics.density).toInt() }
         // A soft glow in the theme's accent colour (top right), fading into the background – drawn in code, no image.
         val accent = Themes.color(a, R.attr.dAccent)
         val bg = Themes.color(a, R.attr.dBg)
@@ -92,11 +98,12 @@ class HomeFeature(private val a: Activity, private val scope: kotlinx.coroutines
             gradientRadius = a.resources.displayMetrics.widthPixels * 0.42f
             setGradientCenter(0.72f, 0.3f)
         }
-        v.findViewById<View>(R.id.heroGlow).background = glow
+        a.findViewById<View>(R.id.homeGlow).background = glow
         val clear = bg and 0x00FFFFFF
-        v.findViewById<View>(R.id.heroShade).background = LayerDrawable(arrayOf(
-            GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, intArrayOf(bg, (bg and 0x00FFFFFF) or (0xAA shl 24), clear)),
-            GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(bg, clear, clear)),
+        a.findViewById<View>(R.id.homeShade).background = LayerDrawable(arrayOf(
+            // Darker on the left (the words) and at the bottom (the rows), the picture clear on the right.
+            GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, intArrayOf((bg and 0x00FFFFFF) or (0xEB shl 24), (bg and 0x00FFFFFF) or (0x8C shl 24), clear, clear)),
+            GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(bg, (bg and 0x00FFFFFF) or (0x99 shl 24), clear, clear)),
         ))
         val h = H(v)
         h.watch.setOnClickListener { slides.getOrNull(index)?.watch?.invoke() }
@@ -120,7 +127,7 @@ class HomeFeature(private val a: Activity, private val scope: kotlinx.coroutines
         val shift = 28 * a.resources.displayMetrics.density
         val parts = listOf<View>(h.kicker, h.logo, h.title, h.meta, h.progress, h.text, h.dots)
         val ease = android.view.animation.DecelerateInterpolator(1.6f)
-        h.art.animate().alpha(0f).setDuration(240).start()
+        art.animate().alpha(0f).setDuration(240).start()
         parts.forEach { it.animate().alpha(0f).translationX(-shift).setDuration(200).setInterpolator(android.view.animation.AccelerateInterpolator()).start() }
         h.itemView.postDelayed({
             index = next; bind(h)
@@ -128,9 +135,9 @@ class HomeFeature(private val a: Activity, private val scope: kotlinx.coroutines
                 v.translationX = shift
                 v.animate().alpha(1f).translationX(0f).setDuration(380).setInterpolator(ease).start()
             }
-            h.art.animate().alpha(1f).setDuration(520).setInterpolator(ease).start()
+            art.animate().alpha(1f).setDuration(520).setInterpolator(ease).start()
         }, 210)
-        h.itemView.postDelayed({ moving = false; h.art.alpha = 1f; parts.forEach { it.alpha = 1f; it.translationX = 0f } }, 800)
+        h.itemView.postDelayed({ moving = false; art.alpha = 1f; parts.forEach { it.alpha = 1f; it.translationX = 0f } }, 800)
     }
 
     private fun bind(h: H) {
@@ -145,7 +152,7 @@ class HomeFeature(private val a: Activity, private val scope: kotlinx.coroutines
             val url = TitleLogos.find(t.first, t.second, Vod.cachedDetails(t.first, t.second.id)?.tmdbId)
             if (slides.getOrNull(index) !== s) return@launch
             if (url != null) TitleLogos.show(h.logo, h.title, url)
-            if (needArt) TitleLogos.cachedBackdrop(t.first, t.second)?.let { Posters.load(h.art, it, artH, wide = true) }
+            if (needArt) TitleLogos.cachedBackdrop(t.first, t.second)?.let { Posters.load(art, it, artH, wide = true) }
         }
         h.meta.text = s.meta
         h.text.text = s.text ?: ""
@@ -153,7 +160,7 @@ class HomeFeature(private val a: Activity, private val scope: kotlinx.coroutines
         h.progress.visibility = if (s.progress >= 0) View.VISIBLE else View.GONE
         if (s.progress >= 0) h.progress.progress = (s.progress * 1000).toInt()
         val bg = t?.let { TitleLogos.cachedBackdrop(it.first, it.second) } ?: s.art
-        if (bg != null) Posters.load(h.art, bg, artH, wide = true) else { h.art.setImageDrawable(null); h.art.tag = null }
+        if (bg != null) Posters.load(art, bg, artH, wide = true) else { art.setImageDrawable(null); art.tag = null }
         h.second.visibility = if (s.second != null) View.VISIBLE else View.GONE
         h.second.text = s.second?.first ?: ""
         h.next.visibility = if (slides.size > 1) View.VISIBLE else View.GONE

@@ -49,7 +49,7 @@ class HomeActivity : BaseActivity() {
         else {
             // The big feature scrolls with the rows, as the first item.
             findViewById<View>(R.id.hero).visibility = View.GONE
-            val f = HomeFeature(this, scope)
+            val f = HomeFeature(this, scope, findViewById(R.id.homeArt))
             feature = f
             rows.adapter = ConcatAdapter(f, adapter)
         }
@@ -82,7 +82,10 @@ class HomeActivity : BaseActivity() {
             } },
         )?.let { (slides, out) -> show(slides, out, saved = true); Ui.test("home-from-saved ${out.size}") }
 
-        side = SideMenu(this, SideMenu.Page.HOME, findViewById<View>(android.R.id.content).let { (it as android.view.ViewGroup).getChildAt(0) })
+        // Not moved across for the menu: the picture goes right under its floating buttons (the rows are moved instead).
+        side = SideMenu(this, SideMenu.Page.HOME, findViewById<View>(android.R.id.content).let { (it as android.view.ViewGroup).getChildAt(0) }, pad = false)
+        if (lite) (findViewById<View>(R.id.hero).parent as View).setPaddingRelative(Ui.dp(this, 60), 0, 0, 0)
+        else rows.setPaddingRelative(rows.paddingStart + Ui.dp(this, 60), rows.paddingTop, rows.paddingEnd, rows.paddingBottom)
     }
 
     override fun onResume() {
@@ -139,6 +142,7 @@ class HomeActivity : BaseActivity() {
     private fun setUpCentredRows() {
         CentredRows.attach(this, rows)
         val fade = findViewById<View>(R.id.topFade)
+        val dim = findViewById<View>(R.id.homeDim)
         val bg = Themes.color(this, R.attr.dBg)
         fade.background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
             intArrayOf(bg, bg, bg and 0x00FFFFFF))
@@ -148,6 +152,11 @@ class HomeActivity : BaseActivity() {
                 // The feature (the first item) still showing at the top: no fade needed.
                 val featureTop = feature != null && rv.getChildAdapterPosition(first) == 0 && first.top > -Ui.dp(this@HomeActivity, 60)
                 fade.visibility = if (featureTop || feature == null) View.GONE else View.VISIBLE
+                // The picture behind dims as the feature scrolls away (the rows over it stay easy to read).
+                if (feature != null) {
+                    val gone = if (rv.getChildAdapterPosition(first) == 0) (-first.top).toFloat() / first.height.coerceAtLeast(1) else 1f
+                    dim.alpha = (gone * 0.75f).coerceIn(0f, 0.75f)
+                }
             }
         })
     }

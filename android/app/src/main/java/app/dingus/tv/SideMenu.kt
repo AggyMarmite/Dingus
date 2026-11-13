@@ -73,6 +73,8 @@ class SideMenu(
     content: View,
     /** LEFT at the left edge of the screen opens the menu (Live TV opens it itself, from the categories). */
     private val leftOpens: Boolean = true,
+    /** Move [content] across for the menu (Home doesn't: its picture goes right under the floating buttons). */
+    pad: Boolean = true,
 ) {
     enum class Page { HOME, LIVE, FILMS, SHOWS, SEARCH, SETTINGS }
 
@@ -82,6 +84,8 @@ class SideMenu(
     private val full = (232 * d).toInt()
     private val scrim = View(a).apply { setBackgroundColor(0xFF000000.toInt()); alpha = 0f; visibility = View.GONE }
     val panel: View = LayoutInflater.from(a).inflate(R.layout.side_menu, root, false)
+    private val panelBg = android.graphics.drawable.ColorDrawable(Themes.color(a, R.attr.dSurface))
+    private var floating: Boolean? = null
     private val edge: View = panel.findViewById(R.id.sideEdge)
     private val fading = listOf<View>(panel.findViewById(R.id.sideName), panel.findViewById(R.id.sideHeader), panel.findViewById(R.id.status))
     private val rows: List<TextView> = listOf(R.id.navHome, R.id.navGuide, R.id.navFilms, R.id.navShows, R.id.navSearch, R.id.settings, R.id.navRefresh)
@@ -99,7 +103,8 @@ class SideMenu(
     var onNavigate: ((Page) -> Unit)? = null
 
     init {
-        content.setPaddingRelative(content.paddingStart + strip, content.paddingTop, content.paddingEnd, content.paddingBottom)
+        if (pad) content.setPaddingRelative(content.paddingStart + strip, content.paddingTop, content.paddingEnd, content.paddingBottom)
+        panel.background = panelBg
         root.addView(scrim, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         root.addView(panel, FrameLayout.LayoutParams(full, ViewGroup.LayoutParams.MATCH_PARENT))
         panel.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> apply() }
@@ -125,6 +130,31 @@ class SideMenu(
 
     private fun rowFor(p: Page): TextView = rows[p.ordinal]
 
+    // ------------------------------------------------------------------ floating buttons
+    // Closed, the menu is round buttons floating over the screen (no panel behind them); opening it brings in the
+    // panel, and the rows become the usual highlighted pills with their names.
+
+
+    private fun bubble(on: Boolean): android.graphics.drawable.Drawable {
+        val oval = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.OVAL
+            setColor(if (on) Themes.color(a, R.attr.dAccent) else (Themes.color(a, R.attr.dSurface2) and 0x00FFFFFF) or (0xD9 shl 24))
+        }
+        // A 40dp circle round the icon (the row is 44dp tall and its icon's middle is 22dp in).
+        val rowW = full - (16 * d).toInt()
+        return android.graphics.drawable.InsetDrawable(oval, (2 * d).toInt(), (2 * d).toInt(), rowW - (42 * d).toInt(), (2 * d).toInt())
+    }
+
+    private fun setFloating(f: Boolean) {
+        if (floating == f) return
+        floating = f
+        val txt = Themes.color(a, R.attr.dText)
+        for (t in rows) {
+            t.background = if (f) bubble(t.isActivated) else androidx.core.content.ContextCompat.getDrawable(a, R.drawable.side_row_bg)
+            t.compoundDrawablesRelative[0]?.setTint(if (f && t.isActivated) 0xFFFFFFFF.toInt() else txt)
+        }
+    }
+
     /** How far open (0 = the strip, 1 = open): the panel's shown width, the names, the dimming behind. */
     private fun apply() {
         val w = strip + ((full - strip) * fraction).toInt()
@@ -134,6 +164,9 @@ class SideMenu(
         val labels = ((fraction - 0.25f) / 0.75f).coerceIn(0f, 1f)
         for (v in fading) v.alpha = labels
         for (t in rows) t.setTextColor(t.textColors.withAlpha((labels * 255).toInt()))
+        panelBg.alpha = (fraction * 250).toInt()
+        edge.alpha = fraction
+        setFloating(fraction < 0.35f)
         scrim.alpha = 0.6f * fraction
         scrim.visibility = if (fraction > 0f) View.VISIBLE else View.GONE
     }
