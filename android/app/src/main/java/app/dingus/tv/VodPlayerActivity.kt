@@ -166,7 +166,8 @@ class VodPlayerActivity : BaseActivity() {
             return when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER,
                 KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_MENU,
-                KeyEvent.KEYCODE_MEDIA_FAST_FORWARD, KeyEvent.KEYCODE_MEDIA_REWIND, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> true
+                KeyEvent.KEYCODE_MEDIA_FAST_FORWARD, KeyEvent.KEYCODE_MEDIA_REWIND, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+                KeyEvent.KEYCODE_MEDIA_PLAY, KeyEvent.KEYCODE_MEDIA_PAUSE -> true
                 else -> super.dispatchKeyEvent(event)
             }
         }
@@ -175,8 +176,10 @@ class VodPlayerActivity : BaseActivity() {
         when (event.keyCode) {
             KeyEvent.KEYCODE_DPAD_LEFT -> seek(-step)
             KeyEvent.KEYCODE_DPAD_RIGHT -> seek(step)
-            KeyEvent.KEYCODE_MEDIA_REWIND -> seek(-30_000)
-            KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> seek(30_000)
+            KeyEvent.KEYCODE_MEDIA_REWIND -> seek(-10_000) // (the remote's buttons: 10 seconds a press)
+            KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> seek(10_000)
+            KeyEvent.KEYCODE_MEDIA_PLAY -> { p.playWhenReady = true; video.showController() }
+            KeyEvent.KEYCODE_MEDIA_PAUSE -> { p.playWhenReady = false; video.showController() }
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
                 if (event.repeatCount == 0) { p.playWhenReady = !p.playWhenReady; video.showController() }
             }

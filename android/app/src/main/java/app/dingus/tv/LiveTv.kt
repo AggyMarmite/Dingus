@@ -227,12 +227,14 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
             KeyEvent.KEYCODE_MENU -> if (event.repeatCount == 0) options()
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY -> if (event.repeatCount == 0) togglePause()
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_MEDIA_REWIND -> if (buffer != null) {
-                val step = if (keyCode == KeyEvent.KEYCODE_MEDIA_REWIND || event.repeatCount > 6) 30_000L else 10_000L
+                // The rewind button: 10 seconds a press. Holding ◀: faster after a moment.
+                val step = if (keyCode != KeyEvent.KEYCODE_MEDIA_REWIND && event.repeatCount > 6) 30_000L else 10_000L
                 pendingJump = (if (pendingJump < 0) currentBehind() else pendingJump) + step
                 scheduleJump()
             }
             KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> if (buffer != null) {
-                val step = if (keyCode == KeyEvent.KEYCODE_MEDIA_FAST_FORWARD || event.repeatCount > 6) 30_000L else 10_000L
+                // The fast forward button: 10 seconds a press, up to live.
+                val step = if (keyCode != KeyEvent.KEYCODE_MEDIA_FAST_FORWARD && event.repeatCount > 6) 30_000L else 10_000L
                 pendingJump = maxOf(0, (if (pendingJump < 0) currentBehind() else pendingJump) - step)
                 scheduleJump()
             }
