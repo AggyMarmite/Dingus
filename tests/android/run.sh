@@ -211,6 +211,12 @@ check "grid-step [5-9]" 5 "UP steps back up a row"
 key KEYCODE_DPAD_LEFT 1.5
 check "browse-panel shown" 5 "LEFT from the first column brings them back"
 fresh
+key KEYCODE_DPAD_DOWN 0.2; key KEYCODE_DPAD_RIGHT 1.5
+check "browse-into grid" 5 "RIGHT straight after moving to another category goes into its titles"
+shot 19b-films-category
+key KEYCODE_DPAD_LEFT 1.5
+check "browse-panel shown" 5 "…and LEFT goes back to the categories"
+fresh
 key KEYCODE_DPAD_LEFT 1.5
 check "menu-open" 5 "the side menu opens on Films too"
 shot 19a-films-menu
