@@ -172,9 +172,15 @@ class SideMenu(
         accountRow.text = sb
     }
 
+    /** While the menu's open, the connections and status keep up (asked again every 20 seconds). */
+    private val poll = object : Runnable {
+        override fun run() { if (isOpen) { showDetails(); panel.postDelayed(this, 20_000L) } }
+    }
+
     fun open() {
         if (isOpen) return
         isOpen = true
+        panel.removeCallbacks(poll); panel.postDelayed(poll, 20_500L)
         returnTo = a.currentFocus
         showDetails()
         for (t in rows) t.isFocusable = t.visibility == View.VISIBLE
@@ -188,6 +194,7 @@ class SideMenu(
     fun close(restore: Boolean = true) {
         if (!isOpen) return
         isOpen = false
+        panel.removeCallbacks(poll)
         val back = returnTo?.takeIf { restore && it.isAttachedToWindow && it.isShown }
         back?.requestFocus()
         for (t in rows) t.isFocusable = false
