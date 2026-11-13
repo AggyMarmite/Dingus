@@ -53,7 +53,7 @@ class BrowseActivity : BaseActivity() {
                 lib = l
                 build()
                 Ui.test("library $kind ${l.items.size}")
-                if (System.currentTimeMillis() - l.loadedAt > 12 * 3600_000L) { lib = Vod.library(kind, fresh = true); build() }
+                if (System.currentTimeMillis() - l.loadedAt > Store.refreshHours * 3600_000L) { lib = Vod.library(kind, fresh = true); build() }
             } catch (e: Exception) {
                 if (lib == null) { empty.text = "Couldn't load the library.\n${Net.friendly(e)}"; empty.visibility = View.VISIBLE }
                 Ui.test("library-failed ${e.message}")

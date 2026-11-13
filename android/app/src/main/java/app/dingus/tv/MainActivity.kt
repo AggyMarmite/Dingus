@@ -53,6 +53,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     private lateinit var live: LiveTv
     private var pendingPlay: Pair<String, String>? = null
     private var resumePreview: String? = null
+    private var lastAutoRefresh = 0L
     private val hintText by lazy { hint.text }
 
     private val catAdapter = CategoryAdapter()
@@ -192,7 +193,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             grid.requestFocus()
             runPendingPlay()
             if (Repo.channels.isEmpty()) refresh(p, true)
-            else if (System.currentTimeMillis() - Store.guideLoadedAt > 12 * 3600_000L) refresh(p, false)
+            else if (Store.refreshDue) refresh(p, false)
             runPendingPlay()
             maybeAutoPlay()
         }
@@ -512,6 +513,12 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         override fun run() {
             clock.text = Ui.time(System.currentTimeMillis())
             grid.refresh()
+            // Left open for a long time: update when it's due (your choice in Settings).
+            val p = Store.playlist
+            if (p != null && !loading && Repo.channels.isNotEmpty() && Store.refreshDue && System.currentTimeMillis() - lastAutoRefresh > 15 * 60_000L) {
+                lastAutoRefresh = System.currentTimeMillis() // (if it fails, try again in a while rather than every minute)
+                scope.launch { refresh(p, false) }
+            }
             handler.postDelayed(this, 60_000L - System.currentTimeMillis() % 60_000L)
         }
     }

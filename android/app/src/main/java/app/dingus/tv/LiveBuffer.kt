@@ -21,7 +21,8 @@ import java.net.URL
 class LiveBuffer(private val url: String, root: File, private val maxSeconds: Int) {
     private class Seg(val start: Long, val file: File) { @Volatile var length = 0L }
 
-    private val dir = File(root, "timeshift").apply { deleteRecursively(); mkdirs() }
+    // Each buffer has its own folder, so clearing up the last channel's never touches this one's.
+    private val dir = File(File(root, "timeshift"), System.nanoTime().toString()).apply { mkdirs() }
     private val segs = ArrayList<Seg>()
     private val lock = Object()
     @Volatile private var closed = false

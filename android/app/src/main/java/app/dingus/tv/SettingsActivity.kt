@@ -32,6 +32,7 @@ class SettingsActivity : BaseActivity() {
         val first = row("Playlists", { playlistsSummary() }) { playlists() }
         row("TV guide sources", { guideSummary() }) { guideSources() }
         refreshRow = row("Update channels and TV guide now", { refreshSummary() }) { refresh() }
+        row("Update playlist and guide", { "Every ${hoursName(Store.refreshHours)}  ·  also when you choose \"Update now\"" }) { refreshInterval() }
         row("How much TV guide to keep", { "${hoursName(Store.guideHours)} ahead  ·  less is lighter on memory" }) { guideLength() }
 
         header("TV guide")
@@ -202,6 +203,14 @@ class SettingsActivity : BaseActivity() {
                 }
             }
             .show()
+    }
+
+    private fun refreshInterval() {
+        val opts = listOf(4, 8, 12, 24, 48, 72)
+        choose("Update the playlist and guide every…", opts.map { hoursName(it) + if (it == 12) "  (recommended)" else "" }, opts.indexOf(Store.refreshHours)) {
+            Store.refreshHours = opts[it]
+            update()
+        }
     }
 
     private fun hoursName(h: Int) = when { h % 24 == 0 && h > 24 -> "${h / 24} days"; h == 24 -> "1 day"; else -> "$h hours" }

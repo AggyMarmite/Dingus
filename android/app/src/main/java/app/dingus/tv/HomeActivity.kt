@@ -104,7 +104,7 @@ class HomeActivity : BaseActivity() {
                     build()
                     try { Repo.refreshGuide() } catch (_: Exception) {}
                     build()
-                } else if (System.currentTimeMillis() - Store.guideLoadedAt > 12 * 3600_000L) {
+                } else if (Store.refreshDue) {
                     try { Repo.refreshChannels(p); Repo.refreshGuide() } catch (_: Exception) {}
                     build()
                 }
