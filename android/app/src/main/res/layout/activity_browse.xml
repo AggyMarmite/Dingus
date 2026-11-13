@@ -21,6 +21,17 @@
             android:orientation="vertical">
             <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content">
                 <include layout="@layout/hero" />
+                <!-- In a category (no banner): its name and how many. -->
+                <LinearLayout android:id="@+id/gridHead" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginStart="44dp" android:layout_marginTop="26dp" android:layout_marginBottom="10dp"
+                    android:orientation="horizontal" android:gravity="bottom" android:visibility="gone">
+                    <TextView android:id="@+id/gridTitle" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:maxLines="1" android:ellipsize="end" android:textSize="26sp" android:textStyle="bold"
+                        android:textColor="?attr/dText" />
+                    <TextView android:id="@+id/gridCount" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp" android:layout_marginBottom="3dp" android:textSize="15sp"
+                        android:textColor="?attr/dMuted" />
+                </LinearLayout>
                 <TextView android:id="@+id/crumb" android:layout_width="wrap_content" android:layout_height="wrap_content"
                     android:layout_gravity="top|end" android:layout_marginTop="14dp" android:layout_marginEnd="28dp"
                     android:maxLines="1" android:textSize="14sp" android:textColor="?attr/dMuted" />

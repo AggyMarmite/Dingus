@@ -42,6 +42,9 @@ class BrowseActivity : BaseActivity() {
     private lateinit var adapter: RowsAdapter
     private lateinit var hero: Hero
     private lateinit var heroView: View
+    private lateinit var gridHead: View
+    private lateinit var gridTitle: TextView
+    private lateinit var gridCount: TextView
     private lateinit var heroText: TextView
     private lateinit var heroBody: View
     private lateinit var crumb: TextView
@@ -67,6 +70,9 @@ class BrowseActivity : BaseActivity() {
         empty = findViewById(R.id.empty)
         crumb = findViewById(R.id.crumb)
         heroView = findViewById(R.id.hero)
+        gridHead = findViewById(R.id.gridHead)
+        gridTitle = findViewById(R.id.gridTitle)
+        gridCount = findViewById(R.id.gridCount)
         heroText = findViewById(R.id.heroText)
         findViewById<TextView>(R.id.heading).text = if (kind == Vod.MOVIES) "Films" else "TV Shows"
         hero = Hero(this, scope)
@@ -159,6 +165,8 @@ class BrowseActivity : BaseActivity() {
         if (id == Vod.FEATURED) {
             grid.visibility = View.GONE
             rows.visibility = View.VISIBLE
+            heroView.visibility = View.VISIBLE
+            gridHead.visibility = View.GONE
             build()
             crumb.text = "◀  Categories"
             if (changed) rows.scrollToPosition(0)
@@ -169,10 +177,14 @@ class BrowseActivity : BaseActivity() {
             grid.visibility = View.VISIBLE
             posters.set(items)
             if (changed) grid.scrollToPosition(0)
-            crumb.text = "◀  $name  ·  ${items.size}"
+            // No banner here: the category's name and how many, then the posters (more of them showing).
+            heroView.visibility = View.GONE
+            gridHead.visibility = View.VISIBLE
+            gridTitle.text = name
+            gridCount.text = "${items.size} ${if (kind == Vod.MOVIES) (if (items.size == 1) "film" else "films") else (if (items.size == 1) "show" else "shows")}"
+            crumb.text = "◀  Categories"
             empty.text = "Nothing here."
             empty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
-            items.firstOrNull()?.let { hero.show(Card.Title(kind, it)) }
             Ui.test("browse-cat $name ${items.size}")
         }
     }
@@ -208,14 +220,25 @@ class BrowseActivity : BaseActivity() {
 
     // ------------------------------------------------------------------ focus and the panel
 
-    private fun focusContent() {
-        if (current == Vod.FEATURED) rows.post {
-            val first = (rows.findViewHolderForAdapterPosition(0) as? RowsAdapter.H)?.list
-            if (first != null) first.post { first.getChildAt(0)?.requestFocus() }
-            else rows.post { (rows.findViewHolderForAdapterPosition(0) as? RowsAdapter.H)?.list?.getChildAt(0)?.requestFocus() }
-        } else if (posters.itemCount > 0) grid.post {
-            (grid.findViewHolderForAdapterPosition(0)?.itemView ?: grid.getChildAt(0))?.requestFocus()
-        }
+    /**
+     * Into the titles (from the categories, or on opening): the first one showing. Just after a category has
+     * changed its titles aren't laid out yet, so this keeps trying for a moment until there's one to go to.
+     */
+    private var focusAsk = 0
+
+    private fun focusContent(tries: Int = 0, ask: Int = ++focusAsk) {
+        if (ask != focusAsk) return // asked again since, or moved elsewhere
+        val target: View? = if (current == Vod.FEATURED) {
+            val lm = rows.layoutManager as LinearLayoutManager
+            val p = lm.findFirstCompletelyVisibleItemPosition().takeIf { it >= 0 } ?: lm.findFirstVisibleItemPosition()
+            val list = (rows.findViewHolderForAdapterPosition(maxOf(0, p)) as? RowsAdapter.H)?.list
+            list?.let { l -> (0 until l.childCount).map { l.getChildAt(it) }.firstOrNull { it.isFocusable && it.right > 0 } }
+        } else if (posters.itemCount > 0) {
+            val lm = grid.layoutManager as GridLayoutManager
+            grid.findViewHolderForAdapterPosition(maxOf(0, lm.findFirstCompletelyVisibleItemPosition()))?.itemView
+        } else null
+        if (target != null && target.requestFocus()) { Ui.test("browse-into ${if (current == Vod.FEATURED) "rows" else "grid"}"); return }
+        if (tries < 30) rows.postDelayed({ focusContent(tries + 1, ask) }, 50)
     }
 
     private fun focusCategory(id: String = current) {
@@ -289,7 +312,8 @@ class BrowseActivity : BaseActivity() {
         val down = event.action == KeyEvent.ACTION_DOWN
         if (!side.isOpen && f != null) {
             when (event.keyCode) {
-                KeyEvent.KEYCODE_DPAD_LEFT -> if (down && atLeftEdge(f)) { showPanel(); focusCategory(); return true }
+                KeyEvent.KEYCODE_DPAD_LEFT -> if (down && atLeftEdge(f)) { focusAsk++; showPanel(); focusCategory(); return true }
+                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> if (down && inside(f, panel)) focusAsk++ // (staying in the categories)
                 KeyEvent.KEYCODE_DPAD_RIGHT -> if (down && inside(f, panel)) { cats.flush(); focusContent(); return true }
                 KeyEvent.KEYCODE_MENU -> if (!inside(f, panel)) {
                     if (down) { showPanel(); focusCategory() }
@@ -317,7 +341,6 @@ class BrowseActivity : BaseActivity() {
         var t = if (downwards) pos + span else pos - span
         if (downwards && t >= n) { if (pos / span == (n - 1) / span) return; t = n - 1 } // the last row, shorter: its last one
         if (t < 0) return
-        setCompact(t >= span)
         val lm = grid.layoutManager as GridLayoutManager
         val v = grid.findViewHolderForAdapterPosition(t)?.itemView
         if (v != null) v.requestFocus() // (the grid scrolls it fully into view)
@@ -388,8 +411,6 @@ class BrowseActivity : BaseActivity() {
                 Ui.grow(view, has, 120)
                 val p = holder.bindingAdapterPosition
                 if (has && p >= 0) {
-                    hero.show(Card.Title(kind, items[p]))
-                    setCompact(p >= (grid.layoutManager as GridLayoutManager).spanCount)
                 }
             }
             return holder
