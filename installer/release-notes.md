@@ -1,3 +1,9 @@
+## What's new in Dingus 0.15.6
+
+* Fire TV: faster Films and TV Shows, with categories as a row.
+* Choose whether to update when switching playlist.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.5
 
 * Fire TV: smoother guide and Home, quicker to open Live TV.
