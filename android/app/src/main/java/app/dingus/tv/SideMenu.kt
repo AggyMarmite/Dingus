@@ -26,6 +26,22 @@ object Background {
 object PlaylistUpdate {
     @Volatile var running = false; private set
 
+    /** Set after switching playlist: the next screen asks whether to update it now. */
+    @Volatile var askAfterSwitch = false
+
+    /** "Update “name” now?" – after switching to a playlist that was loaded before (a new one loads by itself). */
+    fun ask(a: Activity) {
+        askAfterSwitch = false
+        val p = Store.playlist ?: return
+        if (!Repo.hasSaved()) return
+        Dialogs.builder(a).setTitle("Update “${p.name}”?")
+            .setMessage("Get the latest channels and TV guide for this playlist now? (Otherwise it updates by itself when it's due.)")
+            .setPositiveButton("Update now") { _, _ -> start(); Ui.test("switch-update yes") }
+            .setNegativeButton("Not now") { _, _ -> Ui.test("switch-update no") }
+            .show()
+        Ui.test("switch-update asked")
+    }
+
     fun start() {
         val p = Store.playlist ?: return
         if (running) return
@@ -285,7 +301,8 @@ class SideMenu(
                 Playlists.switchTo(all[n].id)
                 checking = false
                 showDetails() // (asks the provider for the new playlist's subscription)
-                // Start again from Home with the new playlist.
+                // Start again from Home with the new playlist (which asks whether to update it).
+                PlaylistUpdate.askAfterSwitch = true
                 if (a is HomeActivity) a.recreate()
                 else a.startActivity(Intent(a, HomeActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP))
             }

@@ -160,7 +160,7 @@ class SettingsActivity : BaseActivity() {
         Dialogs.builder(this).setTitle(p.name)
             .setItems(opts.toTypedArray()) { _, i ->
                 when (opts[i]) {
-                    "Use this playlist" -> { Playlists.switchTo(p.id); update(); checkAccount() }
+                    "Use this playlist" -> { Playlists.switchTo(p.id); update(); checkAccount(); PlaylistUpdate.ask(this) }
                     "Check subscription" -> checkAccount()
                     "Edit" -> startActivity(Intent(this, AddPlaylistActivity::class.java).putExtra(AddPlaylistActivity.ID, p.id))
                     "Remove" -> Dialogs.builder(this).setTitle("Remove “${p.name}”?")

@@ -47,6 +47,8 @@ object Repo {
     /** Each playlist keeps its own saved channels and guide. */
     private val dir: File get() = File(base, "p_${Store.activeId}").apply { mkdirs() }
     fun init(ctx: Context) { base = ctx.filesDir }
+    /** This playlist has been loaded before (its channels are saved on the device). */
+    fun hasSaved(): Boolean = File(dir, "channels.bin").exists()
 
     /** After switching playlist: forget what's in memory (its saved copies stay, so switching back is instant). */
     fun reset() {

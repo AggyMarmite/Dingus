@@ -70,6 +70,7 @@ class HomeActivity : BaseActivity() {
         super.onResume()
         if (Store.homeLite != lite) { recreate(); return } // switched in Settings
         Ui.test("home-shown")
+        if (PlaylistUpdate.askAfterSwitch) PlaylistUpdate.ask(this)
         side.refresh()
         tick.run()
         if (Store.playlist == null) {
