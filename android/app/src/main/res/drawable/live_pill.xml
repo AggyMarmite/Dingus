@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The red "LIVE" badge (the guide's top section, like Home's labels). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@color/live" />
+    <corners android:radius="6dp" />
+</shape>

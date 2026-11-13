@@ -13,6 +13,7 @@ import android.transition.ChangeBounds
 import android.transition.TransitionManager
 import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -241,7 +242,8 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     private fun setStatus(s: String) {
         status.text = s
         status.visibility = if (s.isEmpty()) View.GONE else View.VISIBLE
-        hint.text = s.ifEmpty { hintText }
+        hint.text = s
+        hint.visibility = if (s.isEmpty()) View.GONE else View.VISIBLE
     }
 
     private fun showEmpty(s: String?) {
@@ -313,6 +315,61 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         live.visibility = if (airing) View.VISIBLE else View.GONE
         prog.progress = Ui.progress(p)
         desc.text = p.desc ?: ""
+        showArt(p)
+    }
+
+    // ------------------------------------------------------------------ the picture behind the top (like Home)
+
+    private val guideArt by lazy {
+        val bg = Themes.color(this, R.attr.dBg); val clear = bg and 0x00FFFFFF
+        val accent = Themes.color(this, R.attr.dAccent)
+        findViewById<View>(R.id.guideGlow).background = android.graphics.drawable.GradientDrawable().apply {
+            gradientType = android.graphics.drawable.GradientDrawable.RADIAL_GRADIENT
+            colors = intArrayOf((accent and 0x00FFFFFF) or (0x44 shl 24), (accent and 0x00FFFFFF) or (0x12 shl 24), 0)
+            gradientRadius = resources.displayMetrics.widthPixels * 0.4f
+            setGradientCenter(0.75f, 0.2f)
+        }
+        findViewById<View>(R.id.guideShade).background = android.graphics.drawable.LayerDrawable(arrayOf(
+            android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+                intArrayOf((bg and 0x00FFFFFF) or (0xEB shl 24), (bg and 0x00FFFFFF) or (0xB3 shl 24), (bg and 0x00FFFFFF) or (0x26 shl 24))),
+            android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(bg, (bg and 0x00FFFFFF) or (0x33 shl 24), clear)),
+        ))
+        findViewById<ImageView>(R.id.guideArt)
+    }
+    private var artFor: Programme? = null
+    private val artLookup = Runnable { lookUpArt() }
+
+    /** The programme's picture (from TMDB, when it's matched), faded in behind the top; the glow when there's none. */
+    private fun showArt(p: Programme) {
+        if (artFor === p) return
+        artFor = p
+        handler.removeCallbacks(artLookup)
+        val t = TitleLogos.forProgramme(p)
+        val url = t?.let { TitleLogos.cachedBackdrop(it.first, it.second) }
+        when {
+            url != null -> setArt(url)
+            t != null && TitleLogos.enabled && !TitleLogos.knowsBackdrop(t.first, t.second) -> { setArt(null); handler.postDelayed(artLookup, 450) }
+            else -> setArt(null)
+        }
+    }
+
+    /** (After a moment on a programme, not for every one scrolled past.) */
+    private fun lookUpArt() {
+        val p = artFor ?: return
+        val t = TitleLogos.forProgramme(p) ?: return
+        scope.launch {
+            try { TitleLogos.find(t.first, t.second, null) } catch (_: Exception) {}
+            if (artFor === p) TitleLogos.cachedBackdrop(t.first, t.second)?.let { setArt(it) }
+        }
+    }
+
+    private fun setArt(url: String?) {
+        val v = guideArt
+        if (url == null) { if (v.tag != null) { v.animate().cancel(); v.setImageDrawable(null); v.tag = null }; return }
+        if (v.tag == url) return
+        v.alpha = 0f
+        Posters.load(v, url, resources.displayMetrics.heightPixels / 2, wide = true)
+        v.animate().alpha(1f).setDuration(if (Ui.lite) 0 else 350).start()
     }
 
     /** Plays [c] in the preview window (the stream full screen will carry on with). */
