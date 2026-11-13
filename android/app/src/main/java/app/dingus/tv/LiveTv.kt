@@ -220,7 +220,10 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_PAGE_UP -> zap(-1)
             KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_PAGE_DOWN -> zap(1)
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_INFO ->
-                if (event.repeatCount == 0) { if (info.visibility == View.VISIBLE && info.alpha > 0.5f) { handler.removeCallbacks(hideInfo); hideInfo.run() } else showInfo() }
+                if (event.repeatCount == 0) {
+                    // OK: the full info; OK again hides it.
+                    if (info.visibility == View.VISIBLE && info.alpha > 0.5f && infoFull) { handler.removeCallbacks(hideInfo); hideInfo.run() } else showInfo(full = true)
+                }
             KeyEvent.KEYCODE_MENU -> if (event.repeatCount == 0) options()
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY -> if (event.repeatCount == 0) togglePause()
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_MEDIA_REWIND -> if (buffer != null) {
@@ -253,8 +256,16 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         handler.postDelayed(r, 350)
     }
 
-    fun showInfo() {
+    /** True while the full info (OK pressed) is showing, rather than the short one. */
+    private var infoFull = false
+
+    /**
+     * The info bar. Changing channel shows a short one (channel, and what's on with its times); OK shows it all:
+     * progress, description, what's next, stream stats and the keys.
+     */
+    fun showInfo(full: Boolean = false) {
         val c = list.getOrNull(index) ?: return
+        infoFull = full
         overlay.findViewById<TextView>(R.id.name).text = c.name
         overlay.findViewById<TextView>(R.id.number).text = if (Store.showNumbers && c.number > 0) c.number.toString() else ""
         overlay.findViewById<View>(R.id.fav).visibility = if (Store.isFavourite(c.id)) View.VISIBLE else View.GONE
@@ -265,20 +276,30 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         val times = overlay.findViewById<TextView>(R.id.times)
         val prog = overlay.findViewById<ProgressBar>(R.id.progress)
         val desc = overlay.findViewById<TextView>(R.id.desc)
-        if (now != null) {
-            nowV.text = now.title; times.text = Ui.span(now); prog.progress = Ui.progress(now); prog.visibility = View.VISIBLE
-            desc.text = now.desc ?: ""
-        } else {
-            nowV.text = "No guide information"; times.text = ""; prog.visibility = View.INVISIBLE; desc.text = ""
+        val nextV = overlay.findViewById<TextView>(R.id.next)
+        if (now == null) nowV.text = "No guide information"
+        else if (full) nowV.text = now.title
+        else nowV.text = android.text.SpannableStringBuilder(now.title).apply {
+            // Short: the times on the same line, quieter.
+            val st = length; append("    ${Ui.span(now)}")
+            setSpan(android.text.style.ForegroundColorSpan(Themes.color(a, R.attr.dMuted)), st, length, 0)
+            setSpan(android.text.style.RelativeSizeSpan(0.75f), st, length, 0)
         }
-        desc.visibility = if (desc.text.isEmpty()) View.GONE else View.VISIBLE
-        overlay.findViewById<TextView>(R.id.next).text = next?.let { "Next  ${Ui.time(it.start)}  ${it.title}" } ?: ""
+        times.text = now?.let { Ui.span(it) } ?: ""
+        now?.let { prog.progress = Ui.progress(it) }
+        (times.parent as View).visibility = if (full && now != null) View.VISIBLE else View.GONE
+        desc.text = now?.desc ?: ""
+        desc.visibility = if (full && desc.text.isNotEmpty()) View.VISIBLE else View.GONE
+        nextV.text = next?.let { "Next  ${Ui.time(it.start)}  ${it.title}" } ?: ""
+        nextV.visibility = if (full && nextV.text.isNotEmpty()) View.VISIBLE else View.GONE
+        overlay.findViewById<View>(R.id.keys).visibility = if (full) View.VISIBLE else View.GONE
         updateStats()
         info.animate().cancel()
         info.alpha = 1f
         info.visibility = View.VISIBLE
         handler.removeCallbacks(hideInfo)
-        handler.postDelayed(hideInfo, 5_000)
+        handler.postDelayed(hideInfo, if (full) 8_000 else 4_000)
+        Ui.test(if (full) "info full" else "info short")
     }
 
     // ------------------------------------------------------------------ pause and rewind
@@ -348,7 +369,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         val c = list.getOrNull(index) ?: return
         val p = player ?: return
         val items = ArrayList<Pair<String, () -> Unit>>()
-        items.add((if (Store.isFavourite(c.id)) "Remove from Favourites" else "Add to Favourites") to { Store.toggleFavourite(c.id); showInfo() })
+        items.add((if (Store.isFavourite(c.id)) "Remove from Favourites" else "Add to Favourites") to { Store.toggleFavourite(c.id); showInfo(infoFull) })
         items.add("Audio & subtitles" to { app.dingus.tv.Tracks.choose(a, p) })
         if (currentBehind() >= 3_000) items.add("Back to live" to { seekBehind(0) })
         items.add((if (Store.statsPinned) "Hide stream stats" else "Show stream stats") to {
@@ -414,7 +435,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
             append(t)
         }
         statsLine.text = if (t.isEmpty()) "" else sb
-        statsLine.visibility = if (t.isEmpty()) View.GONE else View.VISIBLE
+        statsLine.visibility = if (t.isEmpty() || !infoFull) View.GONE else View.VISIBLE
         statsBadge.text = sb
         statsBadge.visibility = if (fullScreen && Store.statsPinned && t.isNotEmpty()) View.VISIBLE else View.GONE
         if (t.isNotEmpty()) Ui.test("stats $t")

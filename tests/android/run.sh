@@ -70,6 +70,10 @@ key KEYCODE_DPAD_UP
 check "playing Test 1 HD" 45 "changing channel in full screen"
 check "stats HD  ·  " 15 "full screen shows stream stats (HD, fps, Mbps)"
 sleep 1; shot 05-player-info
+fresh
+key KEYCODE_DPAD_CENTER 1
+check "info full" 5 "OK shows the full info (progress, description, next, stats)"
+shot 05a-player-info-full
 sleep 15
 fresh
 key KEYCODE_DPAD_LEFT 0.3; key KEYCODE_DPAD_LEFT 2

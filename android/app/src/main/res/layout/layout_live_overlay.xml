@@ -21,7 +21,7 @@
     <!-- The info bar: shown when you change channel or press OK. -->
     <LinearLayout android:id="@+id/info" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_gravity="bottom" android:orientation="vertical" android:background="@drawable/overlay_bg" android:visibility="gone"
-        android:paddingStart="56dp" android:paddingEnd="56dp" android:paddingTop="70dp" android:paddingBottom="36dp">
+        android:paddingStart="56dp" android:paddingEnd="56dp" android:paddingTop="60dp" android:paddingBottom="36dp">
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="horizontal" android:gravity="center_vertical">
@@ -59,7 +59,7 @@
         <TextView android:id="@+id/next" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="10dp" android:maxLines="1" android:ellipsize="end" android:textSize="17sp"
             android:textColor="?attr/dText" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp"
+        <TextView android:id="@+id/keys" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp"
             android:text="▲ ▼  channel     ◀ ▶  rewind / forward     ⏯  pause     ≡  options     BACK  guide"
             android:textSize="14sp" android:textColor="?attr/dMuted" />
     </LinearLayout>
