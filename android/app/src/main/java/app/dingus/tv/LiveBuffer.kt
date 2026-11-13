@@ -166,21 +166,31 @@ class LiveBuffer(private val url: String, root: File, private val maxSeconds: In
             out.write("HTTP/1.1 200 OK\r\nContent-Type: video/mp2t\r\nConnection: close\r\nCache-Control: no-cache\r\n\r\n".toByteArray())
             var pos = maxOf(o, oldest)
             val buf = ByteArray(64 * 1024)
-            while (!closed && !s.isClosed) {
-                val n = readAt(pos, buf)
-                if (n < 0) break
-                if (n == 0) continue
-                out.write(buf, 0, n)
-                pos += n
-            }
+            val cur = Cursor()
+            try {
+                while (!closed && !s.isClosed) {
+                    val n = readAt(pos, buf, cur)
+                    if (n < 0) break
+                    if (n == 0) continue
+                    out.write(buf, 0, n)
+                    pos += n
+                }
+            } finally { cur.close() }
         } catch (_: Exception) {
         } finally {
             try { s.close() } catch (_: Exception) {}
         }
     }
 
+    /** The file being played from, kept open while reading through it. */
+    private class Cursor {
+        var seg: Seg? = null
+        var file: RandomAccessFile? = null
+        fun close() { try { file?.close() } catch (_: Exception) {}; file = null; seg = null }
+    }
+
     /** Reads saved bytes at [pos]: waits for new ones at the live edge; -1 when finished. */
-    private fun readAt(pos: Long, buf: ByteArray): Int {
+    private fun readAt(pos: Long, buf: ByteArray, cur: Cursor): Int {
         val seg = synchronized(lock) {
             while (!closed && pos >= written) {
                 if (failed != null) return -1
@@ -193,10 +203,10 @@ class LiveBuffer(private val url: String, root: File, private val maxSeconds: In
         val within = pos - seg.start
         val avail = (seg.length - within).toInt()
         if (avail <= 0) return 0
-        RandomAccessFile(seg.file, "r").use { f ->
-            f.seek(within)
-            return f.read(buf, 0, minOf(buf.size, avail))
-        }
+        if (cur.seg !== seg) { cur.close(); cur.file = RandomAccessFile(seg.file, "r"); cur.seg = seg }
+        val f = cur.file ?: return -1
+        f.seek(within)
+        return f.read(buf, 0, minOf(buf.size, avail))
     }
 
     companion object {

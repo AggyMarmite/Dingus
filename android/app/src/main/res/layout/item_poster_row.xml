@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="116dp" android:layout_height="wrap_content" android:layout_marginStart="5dp" android:layout_marginEnd="5dp" android:layout_marginTop="8dp" android:layout_marginBottom="8dp"
+    android:orientation="vertical" android:background="@drawable/poster_bg" android:padding="4dp"
+    android:focusable="true" android:clickable="true">
+    <FrameLayout android:layout_width="match_parent" android:layout_height="164dp" android:background="@drawable/logo_bg">
+        <TextView android:id="@+id/fallback" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:gravity="center" android:padding="8dp" android:textSize="15sp" android:textStyle="bold"
+            android:textColor="?attr/dMuted" />
+        <ImageView android:id="@+id/poster" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:scaleType="centerCrop" android:contentDescription="@null" />
+        <TextView android:id="@+id/badge" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_gravity="top|end" android:layout_marginStart="5dp" android:layout_marginEnd="5dp" android:layout_marginTop="8dp" android:layout_marginBottom="8dp" android:background="@drawable/badge_bg"
+            android:paddingStart="7dp" android:paddingEnd="7dp" android:paddingTop="2dp" android:paddingBottom="2dp"
+            android:text="✓" android:textSize="13sp" android:textStyle="bold" android:textColor="#FFFFFF" android:visibility="gone" />
+        <ProgressBar android:id="@+id/progress" style="@android:style/Widget.ProgressBar.Horizontal"
+            android:layout_width="match_parent" android:layout_height="4dp" android:layout_gravity="bottom"
+            android:max="1000" android:progressDrawable="@drawable/progress_track" android:visibility="gone" />
+    </FrameLayout>
+    <TextView android:id="@+id/title" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="6dp" android:paddingStart="2dp" android:paddingEnd="2dp"
+        android:maxLines="1" android:ellipsize="end" android:textSize="13sp" android:textColor="?attr/dText" />
+    <TextView android:id="@+id/meta" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:paddingStart="2dp" android:paddingBottom="2dp" android:maxLines="1" android:textSize="12sp"
+        android:textColor="?attr/dMuted" />
+</LinearLayout>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The highlighted title or channel: artwork behind, details on the left. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/hero" android:layout_width="match_parent" android:layout_height="230dp">
+    android:id="@+id/hero" android:layout_width="match_parent" android:layout_height="196dp">
     <ImageView android:id="@+id/heroArt" android:layout_width="match_parent" android:layout_height="match_parent"
         android:scaleType="centerCrop" android:alpha="0.55" android:contentDescription="@null" />
     <View android:id="@+id/heroShade" android:layout_width="match_parent" android:layout_height="match_parent" />

@@ -86,7 +86,7 @@ class RowsAdapter(
         override fun getItemViewType(position: Int) = when (cards[position]) { is Card.Title -> 0; is Card.Live -> 1; is Card.SeeAll -> 2 }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): C {
-            val layout = when (viewType) { 0 -> R.layout.item_poster; 1 -> R.layout.item_channel_card; else -> R.layout.item_see_all }
+            val layout = when (viewType) { 0 -> R.layout.item_poster_row; 1 -> R.layout.item_channel_card; else -> R.layout.item_see_all }
             val v = LayoutInflater.from(ctx).inflate(layout, parent, false)
             val c = C(v)
             v.setOnClickListener { cards.getOrNull(c.bindingAdapterPosition)?.let(onClick) }
@@ -104,7 +104,7 @@ class RowsAdapter(
                     c.title?.text = m.name
                     c.fallback?.text = m.name
                     c.meta?.text = card.label ?: listOfNotNull(m.year.takeIf { it > 0 }?.toString(), m.rating.takeIf { it > 0 }?.let { "★ %.1f".format(it) }).joinToString("   ")
-                    c.poster?.let { Posters.load(it, m.poster, (189 * d).toInt(), c.fallback) }
+                    c.poster?.let { Posters.load(it, m.poster, (164 * d).toInt(), c.fallback) }
                     c.progress?.apply {
                         visibility = if (card.progress >= 0) View.VISIBLE else View.GONE
                         progress = (card.progress * 1000).toInt()
