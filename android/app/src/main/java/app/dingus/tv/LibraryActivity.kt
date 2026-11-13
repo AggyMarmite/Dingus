@@ -81,15 +81,26 @@ class LibraryActivity : BaseActivity() {
 
     private fun load() {
         val cached = Vod.cached(kind)
+        val fromSeeAll = intent.getStringExtra(CATEGORY) != null
         if (cached == null) { empty.text = "Loading ${if (kind == Vod.MOVIES) "films" else "TV shows"}…"; empty.visibility = View.VISIBLE }
+        else {
+            // Already loaded (the usual case, e.g. from "See all"): show it straight away, no waiting.
+            lib = cached
+            setCategories()
+            show(current, force = true)
+            if (fromSeeAll) focusGrid() else categories.post { focusCategory() }
+            Ui.test("library $kind ${cached.items.size}")
+        }
         scope.launch {
             try {
                 val l = Vod.library(kind)
-                lib = l
-                setCategories()
-                show(current, force = true)
-                categories.post { focusCategory() }
-                Ui.test("library $kind ${l.items.size}")
+                if (lib !== l) {
+                    lib = l
+                    setCategories()
+                    show(current, force = true)
+                    if (fromSeeAll) focusGrid() else categories.post { focusCategory() }
+                    Ui.test("library $kind ${l.items.size}")
+                }
                 if (System.currentTimeMillis() - l.loadedAt > Store.refreshHours * 3600_000L) {
                     lib = Vod.library(kind, fresh = true)
                     setCategories(); show(current, force = true)

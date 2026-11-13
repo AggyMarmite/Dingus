@@ -93,8 +93,12 @@ object Vod {
         lib
     }
 
-    private suspend fun load(kind: String, fresh: Boolean): Library =
-        locks.getValue(kind).withLock {
+    private suspend fun load(kind: String, fresh: Boolean): Library {
+        // Already in memory: straight back, without waiting behind an update that's downloading (it holds the lock).
+        if (!fresh) libs[kind]?.let { return it }
+        return locks.getValue(kind).withLock {
+            // Another screen asked for a fresh copy a moment ago: that one will do (no second download).
+            if (fresh) libs[kind]?.takeIf { System.currentTimeMillis() - it.loadedAt < 120_000L }?.let { return@withLock it }
             if (!fresh) {
                 libs[kind]?.let { return@withLock it }
                 try { read(kind)?.let { libs = HashMap(libs).apply { put(kind, it) }; return@withLock it } }
@@ -106,6 +110,7 @@ object Vod {
             try { write(kind, lib) } catch (e: Exception) { Log.w("Dingus", "save $kind", e) }
             lib
         }
+    }
 
     fun clear() {
         libs = HashMap()
