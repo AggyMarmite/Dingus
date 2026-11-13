@@ -44,13 +44,15 @@ object TitleLogos {
     suspend fun find(kind: String, item: VodItem, tmdbId: String?): String? = withContext(Dispatchers.IO) {
         if (!enabled) return@withContext null
         val k = keyFor(kind, item)
-        synchronized(known) { load(); known[k]?.let { return@withContext it.ifEmpty { null } } }
+        // (Looked up before backgrounds were kept too: look again, once, to get the background.)
+        synchronized(known) { load(); if (known.containsKey("bg|$k")) known[k]?.let { return@withContext it.ifEmpty { null } } }
         val type = if (kind == Vod.MOVIES) "movie" else "tv"
+        var bg: String? = null
         val url = try {
             val id = tmdbId?.takeIf { it.isNotBlank() && it != "0" } ?: search(type, item)
-            id?.let { logo(type, it) }
+            id?.let { val (l, b) = images(type, it); bg = b; l }
         } catch (e: Exception) { return@withContext null } // not remembered: try again another time
-        val copy = synchronized(known) { known[k] = url ?: ""; HashMap(known) }
+        val copy = synchronized(known) { known[k] = url ?: ""; known["bg|$k"] = bg ?: ""; HashMap(known) }
         synchronized(this) { try { file.writeText(JSONObject(copy as Map<*, *>).toString()) } catch (_: Exception) {} }
         Ui.test("title-logo ${item.name} ${if (url != null) "found" else "none"}")
         url
@@ -99,9 +101,28 @@ object TitleLogos {
         return kind to VodItem("p:" + t.lowercase(), t, null, "", 0f, 0, "", 0L)
     }
 
+    /** The background picture found with the logo (a programme's or film's still, without text where there's one). */
+    fun knowsBackdrop(kind: String, item: VodItem): Boolean = synchronized(known) { load(); known.containsKey("bg|${keyFor(kind, item)}") }
+    fun cachedBackdrop(kind: String, item: VodItem): String? = synchronized(known) { load(); known["bg|${keyFor(kind, item)}"]?.ifEmpty { null } }
+
+    /** The logo and a background picture, from one look-up. */
+    private fun images(type: String, id: String): Pair<String?, String?> {
+        val o = get("/$type/$id/images?include_image_language=en,null")
+        var bg: JSONObject? = null; var bgScore = -1.0
+        val bs = o.optJSONArray("backdrops")
+        if (bs != null) for (i in 0 until bs.length()) {
+            val b = bs.getJSONObject(i)
+            val lang = b.optString("iso_639_1")
+            val score = (if (lang.isEmpty() || lang == "null") 10.0 else 0.0) + b.optDouble("vote_average", 0.0)
+            if (score > bgScore) { bgScore = score; bg = b }
+        }
+        val backdrop = bg?.optString("file_path")?.takeIf { it.isNotEmpty() }?.let { "https://image.tmdb.org/t/p/w1280$it" }
+        return logo(o) to backdrop
+    }
+
     /** English logo first, then one with no language, best rated; a wide logo works best. */
-    private fun logo(type: String, id: String): String? {
-        val logos = get("/$type/$id/images?include_image_language=en,null").optJSONArray("logos") ?: return null
+    private fun logo(o: JSONObject): String? {
+        val logos = o.optJSONArray("logos") ?: return null
         var best: JSONObject? = null
         var bestScore = -1.0
         for (i in 0 until logos.length()) {

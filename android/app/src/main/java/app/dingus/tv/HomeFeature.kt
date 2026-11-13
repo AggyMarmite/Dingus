@@ -109,16 +109,22 @@ class HomeFeature(private val a: Activity, private val scope: kotlinx.coroutines
         h.title.text = s.title
         val t = s.title_
         TitleLogos.show(h.logo, h.title, t?.let { TitleLogos.cached(it.first, it.second) })
-        if (t != null && TitleLogos.enabled && TitleLogos.cached(t.first, t.second) == null) scope?.launch {
+        // A programme (no picture of its own): the background picture TMDB has for it.
+        val needArt = s.art == null && t != null
+        if (needArt) TitleLogos.cachedBackdrop(t!!.first, t.second)?.let { Posters.load(h.art, it, artH) }
+        if (t != null && TitleLogos.enabled && (TitleLogos.cached(t.first, t.second) == null || (needArt && !TitleLogos.knowsBackdrop(t.first, t.second)))) scope?.launch {
             val url = TitleLogos.find(t.first, t.second, Vod.cachedDetails(t.first, t.second.id)?.tmdbId)
-            if (url != null && slides.getOrNull(index) === s) TitleLogos.show(h.logo, h.title, url)
+            if (slides.getOrNull(index) !== s) return@launch
+            if (url != null) TitleLogos.show(h.logo, h.title, url)
+            if (needArt) TitleLogos.cachedBackdrop(t.first, t.second)?.let { Posters.load(h.art, it, artH) }
         }
         h.meta.text = s.meta
         h.text.text = s.text ?: ""
         h.text.visibility = if (s.text.isNullOrBlank()) View.GONE else View.VISIBLE
         h.progress.visibility = if (s.progress >= 0) View.VISIBLE else View.GONE
         if (s.progress >= 0) h.progress.progress = (s.progress * 1000).toInt()
-        if (s.art != null) Posters.load(h.art, s.art, artH) else { h.art.setImageDrawable(null); h.art.tag = null }
+        if (s.art != null) Posters.load(h.art, s.art, artH)
+        else if (t == null || TitleLogos.cachedBackdrop(t.first, t.second) == null) { h.art.setImageDrawable(null); h.art.tag = null }
         h.second.visibility = if (s.second != null) View.VISIBLE else View.GONE
         h.second.text = s.second?.first ?: ""
         h.next.visibility = if (slides.size > 1) View.VISIBLE else View.GONE
