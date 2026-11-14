@@ -1,3 +1,10 @@
+## What's new in Dingus 0.15.14
+
+* Fire TV: a fresh new design across the app – categories built into the guide, Films and TV Shows, plus new film pages, player, Settings and Search.
+* Fire TV: voice search, programme reminders, and a choice of version for merged channels.
+* Fire TV: live TV no longer stops after a few minutes.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.13
 
 * Fire TV: a new look – full-screen pictures on Home, Films and TV Shows, and a floating menu.
