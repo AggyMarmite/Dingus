@@ -84,6 +84,7 @@ class SettingsActivity : BaseActivity() {
         toggle("Watch in the guide first", "OK plays in the guide window, OK again for full screen", { Store.preview }) { Store.preview = it }
         toggle("Channel numbers", "", { Store.showNumbers }) { Store.showNumbers = it }
         toggle("Colour-coded programmes", "Sport, films, news, kids…", { Store.genreColours }) { Store.genreColours = it }
+        toggle("Switch for reminders", "Change to the channel when a reminded programme starts", { Store.reminderSwitch }) { Store.reminderSwitch = it }
         toggle("Merge duplicate channels", "HD, FHD and backups shown as one", { Store.mergeChannels }) { Store.mergeChannels = it; Repo.reapply() }
         row("Edit channels", { "Rename, renumber or hide" }, { "›" }) { startActivity(Intent(this, ChannelEditorActivity::class.java)) }
         row("Categories", { hiddenSummary() + "  ·  " + (if (listOf("live", "movies", "series").any { Store.categoryOrder(it).isNotEmpty() }) "your own order" else "the playlist's order") }, { "›" }) {

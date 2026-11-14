@@ -79,6 +79,13 @@ object Reminders {
         }
     }
 
+    /** (The self-test: a reminder for the first channel, starting in 40 seconds, so its card shows now.) */
+    fun testSoon() {
+        val c = Repo.channels.firstOrNull() ?: return
+        save(all() + Reminder(c.id, System.currentTimeMillis() + 40_000L, "Reminder test", c.name))
+        handler.postDelayed({ check() }, 1500)
+    }
+
     private fun check() {
         val a = current ?: return
         if (card != null || a.isFinishing) return
@@ -103,7 +110,12 @@ object Reminders {
         val root = a.findViewById<FrameLayout>(android.R.id.content)
         val v = LayoutInflater.from(a).inflate(R.layout.reminder_card, root, false)
         val started = r.start <= System.currentTimeMillis()
-        v.findViewById<TextView>(R.id.remWhen).text = if (started) "STARTED" else "STARTING IN 1 MIN"
+        val auto = Store.reminderSwitch && Repo.channel(r.channelId) != null
+        v.findViewById<TextView>(R.id.remWhen).text = when {
+            started -> "STARTED"
+            auto -> "SWITCHING IN 1 MIN"
+            else -> "STARTING IN 1 MIN"
+        }
         v.findViewById<TextView>(R.id.remTitle).text = r.title
         v.findViewById<TextView>(R.id.remChannel).text = "${r.channelName}  ·  ${Ui.time(r.start)}"
         val ch = Repo.channel(r.channelId)
@@ -128,13 +140,22 @@ object Reminders {
         watch.requestFocus()
         if (!Ui.lite) { v.translationY = Ui.dp(a, 40).toFloat(); v.alpha = 0f; v.animate().translationY(0f).alpha(1f).setDuration(220).start() }
         handler.removeCallbacks(hideCard)
-        handler.postDelayed(hideCard, 30_000)
+        handler.removeCallbacks(autoSwitch)
+        if (auto) {
+            // "Switch for reminders" (Settings): nothing pressed by the start → over to the channel. Dismiss stays put.
+            pendingSwitch = { if (card === v) watch.performClick() }
+            handler.postDelayed(autoSwitch, (r.start - System.currentTimeMillis()).coerceAtLeast(0L))
+        } else handler.postDelayed(hideCard, 30_000)
     }
+
+    private var pendingSwitch: (() -> Unit)? = null
+    private val autoSwitch = Runnable { pendingSwitch?.invoke(); pendingSwitch = null; Ui.test("reminder-switched") }
 
     private var returnFocus: View? = null
 
     private fun dismissCard() {
         handler.removeCallbacks(hideCard)
+        handler.removeCallbacks(autoSwitch); pendingSwitch = null
         val v = card ?: return
         card = null
         val hadFocus = v.hasFocus()

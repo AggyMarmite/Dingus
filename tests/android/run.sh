@@ -262,6 +262,13 @@ adb shell am start -n $PKG/.MainActivity --ez dingus_test_numbers_off true
 check "numbers false" 10 "channel numbers can be turned off"
 sleep 3; shot 19b-guide-no-numbers
 
+# ---- A reminder coming up: the small card in the corner, BACK dismisses it
+fresh
+adb shell am start -n $PKG/.MainActivity --ez dingus_test_reminder true
+check "reminder Reminder test" 15 "a reminder shows its card a minute before"
+sleep 1; shot 19c-reminder-card
+key KEYCODE_BACK 1.5
+
 # ---- Adding a playlist from a phone
 fresh
 adb shell am start -n $PKG/.MainActivity --ez dingus_test_add_playlist true

@@ -159,6 +159,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             scope.launch { Vpn.connect(Vpn.locations().firstOrNull { it.country == name }) }
         }
         if (i.getBooleanExtra("dingus_test_vpn_off", false)) scope.launch { Vpn.disconnect() }
+        if (i.getBooleanExtra("dingus_test_reminder", false)) Reminders.testSoon()
         if (i.getBooleanExtra("dingus_test_numbers_off", false)) { Store.showNumbers = false; grid.showNumbers = false; Ui.test("numbers false") }
         i.getStringExtra("dingus_test_search")?.let { q ->
             startActivity(Intent(this, SearchActivity::class.java).putExtra("dingus_test_query", q))

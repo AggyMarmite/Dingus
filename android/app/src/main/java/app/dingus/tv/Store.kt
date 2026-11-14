@@ -207,6 +207,11 @@ object Store {
     fun putString(key: String, v: String) = prefs.edit().putString(key, v).apply()
 
     /** Show channel numbers in the guide and elsewhere. */
+    /** Reminders: switch to the channel by itself when the programme starts (if nothing's pressed). Off unless chosen. */
+    var reminderSwitch: Boolean
+        get() = prefs.getBoolean("reminderSwitch", false)
+        set(v) = prefs.edit().putBoolean("reminderSwitch", v).apply()
+
     var showNumbers: Boolean
         get() = prefs.getBoolean("showNumbers", false)
         set(v) = prefs.edit().putBoolean("showNumbers", v).apply()
