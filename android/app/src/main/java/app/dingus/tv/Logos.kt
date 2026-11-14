@@ -106,8 +106,9 @@ class ImageCache(private val name: String, megabytes: Int, private val config: B
     }
 
     /** Shows the logo in [view]; [fallback] (e.g. the channel's initials) is shown only while there's no logo. */
-    fun load(view: ImageView, url: String?, heightPx: Int, fallback: View? = null, wide: Boolean = false) {
+    fun load(view: ImageView, url: String?, heightPx: Int, fallback: View? = null, wide: Boolean = false, keep: Boolean = false) {
         view.tag = url
+        if (keep) { loadKeeping(view, url, heightPx, wide); return }
         view.setImageDrawable(null)
         fallback?.visibility = View.VISIBLE
         if (url.isNullOrBlank() || hasFailed(url)) return
@@ -117,6 +118,28 @@ class ImageCache(private val name: String, megabytes: Int, private val config: B
         request(url, heightPx, { ref.get()?.tag == url }, wide = wide) { bmp ->
             val v = ref.get()
             if (v != null && v.tag == url && bmp != null) { v.setImageBitmap(bmp); fb.get()?.visibility = View.GONE }
+        }
+    }
+
+    /**
+     * A big picture (behind the screen): the old one stays until the new one's ready, then the new one fades in – no
+     * flash of empty background, and nothing to draw while you're still moving.
+     */
+    private fun loadKeeping(view: ImageView, url: String?, heightPx: Int, wide: Boolean) {
+        if (url.isNullOrBlank() || hasFailed(url)) { view.setImageDrawable(null); return }
+        fun put(b: Bitmap) {
+            val old = view.drawable
+            val new = android.graphics.drawable.BitmapDrawable(view.resources, b)
+            if (old == null || Ui.lite) { view.setImageDrawable(new); return }
+            val oldD = (old as? android.graphics.drawable.TransitionDrawable)?.let { it.getDrawable(it.numberOfLayers - 1) } ?: old
+            val t = android.graphics.drawable.TransitionDrawable(arrayOf(oldD, new)).apply { isCrossFadeEnabled = true }
+            view.setImageDrawable(t); t.startTransition(220)
+        }
+        cache.get(key(url, heightPx))?.let { put(it); return }
+        val ref = WeakReference(view)
+        request(url, heightPx, { ref.get()?.tag == url }, wide = wide) { bmp ->
+            val v = ref.get()
+            if (v != null && v.tag == url && bmp != null) put(bmp)
         }
     }
 

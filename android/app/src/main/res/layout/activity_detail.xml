@@ -4,9 +4,13 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent" android:background="?attr/dBg">
 
+    <!-- The picture behind and its shading, drawn once as one layer (not again on every frame while scrolling). -->
+    <FrameLayout android:id="@+id/detailBack" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:layerType="hardware">
     <ImageView android:id="@+id/backdrop" android:layout_width="match_parent" android:layout_height="match_parent"
         android:scaleType="centerCrop" android:contentDescription="@null" />
     <View android:id="@+id/detailShade" android:layout_width="match_parent" android:layout_height="match_parent" />
+    </FrameLayout>
 
     <!-- (The poster's kept for the fallback text and older code, but the picture behind does its job now.) -->
     <FrameLayout android:layout_width="1dp" android:layout_height="1dp" android:visibility="gone">

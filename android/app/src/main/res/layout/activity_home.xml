@@ -3,12 +3,16 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent" android:background="?attr/dBg">
     <!-- The feature's picture fills the whole screen, behind everything (the rows scroll up over it). -->
+    <!-- The picture behind and its shading, drawn once as one layer (not again on every frame while scrolling). -->
+    <FrameLayout android:id="@+id/homeBack" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:layerType="hardware">
     <View android:id="@+id/homeGlow" android:layout_width="match_parent" android:layout_height="match_parent" />
     <ImageView android:id="@+id/homeArt" android:layout_width="match_parent" android:layout_height="match_parent"
         android:scaleType="centerCrop" android:contentDescription="@null" />
     <View android:id="@+id/homeShade" android:layout_width="match_parent" android:layout_height="match_parent" />
     <View android:id="@+id/homeDim" android:layout_width="match_parent" android:layout_height="match_parent"
         android:background="?attr/dBg" android:alpha="0" />
+    </FrameLayout>
     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
         <include layout="@layout/hero" />
         <androidx.recyclerview.widget.RecyclerView android:id="@+id/rows" android:layout_width="match_parent"

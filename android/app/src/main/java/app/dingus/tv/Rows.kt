@@ -66,7 +66,7 @@ class RowsAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): H {
         val h = H(LayoutInflater.from(ctx).inflate(R.layout.item_row, parent, false))
-        h.list.layoutManager = LinearLayoutManager(ctx, LinearLayoutManager.HORIZONTAL, false).apply { initialPrefetchItemCount = 6 }
+        h.list.layoutManager = RowLayoutManager(ctx)
         h.list.setRecycledViewPool(pool)
         h.list.itemAnimator = null
         h.list.setHasFixedSize(true)
@@ -181,7 +181,7 @@ class RowsLayoutManager(ctx: Context, private val centered: Boolean = false) : L
             else -> (child.top + child.height / 2) - parent.height / 2
         }
         if (dy == 0) return false
-        if (immediate || Ui.lite) parent.scrollBy(0, dy) else parent.smoothScrollBy(0, dy)
+        Scrolling.by(parent, 0, dy, immediate)
         return true
     }
 
@@ -258,5 +258,34 @@ object RowNav {
         val p = position(rows, focus)
         if (p <= 0) return false
         focus(rows, p - 1); return true
+    }
+}
+
+/**
+ * Scrolling a list to the highlight, smoothly: a short eased glide for a single press; while a button's held down (a
+ * glide still going when the next step comes) it goes straight there, so the list keeps up instead of stuttering.
+ */
+object Scrolling {
+    private val ease = android.view.animation.DecelerateInterpolator(1.6f)
+    fun by(rv: RecyclerView, dx: Int, dy: Int, immediate: Boolean = false) {
+        if (immediate || Ui.lite || rv.scrollState == RecyclerView.SCROLL_STATE_SETTLING) { rv.stopScroll(); rv.scrollBy(dx, dy) }
+        else rv.smoothScrollBy(dx, dy, ease, 190)
+    }
+}
+
+/** Horizontal rows: the same steady scrolling as the rows themselves, the highlighted title kept in from the edge. */
+class RowLayoutManager(ctx: Context) : LinearLayoutManager(ctx, HORIZONTAL, false) {
+    init { initialPrefetchItemCount = 6 }
+    override fun requestChildRectangleOnScreen(parent: RecyclerView, child: View, rect: android.graphics.Rect, immediate: Boolean, focusedChildVisible: Boolean): Boolean {
+        val pad = parent.paddingLeft
+        val right = parent.width - parent.paddingRight
+        val dx = when {
+            child.left < pad -> child.left - pad
+            child.right > right -> child.right - right + (child.width / 3).coerceAtMost(right - pad - child.width).coerceAtLeast(0)
+            else -> 0
+        }
+        if (dx == 0) return false
+        Scrolling.by(parent, dx, 0, immediate)
+        return true
     }
 }

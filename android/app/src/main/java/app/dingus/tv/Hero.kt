@@ -27,6 +27,8 @@ class Hero(
     private val handler = Handler(Looper.getMainLooper())
     private var job: Job? = null
     private var showing: Card? = null
+    private var pendingArt: String? = null
+    private val loadArt = Runnable { val p = pendingArt; if (art.tag != p) Posters.load(art, p, artH, wide = true, keep = true) }
 
     init {
         // Fades the artwork into the background colour (left and bottom), drawn in code so it suits every theme.
@@ -72,6 +74,7 @@ class Hero(
                     next?.let { "Next ${Ui.time(it.start)}  ${it.title}" },
                 ).joinToString("   ·   ")
                 text.text = now?.desc ?: ""
+                art.removeCallbacks(loadArt)
                 art.setImageDrawable(null)
                 art.tag = null
             }
@@ -97,6 +100,10 @@ class Hero(
         ).joinToString("   ·   ")
         text.text = d?.plot ?: ""
         val pic = d?.backdrop ?: d?.poster ?: m.poster
-        if (art.tag != pic) Posters.load(art, pic, artH, wide = true)
+        // The big picture behind only once you've stopped on something (decoding and drawing a full-screen picture
+        // on every step is what made scrolling stutter).
+        pendingArt = pic
+        art.removeCallbacks(loadArt)
+        if (art.tag != pic) art.postDelayed(loadArt, 280)
     }
 }

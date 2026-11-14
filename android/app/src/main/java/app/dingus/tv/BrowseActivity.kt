@@ -315,7 +315,7 @@ class BrowseActivity : BaseActivity() {
         heroBody.setPadding(heroBody.paddingLeft, ((if (on) 14 else 52) * d).toInt(), heroBody.paddingRight, heroBody.paddingBottom)
         // Everything has to fit the smaller banner (nothing cut off): a smaller logo, no description.
         heroText.visibility = if (on) View.GONE else View.VISIBLE
-        heroText.maxLines = 2
+        heroText.maxLines = 2; heroText.minLines = 2 // (always two lines tall: changing titles never re-lays out the screen)
         val logo = findViewById<View>(R.id.heroLogo)
         logo.layoutParams = logo.layoutParams.apply { height = ((if (on) 56 else 64) * resources.displayMetrics.density).toInt() }
     }
