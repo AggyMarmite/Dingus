@@ -1,3 +1,9 @@
+## What's new in Dingus 0.15.15
+
+* Fire TV: smoother scrolling across the app.
+* Fire TV: a bell on programmes with a reminder.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.14
 
 * Fire TV: a fresh new design across the app – categories built into the guide, Films and TV Shows, plus new film pages, player, Settings and Search.
