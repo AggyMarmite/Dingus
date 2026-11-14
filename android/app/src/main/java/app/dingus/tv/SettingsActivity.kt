@@ -125,6 +125,7 @@ class SettingsActivity : BaseActivity() {
         row("Stream format", { "" }, { if (Store.streamFormat == "hls") "HLS" else "MPEG-TS" }) { streamFormat() }
         toggle("Subtitles automatically", "In your language, when there are some", { Store.autoSubtitles }) { Store.autoSubtitles = it }
         row("Subtitle language", { "" }, { java.util.Locale(Store.subtitleLanguage).displayLanguage.ifEmpty { Store.subtitleLanguage } }) { subtitleLanguage() }
+        toggle("Play the next episode automatically", "Otherwise “Up next” waits for you near the end", { Store.autoNext }) { Store.autoNext = it }
         toggle("Match the TV's frame rate", "Smoother motion (50 Hz for UK TV, 24 Hz for films)", { Store.matchFrameRate }) { Store.matchFrameRate = it }
     }
 

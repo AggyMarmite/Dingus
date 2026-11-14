@@ -156,7 +156,14 @@ fresh
 key KEYCODE_DPAD_CENTER 3
 check "vod-playing" 40 "the film plays"
 for _ in 1 2 3 4 5; do key KEYCODE_DPAD_RIGHT 0.5; done
-sleep 2; shot 12-film-playing
+check "vod-skip 10" 5 "RIGHT on the progress bar skips 10 seconds"
+sleep 0.5; shot 12-film-playing
+fresh
+key KEYCODE_DPAD_CENTER 1
+check "vod-pause" 5 "OK on the progress bar pauses"
+sleep 6; shot 12b-film-paused
+key KEYCODE_DPAD_CENTER 1
+check "vod-play" 5 "OK again plays"
 fresh
 key KEYCODE_BACK 3
 check "detail-button .*Resume from" 10 "coming back offers to resume"
@@ -173,6 +180,14 @@ fresh
 key KEYCODE_DPAD_RIGHT 1; key KEYCODE_DPAD_CENTER 3
 check "details .* episodes 4" 30 "a show's seasons and episodes load"
 sleep 3; shot 14-show-details
+fresh
+key KEYCODE_DPAD_CENTER 3
+check "vod-playing" 40 "an episode plays"
+key KEYCODE_DPAD_DOWN 1; key KEYCODE_DPAD_RIGHT 0.5; key KEYCODE_DPAD_RIGHT 0.5; shot 14a-player-buttons
+key KEYCODE_DPAD_CENTER 2
+check "vod-episodes 4" 5 "Episodes in the player lists the show's episodes"
+shot 14b-player-episodes
+key KEYCODE_BACK 2; key KEYCODE_BACK 3
 fresh
 adb shell am start -n $PKG/.MainActivity --es dingus_test_search test
 check "search \"test\" [1-9]" 30 "search finds channels, films and shows"

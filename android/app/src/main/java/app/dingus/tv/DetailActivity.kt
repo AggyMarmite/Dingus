@@ -225,14 +225,15 @@ class DetailActivity : BaseActivity() {
         val m = item ?: return
         if (kind == Vod.MOVIES) {
             startActivity(VodPlayerActivity.intent(this, Vod.MOVIES, null,
-                listOf(VodPlayerActivity.Entry(m.id, m.name, Vod.movieUrl(m))), 0, fromStart))
+                listOf(VodPlayerActivity.Entry(m.id, m.name, Vod.movieUrl(m))), 0, fromStart,
+                listOfNotNull("FILM", m.year.takeIf { it > 0 }?.toString(), m.rating.takeIf { it > 0 }?.let { "★ %.1f".format(it) }).joinToString("  ·  ")))
         } else nextEpisode()?.let { playEpisode(it, fromStart) }
     }
 
     private fun playEpisode(e: Episode, fromStart: Boolean) {
         val m = item ?: return
         val all = details?.episodes ?: return
-        val entries = all.map { VodPlayerActivity.Entry(it.id, "${m.name}  ·  ${epLabel(it)}", Vod.episodeUrl(it)) }
+        val entries = all.map { VodPlayerActivity.Entry(it.id, "${m.name}  ·  ${epLabel(it)}", Vod.episodeUrl(it), it.image) }
         startActivity(VodPlayerActivity.intent(this, Vod.SERIES, m.id, entries, all.indexOf(e), fromStart))
     }
 

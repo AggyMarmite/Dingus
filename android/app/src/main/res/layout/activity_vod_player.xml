@@ -1,13 +1,114 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Films, episodes and catch-up. Our own controls over the picture: the title, a progress bar whose knob is
+     play/pause (◀ ▶ skip 10 seconds), and a row of pill buttons; an Episodes list that slides in from the right; an
+     "Up next" card near the end of an episode; a small "Paused" pill when the controls are hidden. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent" android:layout_height="match_parent" android:background="@android:color/black"
     android:keepScreenOn="true">
     <androidx.media3.ui.PlayerView android:id="@+id/video"
         android:layout_width="match_parent" android:layout_height="match_parent"
-        app:use_controller="true" app:show_buffering="when_playing" app:controller_layout_id="@layout/vod_controls"
-        app:show_timeout="3500" app:resize_mode="fit" app:surface_type="surface_view"
+        app:use_controller="false" app:show_buffering="when_playing"
+        app:resize_mode="fit" app:surface_type="surface_view"
         app:shutter_background_color="@android:color/black" />
+
+    <FrameLayout android:id="@+id/controls" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:visibility="gone">
+        <View android:id="@+id/topShade" android:layout_width="match_parent" android:layout_height="110dp" />
+        <View android:id="@+id/bottomShade" android:layout_width="match_parent" android:layout_height="280dp"
+            android:layout_gravity="bottom" />
+        <TextView android:id="@+id/vodClock" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_gravity="top|end" android:layout_marginTop="22dp" android:layout_marginEnd="48dp"
+            android:textSize="16sp" android:textColor="#FFFFFFFF" android:shadowColor="#99000000" android:shadowRadius="4" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="bottom"
+            android:orientation="vertical" android:paddingStart="56dp" android:paddingEnd="56dp" android:paddingBottom="22dp">
+            <TextView android:id="@+id/vodSub" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:maxLines="1" android:ellipsize="end" android:textSize="13sp" android:textStyle="bold"
+                android:letterSpacing="0.04" android:textColor="#FFCFD6E4" />
+            <TextView android:id="@+id/vodTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="2dp" android:maxLines="1" android:ellipsize="end" android:textSize="28sp"
+                android:textStyle="bold" android:textColor="#FFFFFFFF" />
+            <app.dingus.tv.PlayBar android:id="@+id/bar" android:layout_width="match_parent" android:layout_height="78dp"
+                android:focusable="true" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <TextView android:id="@+id/vodPos" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:textSize="13sp" android:textStyle="bold" android:textColor="#FFDBE3F0" />
+                <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+                <TextView android:id="@+id/vodLeft" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:textSize="13sp" android:textStyle="bold" android:textColor="#FFDBE3F0" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/vodButtons" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="12dp" android:orientation="horizontal">
+                <TextView android:id="@+id/btnTracks" style="@style/Choice" android:textSize="14sp"
+                    android:paddingTop="9dp" android:paddingBottom="9dp" android:text="💬  Audio &amp; subtitles" />
+                <TextView android:id="@+id/btnRestart" style="@style/Choice" android:textSize="14sp" android:layout_marginStart="10dp"
+                    android:paddingTop="9dp" android:paddingBottom="9dp" android:text="⟲  Start over" />
+                <TextView android:id="@+id/btnEpisodes" style="@style/Choice" android:textSize="14sp" android:layout_marginStart="10dp"
+                    android:paddingTop="9dp" android:paddingBottom="9dp" android:text="☰  Episodes" android:visibility="gone" />
+            </LinearLayout>
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- Paused with the controls hidden: a small pill top right, a thin line along the bottom. -->
+    <TextView android:id="@+id/pausedPill" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_gravity="top|end" android:layout_marginTop="28dp" android:layout_marginEnd="40dp"
+        android:background="@drawable/paused_pill" android:paddingStart="16dp" android:paddingEnd="16dp"
+        android:paddingTop="9dp" android:paddingBottom="9dp" android:textSize="15sp" android:textColor="#FFFFFFFF"
+        android:visibility="gone" />
+    <ProgressBar android:id="@+id/pausedLine" style="@android:style/Widget.ProgressBar.Horizontal"
+        android:layout_width="match_parent" android:layout_height="4dp" android:layout_gravity="bottom"
+        android:layout_marginStart="56dp" android:layout_marginEnd="56dp" android:layout_marginBottom="28dp"
+        android:max="1000" android:progressDrawable="@drawable/progress_white" android:visibility="gone" />
+
+    <!-- Near the end of an episode: what's next (OK plays it). -->
+    <LinearLayout android:id="@+id/upNext" android:layout_width="260dp" android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end" android:layout_marginEnd="40dp" android:layout_marginBottom="170dp"
+        android:orientation="vertical" android:background="@drawable/up_next_bg" android:focusable="true"
+        android:clickable="true" android:padding="3dp" android:visibility="gone">
+        <FrameLayout android:id="@+id/upNextPicBox" android:layout_width="match_parent" android:layout_height="140dp"
+            android:background="@drawable/logo_bg">
+            <ImageView android:id="@+id/upNextPic" android:layout_width="match_parent" android:layout_height="match_parent"
+                android:scaleType="centerCrop" android:contentDescription="@null" />
+        </FrameLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
+            android:gravity="center_vertical" android:padding="10dp">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                android:orientation="vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="UP NEXT"
+                    android:textSize="11sp" android:textStyle="bold" android:letterSpacing="0.1" android:textColor="#FF8B94A7" />
+                <TextView android:id="@+id/upNextTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp" android:maxLines="1" android:ellipsize="end" android:textSize="14sp"
+                    android:textStyle="bold" android:textColor="#FFFFFFFF" />
+            </LinearLayout>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp"
+                android:background="@drawable/white_pill" android:paddingStart="12dp" android:paddingEnd="12dp"
+                android:paddingTop="5dp" android:paddingBottom="5dp" android:text="▶ Play" android:textSize="12sp"
+                android:textStyle="bold" android:textColor="#FF0B0E14" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Episodes: slides in from the right, the episode keeps playing behind. -->
+    <FrameLayout android:id="@+id/epPanel" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:visibility="gone">
+        <View android:id="@+id/epShade" android:layout_width="match_parent" android:layout_height="match_parent" />
+        <LinearLayout android:id="@+id/epBody" android:layout_width="440dp" android:layout_height="match_parent"
+            android:layout_gravity="end" android:orientation="vertical" android:paddingTop="30dp" android:paddingEnd="40dp">
+            <TextView android:id="@+id/epShow" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:maxLines="1" android:ellipsize="end" android:textSize="12sp" android:textStyle="bold"
+                android:letterSpacing="0.1" android:textColor="#FF8B94A7" />
+            <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="10dp" android:scrollbars="none">
+                <LinearLayout android:id="@+id/epSeasons" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/epList" android:layout_width="match_parent"
+                android:layout_height="0dp" android:layout_weight="1" android:layout_marginTop="12dp"
+                android:clipToPadding="false" android:paddingBottom="30dp" android:scrollbars="none"
+                android:descendantFocusability="afterDescendants" />
+        </LinearLayout>
+    </FrameLayout>
+
     <TextView android:id="@+id/message" android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:layout_gravity="center" android:gravity="center" android:padding="20dp" android:textSize="20sp"
         android:textColor="?attr/dText" android:shadowColor="#000000" android:shadowRadius="6" />

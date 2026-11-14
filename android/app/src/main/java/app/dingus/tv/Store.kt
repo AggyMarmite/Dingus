@@ -219,6 +219,11 @@ object Store {
         recentSearches = listOf(t) + recentSearches.filterNot { it.equals(t, true) }
     }
 
+    /** At the end of an episode, straight on to the next one (Settings → Playback). */
+    var autoNext: Boolean
+        get() = prefs.getBoolean("autoNext", false)
+        set(v) = prefs.edit().putBoolean("autoNext", v).apply()
+
     var reminderLead: Int
         get() = prefs.getInt("reminderLead", 60)
         set(v) = prefs.edit().putInt("reminderLead", v).apply()
