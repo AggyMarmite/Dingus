@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The categories column, part of the screen: a soft panel, rounded at the top. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#B8141923" />
+    <corners android:topLeftRadius="12dp" android:topRightRadius="12dp" />
+</shape>

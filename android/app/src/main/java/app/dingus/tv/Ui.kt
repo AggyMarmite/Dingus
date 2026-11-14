@@ -51,6 +51,9 @@ object Ui {
         return words.take(2).joinToString("") { it.take(1).uppercase() }.ifEmpty { "TV" }
     }
 
+    /** A count with thousands separators ("3,140"). */
+    fun count(n: Int): String = String.format(java.util.Locale.UK, "%,d", n)
+
     fun dp(ctx: Context, v: Int) = (v * ctx.resources.displayMetrics.density).toInt()
 
     /** Lines the emulator self-test looks for in the log (debug builds only). */

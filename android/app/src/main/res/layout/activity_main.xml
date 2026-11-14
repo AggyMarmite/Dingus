@@ -65,19 +65,27 @@
 
         <LinearLayout android:id="@+id/guideArea" android:layout_width="match_parent" android:layout_height="0dp"
             android:layout_weight="1" android:orientation="horizontal">
-            <!-- Categories: LEFT from the guide opens this column to its left, moving the guide across. -->
-            <LinearLayout android:id="@+id/catPanel" android:layout_width="250dp" android:layout_height="match_parent"
-                android:orientation="vertical" android:background="?attr/dSurface"
+            <!-- Categories: part of the guide (like Sky Q). LEFT from the guide opens this column on the current one, the
+                 guide moving across; moving up and down shows each category's channels beside it; RIGHT folds it away. -->
+            <LinearLayout android:id="@+id/catPanel" android:layout_width="236dp" android:layout_height="match_parent"
+                android:layout_marginTop="4dp" android:layout_marginEnd="8dp"
+                android:orientation="vertical" android:background="@drawable/cat_panel_bg"
                 android:visibility="gone" android:paddingStart="8dp" android:paddingEnd="8dp">
                 <TextView android:layout_width="match_parent" android:layout_height="34dp" android:gravity="center_vertical"
-                    android:paddingStart="12dp" android:text="CATEGORIES" android:textSize="12sp" android:textStyle="bold"
-                    android:letterSpacing="0.08" android:textColor="?attr/dMuted" />
+                    android:paddingStart="12dp" android:text="CATEGORIES" android:textSize="11sp" android:textStyle="bold"
+                    android:letterSpacing="0.12" android:textColor="?attr/dMuted" />
                 <androidx.recyclerview.widget.RecyclerView android:id="@+id/categories"
                     android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
                     android:scrollbars="none" android:clipToPadding="false" android:paddingBottom="16dp"
                     android:descendantFocusability="afterDescendants" />
             </LinearLayout>
-            <FrameLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1">
+            <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+                android:orientation="vertical">
+            <!-- With the column folded away: which category this is, how many, and how to get back to them. -->
+            <TextView android:id="@+id/catHead" android:layout_width="match_parent" android:layout_height="26dp"
+                android:paddingStart="10dp" android:gravity="center_vertical" android:maxLines="1" android:ellipsize="end"
+                android:textSize="15sp" android:textColor="?attr/dText" />
+            <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
                 <app.dingus.tv.GuideGrid android:id="@+id/grid" android:layout_width="match_parent" android:layout_height="match_parent"
                     android:paddingStart="0dp" />
             <TextView android:id="@+id/empty" android:layout_width="wrap_content" android:layout_height="wrap_content"
@@ -85,6 +93,7 @@
                 android:textColor="?attr/dMuted" android:visibility="gone" />
 
             </FrameLayout>
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 

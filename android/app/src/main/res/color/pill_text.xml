@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Text on a pill or card: dark on the white highlight, the theme's text colour otherwise. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true" android:color="#FF0B0E14" />
+    <item android:state_selected="true" android:color="#FF0B0E14" />
+    <item android:color="?attr/dText" />
+</selector>

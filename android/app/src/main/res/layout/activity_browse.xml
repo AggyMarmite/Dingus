@@ -13,12 +13,15 @@
     <LinearLayout android:id="@+id/browseRoot" android:layout_width="match_parent" android:layout_height="match_parent"
         android:orientation="horizontal">
 
-        <LinearLayout android:id="@+id/catPanel" android:layout_width="280dp" android:layout_height="match_parent"
-            android:orientation="vertical" android:background="#F5141923" android:visibility="gone"
-            android:paddingStart="18dp" android:paddingEnd="12dp" android:paddingTop="26dp" android:paddingBottom="16dp">
-            <TextView android:id="@+id/heading" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:paddingStart="14dp" android:paddingBottom="12dp" android:textSize="22sp" android:textStyle="bold"
-                android:textColor="?attr/dText" />
+        <!-- The categories: part of the screen (like Live TV's). Moving up and down shows each one's titles beside it;
+             RIGHT goes into them and the column folds away, LEFT from the first title brings it back. -->
+        <LinearLayout android:id="@+id/catPanel" android:layout_width="240dp" android:layout_height="match_parent"
+            android:layout_marginTop="70dp" android:layout_marginEnd="6dp"
+            android:orientation="vertical" android:background="@drawable/cat_panel_bg" android:visibility="gone"
+            android:paddingStart="8dp" android:paddingEnd="8dp" android:paddingTop="4dp">
+            <TextView android:id="@+id/heading" android:layout_width="wrap_content" android:layout_height="34dp"
+                android:gravity="center_vertical" android:paddingStart="12dp" android:textSize="11sp" android:textStyle="bold"
+                android:letterSpacing="0.12" android:textAllCaps="true" android:textColor="?attr/dMuted" />
             <androidx.recyclerview.widget.RecyclerView android:id="@+id/categories"
                 android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
                 android:scrollbars="none" android:descendantFocusability="afterDescendants" />

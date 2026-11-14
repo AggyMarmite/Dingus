@@ -130,7 +130,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         val (id, cat) = pendingPlay ?: return
         val c = Repo.channel(id) ?: return
         pendingPlay = null
-        if (catPanel.visibility == View.VISIBLE) { catPanel.visibility = View.GONE; grid.isFocusable = true }
+        if (catPanel.visibility == View.VISIBLE) { catPanel.visibility = View.GONE; findViewById<View>(R.id.catHead)?.visibility = View.VISIBLE; grid.isFocusable = true }
         side.close(restore = false)
         val list = Repo.channelsIn(cat).let { l -> if (l.any { it.id == id }) l else Repo.channelsIn(Repo.ALL) }
         val useCat = if (Repo.channelsIn(cat).any { it.id == id }) cat else Repo.ALL
@@ -271,7 +271,8 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         catAdapter.selected(id)
         val list = Repo.channelsIn(id)
         gridIds = list.map { it.id }
-        grid.title = cats.firstOrNull { it.id == id }?.name ?: "All channels"
+        grid.title = ""
+        showCatHead(cats.firstOrNull { it.id == id }?.name ?: "All channels", list.size)
         grid.setChannels(list, focusId)
         Ui.test("guide-filled ${list.size}")
         when {
@@ -511,6 +512,19 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
 
     override fun onLeftEdge() = openCategories()
 
+    /** Above the guide while the column's folded away: "Sport · 96 channels · ◀ categories". */
+    private fun showCatHead(name: String, n: Int) {
+        val v = findViewById<TextView>(R.id.catHead) ?: return
+        val muted = Themes.color(this, R.attr.dMuted)
+        v.text = android.text.SpannableStringBuilder().apply {
+            append(name); setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, length, 0)
+            val st = length
+            append("  ·  ${Ui.count(n)} channel${if (n == 1) "" else "s"}  ·  ◀ categories")
+            setSpan(android.text.style.ForegroundColorSpan(muted), st, length, 0)
+            setSpan(android.text.style.RelativeSizeSpan(0.82f), st, length, 0)
+        }
+    }
+
     private lateinit var catPanel: View
 
     /** LEFT from the guide: the categories open to its left (the guide moves across), on the current one. */
@@ -518,6 +532,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         if (catPanel.visibility == View.VISIBLE) return
         smoothly(guideArea, 180)
         catPanel.visibility = View.VISIBLE
+        findViewById<View>(R.id.catHead)?.visibility = View.INVISIBLE
         grid.isFocusable = false // the guide can't take the remote's presses while the list is open
         val i = catAdapter.items.indexOfFirst { it.id == current }.coerceAtLeast(0)
         categories.scrollToPosition(i)
@@ -540,6 +555,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         catAdapter.pending.run()
         smoothly(guideArea, 160)
         catPanel.visibility = View.GONE
+        findViewById<View>(R.id.catHead)?.visibility = View.VISIBLE
         grid.isFocusable = true
         grid.requestFocus()
     }
@@ -697,6 +713,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             val h = H(v)
             // Moving onto a category shows its channels behind the menu after a short pause.
             v.setOnFocusChangeListener { _, has ->
+                CatPill.focus(v)
                 val p = h.bindingAdapterPosition
                 if (has && p >= 0) {
                     pendingId = items[p].id
@@ -729,8 +746,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
 
         override fun onBindViewHolder(h: H, position: Int) {
             val c = items[position]
-            h.v.text = c.name
-            h.v.isActivated = c.id == sel
+            CatPill.bind(h.v, c.name, Repo.channelsIn(c.id).size, c.id == sel)
         }
     }
 }

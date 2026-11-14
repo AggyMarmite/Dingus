@@ -131,7 +131,7 @@ class BrowseActivity : BaseActivity() {
 
         val wdp = resources.displayMetrics.widthPixels / resources.displayMetrics.density - 60 - 56
         colsWide = (wdp / 146).toInt().coerceIn(3, 10)
-        colsNarrow = ((wdp - 280) / 146).toInt().coerceIn(3, colsWide)
+        colsNarrow = ((wdp - 246) / 146).toInt().coerceIn(3, colsWide)
         grid.layoutManager = GridLayoutManager(this, colsWide)
         grid.adapter = posters
         grid.itemAnimator = null
@@ -213,7 +213,7 @@ class BrowseActivity : BaseActivity() {
             browseArt.visibility = View.INVISIBLE // (just the glow behind a grid)
             findViewById<View>(R.id.screenName).visibility = View.GONE
             gridTitle.text = name
-            gridCount.text = "${items.size} ${if (kind == Vod.MOVIES) (if (items.size == 1) "film" else "films") else (if (items.size == 1) "show" else "shows")}"
+            gridCount.text = "·  ${Ui.count(items.size)} ${if (kind == Vod.MOVIES) (if (items.size == 1) "film" else "films") else (if (items.size == 1) "show" else "shows")}  ·  ◀ categories"
             empty.text = "Nothing here."
             empty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
             Ui.test("browse-cat $name ${items.size}")
