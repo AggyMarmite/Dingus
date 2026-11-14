@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- A card or row: white when the remote is on it, a soft fill for "on"/chosen, a quiet translucent card otherwise. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_focused="true">
-        <shape><solid android:color="?attr/dAccent" /><corners android:radius="10dp" /></shape>
+        <shape><solid android:color="#FFFFFFFF" /><corners android:radius="14dp" /></shape>
     </item>
     <item android:state_activated="true">
-        <shape><solid android:color="?attr/dAccentSoft" /><corners android:radius="10dp" />
-            <stroke android:width="2dp" android:color="?attr/dAccent" /></shape>
+        <shape><solid android:color="#33FFFFFF" /><corners android:radius="14dp" /></shape>
     </item>
-    <item><shape><solid android:color="?attr/dSurface2" /><corners android:radius="10dp" />
-        <stroke android:width="1dp" android:color="?attr/dLine" /></shape></item>
+    <item><shape><solid android:color="#8C1E2636" /><corners android:radius="14dp" /></shape></item>
 </selector>

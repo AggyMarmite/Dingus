@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A setting's value: a small chip (dark on the white highlighted row). -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true"><shape><solid android:color="#FF0B0E14" /><corners android:radius="13dp" /></shape></item>
+    <item><shape><solid android:color="#17FFFFFF" /><corners android:radius="13dp" /></shape></item>
+</selector>

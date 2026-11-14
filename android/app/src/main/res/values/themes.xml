@@ -87,16 +87,17 @@
     <style name="Choice">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:background">@drawable/button_bg</item>
+        <item name="android:background">@drawable/pill_btn_bg</item>
         <item name="android:focusable">true</item>
         <item name="android:clickable">true</item>
         <item name="android:gravity">center</item>
         <item name="android:paddingStart">22dp</item>
         <item name="android:paddingEnd">22dp</item>
-        <item name="android:paddingTop">12dp</item>
-        <item name="android:paddingBottom">12dp</item>
-        <item name="android:textSize">17sp</item>
-        <item name="android:textColor">?attr/dText</item>
+        <item name="android:paddingTop">11dp</item>
+        <item name="android:paddingBottom">11dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/pill_text</item>
     </style>
     <style name="NavRow">
         <item name="android:layout_width">match_parent</item>

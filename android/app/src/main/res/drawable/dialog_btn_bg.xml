@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A pill button (pop-ups, cards): white when the remote is on it, a soft fill otherwise. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true">
+        <shape><solid android:color="#FFFFFFFF" /><corners android:radius="22dp" /></shape>
+    </item>
+    <item><shape><solid android:color="#26FFFFFF" /><corners android:radius="22dp" /></shape></item>
+</selector>

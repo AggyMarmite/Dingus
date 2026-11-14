@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Second line of a row: grey normally, bright on the highlight so it stays readable. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:state_focused="true" android:color="#EEFFFFFF" />
+    <item android:state_focused="true" android:color="#FF4B5565" />
     <item android:color="#9AA3B5" />
 </selector>

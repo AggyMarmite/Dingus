@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- An "on" switch: accent track; white track (accent knob) on the highlighted row so it stays visible. -->
+<!-- An "on" switch: green track, white knob on the right. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_focused="true"><layer-list>
-        <item><shape><solid android:color="#FFFFFFFF" /><corners android:radius="13dp" /><size android:width="46dp" android:height="26dp" /></shape></item>
-        <item android:left="23dp" android:top="3dp" android:right="3dp" android:bottom="3dp"><shape android:shape="oval"><solid android:color="?attr/dAccent" /></shape></item>
+        <item><shape><solid android:color="#FF16A34A" /><corners android:radius="11dp" /><size android:width="40dp" android:height="22dp" /></shape></item>
+        <item android:left="21dp" android:top="3dp" android:right="3dp" android:bottom="3dp"><shape android:shape="oval"><solid android:color="#FFFFFFFF" /></shape></item>
     </layer-list></item>
     <item><layer-list>
-        <item><shape><solid android:color="?attr/dAccent" /><corners android:radius="13dp" /><size android:width="46dp" android:height="26dp" /></shape></item>
-        <item android:left="23dp" android:top="3dp" android:right="3dp" android:bottom="3dp"><shape android:shape="oval"><solid android:color="#FFFFFFFF" /></shape></item>
+        <item><shape><solid android:color="#FF22C55E" /><corners android:radius="11dp" /><size android:width="40dp" android:height="22dp" /></shape></item>
+        <item android:left="21dp" android:top="3dp" android:right="3dp" android:bottom="3dp"><shape android:shape="oval"><solid android:color="#FFFFFFFF" /></shape></item>
     </layer-list></item>
 </selector>

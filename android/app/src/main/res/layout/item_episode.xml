@@ -1,23 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- An episode on a show's page: a wide picture (white edge when highlighted, progress bar along the bottom), then
+     "3 · The Keeper" and its length / Watched / time left. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="6dp"
-    android:background="@drawable/button_bg" android:focusable="true" android:clickable="true"
-    android:orientation="horizontal" android:gravity="center_vertical" android:padding="10dp">
-    <FrameLayout android:layout_width="144dp" android:layout_height="81dp" android:background="@drawable/logo_bg">
-        <TextView android:id="@+id/num" android:layout_width="match_parent" android:layout_height="match_parent"
-            android:gravity="center" android:textSize="20sp" android:textStyle="bold" android:textColor="?attr/dMuted" />
-        <ImageView android:id="@+id/image" android:layout_width="match_parent" android:layout_height="match_parent"
-            android:scaleType="centerCrop" android:contentDescription="@null" />
-        <ProgressBar android:id="@+id/progress" style="@android:style/Widget.ProgressBar.Horizontal"
-            android:layout_width="match_parent" android:layout_height="4dp" android:layout_gravity="bottom"
-            android:max="1000" android:progressDrawable="@drawable/progress_track" android:visibility="gone" />
+    android:layout_width="232dp" android:layout_height="wrap_content" android:layout_marginEnd="16dp"
+    android:focusable="true" android:clickable="true" android:orientation="vertical">
+    <FrameLayout android:id="@+id/frame" android:layout_width="232dp" android:layout_height="131dp"
+        android:background="@drawable/episode_frame" android:duplicateParentState="true" android:padding="3dp">
+        <FrameLayout android:id="@+id/imageBox" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:background="@drawable/logo_bg">
+            <TextView android:id="@+id/num" android:layout_width="match_parent" android:layout_height="match_parent"
+                android:gravity="center" android:textSize="20sp" android:textStyle="bold" android:textColor="?attr/dMuted" />
+            <ImageView android:id="@+id/image" android:layout_width="match_parent" android:layout_height="match_parent"
+                android:scaleType="centerCrop" android:contentDescription="@null" />
+            <ProgressBar android:id="@+id/progress" style="@android:style/Widget.ProgressBar.Horizontal"
+                android:layout_width="match_parent" android:layout_height="4dp" android:layout_gravity="bottom"
+                android:layout_marginStart="10dp" android:layout_marginEnd="10dp" android:layout_marginBottom="8dp"
+                android:max="1000" android:progressDrawable="@drawable/progress_white" android:visibility="gone" />
+        </FrameLayout>
     </FrameLayout>
-    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-        android:layout_marginStart="16dp" android:orientation="vertical">
-        <TextView android:id="@+id/title" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:maxLines="1" android:ellipsize="end" android:textSize="17sp" android:textStyle="bold" android:textColor="?attr/dText" />
-        <TextView android:id="@+id/plot" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="3dp" android:maxLines="2" android:ellipsize="end" android:textSize="14sp"
-            android:duplicateParentState="true" android:textColor="@color/sub_text" />
-    </LinearLayout>
+    <TextView android:id="@+id/title" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="6dp" android:maxLines="1" android:ellipsize="end" android:textSize="14sp"
+        android:textStyle="bold" android:textColor="?attr/dText" />
+    <TextView android:id="@+id/plot" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="1dp" android:maxLines="1" android:ellipsize="end" android:textSize="12sp"
+        android:textColor="?attr/dMuted" />
 </LinearLayout>

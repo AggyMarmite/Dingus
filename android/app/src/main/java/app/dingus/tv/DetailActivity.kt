@@ -44,7 +44,7 @@ class DetailActivity : BaseActivity() {
         restart = findViewById(R.id.restart)
         status = findViewById(R.id.status)
         episodeList = findViewById(R.id.episodes)
-        episodeList.layoutManager = LinearLayoutManager(this)
+        episodeList.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         episodeList.adapter = episodes
         episodeList.itemAnimator = null
 
@@ -57,6 +57,14 @@ class DetailActivity : BaseActivity() {
             refreshButtons()
         }
         play.requestFocus()
+        // The picture behind: darker on the left (under the details) and along the bottom (under the rows).
+        val bgc = Themes.color(this, R.attr.dBg); val clear = bgc and 0x00FFFFFF
+        findViewById<View>(R.id.detailShade).background = android.graphics.drawable.LayerDrawable(arrayOf(
+            android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+                intArrayOf(clear or (0xF0 shl 24), clear or (0xB8 shl 24), clear or (0x33 shl 24), clear)),
+            android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.BOTTOM_TOP,
+                intArrayOf(bgc, clear or (0xC0 shl 24), clear, clear)),
+        ))
 
         val id = intent.getStringExtra(ID)
         scope.launch {
@@ -82,7 +90,8 @@ class DetailActivity : BaseActivity() {
         findViewById<TextView>(R.id.title).text = m.name
         findViewById<TextView>(R.id.fallback).text = m.name
         findViewById<TextView>(R.id.meta).text = meta(m.year, null, m.rating.takeIf { it > 0 }?.let { "%.1f".format(it) }, null)
-        Posters.load(findViewById(R.id.poster), m.poster, (294 * resources.displayMetrics.density).toInt(), findViewById(R.id.fallback))
+        // Until the proper wide picture arrives, the poster behind (better than nothing).
+        Posters.load(findViewById<ImageView>(R.id.backdrop), m.poster, resources.displayMetrics.heightPixels / 2)
     }
 
     private fun meta(year: Int, duration: String?, rating: String?, genre: String?) = listOfNotNull(
@@ -90,7 +99,7 @@ class DetailActivity : BaseActivity() {
         duration?.let { niceDuration(it) },
         rating?.toFloatOrNull()?.takeIf { it > 0 }?.let { "★ %.1f".format(it) },
         genre,
-    ).joinToString("   ·   ")
+    ).joinToString("  ·  ")
 
     /** "01:52:10" or "112 min" → "1 h 52 min". */
     private fun niceDuration(s: String): String? {
@@ -112,8 +121,8 @@ class DetailActivity : BaseActivity() {
         val plot = findViewById<TextView>(R.id.plot)
         plot.text = d.plot ?: ""
         val people = findViewById<TextView>(R.id.people)
-        people.text = listOfNotNull(d.director?.let { "Director: $it" }, d.cast?.let { "Cast: $it" }).joinToString("\n")
-        if (d.poster != null && d.poster != m.poster) Posters.load(findViewById(R.id.poster), d.poster, (294 * resources.displayMetrics.density).toInt(), findViewById(R.id.fallback))
+        people.text = d.director?.let { "Director: $it" } ?: d.cast?.let { "Cast: $it" } ?: ""
+        people.visibility = if (people.text.isEmpty()) View.GONE else View.VISIBLE
         d.backdrop?.let { Posters.load(findViewById<ImageView>(R.id.backdrop), it, resources.displayMetrics.heightPixels, wide = true) } // (full screen: full size)
         // The official title logo (from TMDB), in place of the plain title.
         TitleLogos.cached(kind, m)?.let { TitleLogos.show(findViewById(R.id.titleLogo), findViewById(R.id.title), it) }
@@ -126,6 +135,7 @@ class DetailActivity : BaseActivity() {
         if (kind == Vod.SERIES) {
             plot.maxLines = 2
             people.visibility = View.GONE
+            findViewById<View>(R.id.castHead).visibility = View.GONE
             val seasons = d.episodes.map { it.season }.distinct()
             if (seasons.isEmpty()) { status.text = "No episodes yet."; play.visibility = View.GONE; return }
             val row = findViewById<LinearLayout>(R.id.seasons)
@@ -177,6 +187,7 @@ class DetailActivity : BaseActivity() {
             val pos = Vod.position(m.id)
             play.text = if (pos != null) "▶  Resume from ${clock(pos.first)}" else "▶  Play"
             restart.visibility = if (pos != null) View.VISIBLE else View.GONE
+            showResume(pos)
             findViewById<TextView>(R.id.watched).apply {
                 visibility = View.VISIBLE
                 text = if (Vod.watched(m.id)) "✓  Watched" else "Mark as watched"
@@ -193,6 +204,17 @@ class DetailActivity : BaseActivity() {
         episodes.notifyItemRangeChanged(0, episodes.itemCount)
         Ui.test("detail-button ${play.text}")
     }
+
+    /** Part-watched: a bar for how far, and "1 h 09 min left". */
+    private fun showResume(pos: Pair<Long, Long>?) {
+        val box = findViewById<View>(R.id.resumeBox)
+        if (pos == null || pos.second <= 0) { box.visibility = View.GONE; return }
+        box.visibility = View.VISIBLE
+        findViewById<ProgressBar>(R.id.resumeBar).progress = (pos.first * 1000 / pos.second).toInt()
+        findViewById<TextView>(R.id.resumeLeft).text = "${minutes((pos.second - pos.first) / 60_000)} left"
+    }
+
+    private fun minutes(m: Long) = if (m >= 60) "${m / 60} h %02d min".format(m % 60) else "$m min"
 
     private fun clock(ms: Long): String {
         val s = ms / 1000
@@ -221,12 +243,23 @@ class DetailActivity : BaseActivity() {
     }
 
     override fun onResume() { super.onResume(); refreshButtons() }
+
+    /** The time, top right (like everywhere else). */
+    private val tick = object : Runnable {
+        override fun run() {
+            val c = findViewById<TextView>(R.id.clock) ?: return
+            c.text = Ui.time(System.currentTimeMillis())
+            c.postDelayed(this, 60_000L - System.currentTimeMillis() % 60_000L + 50)
+        }
+    }
+    override fun onStart() { super.onStart(); findViewById<View>(R.id.clock)?.removeCallbacks(tick); tick.run() }
+    override fun onStop() { super.onStop(); findViewById<View>(R.id.clock)?.removeCallbacks(tick) }
     override fun onDestroy() { scope.cancel(); super.onDestroy() }
 
     private inner class EpisodeAdapter : RecyclerView.Adapter<EpisodeAdapter.H>() {
         var items: List<Episode> = emptyList()
         fun set(list: List<Episode>) { items = list; notifyDataSetChanged() }
-        private val h by lazy { (81 * resources.displayMetrics.density).toInt() }
+        private val h by lazy { (125 * resources.displayMetrics.density).toInt() }
 
         inner class H(v: View) : RecyclerView.ViewHolder(v) {
             val num: TextView = v.findViewById(R.id.num)
@@ -239,6 +272,7 @@ class DetailActivity : BaseActivity() {
         override fun getItemCount() = items.size
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): H {
             val v = LayoutInflater.from(parent.context).inflate(R.layout.item_episode, parent, false)
+            v.findViewById<View>(R.id.imageBox).clipToOutline = true
             val holder = H(v)
             v.setOnClickListener { val p = holder.bindingAdapterPosition; if (p >= 0) playEpisode(items[p], false) }
             // MENU on an episode marks it watched or not.
@@ -260,10 +294,16 @@ class DetailActivity : BaseActivity() {
         override fun onBindViewHolder(holder: H, position: Int) {
             val e = items[position]
             holder.num.text = "E${e.number}"
-            holder.title.text = (if (Vod.watched(e.id)) "✓  " else "") + epLabel(e)
-            holder.plot.text = e.plot ?: e.duration?.let { niceDuration(it) } ?: ""
-            Posters.load(holder.image, e.image, h, holder.num, wide = true)
+            val t = e.title.substringAfterLast(" - ").trim()
+            holder.title.text = if (t.isEmpty() || t.equals("Episode", true)) "Episode ${e.number}" else "${e.number}  ·  $t"
             val pos = Vod.position(e.id)
+            val len = e.duration?.let { niceDuration(it) }
+            holder.plot.text = listOfNotNull(len, when {
+                pos != null && pos.second > 0 -> "${minutes((pos.second - pos.first) / 60_000)} left"
+                Vod.watched(e.id) -> "Watched"
+                else -> null
+            }).joinToString("  ·  ")
+            Posters.load(holder.image, e.image, h, holder.num, wide = true)
             if (pos != null && pos.second > 0) {
                 holder.progress.visibility = View.VISIBLE
                 holder.progress.progress = (pos.first * 1000 / pos.second).toInt()
@@ -306,6 +346,7 @@ class DetailActivity : BaseActivity() {
                 row.addView(v)
             }
             findViewById<View>(R.id.castScroll).visibility = View.VISIBLE
+            findViewById<View>(R.id.castHead).visibility = View.VISIBLE
             // Get ready for someone being picked: the first few people's pages, and the playlist to match against.
             cast.take(3).forEach { People.prefetch(it.id) }
             People.warm()

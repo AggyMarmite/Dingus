@@ -1,69 +1,88 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A film or show: artwork behind, poster and details, play buttons; for shows, seasons and episodes. -->
+<!-- A film or show: its picture across the whole screen, the details low on the left, pill buttons; the cast (films)
+     or the seasons and episodes (shows) underneath. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent" android:background="?attr/dBg">
 
     <ImageView android:id="@+id/backdrop" android:layout_width="match_parent" android:layout_height="match_parent"
-        android:scaleType="centerCrop" android:alpha="0.32" android:contentDescription="@null" />
-    <View android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/detail_shade" />
+        android:scaleType="centerCrop" android:contentDescription="@null" />
+    <View android:id="@+id/detailShade" android:layout_width="match_parent" android:layout_height="match_parent" />
 
-    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal"
-        android:paddingStart="48dp" android:paddingEnd="48dp" android:paddingTop="36dp" android:paddingBottom="24dp">
+    <!-- (The poster's kept for the fallback text and older code, but the picture behind does its job now.) -->
+    <FrameLayout android:layout_width="1dp" android:layout_height="1dp" android:visibility="gone">
+        <TextView android:id="@+id/fallback" android:layout_width="match_parent" android:layout_height="match_parent" />
+        <ImageView android:id="@+id/poster" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:contentDescription="@null" />
+    </FrameLayout>
 
-        <FrameLayout android:layout_width="196dp" android:layout_height="294dp" android:background="@drawable/logo_bg">
-            <TextView android:id="@+id/fallback" android:layout_width="match_parent" android:layout_height="match_parent"
-                android:gravity="center" android:padding="12dp" android:textSize="18sp" android:textStyle="bold"
-                android:textColor="?attr/dMuted" />
-            <ImageView android:id="@+id/poster" android:layout_width="match_parent" android:layout_height="match_parent"
-                android:scaleType="centerCrop" android:contentDescription="@null" />
-        </FrameLayout>
+    <TextView android:id="@+id/clock" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_gravity="top|end" android:layout_marginTop="22dp" android:layout_marginEnd="48dp"
+        android:textSize="16sp" android:textColor="?attr/dMuted" />
 
-        <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
-            android:layout_marginStart="36dp" android:orientation="vertical">
-            <ImageView android:id="@+id/titleLogo" android:layout_width="wrap_content" android:layout_height="84dp"
-                android:maxWidth="440dp" android:adjustViewBounds="true" android:scaleType="fitStart" android:contentDescription="@null" />
-            <TextView android:id="@+id/title" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:maxLines="2" android:ellipsize="end" android:textSize="32sp" android:textStyle="bold"
-                android:textColor="?attr/dText" />
-            <TextView android:id="@+id/meta" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="6dp" android:maxLines="1" android:ellipsize="end" android:textSize="16sp"
-                android:textColor="?attr/dMuted" />
-            <TextView android:id="@+id/plot" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="14dp" android:maxLines="4" android:ellipsize="end" android:textSize="16sp"
-                android:lineSpacingExtra="3dp" android:textColor="?attr/dText" />
-            <TextView android:id="@+id/people" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="10dp" android:maxLines="2" android:ellipsize="end" android:textSize="14sp"
-                android:textColor="?attr/dMuted" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical"
+        android:paddingStart="72dp" android:paddingEnd="48dp" android:paddingTop="44dp" android:paddingBottom="16dp">
 
-            <LinearLayout android:id="@+id/buttons" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="18dp" android:orientation="horizontal">
-                <TextView android:id="@+id/play" style="@style/Choice" android:minWidth="170dp" android:text="▶  Play" />
-                <TextView android:id="@+id/restart" style="@style/Choice" android:layout_marginStart="12dp"
-                    android:text="Start over" android:visibility="gone" />
-                <TextView android:id="@+id/watched" style="@style/Choice" android:layout_marginStart="12dp"
-                    android:text="Mark as watched" android:visibility="gone" />
-            </LinearLayout>
+        <ImageView android:id="@+id/titleLogo" android:layout_width="wrap_content" android:layout_height="80dp"
+            android:maxWidth="440dp" android:adjustViewBounds="true" android:scaleType="fitStart" android:contentDescription="@null" />
+        <TextView android:id="@+id/title" android:layout_width="580dp" android:layout_height="wrap_content"
+            android:maxLines="2" android:ellipsize="end" android:textSize="36sp" android:textStyle="bold"
+            android:shadowColor="#99000000" android:shadowRadius="8" android:textColor="#FFFFFFFF" />
+        <TextView android:id="@+id/meta" android:layout_width="580dp" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:maxLines="1" android:ellipsize="end" android:textSize="15sp"
+            android:textStyle="bold" android:textColor="#FFE8ECF3" />
+        <TextView android:id="@+id/plot" android:layout_width="560dp" android:layout_height="wrap_content"
+            android:layout_marginTop="10dp" android:maxLines="3" android:ellipsize="end" android:textSize="15sp"
+            android:lineSpacingExtra="3dp" android:textColor="#E6E8ECF3" />
+        <TextView android:id="@+id/people" android:layout_width="560dp" android:layout_height="wrap_content"
+            android:layout_marginTop="6dp" android:maxLines="1" android:ellipsize="end" android:textSize="13sp"
+            android:textColor="?attr/dMuted" />
 
-            <!-- The cast (from TMDB): OK on someone for their page. -->
-            <HorizontalScrollView android:id="@+id/castScroll" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="16dp" android:scrollbars="none" android:visibility="gone">
-                <LinearLayout android:id="@+id/castRow" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:orientation="horizontal" />
-            </HorizontalScrollView>
-            <HorizontalScrollView android:id="@+id/seasonsScroll" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="18dp" android:scrollbars="none" android:visibility="gone">
-                <LinearLayout android:id="@+id/seasons" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:orientation="horizontal" />
-            </HorizontalScrollView>
-            <androidx.recyclerview.widget.RecyclerView android:id="@+id/episodes"
-                android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
-                android:layout_marginTop="10dp" android:scrollbars="none" android:clipToPadding="false" android:paddingBottom="20dp"
-                android:descendantFocusability="afterDescendants" android:visibility="gone" />
-            <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="16dp" android:textSize="15sp" android:textColor="?attr/dMuted" />
-            <TextView android:id="@+id/episodeHint" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="OK  play     ≡  mark watched / not watched" android:textSize="13sp" android:textColor="?attr/dMuted"
-                android:visibility="gone" />
+        <!-- Part-watched: how far, and how long is left. -->
+        <LinearLayout android:id="@+id/resumeBox" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="12dp" android:orientation="vertical" android:visibility="gone">
+            <ProgressBar android:id="@+id/resumeBar" style="@android:style/Widget.ProgressBar.Horizontal"
+                android:layout_width="300dp" android:layout_height="4dp" android:max="1000"
+                android:progressDrawable="@drawable/progress_white" />
+            <TextView android:id="@+id/resumeLeft" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="4dp" android:textSize="12sp" android:textColor="#FFCFD6E4" />
         </LinearLayout>
+
+        <LinearLayout android:id="@+id/buttons" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="14dp" android:orientation="horizontal">
+            <TextView android:id="@+id/play" style="@style/Choice" android:minWidth="130dp" android:text="▶  Play" />
+            <TextView android:id="@+id/restart" style="@style/Choice" android:layout_marginStart="12dp"
+                android:text="⟲  Start over" android:visibility="gone" />
+            <TextView android:id="@+id/watched" style="@style/Choice" android:layout_marginStart="12dp"
+                android:text="Mark as watched" android:visibility="gone" />
+        </LinearLayout>
+
+        <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:minHeight="10dp" />
+
+        <!-- The cast (from TMDB), films only: OK on someone for their page. -->
+        <TextView android:id="@+id/castHead" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginBottom="6dp" android:text="Cast" android:textSize="16sp" android:textStyle="bold"
+            android:textColor="?attr/dText" android:visibility="gone" />
+        <HorizontalScrollView android:id="@+id/castScroll" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:scrollbars="none" android:clipToPadding="false" android:visibility="gone">
+            <LinearLayout android:id="@+id/castRow" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+        <HorizontalScrollView android:id="@+id/seasonsScroll" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:scrollbars="none" android:visibility="gone">
+            <LinearLayout android:id="@+id/seasons" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+        <!-- Episodes: wide pictures in a row, progress bars on them, "Watched" under the ones you've seen. -->
+        <androidx.recyclerview.widget.RecyclerView android:id="@+id/episodes"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="12dp" android:scrollbars="none" android:clipToPadding="false" android:clipChildren="false"
+            android:paddingTop="6dp" android:paddingBottom="6dp" android:paddingStart="4dp" android:paddingEnd="40dp"
+            android:descendantFocusability="afterDescendants" android:visibility="gone" />
+        <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:textSize="14sp" android:textColor="?attr/dMuted" />
+        <TextView android:id="@+id/episodeHint" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="OK  play     ≡  mark watched / not watched" android:textSize="12sp" android:textColor="#5B6477"
+            android:visibility="gone" />
     </LinearLayout>
 </FrameLayout>

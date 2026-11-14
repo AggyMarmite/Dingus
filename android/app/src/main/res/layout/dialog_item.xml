@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A choice in a pop-up: a pill (white when highlighted; soft with a ✓ for what it's set to now). -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="44dp"
+    android:layout_marginBottom="4dp" android:background="@drawable/cat_pill_bg" android:duplicateParentState="false"
+    android:gravity="center_vertical" android:paddingStart="20dp" android:paddingEnd="18dp" android:drawablePadding="10dp"
+    android:maxLines="1" android:ellipsize="end" android:textSize="15sp" android:textColor="@color/pill_text" />
