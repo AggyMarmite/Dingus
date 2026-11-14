@@ -1,3 +1,10 @@
+## What's new in Dingus 0.15.13
+
+* Fire TV: a new look – full-screen pictures on Home, Films and TV Shows, and a floating menu.
+* Fire TV: a refreshed Live TV guide and cleaner categories.
+* Fire TV: better sizing for the TV, and remote rewind/fast forward skip 10 seconds.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.12
 
 * Fire TV: better sizing for the TV.
