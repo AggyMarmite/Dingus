@@ -84,6 +84,12 @@ class SettingsActivity : BaseActivity() {
         toggle("Watch in the guide first", "OK plays in the guide window, OK again for full screen", { Store.preview }) { Store.preview = it }
         toggle("Channel numbers", "", { Store.showNumbers }) { Store.showNumbers = it }
         toggle("Colour-coded programmes", "Sport, films, news, kids…", { Store.genreColours }) { Store.genreColours = it }
+        row("Remind me", { "How long before a programme its reminder comes up" }, { reminderLeadName(Store.reminderLead) }) {
+            val opts = listOf(30, 60, 120, 300)
+            choose("Remind me", opts.map { reminderLeadName(it) + " before" }, opts.indexOf(Store.reminderLead)) { n ->
+                Store.reminderLead = opts[n]; Reminders.rescheduleAll(); update()
+            }
+        }
         toggle("Switch for reminders", "Change to the channel when a reminded programme starts", { Store.reminderSwitch }) { Store.reminderSwitch = it }
         toggle("Merge duplicate channels", "HD, FHD and backups shown as one", { Store.mergeChannels }) { Store.mergeChannels = it; Repo.reapply() }
         row("Edit channels", { "Rename, renumber or hide" }, { "›" }) { startActivity(Intent(this, ChannelEditorActivity::class.java)) }
@@ -176,6 +182,8 @@ class SettingsActivity : BaseActivity() {
         t.text = s
         t.visibility = if (s.isEmpty()) View.GONE else View.VISIBLE
     }
+
+    private fun reminderLeadName(secs: Int) = when (secs) { 30 -> "30 seconds"; 60 -> "1 minute"; else -> "${secs / 60} minutes" }
 
     private fun choose(title: String, options: List<String>, current: Int, done: (Int) -> Unit) {
         Dialogs.builder(this).setTitle(title)

@@ -30,6 +30,15 @@ object Reminders {
     private lateinit var app: Context
     private const val CHANNEL = "reminders"
 
+    /** How long before: Settings → Live TV → "Remind me". */
+    private fun lead() = Store.reminderLead * 1000L
+
+    /** The time before, in words for the card ("1 MIN", "30 SECS"). */
+    private fun leadWords(): String = Store.reminderLead.let { if (it < 60) "$it SECS" else "${it / 60} MIN" + if (it >= 120) "S" else "" }
+
+    /** The reminder setting changed: set every reminder's alarm again for the new time. */
+    fun rescheduleAll() { Thread { all().forEach { cancel(it); schedule(it) } }.start() }
+
     fun init(ctx: Context) {
         app = ctx.applicationContext
         Thread { all().forEach { schedule(it) } }.start()
@@ -94,7 +103,7 @@ object Reminders {
         // Forget reminders for programmes that started more than 30 minutes ago.
         val stale = list.filter { it.start < now - 30 * 60_000L }
         if (stale.isNotEmpty()) save(list - stale.toSet())
-        val due = all().filter { it.start - 60_000L <= now }.minByOrNull { it.start } ?: return
+        val due = all().filter { it.start - lead() <= now }.minByOrNull { it.start } ?: return
         save(all().filterNot { it === due })
         cancel(due)
         showCard(a, due)
@@ -113,8 +122,8 @@ object Reminders {
         val auto = Store.reminderSwitch && Repo.channel(r.channelId) != null
         v.findViewById<TextView>(R.id.remWhen).text = when {
             started -> "STARTED"
-            auto -> "SWITCHING IN 1 MIN"
-            else -> "STARTING IN 1 MIN"
+            auto -> "SWITCHING IN ${leadWords()}"
+            else -> "STARTING IN ${leadWords()}"
         }
         v.findViewById<TextView>(R.id.remTitle).text = r.title
         v.findViewById<TextView>(R.id.remChannel).text = "${r.channelName}  ·  ${Ui.time(r.start)}"
@@ -173,8 +182,8 @@ object Reminders {
 
     private fun schedule(r: Reminder) {
         if (!::app.isInitialized) return
-        val at = r.start - 60_000L
-        if (at < System.currentTimeMillis() - 60_000L) return
+        val at = r.start - lead()
+        if (r.start < System.currentTimeMillis()) return
         val am = app.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val pi = pending(r, PendingIntent.FLAG_UPDATE_CURRENT) ?: return
         try {

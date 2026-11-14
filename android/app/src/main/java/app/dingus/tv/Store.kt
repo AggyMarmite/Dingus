@@ -208,6 +208,11 @@ object Store {
 
     /** Show channel numbers in the guide and elsewhere. */
     /** Reminders: switch to the channel by itself when the programme starts (if nothing's pressed). Off unless chosen. */
+    /** How long before a reminded programme the reminder comes up, in seconds (1 minute unless changed). */
+    var reminderLead: Int
+        get() = prefs.getInt("reminderLead", 60)
+        set(v) = prefs.edit().putInt("reminderLead", v).apply()
+
     var reminderSwitch: Boolean
         get() = prefs.getBoolean("reminderSwitch", false)
         set(v) = prefs.edit().putBoolean("reminderSwitch", v).apply()
