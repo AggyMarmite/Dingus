@@ -1,0 +1,6 @@
+--------- beginning of main
+--------- beginning of system
+11-14 11:25:08.061 11899 11899 I DINGUS-TEST: main-shown
+11-14 11:25:08.061 11899 11899 I DINGUS-TEST: guide-showing 3
+11-14 11:25:08.107 11899 11933 I DINGUS-TEST: vpn off 
+11-14 11:25:08.107 11899 11933 I DINGUS-TEST: vpn off 

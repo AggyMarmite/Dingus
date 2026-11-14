@@ -1,0 +1,535 @@
+--------- beginning of main
+--------- beginning of system
+11-14 11:18:00.343  2861  2861 I DINGUS-TEST: main-shown
+11-14 11:18:01.990  2861  2861 I DINGUS-TEST: guide-filled 0
+11-14 11:18:01.996  2861  2861 I DINGUS-TEST: notice-working Updating playlist & TV guide…
+11-14 11:18:02.020  2861  2861 I DINGUS-TEST: update-none
+11-14 11:18:02.383  2861  2861 I DINGUS-TEST: guide-filled 3
+11-14 11:18:02.384  2861  2861 I DINGUS-TEST: channels 3 categories 2
+11-14 11:18:02.504  2861  2861 I DINGUS-TEST: notice-done Playlist & TV guide updated
+11-14 11:18:02.504  2861  2861 I DINGUS-TEST: guide 3
+11-14 11:18:03.165  2861  2977 I DINGUS-TEST: title-logo Programme 2 on Test 1 none
+11-14 11:18:07.978  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_CENTER on GuideGrid/
+11-14 11:18:07.978  2861  2861 I DINGUS-TEST: ok Test 1 HD programme=Programme 2 on Test 1 playing=null full=false
+11-14 11:18:08.197  2861  2861 I DINGUS-TEST: load Test 1 HD
+11-14 11:18:09.485  2861  2861 I DINGUS-TEST: preview Test 1 HD
+11-14 11:18:14.507  2861  2861 I DINGUS-TEST: account null/null online
+--------- beginning of crash
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: FATAL EXCEPTION: AsyncDvrDbTask-0
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: Process: com.android.tv, PID: 3910
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: java.lang.RuntimeException: An error occurred while executing doInBackground()
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at android.os.AsyncTask$3.done(AsyncTask.java:354)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at java.util.concurrent.FutureTask.finishCompletion(FutureTask.java:383)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at java.util.concurrent.FutureTask.setException(FutureTask.java:252)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at java.util.concurrent.FutureTask.run(FutureTask.java:271)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1167)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at java.lang.Thread.run(Thread.java:764)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: Caused by: android.database.sqlite.SQLiteException: no such column: failed_reason (code 1 SQLITE_ERROR): , while compiling: SELECT _id, priority, type, input_id, channel_id, program_id, program_title, start_time_utc_millis, end_time_utc_millis, season_number, episode_number, episode_title, program_description, program_long_description, program_poster_art_uri, program_thumbnail_uri, state, failed_reason, series_recording_id FROM schedules
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.nativePrepareStatement(Native Method)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.acquirePreparedStatement(SQLiteConnection.java:903)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.prepare(SQLiteConnection.java:514)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at android.database.sqlite.SQLiteSession.prepare(SQLiteSession.java:588)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at android.database.sqlite.SQLiteProgram.<init>(SQLiteProgram.java:58)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at android.database.sqlite.SQLiteQuery.<init>(SQLiteQuery.java:37)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at android.database.sqlite.SQLiteDirectCursorDriver.query(SQLiteDirectCursorDriver.java:46)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at android.database.sqlite.SQLiteDatabase.rawQueryWithFactory(SQLiteDatabase.java:1408)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at android.database.sqlite.SQLiteQueryBuilder.query(SQLiteQueryBuilder.java:399)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at android.database.sqlite.SQLiteQueryBuilder.query(SQLiteQueryBuilder.java:294)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at com.android.tv.dvr.provider.DvrDatabaseHelper.query(DvrDatabaseHelper.java:276)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask$AsyncDvrQueryScheduleTask.doInDvrBackground(AsyncDvrDbTask.java:128)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask$AsyncDvrQueryScheduleTask.doInDvrBackground(AsyncDvrDbTask.java:115)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask.doInBackground(AsyncDvrDbTask.java:65)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at android.os.AsyncTask$2.call(AsyncTask.java:333)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+11-14 11:18:16.877  3910  3982 E AndroidRuntime: 	... 3 more
+11-14 11:18:19.397  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_RIGHT on GuideGrid/
+11-14 11:18:19.858  2861  2977 I DINGUS-TEST: title-logo Programme 3 on Test 1 none
+11-14 11:18:21.663  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_RIGHT on GuideGrid/
+11-14 11:18:22.141  2861  2977 I DINGUS-TEST: title-logo Programme 4 on Test 1 none
+11-14 11:18:23.869  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_DOWN on GuideGrid/
+11-14 11:18:24.353  2861  2977 I DINGUS-TEST: title-logo Programme 4 on Test 2 none
+11-14 11:18:31.597  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_CENTER on GuideGrid/
+11-14 11:18:31.597  2861  2861 I DINGUS-TEST: ok Test 2 programme=Programme 4 on Test 2 playing=Test 1 HD full=false
+11-14 11:18:31.805  2861  2861 I DINGUS-TEST: dialog-ok Button
+11-14 11:18:32.130  2861  2861 I DINGUS-TEST: reminder-set true Programme 4 on Test 2
+11-14 11:18:37.884  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_CENTER on GuideGrid/
+11-14 11:18:37.884  2861  2861 I DINGUS-TEST: ok Test 2 programme=Programme 4 on Test 2 playing=Test 1 HD full=false
+11-14 11:18:38.279  2861  2861 I DINGUS-TEST: dialog-ok Button
+11-14 11:18:38.324  2861  2861 I DINGUS-TEST: reminder-set false Programme 4 on Test 2
+11-14 11:18:45.627  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_LEFT on GuideGrid/
+11-14 11:18:46.199  2861  2977 I DINGUS-TEST: title-logo Programme 3 on Test 2 none
+11-14 11:18:48.218  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_LEFT on GuideGrid/
+11-14 11:18:48.746  2861  2977 I DINGUS-TEST: title-logo Programme 2 on Test 2 none
+11-14 11:18:50.803  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_LEFT on GuideGrid/
+11-14 11:18:50.805  2861  2861 I DINGUS-TEST: categories-open
+11-14 11:18:59.194  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_DOWN on TextView/All channels
+11-14 11:18:59.469  2861  2861 I DINGUS-TEST: guide-filled 2
+11-14 11:19:01.522  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_DOWN on TextView/UK: Entertainment
+11-14 11:19:01.785  2861  2861 I DINGUS-TEST: guide-filled 1
+11-14 11:19:02.244  2861  2977 I DINGUS-TEST: title-logo Programme 2 on Test 3 none
+11-14 11:19:03.807  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_CENTER on TextView/Sport
+11-14 11:19:08.939  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_CENTER on GuideGrid/
+11-14 11:19:08.939  2861  2861 I DINGUS-TEST: ok Test 3 Sport programme=Programme 2 on Test 3 playing=Test 1 HD full=false
+11-14 11:19:08.941  2861  2861 I DINGUS-TEST: load Test 3 Sport
+11-14 11:19:09.342  2861  2861 I DINGUS-TEST: preview Test 3 Sport
+11-14 11:19:14.294  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_LEFT on GuideGrid/
+11-14 11:19:14.296  2861  2861 I DINGUS-TEST: categories-open
+11-14 11:19:14.478  2861  2861 I DINGUS-TEST: account null/null online
+11-14 11:19:17.395  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_UP on TextView/Sport
+11-14 11:19:17.652  2861  2861 I DINGUS-TEST: guide-filled 2
+11-14 11:19:19.328  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_CENTER on TextView/UK: Entertainment
+11-14 11:19:24.068  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_CENTER on GuideGrid/
+11-14 11:19:24.068  2861  2861 I DINGUS-TEST: ok Test 1 HD programme=Programme 2 on Test 1 playing=Test 3 Sport full=false
+11-14 11:19:24.068  2861  2861 I DINGUS-TEST: load Test 1 HD
+11-14 11:19:24.304  2861  2861 I DINGUS-TEST: preview Test 1 HD
+11-14 11:19:25.648  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_DOWN on GuideGrid/
+11-14 11:19:28.077  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_CENTER on GuideGrid/
+11-14 11:19:28.077  2861  2861 I DINGUS-TEST: ok Test 2 programme=Programme 2 on Test 2 playing=Test 1 HD full=false
+11-14 11:19:28.078  2861  2861 I DINGUS-TEST: load Test 2
+11-14 11:19:28.450  2861  2861 I DINGUS-TEST: preview Test 2
+11-14 11:19:29.374  2861  2861 I DINGUS-TEST: account null/null online
+11-14 11:19:33.463  2861  2861 I DINGUS-TEST: account null/null online
+11-14 11:19:33.566  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_CENTER on GuideGrid/
+11-14 11:19:33.566  2861  2861 I DINGUS-TEST: ok Test 2 programme=Programme 2 on Test 2 playing=Test 2 full=false
+11-14 11:19:33.570  2861  2861 I DINGUS-TEST: fullscreen Test 2
+11-14 11:19:33.572  2861  2861 I DINGUS-TEST: stats HD  ·  21 dropped
+11-14 11:19:33.572  2861  2861 I DINGUS-TEST: info short
+11-14 11:19:33.661  2861  2861 I DINGUS-TEST: stats HD  ·  21 dropped
+11-14 11:19:35.671  2861  2861 I DINGUS-TEST: stats HD  ·  25 fps  ·  21 dropped
+11-14 11:19:37.693  2861  2861 I DINGUS-TEST: stats HD  ·  24 fps  ·  21 dropped
+11-14 11:19:39.699  2861  2861 I DINGUS-TEST: stats HD  ·  25 fps  ·  21 dropped
+11-14 11:19:40.809  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_UP on full screen
+11-14 11:19:40.812  2861  2861 I DINGUS-TEST: stats HD  ·  25 fps  ·  21 dropped
+11-14 11:19:40.812  2861  2861 I DINGUS-TEST: info short
+11-14 11:19:41.168  2861  2861 I DINGUS-TEST: load Test 1 HD
+11-14 11:19:41.458  2861  2861 I DINGUS-TEST: playing Test 1 HD 1280x720
+11-14 11:19:41.700  2861  2861 I DINGUS-TEST: stats HD  ·  25 fps  ·  2.1 Mbps  ·  21 dropped
+11-14 11:19:43.702  2861  2861 I DINGUS-TEST: stats HD  ·  22 fps  ·  2.4 Mbps  ·  21 dropped
+11-14 11:19:45.706  2861  2861 I DINGUS-TEST: stats HD  ·  25 fps  ·  2.5 Mbps  ·  21 dropped
+11-14 11:19:46.438  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_CENTER on full screen
+11-14 11:19:46.441  2861  2861 I DINGUS-TEST: stats HD  ·  25 fps  ·  2.5 Mbps  ·  21 dropped
+11-14 11:19:46.442  2861  2861 I DINGUS-TEST: info full
+11-14 11:19:46.683  2861  2861 I DINGUS-TEST: account null/null online
+11-14 11:19:47.716  2861  2861 I DINGUS-TEST: stats HD  ·  24 fps  ·  2.4 Mbps  ·  21 dropped
+11-14 11:19:49.718  2861  2861 I DINGUS-TEST: stats HD  ·  25 fps  ·  2.5 Mbps  ·  21 dropped
+11-14 11:19:51.719  2861  2861 I DINGUS-TEST: stats HD  ·  25 fps  ·  2.7 Mbps  ·  21 dropped
+11-14 11:19:53.722  2861  2861 I DINGUS-TEST: stats HD  ·  24 fps  ·  2.5 Mbps  ·  21 dropped
+11-14 11:19:55.726  2861  2861 I DINGUS-TEST: stats HD  ·  25 fps  ·  2.5 Mbps  ·  21 dropped
+11-14 11:19:57.727  2861  2861 I DINGUS-TEST: stats HD  ·  25 fps  ·  2.7 Mbps  ·  21 dropped
+11-14 11:19:59.730  2861  2861 I DINGUS-TEST: stats HD  ·  25 fps  ·  2.6 Mbps  ·  21 dropped
+11-14 11:20:01.731  2861  2861 I DINGUS-TEST: stats HD  ·  25 fps  ·  2.5 Mbps  ·  21 dropped
+11-14 11:20:03.733  2861  2861 I DINGUS-TEST: stats HD  ·  24 fps  ·  2.7 Mbps  ·  21 dropped
+11-14 11:20:05.735  2861  2861 I DINGUS-TEST: stats HD  ·  25 fps  ·  2.6 Mbps  ·  21 dropped
+11-14 11:20:06.205  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_LEFT on full screen
+11-14 11:20:06.817  2861  2861 I DINGUS-TEST: timeshift behind 10s
+11-14 11:20:06.823  2861  2861 I DINGUS-TEST: stats HD  ·  25 fps  ·  2.6 Mbps  ·  21 dropped
+11-14 11:20:06.823  2861  2861 I DINGUS-TEST: info short
+11-14 11:20:07.124  2861  2861 I DINGUS-TEST: playing Test 1 HD 1280x720
+11-14 11:20:07.266  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_LEFT on full screen
+11-14 11:20:07.736  2861  2861 I DINGUS-TEST: stats HD  ·  25 fps  ·  8.0 Mbps  ·  26 dropped
+11-14 11:20:07.871  2861  2861 I DINGUS-TEST: timeshift behind 20s
+11-14 11:20:07.873  2861  2861 I DINGUS-TEST: stats HD  ·  25 fps  ·  8.0 Mbps  ·  26 dropped
+11-14 11:20:07.873  2861  2861 I DINGUS-TEST: info short
+11-14 11:20:08.030  2861  2861 I DINGUS-TEST: playing Test 1 HD 1280x720
+11-14 11:20:09.738  2861  2861 I DINGUS-TEST: stats HD  ·  8 fps  ·  16.8 Mbps  ·  26 dropped
+11-14 11:20:11.746  2861  2861 I DINGUS-TEST: stats HD  ·  25 fps  ·  11.3 Mbps  ·  26 dropped
+11-14 11:20:12.258  2861  2861 I DINGUS-TEST: account null/null online
+11-14 11:20:13.756  2861  2861 I DINGUS-TEST: stats HD  ·  25 fps  ·  7.7 Mbps  ·  26 dropped
+11-14 11:20:15.738  2861  2861 I DINGUS-TEST: key KEYCODE_MEDIA_PLAY_PAUSE on full screen
+11-14 11:20:15.741  2861  2861 I DINGUS-TEST: timeshift paused
+11-14 11:20:15.786  2861  2861 I DINGUS-TEST: stats HD  ·  25 fps  ·  5.6 Mbps  ·  26 dropped
+11-14 11:20:17.788  2861  2861 I DINGUS-TEST: stats HD  ·  4.6 Mbps  ·  26 dropped
+11-14 11:20:18.309  2861  2861 I DINGUS-TEST: key KEYCODE_MEDIA_PLAY_PAUSE on full screen
+11-14 11:20:19.793  2861  2861 I DINGUS-TEST: stats HD  ·  19 fps  ·  3.7 Mbps  ·  26 dropped
+11-14 11:20:20.390  2861  2861 I DINGUS-TEST: key KEYCODE_MENU on full screen
+11-14 11:20:21.794  2861  2861 I DINGUS-TEST: stats HD  ·  22 fps  ·  3.2 Mbps  ·  26 dropped
+11-14 11:20:23.796  2861  2861 I DINGUS-TEST: stats HD  ·  22 fps  ·  3.1 Mbps  ·  26 dropped
+11-14 11:20:25.796  2861  2861 I DINGUS-TEST: stats HD  ·  24 fps  ·  2.8 Mbps  ·  26 dropped
+11-14 11:20:26.929  2861  2861 I DINGUS-TEST: dialog-ok RecycleListView
+11-14 11:20:26.972  2861  2861 I DINGUS-TEST: stats HD  ·  24 fps  ·  2.8 Mbps  ·  26 dropped
+11-14 11:20:26.972  2861  2861 I DINGUS-TEST: info short
+11-14 11:20:27.800  2861  2861 I DINGUS-TEST: stats HD  ·  24 fps  ·  2.6 Mbps  ·  26 dropped
+11-14 11:20:29.813  2861  2861 I DINGUS-TEST: stats HD  ·  21 fps  ·  2.8 Mbps  ·  26 dropped
+11-14 11:20:30.883  2861  2861 I DINGUS-TEST: key KEYCODE_BACK on full screen
+11-14 11:20:31.814  2861  2861 I DINGUS-TEST: stats HD  ·  25 fps  ·  2.7 Mbps  ·  26 dropped
+11-14 11:20:32.656  2861  2861 I DINGUS-TEST: key KEYCODE_BACK on full screen
+11-14 11:20:32.662  2861  2861 I DINGUS-TEST: timeshift behind 0s
+11-14 11:20:32.682  2861  2861 I DINGUS-TEST: guide-shown Test 1 HD
+11-14 11:20:33.016  2861  2861 I DINGUS-TEST: preview Test 1 HD
+11-14 11:20:38.052  2861  2861 I DINGUS-TEST: account null/null online
+11-14 11:20:38.574  2861  2861 I DINGUS-TEST: key KEYCODE_BACK on GuideGrid/
+11-14 11:20:38.577  2861  2861 I DINGUS-TEST: categories-open
+11-14 11:20:40.330  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_LEFT on TextView/UK: Entertainment
+11-14 11:20:40.334  2861  2861 I DINGUS-TEST: menu-open
+11-14 11:20:44.462  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_DOWN on TextView/Live TV
+11-14 11:20:45.497  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_DOWN on TextView/Search
+11-14 11:20:46.366  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_DOWN on TextView/Settings
+11-14 11:20:47.971  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_DOWN on TextView/Refresh playlist
+11-14 11:20:48.930  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_DOWN on TextView/Refresh playlist
+11-14 11:20:49.969  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_DOWN on TextView/Refresh playlist
+11-14 11:20:50.922  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_DOWN on TextView/Refresh playlist
+11-14 11:20:51.928  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_UP on TextView/Refresh playlist
+11-14 11:20:52.841  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_CENTER on TextView/Settings
+11-14 11:20:52.852  2861  2861 I DINGUS-TEST: menu-closed
+11-14 11:20:52.898  2861  2861 I DINGUS-TEST: menu-go SETTINGS
+11-14 11:20:53.108  2861  2861 I DINGUS-TEST: settings-section Playlists & EPG
+11-14 11:20:53.113  2861  2861 I DINGUS-TEST: settings-shown
+11-14 11:20:55.382  2861  2861 I DINGUS-TEST: settings-section Live TV
+11-14 11:20:56.826  2861  2861 I DINGUS-TEST: settings-section Playback
+11-14 11:20:57.994  2861  2861 I DINGUS-TEST: settings-into Playback: Pause & rewind live TV
+11-14 11:20:58.040  2861  2861 I DINGUS-TEST: account null/null online
+11-14 11:21:00.357  2861  2861 I DINGUS-TEST: settings-section Live TV
+11-14 11:21:01.533  2861  2861 I DINGUS-TEST: settings-into Live TV: Watch in the guide first
+11-14 11:21:05.191  2861  2861 I DINGUS-TEST: main-shown
+11-14 11:21:05.191  2861  2861 I DINGUS-TEST: guide-showing 2
+11-14 11:21:05.810  2861  2861 I DINGUS-TEST: load Test 1 HD
+11-14 11:21:06.146  2861  2861 I DINGUS-TEST: preview Test 1 HD
+11-14 11:21:07.343  2861  2861 I DINGUS-TEST: main-shown
+11-14 11:21:07.343  2861  2861 I DINGUS-TEST: guide-showing 2
+11-14 11:21:07.356  2861  2861 I DINGUS-TEST: update-found 99.0.0
+11-14 11:21:07.957  2861  2861 I DINGUS-TEST: load Test 1 HD
+11-14 11:21:08.874  2861  2861 I DINGUS-TEST: preview Test 1 HD
+11-14 11:21:11.182  2861  2861 I DINGUS-TEST: account null/null online
+11-14 11:21:15.578  2861  2861 I DINGUS-TEST: update-downloaded 11292919
+11-14 11:21:15.660  2861  2861 I DINGUS-TEST: update-needs-permission
+11-14 11:21:21.852  2861  2861 I DINGUS-TEST: main-shown
+11-14 11:21:21.852  2861  2861 I DINGUS-TEST: guide-showing 2
+11-14 11:21:21.861  2861  2861 I DINGUS-TEST: guide-filled 0
+11-14 11:21:21.875  2861  2861 I DINGUS-TEST: guide-filled 0
+11-14 11:21:21.885  2861  2861 I DINGUS-TEST: notice-working Updating playlist & TV guide…
+11-14 11:21:21.975  2861  2861 I DINGUS-TEST: guide-filled 3
+11-14 11:21:21.976  2861  2861 I DINGUS-TEST: channels 3 categories 2
+11-14 11:21:22.079  2861  2861 I DINGUS-TEST: notice-done Playlist & TV guide updated
+11-14 11:21:22.079  2861  2861 I DINGUS-TEST: guide 3
+11-14 11:21:26.052  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_LEFT on GuideGrid/
+11-14 11:21:26.053  2861  2861 I DINGUS-TEST: categories-open
+11-14 11:21:26.866  2861  2861 I DINGUS-TEST: account 0/2 online
+11-14 11:21:28.212  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_RIGHT on TextView/All channels
+11-14 11:21:30.391  2861  2861 I DINGUS-TEST: key KEYCODE_MENU on GuideGrid/
+11-14 11:21:30.407  2861  2861 I DINGUS-TEST: channel-menu Test 1 HD
+11-14 11:21:32.581  2861  2861 I DINGUS-TEST: dialog-ok RecycleListView
+11-14 11:21:32.602  2861  2861 I DINGUS-TEST: catchup-list Test 1 HD 6
+11-14 11:21:35.089  2861  2861 I DINGUS-TEST: dialog-ok RecycleListView
+11-14 11:21:35.089  2861  2861 I DINGUS-TEST: ok Test 1 HD programme=Programme 1 on Test 1 playing=null full=false
+11-14 11:21:35.091  2861  2861 I DINGUS-TEST: catchup Test 1 HD Programme 1 on Test 1
+11-14 11:21:42.485  2861  2861 I DINGUS-TEST: vod-playing Test 1 HD  ·  Programme 1 on Test 1
+11-14 11:21:47.599  2861  2861 I DINGUS-TEST: account 0/2 online
+11-14 11:21:52.474  2861  2861 I DINGUS-TEST: main-shown
+11-14 11:21:52.474  2861  2861 I DINGUS-TEST: guide-showing 3
+11-14 11:21:55.679  2861  2861 I DINGUS-TEST: key KEYCODE_BACK on GuideGrid/
+11-14 11:21:55.683  2861  2861 I DINGUS-TEST: categories-open
+11-14 11:21:56.934  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_LEFT on TextView/All channels
+11-14 11:21:56.938  2861  2861 I DINGUS-TEST: menu-open
+11-14 11:21:59.119  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_DOWN on TextView/Live TV
+11-14 11:21:59.991  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_CENTER on TextView/Films
+11-14 11:21:59.994  2861  2861 I DINGUS-TEST: menu-closed
+11-14 11:21:59.998  2861  2861 I DINGUS-TEST: menu-go FILMS
+11-14 11:22:00.315  2861  2861 I DINGUS-TEST: browse-cat Featured 4
+11-14 11:22:00.316  2861  2861 I DINGUS-TEST: library movies 23
+11-14 11:22:00.426  2861  2861 I DINGUS-TEST: browse-into rows
+11-14 11:22:01.079  2861  2977 I DINGUS-TEST: title-logo A Very Long Sine Wave none
+11-14 11:22:07.284  2861  2979 I DINGUS-TEST: title-logo Colour Bars Returns none
+11-14 11:22:08.189  2861  2861 I DINGUS-TEST: details Colour Bars Returns episodes 0
+11-14 11:22:08.189  2861  2861 I DINGUS-TEST: detail-button ▶  Play
+11-14 11:22:13.929  2861  2861 I DINGUS-TEST: vod-playing Colour Bars Returns
+11-14 11:22:17.736  2861  2861 I DINGUS-TEST: vod-skip 10
+11-14 11:22:18.936  2861  2861 I DINGUS-TEST: account 0/2 online
+11-14 11:22:18.981  2861  2861 I DINGUS-TEST: vod-skip 10
+11-14 11:22:19.457  2861  2861 I DINGUS-TEST: vod-playing Colour Bars Returns
+11-14 11:22:20.338  2861  2861 I DINGUS-TEST: vod-skip 10
+11-14 11:22:20.965  2861  2861 I DINGUS-TEST: vod-playing Colour Bars Returns
+11-14 11:22:22.405  2861  2861 I DINGUS-TEST: vod-skip 10
+11-14 11:22:23.349  2861  2861 I DINGUS-TEST: vod-skip 10
+11-14 11:22:24.466  2861  2861 I DINGUS-TEST: account 0/2 online
+11-14 11:22:25.403  2861  2861 I DINGUS-TEST: vod-pause
+11-14 11:22:28.310  2861  2861 I DINGUS-TEST: vod-playing Colour Bars Returns
+11-14 11:22:33.051  2861  2861 I DINGUS-TEST: vod-play
+11-14 11:22:33.326  2861  2861 I DINGUS-TEST: account 0/2 online
+11-14 11:22:34.878  2861  2861 I DINGUS-TEST: detail-button ▶  Resume from 0:55
+11-14 11:22:40.425  2861  2861 I DINGUS-TEST: browse-panel shown
+11-14 11:22:42.610  2861  2861 I DINGUS-TEST: main-shown
+11-14 11:22:42.610  2861  2861 I DINGUS-TEST: guide-showing 3
+11-14 11:22:44.761  2861  2861 I DINGUS-TEST: key KEYCODE_BACK on GuideGrid/
+11-14 11:22:44.763  2861  2861 I DINGUS-TEST: categories-open
+11-14 11:22:45.922  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_LEFT on TextView/All channels
+11-14 11:22:45.924  2861  2861 I DINGUS-TEST: menu-open
+11-14 11:22:48.087  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_DOWN on TextView/Live TV
+11-14 11:22:48.742  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_DOWN on TextView/Films
+11-14 11:22:49.396  2861  2861 I DINGUS-TEST: key KEYCODE_DPAD_CENTER on TextView/TV Shows
+11-14 11:22:49.399  2861  2861 I DINGUS-TEST: menu-closed
+11-14 11:22:49.403  2861  2861 I DINGUS-TEST: menu-go SHOWS
+11-14 11:22:49.709  2861  2861 I DINGUS-TEST: browse-cat Featured 2
+11-14 11:22:49.709  2861  2861 I DINGUS-TEST: library series 2
+11-14 11:22:49.797  2861  2861 I DINGUS-TEST: browse-into rows
+11-14 11:22:50.417  2861  2979 I DINGUS-TEST: title-logo Signal Lost none
+11-14 11:22:55.361  2861  2979 I DINGUS-TEST: title-logo The Calibration none
+11-14 11:22:55.916  2861  2861 I DINGUS-TEST: details The Calibration episodes 4
+11-14 11:22:55.916  2861  2861 I DINGUS-TEST: detail-button ▶  Play S1 E1
+11-14 11:23:02.844  2861  2861 I DINGUS-TEST: vod-playing The Calibration  ·  S1 E1  Part 1
+11-14 11:23:08.089  2861  2861 I DINGUS-TEST: account 0/2 online
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: FATAL EXCEPTION: AsyncDvrDbTask-0
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: Process: com.android.tv, PID: 10746
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: java.lang.RuntimeException: An error occurred while executing doInBackground()
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at android.os.AsyncTask$3.done(AsyncTask.java:354)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at java.util.concurrent.FutureTask.finishCompletion(FutureTask.java:383)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at java.util.concurrent.FutureTask.setException(FutureTask.java:252)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at java.util.concurrent.FutureTask.run(FutureTask.java:271)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1167)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at java.lang.Thread.run(Thread.java:764)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: Caused by: android.database.sqlite.SQLiteException: no such column: failed_reason (code 1 SQLITE_ERROR): , while compiling: SELECT _id, priority, type, input_id, channel_id, program_id, program_title, start_time_utc_millis, end_time_utc_millis, season_number, episode_number, episode_title, program_description, program_long_description, program_poster_art_uri, program_thumbnail_uri, state, failed_reason, series_recording_id FROM schedules
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.nativePrepareStatement(Native Method)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.acquirePreparedStatement(SQLiteConnection.java:903)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.prepare(SQLiteConnection.java:514)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at android.database.sqlite.SQLiteSession.prepare(SQLiteSession.java:588)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at android.database.sqlite.SQLiteProgram.<init>(SQLiteProgram.java:58)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at android.database.sqlite.SQLiteQuery.<init>(SQLiteQuery.java:37)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at android.database.sqlite.SQLiteDirectCursorDriver.query(SQLiteDirectCursorDriver.java:46)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at android.database.sqlite.SQLiteDatabase.rawQueryWithFactory(SQLiteDatabase.java:1408)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at android.database.sqlite.SQLiteQueryBuilder.query(SQLiteQueryBuilder.java:399)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at android.database.sqlite.SQLiteQueryBuilder.query(SQLiteQueryBuilder.java:294)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at com.android.tv.dvr.provider.DvrDatabaseHelper.query(DvrDatabaseHelper.java:276)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask$AsyncDvrQueryScheduleTask.doInDvrBackground(AsyncDvrDbTask.java:128)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask$AsyncDvrQueryScheduleTask.doInDvrBackground(AsyncDvrDbTask.java:115)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask.doInBackground(AsyncDvrDbTask.java:65)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at android.os.AsyncTask$2.call(AsyncTask.java:333)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+11-14 11:23:08.358 10746 10799 E AndroidRuntime: 	... 3 more
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: FATAL EXCEPTION: AsyncDvrDbTask-0
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: Process: com.android.tv, PID: 10849
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: java.lang.RuntimeException: An error occurred while executing doInBackground()
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at android.os.AsyncTask$3.done(AsyncTask.java:354)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at java.util.concurrent.FutureTask.finishCompletion(FutureTask.java:383)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at java.util.concurrent.FutureTask.setException(FutureTask.java:252)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at java.util.concurrent.FutureTask.run(FutureTask.java:271)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1167)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at java.lang.Thread.run(Thread.java:764)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: Caused by: android.database.sqlite.SQLiteException: no such column: failed_reason (code 1 SQLITE_ERROR): , while compiling: SELECT _id, priority, type, input_id, channel_id, program_id, program_title, start_time_utc_millis, end_time_utc_millis, season_number, episode_number, episode_title, program_description, program_long_description, program_poster_art_uri, program_thumbnail_uri, state, failed_reason, series_recording_id FROM schedules
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.nativePrepareStatement(Native Method)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.acquirePreparedStatement(SQLiteConnection.java:903)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.prepare(SQLiteConnection.java:514)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at android.database.sqlite.SQLiteSession.prepare(SQLiteSession.java:588)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at android.database.sqlite.SQLiteProgram.<init>(SQLiteProgram.java:58)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at android.database.sqlite.SQLiteQuery.<init>(SQLiteQuery.java:37)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at android.database.sqlite.SQLiteDirectCursorDriver.query(SQLiteDirectCursorDriver.java:46)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at android.database.sqlite.SQLiteDatabase.rawQueryWithFactory(SQLiteDatabase.java:1408)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at android.database.sqlite.SQLiteQueryBuilder.query(SQLiteQueryBuilder.java:399)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at android.database.sqlite.SQLiteQueryBuilder.query(SQLiteQueryBuilder.java:294)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at com.android.tv.dvr.provider.DvrDatabaseHelper.query(DvrDatabaseHelper.java:276)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask$AsyncDvrQueryScheduleTask.doInDvrBackground(AsyncDvrDbTask.java:128)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask$AsyncDvrQueryScheduleTask.doInDvrBackground(AsyncDvrDbTask.java:115)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask.doInBackground(AsyncDvrDbTask.java:65)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at android.os.AsyncTask$2.call(AsyncTask.java:333)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+11-14 11:23:10.277 10849 10891 E AndroidRuntime: 	... 3 more
+11-14 11:23:15.711  2861  2861 I DINGUS-TEST: vod-episodes 4
+11-14 11:23:22.829  2861  2861 I DINGUS-TEST: detail-button ▶  Play S1 E1
+11-14 11:23:25.959  2861  2861 I DINGUS-TEST: main-shown
+11-14 11:23:25.959  2861  2861 I DINGUS-TEST: guide-showing 3
+11-14 11:23:26.248  2861  2861 I DINGUS-TEST: search "test" 7
+11-14 11:23:29.333  2861  2861 I DINGUS-TEST: home-shown
+11-14 11:23:29.362  2861  2861 I DINGUS-TEST: home-focus rows
+11-14 11:23:29.413  2861  2861 I DINGUS-TEST: home-loading-done
+11-14 11:23:29.414  2861  2861 I DINGUS-TEST: home rows 4 slides 2
+11-14 11:23:29.415  2861  2861 I DINGUS-TEST: account 0/2 online
+11-14 11:23:29.422  2861  2861 I DINGUS-TEST: home-feature 1/2 Colour Bars Returns
+11-14 11:23:29.429  2861  2861 I DINGUS-TEST: home-focus row 0 heroWatch
+11-14 11:23:29.593  2861  2861 I DINGUS-TEST: home-feature 1/2 Colour Bars Returns
+11-14 11:23:29.594  2861  2861 I DINGUS-TEST: home rows 4 slides 2
+11-14 11:23:34.703  2861  2861 I DINGUS-TEST: home-focus row 1 ?
+11-14 11:23:38.085  2861  2861 I DINGUS-TEST: home-focus row 0 heroWatch
+11-14 11:23:39.265  2861  2861 I DINGUS-TEST: home-focus navHome
+11-14 11:23:39.266  2861  2861 I DINGUS-TEST: menu-open
+11-14 11:23:41.130  2861  2861 I DINGUS-TEST: home-focus navGuide
+11-14 11:23:41.795  2861  2861 I DINGUS-TEST: home-focus navFilms
+11-14 11:23:42.480  2861  2861 I DINGUS-TEST: home-focus row 0 heroWatch
+11-14 11:23:42.481  2861  2861 I DINGUS-TEST: menu-closed
+11-14 11:23:42.495  2861  2861 I DINGUS-TEST: menu-go FILMS
+11-14 11:23:42.636  2861  2861 I DINGUS-TEST: browse-cat Featured 5
+11-14 11:23:42.636  2861  2861 I DINGUS-TEST: library movies 23
+11-14 11:23:42.853  2861  2861 I DINGUS-TEST: browse-into rows
+11-14 11:23:52.324  2861  2861 I DINGUS-TEST: browse-panel shown
+11-14 11:23:54.454  2861  2861 I DINGUS-TEST: browse-cat Continue watching 1
+11-14 11:23:55.200  2861  2861 I DINGUS-TEST: browse-cat Recently added 23
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: FATAL EXCEPTION: AsyncDvrDbTask-0
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: Process: com.android.tv, PID: 11467
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: java.lang.RuntimeException: An error occurred while executing doInBackground()
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at android.os.AsyncTask$3.done(AsyncTask.java:354)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at java.util.concurrent.FutureTask.finishCompletion(FutureTask.java:383)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at java.util.concurrent.FutureTask.setException(FutureTask.java:252)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at java.util.concurrent.FutureTask.run(FutureTask.java:271)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1167)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at java.lang.Thread.run(Thread.java:764)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: Caused by: android.database.sqlite.SQLiteException: no such column: failed_reason (code 1 SQLITE_ERROR): , while compiling: SELECT _id, priority, type, input_id, channel_id, program_id, program_title, start_time_utc_millis, end_time_utc_millis, season_number, episode_number, episode_title, program_description, program_long_description, program_poster_art_uri, program_thumbnail_uri, state, failed_reason, series_recording_id FROM schedules
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.nativePrepareStatement(Native Method)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.acquirePreparedStatement(SQLiteConnection.java:903)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.prepare(SQLiteConnection.java:514)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at android.database.sqlite.SQLiteSession.prepare(SQLiteSession.java:588)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at android.database.sqlite.SQLiteProgram.<init>(SQLiteProgram.java:58)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at android.database.sqlite.SQLiteQuery.<init>(SQLiteQuery.java:37)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at android.database.sqlite.SQLiteDirectCursorDriver.query(SQLiteDirectCursorDriver.java:46)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at android.database.sqlite.SQLiteDatabase.rawQueryWithFactory(SQLiteDatabase.java:1408)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at android.database.sqlite.SQLiteQueryBuilder.query(SQLiteQueryBuilder.java:399)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at android.database.sqlite.SQLiteQueryBuilder.query(SQLiteQueryBuilder.java:294)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at com.android.tv.dvr.provider.DvrDatabaseHelper.query(DvrDatabaseHelper.java:276)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask$AsyncDvrQueryScheduleTask.doInDvrBackground(AsyncDvrDbTask.java:128)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask$AsyncDvrQueryScheduleTask.doInDvrBackground(AsyncDvrDbTask.java:115)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask.doInBackground(AsyncDvrDbTask.java:65)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at android.os.AsyncTask$2.call(AsyncTask.java:333)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+11-14 11:23:56.266 11467 11494 E AndroidRuntime: 	... 3 more
+11-14 11:23:56.609  2861  2861 I DINGUS-TEST: browse-panel hidden
+11-14 11:23:56.610  2861  2861 I DINGUS-TEST: browse-into grid
+11-14 11:23:58.495  2861  2861 I DINGUS-TEST: grid-step 5
+11-14 11:23:59.453  2861  2861 I DINGUS-TEST: grid-step 10
+11-14 11:24:00.402  2861  2861 I DINGUS-TEST: grid-step 15
+11-14 11:24:02.276  2861  2861 I DINGUS-TEST: grid-step 10
+11-14 11:24:03.942  2861  2861 I DINGUS-TEST: browse-panel shown
+11-14 11:24:05.864  2861  2861 I DINGUS-TEST: browse-cat Top rated 3
+11-14 11:24:06.002  2861  2861 I DINGUS-TEST: browse-panel hidden
+11-14 11:24:06.002  2861  2861 I DINGUS-TEST: browse-into grid
+11-14 11:24:07.848  2861  2861 I DINGUS-TEST: browse-panel shown
+11-14 11:24:09.513  2861  2861 I DINGUS-TEST: menu-open
+11-14 11:24:09.534  2861  2861 I DINGUS-TEST: account 0/2 online
+11-14 11:24:11.429  2861  2861 I DINGUS-TEST: menu-closed
+11-14 11:24:12.643  2861  2861 I DINGUS-TEST: home-shown
+11-14 11:24:12.770  2861  2861 I DINGUS-TEST: home-feature 1/2 Colour Bars Returns
+11-14 11:24:12.770  2861  2861 I DINGUS-TEST: home rows 4 slides 2
+11-14 11:24:12.782  2861  2861 I DINGUS-TEST: home-feature 1/2 Colour Bars Returns
+11-14 11:24:12.782  2861  2861 I DINGUS-TEST: home rows 4 slides 2
+11-14 11:24:16.039  2861  2861 I DINGUS-TEST: home-focus navHome
+11-14 11:24:16.039  2861  2861 I DINGUS-TEST: menu-open
+11-14 11:24:17.686  2861  2861 I DINGUS-TEST: home-focus navGuide
+11-14 11:24:18.248  2861  2861 I DINGUS-TEST: home-focus navFilms
+11-14 11:24:18.805  2861  2861 I DINGUS-TEST: home-focus navShows
+11-14 11:24:19.357  2861  2861 I DINGUS-TEST: home-focus navSearch
+11-14 11:24:19.937  2861  2861 I DINGUS-TEST: home-focus settings
+11-14 11:24:20.481  2861  2861 I DINGUS-TEST: home-focus row 0 heroWatch
+11-14 11:24:20.482  2861  2861 I DINGUS-TEST: menu-closed
+11-14 11:24:20.486  2861  2861 I DINGUS-TEST: menu-go SETTINGS
+11-14 11:24:20.592  2861  2861 I DINGUS-TEST: settings-section Playlists & EPG
+11-14 11:24:20.596  2861  2861 I DINGUS-TEST: settings-shown
+11-14 11:24:22.771  2861  2861 I DINGUS-TEST: menu-open
+11-14 11:24:26.676  2861  2861 I DINGUS-TEST: menu-closed
+11-14 11:24:26.679  2861  2861 I DINGUS-TEST: menu-go LIVE
+11-14 11:24:26.745  2861  2861 I DINGUS-TEST: main-shown
+11-14 11:24:26.745  2861  2861 I DINGUS-TEST: guide-showing 3
+11-14 11:24:26.786  2861  2861 I DINGUS-TEST: categories-open
+11-14 11:24:29.366  2861  2861 I DINGUS-TEST: key KEYCODE_BACK on TextView/All channels
+11-14 11:24:29.370  2861  2861 I DINGUS-TEST: menu-open
+11-14 11:24:30.519  2861  2861 I DINGUS-TEST: key KEYCODE_BACK on TextView/Live TV
+11-14 11:24:31.168  2861  2861 I DINGUS-TEST: main-closed
+11-14 11:24:31.668  2861  2861 I DINGUS-TEST: home-shown
+11-14 11:24:31.685  2861  2861 I DINGUS-TEST: home-focus rows
+11-14 11:24:31.749  2861  2861 I DINGUS-TEST: account 0/2 online
+11-14 11:24:31.795  2861  2861 I DINGUS-TEST: home-loading-done
+11-14 11:24:31.795  2861  2861 I DINGUS-TEST: home rows 4 slides 2
+11-14 11:24:31.797  2861  2861 I DINGUS-TEST: home-loading-done
+11-14 11:24:31.797  2861  2861 I DINGUS-TEST: home rows 4 slides 2
+11-14 11:24:31.807  2861  2861 I DINGUS-TEST: home-feature 1/2 Colour Bars Returns
+11-14 11:24:31.813  2861  2861 I DINGUS-TEST: home-focus row 0 heroWatch
+11-14 11:24:33.948 11899 11899 I DINGUS-TEST: home-loading-done
+11-14 11:24:33.949 11899 11899 I DINGUS-TEST: home rows 4 slides 2
+11-14 11:24:33.949 11899 11899 I DINGUS-TEST: home-from-saved 4
+11-14 11:24:33.974 11899 11899 I DINGUS-TEST: home-shown
+11-14 11:24:33.986 11899 11899 I DINGUS-TEST: home-focus rows
+11-14 11:24:34.062 11899 11899 I DINGUS-TEST: home-feature 1/2 Colour Bars Returns
+11-14 11:24:34.109 11899 11899 I DINGUS-TEST: home-focus row 0 heroWatch
+11-14 11:24:34.805 11899 11899 I DINGUS-TEST: account 0/2 online
+11-14 11:24:35.003 11899 11899 I DINGUS-TEST: home-feature 1/2 Colour Bars Returns
+11-14 11:24:35.006 11899 11899 I DINGUS-TEST: home rows 3 slides 2
+11-14 11:24:35.027 11899 11899 I DINGUS-TEST: home-focus rows
+11-14 11:24:35.029 11899 11899 I DINGUS-TEST: home-feature 1/2 Colour Bars Returns
+11-14 11:24:35.038 11899 11899 I DINGUS-TEST: home-focus row 0 heroWatch
+11-14 11:24:35.280 11899 11899 I DINGUS-TEST: home-feature 1/2 Colour Bars Returns
+11-14 11:24:35.281 11899 11899 I DINGUS-TEST: home rows 4 slides 2
+11-14 11:24:35.284 11899 11899 I DINGUS-TEST: home-shown
+11-14 11:24:35.306 11899 11899 I DINGUS-TEST: home-focus rows
+11-14 11:24:35.308 11899 11899 I DINGUS-TEST: home-feature 1/2 Colour Bars Returns
+11-14 11:24:35.319 11899 11899 I DINGUS-TEST: home-focus row 0 heroWatch
+11-14 11:24:35.368 11899 11899 I DINGUS-TEST: home-feature 1/2 Colour Bars Returns
+11-14 11:24:35.369 11899 11899 I DINGUS-TEST: home rows 4 slides 2
+11-14 11:24:35.766 11899 11899 I DINGUS-TEST: home-feature 1/2 Colour Bars Returns
+11-14 11:24:35.766 11899 11899 I DINGUS-TEST: home rows 4 slides 2
+11-14 11:24:40.498 11899 11899 I DINGUS-TEST: home-focus navHome
+11-14 11:24:40.500 11899 11899 I DINGUS-TEST: menu-open
+11-14 11:24:41.389 11899 11899 I DINGUS-TEST: home-loading-done
+11-14 11:24:42.201 11899 11899 I DINGUS-TEST: home-focus navGuide
+11-14 11:24:42.869 11899 11899 I DINGUS-TEST: home-focus row 0 heroWatch
+11-14 11:24:42.870 11899 11899 I DINGUS-TEST: menu-closed
+11-14 11:24:42.874 11899 11899 I DINGUS-TEST: menu-go LIVE
+11-14 11:24:43.067 11899 11899 I DINGUS-TEST: main-shown
+11-14 11:24:43.073 11899 11899 I DINGUS-TEST: guide-filled 3
+11-14 11:24:43.074 11899 11899 I DINGUS-TEST: categories-open
+11-14 11:24:46.161 11899 11899 I DINGUS-TEST: numbers false
+11-14 11:24:46.162 11899 11899 I DINGUS-TEST: main-shown
+11-14 11:24:46.162 11899 11899 I DINGUS-TEST: guide-showing 3
+11-14 11:24:49.416 11899 11899 I DINGUS-TEST: main-shown
+11-14 11:24:49.416 11899 11899 I DINGUS-TEST: guide-showing 3
+11-14 11:24:49.434 11899 11899 I DINGUS-TEST: reminder Reminder test
+11-14 11:24:50.773 11899 11899 I DINGUS-TEST: key KEYCODE_BACK on TextView/▶  Watch
+11-14 11:24:52.333 11899 11899 I DINGUS-TEST: main-shown
+11-14 11:24:52.333 11899 11899 I DINGUS-TEST: guide-showing 3
+11-14 11:24:52.439 11899 11899 I DINGUS-TEST: phone-setup code 4793 port 8765
+11-14 11:24:54.658 11899 11899 I DINGUS-TEST: playlist-from-phone m3u
+11-14 11:24:54.688 11899 11899 I DINGUS-TEST: guide-filled 0
+11-14 11:24:54.690 11899 11899 I DINGUS-TEST: playlist-added Phone
+11-14 11:24:54.735 11899 11899 I DINGUS-TEST: main-shown
+11-14 11:24:54.736 11899 11899 I DINGUS-TEST: guide-showing 0
+11-14 11:24:54.755 11899 11899 I DINGUS-TEST: notice-working Updating TV guide…
+11-14 11:24:54.936 11899 11899 I DINGUS-TEST: notice-done TV guide updated
+11-14 11:24:54.936 11899 11899 I DINGUS-TEST: guide 3
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: FATAL EXCEPTION: AsyncDvrDbTask-0
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: Process: com.android.tv, PID: 12066
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: java.lang.RuntimeException: An error occurred while executing doInBackground()
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at android.os.AsyncTask$3.done(AsyncTask.java:354)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at java.util.concurrent.FutureTask.finishCompletion(FutureTask.java:383)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at java.util.concurrent.FutureTask.setException(FutureTask.java:252)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at java.util.concurrent.FutureTask.run(FutureTask.java:271)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1167)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at java.lang.Thread.run(Thread.java:764)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: Caused by: android.database.sqlite.SQLiteException: no such column: failed_reason (code 1 SQLITE_ERROR): , while compiling: SELECT _id, priority, type, input_id, channel_id, program_id, program_title, start_time_utc_millis, end_time_utc_millis, season_number, episode_number, episode_title, program_description, program_long_description, program_poster_art_uri, program_thumbnail_uri, state, failed_reason, series_recording_id FROM schedules
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.nativePrepareStatement(Native Method)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.acquirePreparedStatement(SQLiteConnection.java:903)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.prepare(SQLiteConnection.java:514)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at android.database.sqlite.SQLiteSession.prepare(SQLiteSession.java:588)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at android.database.sqlite.SQLiteProgram.<init>(SQLiteProgram.java:58)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at android.database.sqlite.SQLiteQuery.<init>(SQLiteQuery.java:37)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at android.database.sqlite.SQLiteDirectCursorDriver.query(SQLiteDirectCursorDriver.java:46)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at android.database.sqlite.SQLiteDatabase.rawQueryWithFactory(SQLiteDatabase.java:1408)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at android.database.sqlite.SQLiteQueryBuilder.query(SQLiteQueryBuilder.java:399)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at android.database.sqlite.SQLiteQueryBuilder.query(SQLiteQueryBuilder.java:294)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at com.android.tv.dvr.provider.DvrDatabaseHelper.query(DvrDatabaseHelper.java:276)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask$AsyncDvrQueryScheduleTask.doInDvrBackground(AsyncDvrDbTask.java:128)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask$AsyncDvrQueryScheduleTask.doInDvrBackground(AsyncDvrDbTask.java:115)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at com.android.tv.dvr.provider.AsyncDvrDbTask.doInBackground(AsyncDvrDbTask.java:65)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at android.os.AsyncTask$2.call(AsyncTask.java:333)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+11-14 11:24:56.362 12066 12095 E AndroidRuntime: 	... 3 more
+11-14 11:24:56.765 11899 11899 I DINGUS-TEST: main-shown
+11-14 11:24:56.765 11899 11899 I DINGUS-TEST: guide-showing 0
+11-14 11:24:56.874 11899 11899 I DINGUS-TEST: phone-setup code 3675 port 8765
+11-14 11:24:56.918 11899 11899 I DINGUS-TEST: vpn-screen
+11-14 11:24:57.292 11899 11899 I DINGUS-TEST: vpn-locations 142
+11-14 11:24:59.159 11899 12132 I DINGUS-TEST: vpn-imported Test
+11-14 11:24:59.164 11899 11899 I DINGUS-TEST: vpn-locations 1
+11-14 11:25:02.561 11899 11899 I DINGUS-TEST: main-shown
+11-14 11:25:02.561 11899 11899 I DINGUS-TEST: guide-showing 0
+11-14 11:25:02.566 11899 11932 I DINGUS-TEST: vpn connecting Test
+11-14 11:25:02.760 11899 11932 I DINGUS-TEST: vpn on Test
+11-14 11:25:03.639 11899 11899 I DINGUS-TEST: main-shown
+11-14 11:25:03.639 11899 11899 I DINGUS-TEST: guide-showing 0
+11-14 11:25:03.644 11899 11899 I DINGUS-TEST: guide-filled 0
+11-14 11:25:03.650 11899 11899 I DINGUS-TEST: notice-working Updating playlist & TV guide…
+11-14 11:25:03.672 11899 11899 I DINGUS-TEST: guide-filled 3
+11-14 11:25:03.687 11899 11899 I DINGUS-TEST: channels 3 categories 2
+11-14 11:25:03.816 11899 11899 I DINGUS-TEST: notice-done Playlist & TV guide updated
+11-14 11:25:03.816 11899 11899 I DINGUS-TEST: guide 3
+11-14 11:25:08.061 11899 11899 I DINGUS-TEST: main-shown
+11-14 11:25:08.061 11899 11899 I DINGUS-TEST: guide-showing 3
+11-14 11:25:08.107 11899 11933 I DINGUS-TEST: vpn off 
+11-14 11:25:08.107 11899 11933 I DINGUS-TEST: vpn off 

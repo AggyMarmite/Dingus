@@ -1,0 +1,88 @@
+PASS playlist loaded (3 channels, 2 categories)
+PASS a note says when the playlist and guide have updated
+PASS guide read for all 3 channels
+PASS nothing plays until you choose a channel
+PASS OK plays the channel in the guide's window
+PASS OK on a later programme sets a reminder
+PASS LEFT from what's on now shows the categories
+PASS scrolling through categories keeps the highlight where you are
+PASS picking a category shows its channels
+PASS moving up a category works too
+PASS the guide shows that category's channels
+PASS moving down doesn't start the next channel by itself
+PASS OK plays it in the window (HLS)
+PASS OK again on the same channel grows it to full screen (same stream)
+PASS full screen keeps the preview's stream (no second load)
+PASS changing channel in full screen
+PASS full screen shows stream stats (HD, fps, Mbps)
+PASS OK adds the times, progress and what's next
+PASS LEFT rewinds live TV
+PASS playback carries on from the earlier point
+PASS play/pause pauses live TV
+PASS BACK shrinks back to the guide, on the channel just watched
+PASS LEFT from the categories opens the main menu
+PASS Settings opens from the menu
+PASS Settings: moving down the sections shows each one's options
+PASS RIGHT from a section lands on its first option
+PASS finds an update on the release page
+PASS downloads the update
+PASS hands the update to Android's installer
+PASS Xtream login: live channels loaded
+PASS Xtream login: guide read
+PASS LEFT from what's on now opens the categories (even on a catch-up channel)
+PASS ≡ on a catch-up channel lists its past programmes
+PASS picking one starts catch-up
+PASS the catch-up programme plays
+PASS the provider is asked for connections in use (server online)
+PASS BACK shows the categories
+PASS then the main menu
+PASS Films load
+PASS a film's details load
+PASS the film plays
+PASS RIGHT on the progress bar skips 10 seconds
+PASS OK on the progress bar pauses
+PASS OK again plays
+PASS coming back offers to resume
+PASS BACK from the films brings in their categories
+PASS TV shows load
+PASS a show's seasons and episodes load
+PASS an episode plays
+PASS Episodes in the player lists the show's episodes
+PASS search finds channels, films and shows
+PASS Home shows its rows
+PASS UP from the rows goes back up to the top
+PASS LEFT at the left edge of Home opens the side menu
+PASS Films opens from the side menu
+PASS LEFT from the first film brings in the categories panel
+PASS moving through the categories shows each one
+PASS RIGHT goes into the films, the categories step aside
+PASS DOWN steps down the grid a row at a time
+PASS UP steps back up a row
+PASS LEFT from the first column brings them back
+PASS RIGHT straight after moving to another category goes into its titles
+PASS …and LEFT goes back to the categories
+PASS the side menu opens on Films too
+PASS RIGHT closes it
+PASS BACK from Films returns to Home
+PASS Settings opens from the side menu on Home
+PASS Live TV from Settings shows the channels
+PASS Home opens by itself
+PASS …straight away, from what it showed last time
+PASS the loading screen gives way to Home
+PASS …and goes once Home's ready
+PASS Live TV from Home shows the channels
+PASS …with the categories open first
+PASS channel numbers can be turned off
+PASS a reminder shows its card a minute before
+PASS Add playlist: the phone page starts
+PASS Add playlist: one typed on a phone is checked and added
+PASS VPN: the phone setup page starts
+PASS VPN: a config file sent from a phone is saved
+PASS VPN: connects
+PASS VPN: the playlist loads through the tunnel
+PASS VPN: disconnects
+frames: Total frames rendered: 108
+frames: Janky frames: 74 (68.52%)
+frames: 90th percentile: 150ms
+memory:                TOTAL:    55011       TOTAL SWAP PSS:        0
+PASSED
