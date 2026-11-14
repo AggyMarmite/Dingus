@@ -1,0 +1,73 @@
+window opened at 1440×826 (Normal) on a 1920×1032 screen
+splash showing as the window opened: True
+00-splash: 1440×826
+channels: 14, guide-matched: 14
+00-splash-add-playlist: 1920×1032
+title bar: every button can be clicked
+01-home: 1920×1032
+01-home-full: 1903×2440
+02-guide: 1920×1032
+03b-guide-reorder: 1920×1032
+categories: moved UK News up · first in the list=True · first in the guide=True
+categories: hid UK Entertainment – 6 → 5, back to 6
+03-guide-on-now: 1920×1032
+04-guide-tonight: 1920×1032
+06-films: 1920×1032
+07-shows: 1920×1032
+trailer links: checked
+my list: 3 saved
+01b-home-mylist: 1920×1032
+01b-home-mylist-full: 1903×2791
+06b-films-mylist: 1920×1032
+06c-film-details: 1920×1032
+07b-show-details: 1920×1032
+09-settings: 1920×1032
+09-settings-full: 900×3157
+16-recordings: 1920×1032
+16-recordings-full: 1000×922
+20-events: 1920×1032
+events: following Rovers – 5 games in the guide
+events: 5 reminders set for Rovers' games
+events: search “rovers v utd” – 5 games
+20b-events-search: 1920×1032
+20c-events-channels: 1920×1032
+events: the first game is on 3 channels
+team crests: 573 clubs · sau.1: the server returned an error (404) · Man Utd → Manchester United · Spurs → Tottenham Hotspur · Rovers (several clubs) → none
+20d-events-crests: 1920×1032
+downloads: film Done → out\The Test Pattern.mp4 · 3158073 bytes · matches=True
+downloads: half-done episode Done → out\Testing Times\Season 1\Testing Times – S01E02 – Episode 2.mp4 · matches=True
+downloads: fully arrived but unfinished → Done · matches=True
+downloads: free space where they're saved 26.9 GB
+downloads: missing link → Failed · The link has expired (404) – start the download again from its page.
+shared connection: first channel 18.0s received · gaps 0 · repeats 0 · waited 0.0s
+shared connection: second channel 17.7s received · gaps 0 · repeats 0 · waited 0.0s
+shared connection: most connections open at once 1 (Dingus's count 1) · refused 0
+23-downloads: 1920×1032
+14-search: 1920×1032
+15-search-films: 1920×1032
+search bar: open while searching=True, back to the magnifying glass after=True
+10-shortcuts: 1920×1032
+11-channel-editor: 964×664
+13-guide-match: 576×564
+12-reminder: 300×149
+  on top → True (fullscreen False) from MainWindow.SetOsFullscreen < MainWindow.EnterPlayer < MainWindow.PlayVod < <VideoMemory>d__10.MoveNext
+video, full player: playing=True · working set 390 MB · private 302 MB · .NET heap 35 MB
+sound filters: normvol
+17-player-controls: 1920×1080
+night mode on: playing=True · sound filters: normvol, compressor
+  on top → False (fullscreen False) from MainWindow.SetOsFullscreen < MainWindow.EnterMini < MainWindow.SelfTestMini < <VideoMemory>d__10.MoveNext
+  on top → True (fullscreen False) from MainWindow.EnterMini < MainWindow.SelfTestMini < <VideoMemory>d__10.MoveNext < App.Main
+video, picture-in-picture: playing=True · working set 302 MB · private 255 MB · .NET heap 18 MB
+18-pip-controls: 480×270
+mini player volume 80 (player 80)
+  on top → False (fullscreen False) from MainWindow.LeaveMiniWindow < MainWindow.ExitMini < MainWindow.SelfTestMini < <VideoMemory>d__10.MoveNext
+  on top → True (fullscreen False) from MainWindow.SetOsFullscreen < MainWindow.EnterPlayer < MainWindow.ExitMini < MainWindow.SelfTestMini
+video, full player again: playing=True · working set 387 MB · private 295 MB · .NET heap 27 MB
+just after going full screen: True · Normal · None · 1920×1080
+full screen: True · on top: True · still in the player: True
+  on top → False (fullscreen False) from MainWindow.SetOsFullscreen < MainWindow.ExitPlayerLayout < MainWindow.ExitPlayer < MainWindow.SelfTestExitPlayer
+video stopped: working set 20 MB · private 224 MB · .NET heap 16 MB · on top: False
+after full screen: 0 window(s) had to be taken off 'always on top'; still on top: none
+memory: 27 MB
+
+PASSED
