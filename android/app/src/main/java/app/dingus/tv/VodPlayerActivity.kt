@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.KeyEvent
+import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.annotation.OptIn
