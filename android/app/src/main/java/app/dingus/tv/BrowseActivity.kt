@@ -100,8 +100,9 @@ class BrowseActivity : BaseActivity() {
         compact = true; setCompact(false) // (the full size banner: taller here than Home's)
 
         adapter = RowsAdapter(this, onFocus = { hero.show(it) }, onClick = { open(it) })
-        rows.layoutManager = RowsLayoutManager(this, centered = true) // (the row you're on in the middle, like Home)
-        CentredRows.attach(this, rows)
+        // The row you're on sits right under the banner, fully in view (the next one peeking below); moving down slides
+        // the rows up one, so nothing jumps about or gets cut off.
+        rows.layoutManager = RowsLayoutManager(this, centered = false)
         rows.adapter = adapter
         rows.itemAnimator = null
         rows.setItemViewCacheSize(4)
@@ -308,14 +309,15 @@ class BrowseActivity : BaseActivity() {
         // (No animation: the grid resizing under the remote while moving would throw the highlight about.)
         val lp = heroView.layoutParams
         val d = resources.displayMetrics.density
-        lp.height = ((if (on) 150 else 300) * d).toInt()
+        lp.height = ((if (on) 150 else 212) * d).toInt()
         heroView.layoutParams = lp
         // Room above the logo for the picture behind (less when it's small).
-        heroBody.setPadding(heroBody.paddingLeft, ((if (on) 14 else 62) * d).toInt(), heroBody.paddingRight, heroBody.paddingBottom)
+        heroBody.setPadding(heroBody.paddingLeft, ((if (on) 14 else 52) * d).toInt(), heroBody.paddingRight, heroBody.paddingBottom)
         // Everything has to fit the smaller banner (nothing cut off): a smaller logo, no description.
         heroText.visibility = if (on) View.GONE else View.VISIBLE
+        heroText.maxLines = 2
         val logo = findViewById<View>(R.id.heroLogo)
-        logo.layoutParams = logo.layoutParams.apply { height = ((if (on) 56 else 84) * resources.displayMetrics.density).toInt() }
+        logo.layoutParams = logo.layoutParams.apply { height = ((if (on) 56 else 64) * resources.displayMetrics.density).toInt() }
     }
 
     private fun inside(v: View, parent: View): Boolean {
