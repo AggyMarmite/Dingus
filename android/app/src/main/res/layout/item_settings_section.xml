@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A section in Settings' left-hand list. -->
-<TextView xmlns:android="http://schemas.android.com/apk/res/android" style="@style/NavRow"
-    android:layout_height="52dp" android:gravity="center_vertical" android:textSize="18sp" android:layout_marginBottom="4dp" />
+<!-- A section in Settings' left-hand list: a pill, like the category columns. -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="38dp" android:layout_marginBottom="4dp"
+    android:background="@drawable/cat_pill_bg" android:focusable="true" android:clickable="true"
+    android:gravity="center_vertical" android:paddingStart="16dp" android:paddingEnd="12dp" android:drawablePadding="12dp"
+    android:maxLines="1" android:textSize="15sp" android:textColor="@color/pill_text" />

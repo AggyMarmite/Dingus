@@ -47,7 +47,7 @@ class SettingsActivity : BaseActivity() {
             t.text = s.first
             t.id = View.generateViewId()
             // Moving onto a section shows its options; OK (or RIGHT) goes into them.
-            t.setOnFocusChangeListener { _, has -> if (has) showSection(i) }
+            t.setOnFocusChangeListener { _, has -> if (has) showSection(i); CatPill.style(t) }
             t.setOnClickListener { list.getChildAt(firstRow())?.requestFocus() }
             t.nextFocusRightId = View.NO_ID
             holder.addView(t)
@@ -55,14 +55,32 @@ class SettingsActivity : BaseActivity() {
         }
         showSection(0)
         sectionViews[0].requestFocus()
+        val accent = Themes.color(this, R.attr.dAccent)
+        findViewById<View>(R.id.settingsGlow).background = android.graphics.drawable.GradientDrawable().apply {
+            gradientType = android.graphics.drawable.GradientDrawable.RADIAL_GRADIENT
+            colors = intArrayOf((accent and 0x00FFFFFF) or (0x30 shl 24), (accent and 0x00FFFFFF) or (0x0C shl 24), 0)
+            gradientRadius = resources.displayMetrics.widthPixels * 0.5f
+            setGradientCenter(0.85f, -0.05f)
+        }
     }
+
+    /** The time, top right. */
+    private val tick = object : Runnable {
+        override fun run() {
+            val c = findViewById<TextView>(R.id.clock) ?: return
+            c.text = Ui.time(System.currentTimeMillis())
+            c.postDelayed(this, 60_000L - System.currentTimeMillis() % 60_000L + 50)
+        }
+    }
+    override fun onStart() { super.onStart(); findViewById<View>(R.id.clock)?.removeCallbacks(tick); tick.run() }
+    override fun onStop() { super.onStop(); findViewById<View>(R.id.clock)?.removeCallbacks(tick) }
 
     private fun firstRow(): Int { for (i in 0 until list.childCount) if (list.getChildAt(i).isFocusable) return i; return 0 }
 
     private fun showSection(i: Int) {
         if (i == section) return
         section = i
-        sectionViews.forEachIndexed { n, v -> v.isActivated = n == i }
+        sectionViews.forEachIndexed { n, v -> v.isActivated = n == i; CatPill.style(v) }
         list.removeAllViews(); subtitles.clear(); values.clear(); switches.clear()
         refreshRow = null; updateRow = null; accountRow = null
         header(sections[i].first)
@@ -144,7 +162,14 @@ class SettingsActivity : BaseActivity() {
 
     private fun update() {
         for ((v, f) in subtitles) sub(v, f())
-        for ((v, f) in values) if (v.parent != null) v.findViewById<TextView>(R.id.value).text = f()
+        for ((v, f) in values) if (v.parent != null) v.findViewById<TextView>(R.id.value).apply {
+            text = f()
+            // A value sits in a small chip; "›" (opens a screen) and nothing at all don't.
+            val plain = text == "›" || text.isEmpty()
+            if (plain) { background = null; setPadding(0, 0, 0, 0); textSize = 18f }
+            visibility = if (text.isEmpty()) View.GONE else View.VISIBLE
+        }
+        findViewById<TextView>(R.id.settingsSub)?.text = listOfNotNull("Dingus ${BuildConfig.VERSION_NAME}", Store.playlist?.name).joinToString("  ·  ")
         for ((v, f) in switches) if (v.parent != null) v.findViewById<android.widget.ImageView>(R.id.switchIcon).setImageResource(if (f()) R.drawable.switch_on else R.drawable.switch_off)
     }
 

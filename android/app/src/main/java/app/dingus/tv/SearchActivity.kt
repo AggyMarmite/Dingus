@@ -40,6 +40,7 @@ class SearchActivity : BaseActivity() {
     private lateinit var query: EditText
     private lateinit var status: TextView
     private lateinit var results: RecyclerView
+    private lateinit var voice: TextView
     private val adapter = ResultAdapter()
     private var job: Job? = null
 
@@ -61,18 +62,33 @@ class SearchActivity : BaseActivity() {
         })
         query.setOnEditorActionListener { _, action, _ ->
             if (action == EditorInfo.IME_ACTION_SEARCH || action == EditorInfo.IME_ACTION_DONE) {
-                (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(query.windowToken, 0)
+                endTyping()
                 search(query.text.toString(), 0)
-                results.post { results.getChildAt(1)?.requestFocus() ?: results.getChildAt(0)?.requestFocus() }
+                Store.addRecentSearch(query.text.toString())
+                results.post { firstResult()?.requestFocus() ?: voice.requestFocus() }
                 true
             } else false
         }
+        // Speaking or typing into the box (Fire TV's keyboard): BACK or DOWN once it's closed comes back out.
         query.setOnKeyListener { _, code, ev ->
-            if (code == KeyEvent.KEYCODE_DPAD_DOWN && ev.action == KeyEvent.ACTION_DOWN && adapter.itemCount > 0) {
-                results.post { (results.getChildAt(1) ?: results.getChildAt(0))?.requestFocus() }; true
-            } else false
+            if (ev.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
+            when (code) {
+                KeyEvent.KEYCODE_DPAD_DOWN -> { endTyping(); (firstResult() ?: voice).requestFocus(); true }
+                KeyEvent.KEYCODE_BACK -> { endTyping(); voice.requestFocus(); true }
+                else -> false
+            }
         }
-        status.text = "Type to search."
+        voice = findViewById(R.id.voice)
+        voice.setOnClickListener { startTyping() }
+        buildKeys()
+        val accent = Themes.color(this, R.attr.dAccent)
+        findViewById<View>(R.id.searchGlow).background = android.graphics.drawable.GradientDrawable().apply {
+            gradientType = android.graphics.drawable.GradientDrawable.RADIAL_GRADIENT
+            colors = intArrayOf((accent and 0x00FFFFFF) or (0x30 shl 24), (accent and 0x00FFFFFF) or (0x0C shl 24), 0)
+            gradientRadius = resources.displayMetrics.widthPixels * 0.5f
+            setGradientCenter(0.85f, -0.05f)
+        }
+        status.text = ""
         // Films and shows are loaded in the background so they can be searched too.
         // Get everything ready to search while you type (names worked out once, films and shows read in).
         scope.launch {
@@ -80,14 +96,16 @@ class SearchActivity : BaseActivity() {
             if (Vod.available) for (k in listOf(Vod.MOVIES, Vod.SERIES)) try { Vod.library(k); withContext(Dispatchers.Default) { SearchIndex.vod(k) } } catch (_: Exception) {}
             if (query.text.isNotEmpty()) search(query.text.toString(), 0)
         }
-        query.requestFocus()
+        voice.requestFocus()
+        showRecent()
         if (BuildConfig.DEBUG) intent.getStringExtra("dingus_test_query")?.let { query.setText(it) }
     }
 
     private fun search(text: String, wait: Long) {
         job?.cancel()
         val words = SearchIndex.norm(text).split(' ').filter { it.isNotBlank() }
-        if (words.isEmpty() || words.sumOf { it.length } < 2) { adapter.set(emptyList()); status.text = "Type to search."; return }
+        if (words.isEmpty() || words.sumOf { it.length } < 2) { adapter.set(emptyList()); status.text = ""; showRecent(); return }
+        findViewById<View>(R.id.recentBox).visibility = View.GONE
         job = scope.launch {
             if (wait > 0) delay(wait)
             val rows = withContext(Dispatchers.Default) {
@@ -107,14 +125,14 @@ class SearchActivity : BaseActivity() {
                     if (c.id !in seen && hit(tv.titles[i])) { seen.add(c.id); progs.add(Row.Live(c, tv.programmes[i])) }
                 }
                 ensureActive()
-                if (chans.isNotEmpty()) { out.add(Row.Heading("CHANNELS")); chans.forEach { out.add(Row.Live(it, Repo.nowNext(it).first)) } }
-                if (progs.isNotEmpty()) { out.add(Row.Heading("ON TV")); out.addAll(progs) }
+                if (chans.isNotEmpty()) { out.add(Row.Heading("Channels  ·  ${chans.size}")); chans.forEach { out.add(Row.Live(it, Repo.nowNext(it).first)) } }
+                if (progs.isNotEmpty()) { out.add(Row.Heading("On TV today  ·  ${progs.size}")); out.addAll(progs) }
                 for (k in listOf(Vod.MOVIES, Vod.SERIES)) {
                     val vi = SearchIndex.vod(k) ?: continue
                     val hits = ArrayList<VodItem>()
                     for (i in vi.names.indices) { if (hit(vi.names[i])) { hits.add(vi.items[i]); if (hits.size >= 60) break } }
                     ensureActive()
-                    if (hits.isNotEmpty()) { out.add(Row.Heading(if (k == Vod.MOVIES) "FILMS" else "TV SHOWS")); hits.forEach { out.add(Row.Item(k, it)) } }
+                    if (hits.isNotEmpty()) { out.add(Row.Heading((if (k == Vod.MOVIES) "Films" else "TV Shows") + "  ·  ${hits.size}")); hits.forEach { out.add(Row.Item(k, it)) } }
                 }
                 out
             }
@@ -126,6 +144,72 @@ class SearchActivity : BaseActivity() {
     }
 
     override fun onDestroy() { scope.cancel(); super.onDestroy() }
+
+    private fun firstResult(): View? = (0 until results.childCount).map { results.getChildAt(it) }.firstOrNull { it.isFocusable }
+
+    // ------------------------------------------------------------------ the keyboard and voice
+
+    /** Voice search: the box takes the Fire TV keyboard (hold the remote's mic to speak, or type). */
+    private fun startTyping() {
+        query.isFocusable = true; query.isFocusableInTouchMode = true
+        query.requestFocus()
+        query.setSelection(query.text.length)
+        (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(query, InputMethodManager.SHOW_FORCED)
+        Ui.test("search-voice")
+    }
+
+    private fun endTyping() {
+        (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(query.windowToken, 0)
+        query.isFocusable = false; query.isFocusableInTouchMode = false
+        if (query.text.isNotBlank()) Store.addRecentSearch(query.text.toString())
+    }
+
+    private fun buildKeys() {
+        val grid = findViewById<android.widget.GridLayout>(R.id.keys)
+        for (ch in "abcdefghijklmnopqrstuvwxyz1234567890") {
+            val k = android.view.ContextThemeWrapper(this, R.style.SearchKey).let { TextView(it, null, 0, R.style.SearchKey) }
+            k.text = ch.toString()
+            k.layoutParams = android.widget.GridLayout.LayoutParams().apply {
+                width = Ui.dp(this@SearchActivity, 38); height = Ui.dp(this@SearchActivity, 38)
+                setMargins(0, 0, Ui.dp(this@SearchActivity, 3), Ui.dp(this@SearchActivity, 4))
+            }
+            k.setOnClickListener { type(ch.toString()) }
+            grid.addView(k)
+        }
+        findViewById<View>(R.id.keySpace).setOnClickListener { if (query.text.isNotEmpty() && !query.text.endsWith(" ")) type(" ") }
+        findViewById<View>(R.id.keyDelete).setOnClickListener { val t = query.text; if (t.isNotEmpty()) query.setText(t.subSequence(0, t.length - 1)) }
+        findViewById<View>(R.id.keyClear).setOnClickListener { query.setText("") }
+    }
+
+    private fun type(s: String) { query.append(s); Ui.test("search-key $s") }
+
+    /** Before you type: what you searched for lately, as chips. */
+    private fun showRecent() {
+        val box = findViewById<View>(R.id.recentBox)
+        val row = findViewById<android.widget.LinearLayout>(R.id.recent)
+        val list = Store.recentSearches
+        row.removeAllViews()
+        box.visibility = if (list.isEmpty()) View.GONE else View.VISIBLE
+        for (q in list) {
+            val chip = TextView(android.view.ContextThemeWrapper(this, R.style.Choice), null, 0, R.style.Choice)
+            chip.text = q; chip.textSize = 13f
+            chip.setPadding(Ui.dp(this, 16), Ui.dp(this, 7), Ui.dp(this, 16), Ui.dp(this, 7))
+            chip.layoutParams = android.widget.LinearLayout.LayoutParams(-2, -2).apply { marginEnd = Ui.dp(this@SearchActivity, 8) }
+            chip.setOnClickListener { query.setText(q); query.setSelection(q.length) }
+            row.addView(chip)
+        }
+    }
+
+    /** The time, top right. */
+    private val tick = object : Runnable {
+        override fun run() {
+            val c = findViewById<TextView>(R.id.clock) ?: return
+            c.text = Ui.time(System.currentTimeMillis())
+            c.postDelayed(this, 60_000L - System.currentTimeMillis() % 60_000L + 50)
+        }
+    }
+    override fun onStart() { super.onStart(); findViewById<View>(R.id.clock)?.removeCallbacks(tick); tick.run() }
+    override fun onStop() { super.onStop(); findViewById<View>(R.id.clock)?.removeCallbacks(tick) }
 
     private inner class ResultAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         var rows: List<Row> = emptyList()
@@ -145,10 +229,11 @@ class SearchActivity : BaseActivity() {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
             val inf = LayoutInflater.from(parent.context)
-            if (viewType == 0) return Head(inf.inflate(R.layout.item_heading, parent, false) as TextView)
+            if (viewType == 0) return Head(inf.inflate(R.layout.item_search_heading, parent, false) as TextView)
             val v = inf.inflate(R.layout.item_result, parent, false)
             val h = H(v)
             v.setOnClickListener {
+                Store.addRecentSearch(query.text.toString())
                 when (val r = rows.getOrNull(h.bindingAdapterPosition)) {
                     is Row.Live -> startActivity(Intent(this@SearchActivity, MainActivity::class.java)
                         .putExtra(MainActivity.PLAY, r.c.id).putExtra(MainActivity.PLAY_CATEGORY, Repo.ALL))

@@ -209,6 +209,16 @@ object Store {
     /** Show channel numbers in the guide and elsewhere. */
     /** Reminders: switch to the channel by itself when the programme starts (if nothing's pressed). Off unless chosen. */
     /** How long before a reminded programme the reminder comes up, in seconds (1 minute unless changed). */
+    /** What you've searched for lately (newest first), shown before you type. */
+    var recentSearches: List<String>
+        get() = prefs.getString("recentSearches", "")!!.split('\n').filter { it.isNotBlank() }
+        set(v) = prefs.edit().putString("recentSearches", v.take(8).joinToString("\n")).apply()
+
+    fun addRecentSearch(q: String) {
+        val t = q.trim(); if (t.length < 2) return
+        recentSearches = listOf(t) + recentSearches.filterNot { it.equals(t, true) }
+    }
+
     var reminderLead: Int
         get() = prefs.getInt("reminderLead", 60)
         set(v) = prefs.edit().putInt("reminderLead", v).apply()
