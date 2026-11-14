@@ -246,7 +246,21 @@ class HomeActivity : BaseActivity() {
 
     /** The Dingus loading screen (logo, spinner, what's happening) while the playlist's read or loaded. */
     private fun loadingText(t: String) {
-        findViewById<View>(R.id.loadingScreen)?.visibility = View.VISIBLE
+        val v = findViewById<View>(R.id.loadingScreen) ?: return
+        // Over everything, the menu included (nothing to pick while it loads).
+        val root = findViewById<android.view.ViewGroup>(android.R.id.content)
+        if (v.parent !== root) {
+            (v.parent as? android.view.ViewGroup)?.removeView(v)
+            root.addView(v, android.view.ViewGroup.LayoutParams(-1, -1))
+            val accent = Themes.color(this, R.attr.dAccent)
+            v.findViewById<View>(R.id.loadingGlow)?.background = android.graphics.drawable.GradientDrawable().apply {
+                gradientType = android.graphics.drawable.GradientDrawable.RADIAL_GRADIENT
+                colors = intArrayOf((accent and 0x00FFFFFF) or (0x38 shl 24), (accent and 0x00FFFFFF) or (0x0E shl 24), 0)
+                gradientRadius = resources.displayMetrics.widthPixels * 0.45f
+                setGradientCenter(0.5f, 0.4f)
+            }
+        } else root.bringChildToFront(v)
+        v.visibility = View.VISIBLE
         findViewById<TextView>(R.id.loadingText)?.text = t
     }
 

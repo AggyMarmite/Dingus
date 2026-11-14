@@ -10,11 +10,14 @@ import android.widget.ListView
 object Dialogs {
     fun builder(a: Activity): AlertDialog.Builder = TvBuilder(a)
 
+    /** A list that slides in from the right over the screen (catch-up and the like). */
+    fun side(a: Activity): AlertDialog.Builder = TvBuilder(a, side = true)
+
     /**
      * Dialogs that always answer the remote's OK button: it presses whatever's highlighted (a button or a list
      * item), whatever the device's own dialogs do with it.
      */
-    private class TvBuilder(val a: Activity) : AlertDialog.Builder(a, android.R.style.Theme_DeviceDefault_Dialog_Alert) {
+    private class TvBuilder(val a: Activity, val side: Boolean = false) : AlertDialog.Builder(a, android.R.style.Theme_DeviceDefault_Dialog_Alert) {
         // Lists as pills (white when highlighted, a soft fill and ✓ on what it's set to now).
         override fun setItems(items: Array<out CharSequence>, listener: android.content.DialogInterface.OnClickListener?): AlertDialog.Builder =
             setAdapter(PillAdapter(a, items, -1), listener)
@@ -23,7 +26,7 @@ object Dialogs {
             setSingleChoiceItems(PillAdapter(a, items, checkedItem), checkedItem, listener)
 
         override fun create(): AlertDialog = super.create().also { d ->
-            d.setOnShowListener { style(a, d) }
+            d.setOnShowListener { style(a, d, side) }
             d.setOnKeyListener { _, code, ev ->
                 if (code != KeyEvent.KEYCODE_DPAD_CENTER && code != KeyEvent.KEYCODE_ENTER && code != KeyEvent.KEYCODE_NUMPAD_ENTER) return@setOnKeyListener false
                 val f = d.currentFocus ?: return@setOnKeyListener false
@@ -71,13 +74,23 @@ object Dialogs {
      * The new look on every pop-up: a dark rounded card, a bold title with a quieter line under it, pills for the
      * choices, and pill buttons with the main one first.
      */
-    private fun style(a: Activity, d: AlertDialog) {
+    private fun style(a: Activity, d: AlertDialog, side: Boolean = false) {
         try {
             val dp = a.resources.displayMetrics.density
-            d.window?.setBackgroundDrawable(android.graphics.drawable.InsetDrawable(android.graphics.drawable.GradientDrawable().apply {
-                setColor(0xFF121722.toInt()); cornerRadius = 20 * dp; setStroke((1 * dp).toInt(), 0x14FFFFFF)
-            }, (16 * dp).toInt()))
-            d.window?.setDimAmount(0.6f)
+            if (side) d.window?.let { w ->
+                w.setBackgroundDrawable(android.graphics.drawable.GradientDrawable().apply {
+                    setColor(0xF5121722.toInt()); cornerRadii = floatArrayOf(22 * dp, 22 * dp, 0f, 0f, 0f, 0f, 22 * dp, 22 * dp)
+                })
+                w.setGravity(android.view.Gravity.END or android.view.Gravity.FILL_VERTICAL)
+                w.setLayout((470 * dp).toInt(), android.view.ViewGroup.LayoutParams.MATCH_PARENT)
+                w.setWindowAnimations(android.R.style.Animation_Translucent)
+                w.setDimAmount(0.45f)
+            } else {
+                d.window?.setBackgroundDrawable(android.graphics.drawable.InsetDrawable(android.graphics.drawable.GradientDrawable().apply {
+                    setColor(0xFF121722.toInt()); cornerRadius = 20 * dp; setStroke((1 * dp).toInt(), 0x14FFFFFF)
+                }, (16 * dp).toInt()))
+                d.window?.setDimAmount(0.6f)
+            }
             val title = d.findViewById<android.widget.TextView>(a.resources.getIdentifier("alertTitle", "id", "android"))
             title?.apply { textSize = 20f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(0xFFFFFFFF.toInt()) }
             d.findViewById<android.widget.TextView>(android.R.id.message)?.apply {

@@ -36,6 +36,7 @@ class VpnActivity : BaseActivity() {
 
         header("Built-in VPN")
         val first = row("VPN", { statusLine() }) { toggle() }
+        statusRow = first
         row("Location", { locationLine() }) { chooseLocation() }
         row("Provider", { if (Vpn.provider == Vpn.SURFSHARK) "Surfshark" else "WireGuard config files (ProtonVPN and others)" }) { chooseProvider() }
         row("Set up from your phone", { setupLine() }) { phoneSetup() }
@@ -79,7 +80,26 @@ class VpnActivity : BaseActivity() {
         return v
     }
 
-    private fun update() { for ((v, f) in subtitles) v.findViewById<TextView>(R.id.subtitle).text = f() }
+    private var statusRow: View? = null
+
+    private fun update() {
+        for ((v, f) in subtitles) v.findViewById<TextView>(R.id.subtitle).text = f()
+        // The status card on top: big, and green while connected (white when the remote's on it, like every row).
+        statusRow?.let { v ->
+            val d = resources.displayMetrics.density
+            val on = Vpn.status == Vpn.Status.ON
+            v.findViewById<TextView>(R.id.title).apply {
+                text = when (Vpn.status) { Vpn.Status.ON -> "⛨  Connected"; Vpn.Status.CONNECTING -> "⛨  Connecting…"; else -> "⛨  Not connected" }
+                textSize = 21f; setTypeface(null, android.graphics.Typeface.BOLD)
+            }
+            v.background = android.graphics.drawable.StateListDrawable().apply {
+                addState(intArrayOf(android.R.attr.state_focused), android.graphics.drawable.GradientDrawable().apply { setColor(0xFFFFFFFF.toInt()); cornerRadius = 18 * d })
+                addState(intArrayOf(), android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+                    if (on) intArrayOf(0x5522C55E, 0x8C1E2636.toInt()) else intArrayOf(0x8C1E2636.toInt(), 0x8C1E2636.toInt())).apply { cornerRadius = 18 * d })
+            }
+            v.setPadding((22 * d).toInt(), (18 * d).toInt(), (22 * d).toInt(), (18 * d).toInt())
+        }
+    }
 
     private fun statusLine() = when (Vpn.status) {
         Vpn.Status.ON -> "On  ·  connected to ${Vpn.connectedTo?.label ?: ""}"

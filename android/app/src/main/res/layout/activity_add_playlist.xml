@@ -7,15 +7,16 @@
         <LinearLayout android:layout_width="760dp" android:layout_height="wrap_content" android:orientation="vertical">
 
             <TextView android:id="@+id/heading" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="Add your playlist" android:textSize="30sp" android:textStyle="bold" android:textColor="?attr/dText" />
+                android:text="Add a playlist" android:textSize="26sp" android:textStyle="bold" android:textColor="?attr/dText" />
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp"
-                android:text="Xtream Codes logins and M3U links are both supported." android:textSize="16sp"
+                android:text="M3U link or Xtream login – easiest from your phone." android:textSize="14sp"
                 android:textColor="?attr/dMuted" />
             <!-- Typing with a remote is slow: the same form on your phone. -->
             <LinearLayout android:id="@+id/phoneBox" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="18dp" android:background="@drawable/pill_bg" android:padding="16dp"
+                android:layout_marginTop="18dp" android:background="@drawable/card_bg" android:padding="20dp"
                 android:orientation="horizontal" android:gravity="center_vertical" android:visibility="gone">
-                <ImageView android:id="@+id/phoneQr" android:layout_width="150dp" android:layout_height="150dp"
+                <ImageView android:id="@+id/phoneQr" android:layout_width="160dp" android:layout_height="160dp"
+                    android:background="@drawable/qr_bg" android:padding="8dp"
                     android:contentDescription="QR code" />
                 <TextView android:id="@+id/phoneHint" android:layout_width="0dp" android:layout_height="wrap_content"
                     android:layout_weight="1" android:layout_marginStart="20dp"

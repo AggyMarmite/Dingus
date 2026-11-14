@@ -23,6 +23,12 @@ class PersonActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_person)
+        findViewById<ImageView>(R.id.photo).apply {
+            clipToOutline = true
+            outlineProvider = object : android.view.ViewOutlineProvider() {
+                override fun getOutline(view: android.view.View, o: android.graphics.Outline) { o.setOval(0, 0, view.width, view.height) }
+            }
+        }
         val id = intent.getStringExtra(ID) ?: return finish()
         findViewById<TextView>(R.id.name).text = intent.getStringExtra(NAME) ?: ""
         val status = findViewById<TextView>(R.id.status)
@@ -41,7 +47,7 @@ class PersonActivity : BaseActivity() {
             findViewById<TextView>(R.id.name).text = p.name
             findViewById<TextView>(R.id.born).text = p.born
             findViewById<TextView>(R.id.bio).text = p.bio.ifEmpty { "No biography yet." }
-            Posters.load(findViewById<ImageView>(R.id.photo), p.photo, Ui.dp(this@PersonActivity, 210))
+            Posters.load(findViewById<ImageView>(R.id.photo), p.photo, Ui.dp(this@PersonActivity, 150))
             // (Usually already loaded; if not, both at once.)
             if (Vod.available) listOf(Vod.MOVIES, Vod.SERIES).filter { Vod.cached(it) == null }
                 .map { k -> async { try { Vod.library(k) } catch (_: Exception) {} } }.forEach { it.await() }

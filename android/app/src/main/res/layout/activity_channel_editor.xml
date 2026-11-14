@@ -3,9 +3,9 @@
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:orientation="horizontal" android:background="?attr/dBg">
     <LinearLayout android:layout_width="290dp" android:layout_height="match_parent" android:orientation="vertical"
-        android:background="?attr/dSurface" android:paddingStart="34dp" android:paddingEnd="16dp" android:paddingTop="28dp">
+        android:paddingStart="24dp" android:paddingEnd="12dp" android:paddingTop="28dp">
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:paddingStart="14dp"
-            android:text="Edit channels" android:textSize="24sp" android:textStyle="bold" android:textColor="?attr/dText" />
+            android:text="Edit channels" android:textSize="26sp" android:textStyle="bold" android:textColor="?attr/dText" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingStart="14dp"
             android:layout_marginTop="6dp" android:layout_marginBottom="14dp" android:text="OK on a channel to rename, renumber or hide it."
             android:textSize="14sp" android:textColor="?attr/dMuted" />

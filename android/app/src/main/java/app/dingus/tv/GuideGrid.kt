@@ -351,7 +351,7 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
     private fun block(canvas: Canvas, x0: Float, x1: Float, y0: Float, y1: Float, text: String, p: Programme?, on: Boolean, airing: Boolean,
                       past: Boolean = false, catchUp: Boolean = false) {
         if (x1 - x0 < 3 * d) return
-        fill.color = when { on -> cAccent; airing -> cAiring; past -> cPast; else -> cSurface }
+        fill.color = when { on -> 0xFFFFFFFF.toInt(); airing -> cAiring; past -> cPast; else -> cSurface } // (white for the highlight, like everywhere)
         r.set(x0 + gap, y0, x1 - gap, y1)
         canvas.drawRoundRect(r, 6 * d, 6 * d, fill)
         if (genreColours && p != null && p.genre != Genres.NONE && x1 - x0 > 12 * d) {
@@ -363,15 +363,17 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         }
         val avail = x1 - x0 - 2 * pad
         if (avail < 12 * d || text.isEmpty()) return
-        titleP.color = if (past && !on && !catchUp) cMuted else cText
+        titleP.color = if (on) 0xFF0B0E14.toInt() else if (past && !catchUp) cMuted else cText
         if (p == null) {
+            subP.color = if (on) 0xFF4B5565.toInt() else cMuted
             canvas.drawText(fit(text, subP, avail, 's'), x0 + pad, (y0 + y1) / 2 + 4 * d, subP)
+            subP.color = cMuted
             return
         }
         val bell = reminder?.invoke(p) == true
         canvas.drawText(fit(text, titleP, avail - if (bell) 14 * d else 0f, 't'), x0 + pad, y0 + 18 * d, titleP)
-        if (bell) { fill.color = if (on) cText else cAccent; canvas.drawCircle(x1 - gap - 10 * d, y0 + 12 * d, 4 * d, fill) }
-        subP.color = if (on) 0xDDFFFFFF.toInt() else cMuted
+        if (bell) { fill.color = if (on) 0xFF0B0E14.toInt() else cAccent; canvas.drawCircle(x1 - gap - 10 * d, y0 + 12 * d, 4 * d, fill) }
+        subP.color = if (on) 0xFF4B5565.toInt() else cMuted
         canvas.drawText(fit((if (catchUp) "↺  " else "") + Ui.span(p), subP, avail, 's'), x0 + pad, y0 + 34 * d, subP)
         subP.color = cMuted
     }

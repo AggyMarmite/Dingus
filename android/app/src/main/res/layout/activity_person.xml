@@ -4,16 +4,18 @@
     android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical"
     android:background="?attr/dBg" android:paddingStart="56dp" android:paddingEnd="40dp" android:paddingTop="36dp">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-        <ImageView android:id="@+id/photo" android:layout_width="150dp" android:layout_height="210dp"
-            android:scaleType="centerCrop" android:background="?attr/dSurface" android:contentDescription="@null" />
+        <ImageView android:id="@+id/photo" android:layout_width="150dp" android:layout_height="150dp"
+            android:scaleType="centerCrop" android:background="@drawable/round_photo_bg" android:contentDescription="@null" />
         <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
             android:layout_marginStart="28dp" android:orientation="vertical">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ACTOR"
+                android:textSize="11sp" android:textStyle="bold" android:letterSpacing="0.14" android:textColor="?attr/dMuted" />
             <TextView android:id="@+id/name" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:textSize="34sp" android:textStyle="bold" android:textColor="?attr/dText" />
+                android:textSize="32sp" android:textStyle="bold" android:textColor="?attr/dText" />
             <TextView android:id="@+id/born" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="4dp" android:textSize="15sp" android:textColor="?attr/dMuted" />
             <TextView android:id="@+id/bio" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="12dp" android:maxLines="6" android:ellipsize="end" android:textSize="15sp"
+                android:layout_marginTop="10dp" android:maxLines="4" android:ellipsize="end" android:textSize="15sp"
                 android:lineSpacingExtra="3dp" android:textColor="?attr/dText" />
         </LinearLayout>
     </LinearLayout>

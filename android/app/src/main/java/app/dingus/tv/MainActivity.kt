@@ -472,7 +472,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         if (p != null && p.stop <= now && Repo.canCatchUp(c, p)) items.add("Watch from the start (catch-up)" to { onPlay(c, p) })
         val past = Repo.programmes(c).filter { Repo.canCatchUp(c, it, now) }.asReversed().take(60)
         if (past.isNotEmpty()) items.add(0, "Catch up…" to {
-            Dialogs.builder(this).setTitle("Catch up: ${c.name}")
+            Dialogs.side(this).setTitle("Catch up · ${c.name}")
                 .setItems(past.map { q -> "${Ui.day(q.start)}  ${Ui.time(q.start)}   ${q.title}" }.toTypedArray()) { _, i -> onPlay(c, past[i]) }
                 .show()
             Ui.test("catchup-list ${c.name} ${past.size}")
