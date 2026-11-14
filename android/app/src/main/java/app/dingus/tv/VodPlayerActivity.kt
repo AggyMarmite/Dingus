@@ -348,12 +348,11 @@ class VodPlayerActivity : BaseActivity() {
             KeyEvent.KEYCODE_DPAD_RIGHT -> if (onBar) skip(step) else return super.dispatchKeyEvent(event)
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER ->
                 if (onBar) { if (event.repeatCount == 0) { togglePause(); bar.requestFocus() } } else return super.dispatchKeyEvent(event)
-            KeyEvent.KEYCODE_DPAD_DOWN -> when {
-                !shown -> showControls(focusBar = true)
-                bar.isFocused -> (0 until findViewById<android.view.ViewGroup>(R.id.vodButtons).childCount)
-                    .map { findViewById<android.view.ViewGroup>(R.id.vodButtons).getChildAt(it) }
-                    .firstOrNull { it.visibility == View.VISIBLE }?.requestFocus()
-                else -> {}
+            KeyEvent.KEYCODE_DPAD_DOWN -> if (!shown || bar.isFocused) {
+                // ▼ goes to the buttons (bringing the controls up first if they're hidden).
+                showControls()
+                val row = findViewById<android.view.ViewGroup>(R.id.vodButtons)
+                (0 until row.childCount).map { row.getChildAt(it) }.firstOrNull { it.visibility == View.VISIBLE }?.requestFocus()
             }
             KeyEvent.KEYCODE_DPAD_UP -> if (!shown) showControls(focusBar = true) else if (!bar.isFocused) bar.requestFocus()
             else -> return super.dispatchKeyEvent(event)

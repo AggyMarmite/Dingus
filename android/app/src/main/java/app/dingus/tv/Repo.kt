@@ -90,7 +90,25 @@ object Repo {
     fun versions(c: Channel): List<Channel> {
         if (!Store.mergeChannels) return listOf(c)
         val k = Merge.key(c).ifEmpty { return listOf(c) }
-        return Merge.order(channels.filter { it.id !in hiddenIds && Merge.key(it) == k })
+        val all = Merge.order(channels.filter { it.id !in hiddenIds && Merge.key(it) == k })
+        // The version you chose (≡ → Choose version) first; the rest stay in order for when one won't play.
+        val pick = Store.preferredVersion(k)?.let { id -> all.firstOrNull { it.id == id } } ?: return all
+        return listOf(pick) + all.filter { it !== pick }
+    }
+
+    /** Merged channels: "Choose version…" – every version, with the one that plays (✓); picking one keeps it. */
+    fun chooseVersion(a: android.app.Activity, c: Channel, done: () -> Unit) {
+        val vs = versions(c)
+        if (vs.size < 2) return
+        fun label(v: Channel) = v.name + "  ·  " + (if (Merge.isBackup(v)) "Backup" else when (Merge.rank(v)) { 4 -> "4K"; 3 -> "FHD"; 1 -> "SD"; else -> "HD" })
+        Dialogs.builder(a).setTitle("Choose version")
+            .setSingleChoiceItems(vs.map { label(it) }.toTypedArray(), 0) { d, i ->
+                d.dismiss()
+                Store.setPreferredVersion(Merge.key(c), vs[i].id)
+                Ui.test("version-chosen ${vs[i].name}")
+                done()
+            }.show()
+        Ui.test("version-list ${vs.size}")
     }
 
     /** Every channel including hidden ones, for the channel editor. */

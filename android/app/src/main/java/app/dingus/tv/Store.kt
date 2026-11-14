@@ -224,6 +224,10 @@ object Store {
         get() = prefs.getBoolean("autoNext", false)
         set(v) = prefs.edit().putBoolean("autoNext", v).apply()
 
+    /** Merged channels: the version you chose to watch (by merge key → channel id). */
+    fun preferredVersion(key: String): String? = prefs.getString("ver_$key", null)
+    fun setPreferredVersion(key: String, id: String?) = prefs.edit().apply { if (id == null) remove("ver_$key") else putString("ver_$key", id) }.apply()
+
     var reminderLead: Int
         get() = prefs.getInt("reminderLead", 60)
         set(v) = prefs.edit().putInt("reminderLead", v).apply()

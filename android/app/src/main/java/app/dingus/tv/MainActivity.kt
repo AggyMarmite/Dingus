@@ -480,6 +480,9 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         if (Store.preview && live.current?.id != c.id) items.add("Watch here" to { preview(c) })
         items.add("Watch full screen" to { goFullScreen(c) })
         items.add((if (Store.isFavourite(c.id)) "Remove from Favourites" else "Add to Favourites") to { onFavourite(c) })
+        if (Store.mergeChannels && Repo.versions(c).size > 1) items.add("Choose version…" to {
+            Repo.chooseVersion(this, c) { if (live.current?.id == c.id) live.replayVersion() }
+        })
         items.add("Rename channel" to {
             Dialogs.input(this, "New name", c.name, "Channel name") { n ->
                 val e = ChannelEdits.all()[c.id]

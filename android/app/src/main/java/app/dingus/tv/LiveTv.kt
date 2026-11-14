@@ -55,6 +55,32 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     private val hideInfo = Runnable { info.animate().alpha(0f).setDuration(if (Ui.lite) 0 else 250).withEndAction { info.visibility = View.GONE } }
     private val retry = Runnable { startChannel() }
 
+    /**
+     * A stream that stops moving (the picture frozen, no error from the player – it happens with some providers after
+     * a few minutes, or when a connection's quietly dropped): after 12 seconds with nothing new, start it again, at live.
+     */
+    private var lastPos = -1L
+    private var lastBuffered = -1L
+    private var stuckFor = 0
+    private val watchdog = object : Runnable {
+        override fun run() {
+            val p = player
+            if (p != null) {
+                val active = p.playWhenReady && (p.playbackState == Player.STATE_READY || p.playbackState == Player.STATE_BUFFERING)
+                val pos = p.currentPosition; val buf = p.bufferedPosition
+                if (active && pos == lastPos && buf == lastBuffered) stuckFor++ else stuckFor = 0
+                lastPos = pos; lastBuffered = buf
+                if (stuckFor >= 4) {
+                    stuckFor = 0
+                    Ui.test("stall-restart ${current?.name}")
+                    retries = 0
+                    startChannel()
+                }
+            }
+            handler.postDelayed(this, 3_000)
+        }
+    }
+
     private var buffer: LiveBuffer? = null
     private var behindMs = 0L
     private var pausedAt = 0L
@@ -75,19 +101,27 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         version = null; versionTry = 0; retries = 0
         makePlayer()
         startChannel()
+        startWatchdog()
     }
+
+    // While anything's playing (the guide's window too), the Fire TV's screensaver mustn't start: it comes on after
+    // 5 minutes without a button press and stops the stream behind it.
+    private fun startWatchdog() {
+        a.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); stuckFor = 0; lastPos = -1; handler.removeCallbacks(watchdog); handler.postDelayed(watchdog, 3_000) }
 
     /** Back to the screen while watching: start the same channel again. */
     fun resume() {
         if (player != null || list.isEmpty()) return
         makePlayer()
         startChannel()
+        startWatchdog()
     }
 
     /** Stops and lets go of the stream (leaving the screen). */
     fun release() {
         if (player != null) Account.soon()
         handler.removeCallbacksAndMessages(null)
+        a.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         player?.release()
         player = null
         video.player = null
@@ -200,7 +234,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
 
     private fun startChannel() {
         val p = player ?: return
-        val c = version ?: list.getOrNull(index) ?: return
+        val c = version ?: list.getOrNull(index)?.let { if (Store.mergeChannels) Repo.versions(it).first() else it } ?: return
         Ui.test("load ${c.name}")
         message.text = if (fullScreen) "" else "Loading…"
         buffer?.close()
@@ -238,7 +272,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         updateSurface()
         handler.removeCallbacks(statsTick)
         statsBadge.visibility = View.GONE
-        a.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        if (player == null) a.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) // (still on while the window plays)
         FrameRate.reset(a)
         message.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
         pendingJump = -1; handler.removeCallbacks(doJump)
@@ -403,6 +437,9 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
 
     // ------------------------------------------------------------------ options
 
+    /** A different version was chosen for the channel that's playing: switch to it. */
+    fun replayVersion() { version = null; versionTry = 0; retries = 0; startChannel() }
+
     private fun options() {
         val c = list.getOrNull(index) ?: return
         val p = player ?: return
@@ -414,6 +451,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
             Store.statsPinned = !Store.statsPinned; updateStats(); Ui.test("stats-pinned ${Store.statsPinned}")
         })
         items.add("Stream information" to { streamInfo() })
+        if (Store.mergeChannels && Repo.versions(c).size > 1) items.add(1, "Choose version…" to { Repo.chooseVersion(a, c) { replayVersion() } })
         Dialogs.builder(a).setTitle(c.name).setItems(items.map { it.first }.toTypedArray()) { _, i -> items[i].second() }.show()
     }
 

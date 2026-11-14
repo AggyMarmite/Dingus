@@ -14,7 +14,7 @@
     <TextView android:id="@+id/value" android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:layout_marginStart="16dp" android:maxWidth="320dp" android:maxLines="1" android:ellipsize="end"
         android:textSize="13sp" android:duplicateParentState="true" android:textColor="@color/chip_text"
-        android:background="@drawable/value_chip" android:paddingStart="12dp" android:paddingEnd="12dp" android:paddingTop="4dp" android:paddingBottom="4dp" />
+        android:background="@drawable/value_chip" android:visibility="gone" android:paddingStart="12dp" android:paddingEnd="12dp" android:paddingTop="4dp" android:paddingBottom="4dp" />
     <ImageView android:id="@+id/switchIcon" android:layout_width="40dp" android:layout_height="22dp" android:layout_marginStart="16dp"
         android:duplicateParentState="true" android:contentDescription="@null" android:visibility="gone" />
 </LinearLayout>
