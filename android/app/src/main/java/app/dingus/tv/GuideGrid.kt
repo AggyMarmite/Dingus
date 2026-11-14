@@ -120,6 +120,10 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
     private val starP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 12 * d; color = 0xFFFBBF24.toInt() }
     private val r = RectF()
     private val tri = Path()
+    /** The reminder bell (13dp), from the usual 24-unit bell shape. */
+    private val bellPath: Path = androidx.core.graphics.PathParser.createPathFromPathData(
+        "M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22zm7-6V11a7 7 0 0 0-5.5-6.84V3.5a1.5 1.5 0 0 0-3 0v.66A7 7 0 0 0 5 11v5l-2 2v1h18v-1z"
+    ).apply { transform(android.graphics.Matrix().apply { setScale(13 * d / 24f, 13 * d / 24f) }) }
 
     init {
         isFocusable = true
@@ -371,8 +375,11 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
             return
         }
         val bell = reminder?.invoke(p) == true
-        canvas.drawText(fit(text, titleP, avail - if (bell) 14 * d else 0f, 't'), x0 + pad, y0 + 18 * d, titleP)
-        if (bell) { fill.color = if (on) 0xFF0B0E14.toInt() else cAccent; canvas.drawCircle(x1 - gap - 10 * d, y0 + 12 * d, 4 * d, fill) }
+        canvas.drawText(fit(text, titleP, avail - if (bell) 18 * d else 0f, 't'), x0 + pad, y0 + 18 * d, titleP)
+        if (bell) { // a small bell: white, dark on the white highlight
+            fill.color = if (on) 0xFF0B0E14.toInt() else 0xFFFFFFFF.toInt()
+            canvas.save(); canvas.translate(x1 - gap - 17 * d, y0 + 5 * d); canvas.drawPath(bellPath, fill); canvas.restore()
+        }
         subP.color = if (on) 0xFF4B5565.toInt() else cMuted
         canvas.drawText(fit((if (catchUp) "↺  " else "") + Ui.span(p), subP, avail, 's'), x0 + pad, y0 + 34 * d, subP)
         subP.color = cMuted
