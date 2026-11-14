@@ -82,11 +82,13 @@ class SideMenu(
     private val d = a.resources.displayMetrics.density
     private val strip = (60 * d).toInt()
     private val full = (232 * d).toInt()
-    private val scrim = View(a).apply { setBackgroundColor(0xFF000000.toInt()); alpha = 0f; visibility = View.GONE }
+    /** Darkens the left of the screen behind the open menu (fading out across it); the rest stays bright and live. */
+    private val scrim = View(a).apply {
+        background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+            intArrayOf(0xED000000.toInt(), 0xEB000000.toInt(), 0xE8000000.toInt(), 0xCC000000.toInt(), 0x73000000, 0x14000000, 0))
+        alpha = 0f; visibility = View.GONE
+    }
     val panel: View = LayoutInflater.from(a).inflate(R.layout.side_menu, root, false)
-    private val panelBg = android.graphics.drawable.ColorDrawable(Themes.color(a, R.attr.dSurface))
-    private var floating: Boolean? = null
-    private val rowPad = HashMap<View, IntArray>()
     private val edge: View = panel.findViewById(R.id.sideEdge)
     private val fading = listOf<View>(panel.findViewById(R.id.sideName), panel.findViewById(R.id.sideHeader), panel.findViewById(R.id.status))
     private val rows: List<TextView> = listOf(R.id.navHome, R.id.navGuide, R.id.navFilms, R.id.navShows, R.id.navSearch, R.id.settings, R.id.navRefresh)
@@ -105,7 +107,7 @@ class SideMenu(
 
     init {
         if (pad) content.setPaddingRelative(content.paddingStart + strip, content.paddingTop, content.paddingEnd, content.paddingBottom)
-        panel.background = panelBg
+        panel.background = null
         root.addView(scrim, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         root.addView(panel, FrameLayout.LayoutParams(full, ViewGroup.LayoutParams.MATCH_PARENT))
         panel.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> apply() }
@@ -116,6 +118,13 @@ class SideMenu(
             dr.setTint(colour); dr.setBounds(0, 0, size, size); t.setCompoundDrawablesRelative(dr, null, null, null)
         }
         rowFor(here).isActivated = true
+        for (t in rows) {
+            // (A background can bring its own padding; keep the row's own.)
+            val pad = intArrayOf(t.paddingStart, t.paddingTop, t.paddingEnd, t.paddingBottom)
+            t.background = Pill(t)
+            t.setPaddingRelative(pad[0], pad[1], pad[2], pad[3])
+            t.setOnFocusChangeListener { _, _ -> tintRows(((fraction - 0.25f) / 0.75f).coerceIn(0f, 1f)) }
+        }
 
         panel.findViewById<View>(R.id.navHome).setOnClickListener { go(Page.HOME) }
         panel.findViewById<View>(R.id.navGuide).setOnClickListener { go(Page.LIVE) }
@@ -131,33 +140,50 @@ class SideMenu(
 
     private fun rowFor(p: Page): TextView = rows[p.ordinal]
 
-    // ------------------------------------------------------------------ floating buttons
-    // Closed, the menu is round buttons floating over the screen (no panel behind them); opening it brings in the
-    // panel, and the rows become the usual highlighted pills with their names.
+    // ------------------------------------------------------------------ the buttons and pills
+    // Closed: light round buttons floating on the left (the screen you're on in a soft white). Opening: each one
+    // stretches into a pill and its name fades in, with no panel behind – just the left of the screen darkening.
+    // Open: the highlighted pill is white; the screen you're on keeps its soft white.
 
-
-    private fun bubble(on: Boolean): android.graphics.drawable.Drawable {
-        val oval = android.graphics.drawable.GradientDrawable().apply {
-            shape = android.graphics.drawable.GradientDrawable.OVAL
-            setColor(if (on) Themes.color(a, R.attr.dAccent) else (Themes.color(a, R.attr.dSurface2) and 0x00FFFFFF) or (0xD9 shl 24))
+    private inner class Pill(private val v: TextView) : android.graphics.drawable.Drawable() {
+        private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        private val edgePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            style = android.graphics.Paint.Style.STROKE; strokeWidth = d; color = 0x1FFFFFFF
         }
-        // A 40dp circle round the icon (the row is 44dp tall and its icon's middle is 22dp in).
-        val rowW = full - (16 * d).toInt()
-        return android.graphics.drawable.InsetDrawable(oval, (2 * d).toInt(), (2 * d).toInt(), rowW - (42 * d).toInt(), (2 * d).toInt())
+        private val r = android.graphics.RectF()
+        override fun draw(c: android.graphics.Canvas) {
+            val p = fraction
+            val b = bounds
+            val inset = 2 * d * (1 - p)
+            val w = 40 * d + (b.width() - 40 * d) * p
+            r.set(b.left + inset, b.top + inset, b.left + inset + w - 2 * inset * 0, b.bottom - inset)
+            val rad = r.height() / 2
+            val focused = v.isFocused && isOpen
+            paint.color = when {
+                focused -> 0xFFFFFFFF.toInt()
+                v.isActivated -> 0x38FFFFFF                                   // the screen you're on: soft white
+                else -> ((0.6f + 0.25f * p) * 255).toInt() shl 24 or 0x1E2636   // a dark see-through button / pill
+            }
+            c.drawRoundRect(r, rad, rad, paint)
+            if (!focused && !v.isActivated) c.drawRoundRect(r, rad, rad, edgePaint)
+        }
+        override fun isStateful() = true
+        override fun onStateChange(state: IntArray): Boolean { invalidateSelf(); return true }
+        override fun setAlpha(alpha: Int) {}
+        override fun setColorFilter(cf: android.graphics.ColorFilter?) {}
+        @Deprecated("Deprecated in Java")
+        override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
     }
 
-    private fun setFloating(f: Boolean) {
-        if (floating == f) return
-        floating = f
-        val txt = Themes.color(a, R.attr.dText)
+    /** The names and icons: dark on the white highlight, light otherwise; the names fade in as it opens. */
+    private fun tintRows(labels: Float) {
+        val light = Themes.color(a, R.attr.dText)
         for (t in rows) {
-            // (Setting a background can change the row's padding – the circle's insets would push the name out of
-            // sight – so the padding is put back as it was.)
-            val pad = intArrayOf(t.paddingStart, t.paddingTop, t.paddingEnd, t.paddingBottom)
-            val base = rowPad.getOrPut(t) { pad }
-            t.background = if (f) bubble(t.isActivated) else androidx.core.content.ContextCompat.getDrawable(a, R.drawable.side_row_bg)
-            t.setPaddingRelative(base[0], base[1], base[2], base[3])
-            t.compoundDrawablesRelative[0]?.setTint(if (f && t.isActivated) 0xFFFFFFFF.toInt() else txt)
+            val dark = t.isFocused && isOpen
+            val c = if (dark) 0xFF0B0E14.toInt() else light
+            t.setTextColor((c and 0x00FFFFFF) or ((labels * 255).toInt() shl 24))
+            t.compoundDrawablesRelative[0]?.setTint(if (dark) 0xFF0B0E14.toInt() else 0xFFFFFFFF.toInt())
+            t.background?.invalidateSelf()
         }
     }
 
@@ -169,11 +195,9 @@ class SideMenu(
         edge.translationX = (w - 1).toFloat()
         val labels = ((fraction - 0.25f) / 0.75f).coerceIn(0f, 1f)
         for (v in fading) v.alpha = labels
-        for (t in rows) t.setTextColor(t.textColors.withAlpha((labels * 255).toInt()))
-        panelBg.alpha = (fraction * 250).toInt()
-        edge.alpha = fraction
-        setFloating(fraction < 0.35f)
-        scrim.alpha = 0.6f * fraction
+        tintRows(labels)
+        edge.alpha = 0f
+        scrim.alpha = fraction
         scrim.visibility = if (fraction > 0f) View.VISIBLE else View.GONE
     }
 
