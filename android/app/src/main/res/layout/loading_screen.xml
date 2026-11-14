@@ -7,7 +7,7 @@
     <View android:id="@+id/loadingGlow" android:layout_width="match_parent" android:layout_height="match_parent" />
     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
         android:orientation="vertical" android:gravity="center">
-        <ImageView android:layout_width="92dp" android:layout_height="92dp" android:src="@mipmap/ic_launcher"
+        <ImageView android:layout_width="92dp" android:layout_height="92dp" android:src="@drawable/ic_launcher"
             android:contentDescription="@null" />
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="16dp"
             android:text="Dingus" android:textSize="30sp" android:textStyle="bold" android:textColor="?attr/dText" />
