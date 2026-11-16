@@ -37,6 +37,16 @@ jobs:
         run: |
           ls -la android/app/build/outputs/apk/*/
           echo "::notice title=apk::release $(du -k android/app/build/outputs/apk/release/*.apk | cut -f1) KB"
+      - name: Check the icon and banner made it into the APK
+        run: |
+          AAPT=$(ls $ANDROID_HOME/build-tools/*/aapt2 | sort -V | tail -1)
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          $AAPT dump badging $APK > badging.txt
+          grep -E "^(application:|application-icon|banner|leanback)" badging.txt || true
+          echo "--- icon/banner files in the APK"
+          unzip -l $APK | grep -iE "res/.*(png|webp|xml)" | grep -iE "banner|launcher|drawable" | head -40 || true
+          grep -q "^application-icon-" badging.txt || { echo "::error::No launcher icon found in the APK"; exit 1; }
+          grep -q "banner" badging.txt || echo "::warning::No banner found in badging output"
       - name: Put the APK on a release
         if: github.event_name == 'workflow_dispatch' && inputs.attach_to != ''
         env:
