@@ -11,8 +11,8 @@
         <FrameLayout android:layout_width="match_parent" android:layout_height="182dp">
         <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent" android:layerType="hardware">
         <View android:id="@+id/guideGlow" android:layout_width="match_parent" android:layout_height="match_parent" />
-        <ImageView android:id="@+id/guideArt" android:layout_width="match_parent" android:layout_height="match_parent"
-            android:scaleType="centerCrop" android:contentDescription="@null" />
+        <app.dingus.tv.TopCropImageView android:id="@+id/guideArt" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:contentDescription="@null" />
         <View android:id="@+id/guideShade" android:layout_width="match_parent" android:layout_height="match_parent" />
         </FrameLayout>
         <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal"
