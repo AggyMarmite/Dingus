@@ -3,6 +3,12 @@ package app.dingus.tv
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.ColorFilter
+import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.PixelFormat
+import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
 import android.util.LruCache
@@ -129,7 +135,7 @@ class ImageCache(private val name: String, megabytes: Int, private val config: B
         if (url.isNullOrBlank() || hasFailed(url)) { view.setImageDrawable(null); return }
         fun put(b: Bitmap) {
             val old = view.drawable
-            val new = android.graphics.drawable.BitmapDrawable(view.resources, b)
+            val new = CoverDrawable(b)
             if (old == null || Ui.lite) { view.setImageDrawable(new); return }
             val oldD = (old as? android.graphics.drawable.TransitionDrawable)?.let { it.getDrawable(it.numberOfLayers - 1) } ?: old
             val t = android.graphics.drawable.TransitionDrawable(arrayOf(oldD, new)).apply { isCrossFadeEnabled = true }
@@ -141,6 +147,27 @@ class ImageCache(private val name: String, megabytes: Int, private val config: B
             val v = ref.get()
             if (v != null && v.tag == url && bmp != null) put(bmp)
         }
+    }
+
+    /**
+     * A picture drawn cover-fitted into whatever it's given. Used for the crossfade: a plain bitmap in a
+     * TransitionDrawable is stretched to fill the view, so pictures of different shapes came out distorted.
+     */
+    private class CoverDrawable(private val bmp: Bitmap) : Drawable() {
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        private val m = Matrix()
+        override fun draw(c: Canvas) {
+            val b = bounds
+            if (b.isEmpty || bmp.width <= 0 || bmp.height <= 0) return
+            val s = maxOf(b.width().toFloat() / bmp.width, b.height().toFloat() / bmp.height)
+            m.setScale(s, s)
+            m.postTranslate(b.left + (b.width() - bmp.width * s) / 2f, b.top + (b.height() - bmp.height * s) / 2f)
+            c.save(); c.clipRect(b); c.drawBitmap(bmp, m, paint); c.restore()
+        }
+        override fun setAlpha(alpha: Int) { paint.alpha = alpha }
+        override fun setColorFilter(filter: ColorFilter?) { paint.colorFilter = filter }
+        @Suppress("OVERRIDE_DEPRECATION")
+        override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
     }
 
     private val tmdbSize = Regex("""(image\.tmdb\.org/t/p/)(original|w\d+)/""")
