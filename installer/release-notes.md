@@ -1,3 +1,10 @@
+## What's new in Dingus 0.15.17
+
+* Fire TV: a tidier progress bar when watching films and shows.
+* Fire TV: the TV returns to its normal refresh rate after full screen.
+* Fire TV: a steadier, top-aligned picture behind the guide.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.16
 
 * Fire TV: new options on films and shows – My list, and mark as unwatched.
