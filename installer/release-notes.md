@@ -1,3 +1,11 @@
+## What's new in Dingus 0.15.16
+
+* Fire TV: new options on films and shows – My list, and mark as unwatched.
+* Fire TV: a tidier next-episode card near the end of an episode.
+* Fire TV: quicker playlist and TV guide updates.
+* Fire TV: fixed stretched pictures in Films and TV Shows.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.15
 
 * Fire TV: smoother scrolling across the app.
