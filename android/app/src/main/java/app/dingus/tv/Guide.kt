@@ -3,8 +3,6 @@ package app.dingus.tv
 import android.util.Xml
 import org.xmlpull.v1.XmlPullParser
 import java.io.InputStream
-import java.util.Calendar
-import java.util.TimeZone
 
 /**
  * Reads an XMLTV guide as it downloads (guides can be 100 MB+, so it's never all in memory), keeping only the
@@ -17,10 +15,14 @@ object Guide {
     /** "BBC One HD", "UK: BBC One FHD" → "bbcone". */
     fun norm(name: String): String {
         var s = name.lowercase()
-        s = s.replace(Regex("""^\s*([a-z]{2,4})\s*[|:\-]\s*"""), "")
-        s = s.replace(Regex("""\b(uhd|fhd|hd|sd|4k|hevc|h265|1080p|720p|50fps|backup|\+1)\b"""), "")
+        s = s.replace(prefixRx, "")
+        s = s.replace(qualityRx, "")
         return s.filter { it.isLetterOrDigit() }
     }
+
+    // (Made once, not for every name in the guide.)
+    private val prefixRx = Regex("""^\s*([a-z]{2,4})\s*[|:\-]\s*""")
+    private val qualityRx = Regex("""\b(uhd|fhd|hd|sd|4k|hevc|h265|1080p|720p|50fps|backup|\+1)\b""")
 
     fun parse(input: InputStream, channels: List<Channel>, hoursAhead: Int = 14, hoursBack: Int = 1): Parsed {
         val now = System.currentTimeMillis()
@@ -115,17 +117,20 @@ object Guide {
         }
     }
 
-    private val utc = TimeZone.getTimeZone("UTC")
-
-    /** "20261112210000 +0000" → milliseconds (0 if it can't be read). */
+    /**
+     * "20261112210000 +0000" → milliseconds (0 if it can't be read). Done with plain arithmetic: a guide has a
+     * time on every programme, and building a calendar for each one was most of the parse time.
+     */
     fun time(s: String?): Long {
         if (s == null || s.length < 14) return 0
         return try {
-            val c = Calendar.getInstance(utc)
-            c.clear()
-            c.set(s.substring(0, 4).toInt(), s.substring(4, 6).toInt() - 1, s.substring(6, 8).toInt(),
-                s.substring(8, 10).toInt(), s.substring(10, 12).toInt(), s.substring(12, 14).toInt())
-            var t = c.timeInMillis
+            fun num(from: Int, to: Int): Int {
+                var v = 0
+                for (i in from until to) { val d = s[i] - '0'; if (d !in 0..9) throw NumberFormatException(); v = v * 10 + d }
+                return v
+            }
+            val days = daysFromCivil(num(0, 4), num(4, 6), num(6, 8))
+            var t = (days * 86_400L + num(8, 10) * 3600L + num(10, 12) * 60L + num(12, 14)) * 1000L
             val tz = s.substring(14).trim()
             if (tz.length >= 5 && (tz[0] == '+' || tz[0] == '-')) {
                 val mins = tz.substring(1, 3).toInt() * 60 + tz.substring(3, 5).toInt()
@@ -133,5 +138,15 @@ object Guide {
             }
             t
         } catch (e: Exception) { 0 }
+    }
+
+    /** Days since 1970-01-01 for a date in the Gregorian calendar (the standard civil-date formula). */
+    private fun daysFromCivil(y0: Int, m: Int, d: Int): Long {
+        val y = if (m <= 2) y0 - 1 else y0
+        val era = (if (y >= 0) y else y - 399) / 400
+        val yoe = y - era * 400
+        val doy = (153 * (if (m > 2) m - 3 else m + 9) + 2) / 5 + d - 1
+        val doe = yoe * 365 + yoe / 4 - yoe / 100 + doy
+        return era * 146097L + doe - 719468L
     }
 }

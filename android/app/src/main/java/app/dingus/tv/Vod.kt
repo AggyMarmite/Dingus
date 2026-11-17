@@ -196,6 +196,25 @@ object Vod {
     }
     fun lastEpisode(showId: String): String? = progress.getString("last:$showId", null)
 
+    // ------------------------------------------------------------------ My list
+
+    /** Films and shows saved by hand, newest first, as "movies:12" / "series:34" lines. */
+    private fun myListKeys(): List<String> = (progress.getString("mylist", "") ?: "").split('\n').filter { it.isNotEmpty() }
+
+    fun inMyList(kind: String, id: String): Boolean = myListKeys().contains("$kind:$id")
+
+    fun setInMyList(kind: String, id: String, on: Boolean) {
+        val key = "$kind:$id"
+        val list = myListKeys().filter { it != key }
+        progress.edit().putString("mylist", (if (on) listOf(key) + list else list).take(300).joinToString("\n")).apply()
+    }
+
+    /** My list items that are in the library, in the order they were added. */
+    fun myList(lib: Map<String, Library>): List<Pair<String, VodItem>> = myListKeys().mapNotNull { k ->
+        val kind = k.substringBefore(':'); val id = k.substringAfter(':')
+        lib[kind]?.byId?.get(id)?.let { kind to it }
+    }
+
     fun continueList(kind: String, lib: Library): List<VodItem> =
         (progress.getString("c:$kind", "") ?: "").split('\n').filter { it.isNotEmpty() }.mapNotNull { lib.byId[it] }
 

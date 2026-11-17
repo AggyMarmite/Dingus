@@ -56,6 +56,8 @@
             <TextView android:id="@+id/play" style="@style/Choice" android:minWidth="130dp" android:text="▶  Play" />
             <TextView android:id="@+id/restart" style="@style/Choice" android:layout_marginStart="12dp"
                 android:text="⟲  Start over" android:visibility="gone" />
+            <TextView android:id="@+id/myList" style="@style/Choice" android:layout_marginStart="12dp"
+                android:text="＋  My list" android:visibility="gone" />
             <TextView android:id="@+id/watched" style="@style/Choice" android:layout_marginStart="12dp"
                 android:text="Mark as watched" android:visibility="gone" />
         </LinearLayout>

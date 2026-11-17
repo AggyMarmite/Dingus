@@ -99,7 +99,7 @@ class BrowseActivity : BaseActivity() {
         heroBody = findViewById(R.id.heroBody)
         compact = true; setCompact(false) // (the full size banner: taller here than Home's)
 
-        adapter = RowsAdapter(this, onFocus = { hero.show(it) }, onClick = { open(it) })
+        adapter = RowsAdapter(this, onFocus = { hero.show(it) }, onClick = { open(it) }, onLong = { MyList.toggle(it) { build() } })
         // The row you're on sits right under the banner, fully in view (the next one peeking below); moving down slides
         // the rows up one, so nothing jumps about or gets cut off.
         rows.layoutManager = RowsLayoutManager(this, centered = false)
@@ -229,6 +229,7 @@ class BrowseActivity : BaseActivity() {
             Card.Title(kind, m, if (pos != null && pos.second > 0) pos.first.toFloat() / pos.second else -1f, if (kind == Vod.SERIES) "Continue" else null)
         }
         if (cont.isNotEmpty()) out.add(Row("Continue watching", cont.take(20)))
+        MyList.row(kind)?.let { out.add(it) }
         if (l.newest.isNotEmpty()) out.add(Row("Recently added", l.newest.take(30).map { Card.Title(kind, it) } +
             (if (l.items.size > 30) listOf(Card.SeeAll(kind, Vod.RECENT, "Recently added")) else emptyList())))
         val top = Vod.topRated(l)

@@ -42,7 +42,7 @@ class HomeActivity : BaseActivity() {
         rows = findViewById(R.id.rows)
         empty = findViewById(R.id.empty)
         hero = Hero(this, scope)
-        adapter = RowsAdapter(this, onFocus = { if (lite) hero.show(it) }, onClick = { open(it) })
+        adapter = RowsAdapter(this, onFocus = { if (lite) hero.show(it) }, onClick = { open(it) }, onLong = { MyList.toggle(it) { build() } })
         rows.layoutManager = RowsLayoutManager(this, centered = true)
         setUpCentredRows()
         if (lite) rows.adapter = adapter
@@ -301,6 +301,7 @@ class HomeActivity : BaseActivity() {
         }
         Vod.cached(Vod.SERIES)?.let { lib -> Vod.continueList(Vod.SERIES, lib).forEach { cont.add(Card.Title(Vod.SERIES, it, label = "Continue")) } }
         if (cont.isNotEmpty()) out.add(Row("Continue watching", cont.take(20)))
+        MyList.row()?.let { out.add(it) }
         val favs = Repo.channelsIn(Repo.FAV)
         if (favs.isNotEmpty()) out.add(Row("Favourite channels", favs.take(30).map { Card.Live(it) }))
         val recent = Repo.channelsIn(Repo.RECENT)
@@ -445,6 +446,7 @@ class HomeActivity : BaseActivity() {
         }
 
         if (cont.isNotEmpty()) out.add(Row("Continue watching", cont.take(20)))
+        MyList.row()?.let { out.add(it) }
         if (favs.isNotEmpty()) out.add(Row("Favourite channels", favs.take(30).map { c -> Card.Show(c, Repo.nowNext(c).first) }))
         val next = mine.mapNotNull { c -> Repo.nowNext(c).second?.let { Card.Show(c, it, until(it, now)) } }
         if (next.isNotEmpty()) out.add(Row("Coming up next", next.take(20)))

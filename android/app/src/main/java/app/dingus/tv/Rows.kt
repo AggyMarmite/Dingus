@@ -29,6 +29,27 @@ sealed class Card {
 
 class Row(val title: String, val cards: List<Card>)
 
+/** My list: films and shows saved by hand (held OK on a poster, or the button on the details page). */
+object MyList {
+    /** The row on Home (both kinds), or on Films / TV Shows (just that kind, when [kind] is given). */
+    fun row(kind: String? = null): Row? {
+        val libs = listOfNotNull(Vod.cached(Vod.MOVIES)?.let { Vod.MOVIES to it }, Vod.cached(Vod.SERIES)?.let { Vod.SERIES to it }).toMap()
+        val items = Vod.myList(libs).filter { kind == null || it.first == kind }
+        return if (items.isEmpty()) null else Row("My list", items.take(30).map { (kind, m) -> Card.Title(kind, m) })
+    }
+
+    /** Adds or removes a film or show; [redo] rebuilds what's on screen. */
+    fun toggle(card: Card, redo: () -> Unit): Boolean {
+        val t = card as? Card.Title ?: return false
+        val on = !Vod.inMyList(t.kind, t.item.id)
+        Vod.setInMyList(t.kind, t.item.id, on)
+        Ui.test("my-list ${t.item.name} $on")
+        Notice.done(if (on) "Added to My list" else "Removed from My list", 2_500)
+        redo()
+        return true
+    }
+}
+
 /**
  * Rows of cards, Netflix-style: one vertical list of rows, each a horizontal list. The rows share one pool of
  * card views, and a row remembers where you'd scrolled to, so it's smooth on a Fire Stick.
@@ -37,6 +58,8 @@ class RowsAdapter(
     private val ctx: Context,
     private val onFocus: (Card) -> Unit,
     private val onClick: (Card) -> Unit,
+    /** Held OK on a film or show: true when it dealt with it (so the click doesn't also open it). */
+    private val onLong: (Card) -> Boolean = { false },
 ) : RecyclerView.Adapter<RowsAdapter.H>() {
     var rows: List<Row> = emptyList(); private set
     private val pool = RecyclerView.RecycledViewPool().apply { setMaxRecycledViews(0, 24); setMaxRecycledViews(1, 16) }
@@ -110,6 +133,7 @@ class RowsAdapter(
             // (not the row that first made the view) – otherwise it can show and open another row's title.
             fun card(): Card? = (c.bindingAdapter as? CardsAdapter)?.cards?.getOrNull(c.bindingAdapterPosition)
             v.setOnClickListener { card()?.let(onClick) }
+            v.setOnLongClickListener { card()?.let(onLong) ?: false }
             v.setOnFocusChangeListener { view, has ->
                 Ui.grow(view, has)
                 if (has) card()?.let(onFocus)

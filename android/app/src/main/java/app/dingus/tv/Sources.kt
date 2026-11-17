@@ -5,6 +5,9 @@ import android.util.JsonToken
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.URLEncoder
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 
 /** Reads a playlist's categories and live channels (Xtream Codes login, or an M3U link). */
 object Sources {
@@ -28,6 +31,18 @@ object Sources {
     private fun xtream(p: Playlist): Result {
         val base = xtreamBase(p.server)
         val auth = "username=${enc(p.user)}&password=${enc(p.pass)}"
+        // The login, the categories and the channel list don't need each other, so they come down together (a wrong
+        // login still stops everything: the login's error is the one shown, as before).
+        return runBlocking {
+            val login = async(Dispatchers.IO) { xtreamLogin(base, auth) }
+            val cats = async(Dispatchers.IO) { xtreamCategories(base, auth) }
+            val chans = async(Dispatchers.IO) { xtreamChannels(p, base, auth) }
+            login.await()
+            Result(cats.await(), chans.await(), "$base/xmltv.php?$auth")
+        }
+    }
+
+    private fun xtreamLogin(base: String, auth: String) {
         // The login itself: a wrong one answers with "auth": 0.
         Net.open("$base/player_api.php?$auth").use { s ->
             val r = JsonReader(InputStreamReader(s, Charsets.UTF_8))
@@ -63,6 +78,9 @@ object Sources {
             }
             if (!ok) throw IOException("The username or password wasn't accepted")
         }
+    }
+
+    private fun xtreamCategories(base: String, auth: String): List<Category> {
         val cats = ArrayList<Category>()
         Net.open("$base/player_api.php?$auth&action=get_live_categories").use { s ->
             val r = JsonReader(InputStreamReader(s, Charsets.UTF_8))
@@ -80,6 +98,10 @@ object Sources {
             }
             r.endArray()
         }
+        return cats
+    }
+
+    private fun xtreamChannels(p: Playlist, base: String, auth: String): List<Channel> {
         val chans = ArrayList<Channel>()
         Net.open("$base/player_api.php?$auth&action=get_live_streams", 30_000).use { s ->
             val r = JsonReader(InputStreamReader(s, Charsets.UTF_8))
@@ -107,7 +129,7 @@ object Sources {
             }
             r.endArray()
         }
-        return Result(cats, chans, "$base/xmltv.php?$auth")
+        return chans
     }
 
     /** A value as text, whatever JSON type it came as (Xtream servers mix numbers, strings and nulls). */

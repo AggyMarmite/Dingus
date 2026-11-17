@@ -50,6 +50,12 @@ class DetailActivity : BaseActivity() {
 
         play.setOnClickListener { playMain(fromStart = false) }
         restart.setOnClickListener { playMain(fromStart = true) }
+        findViewById<TextView>(R.id.myList).setOnClickListener {
+            val m = item ?: return@setOnClickListener
+            Vod.setInMyList(kind, m.id, !Vod.inMyList(kind, m.id))
+            Ui.test("my-list ${m.name} ${Vod.inMyList(kind, m.id)}")
+            refreshButtons()
+        }
         findViewById<TextView>(R.id.watched).setOnClickListener {
             val m = item ?: return@setOnClickListener
             Vod.setWatched(m.id, !Vod.watched(m.id), kind)
@@ -183,6 +189,12 @@ class DetailActivity : BaseActivity() {
 
     private fun refreshButtons() {
         val m = item ?: return
+        findViewById<TextView>(R.id.myList).apply {
+            visibility = View.VISIBLE
+            val on = Vod.inMyList(kind, m.id)
+            text = if (on) "✓  In My list" else "＋  My list"
+            isActivated = on
+        }
         if (kind == Vod.MOVIES) {
             val pos = Vod.position(m.id)
             play.text = if (pos != null) "▶  Resume from ${clock(pos.first)}" else "▶  Play"
@@ -190,7 +202,7 @@ class DetailActivity : BaseActivity() {
             showResume(pos)
             findViewById<TextView>(R.id.watched).apply {
                 visibility = View.VISIBLE
-                text = if (Vod.watched(m.id)) "✓  Watched" else "Mark as watched"
+                text = if (Vod.watched(m.id)) "Mark as unwatched" else "Mark as watched"
                 isActivated = Vod.watched(m.id)
             }
         } else {

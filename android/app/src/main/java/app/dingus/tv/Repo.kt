@@ -194,7 +194,9 @@ object Repo {
     }
 
     private fun refreshChannelsNow(p: Playlist, already: Sources.Result?) {
+        val t0 = System.currentTimeMillis()
         val r = already ?: Sources.load(p)
+        val t1 = System.currentTimeMillis()
         Sources.accountInfo?.let { Account.remember(it); Sources.accountInfo = null }
         // Keep guide matches from before, so now/next shows straight away until the guide's read again.
         val oldKeys = channels.associate { it.id to it.guideKey }
@@ -202,6 +204,7 @@ object Repo {
         set(r.categories, r.channels, r.guideUrl)
         channelsIn(ALL) // (worked out here, in the background, not when the guide first draws)
         try { writeChannels() } catch (e: Exception) { Log.w("Dingus", "save channels", e) }
+        Log.i("Dingus", "Update: ${r.channels.size} channels, loaded in ${t1 - t0} ms, saved in ${System.currentTimeMillis() - t1} ms")
         changed()
     }
 
@@ -230,7 +233,9 @@ object Repo {
             val todo = chans.filter { !keys.containsKey(it.id) }
             if (todo.isEmpty()) break
             try {
+                val t0 = System.currentTimeMillis()
                 val parsed = Net.open(url, 30_000).use { Guide.parse(it, todo, hoursAhead = Store.guideHours, hoursBack = backHours) }
+                Log.i("Dingus", "Update: guide $n read and matched in ${System.currentTimeMillis() - t0} ms (${parsed.keysByChannelId.size} channels)")
                 anyWorked = true
                 // Keys from different guides could clash, so each guide's are kept apart.
                 for ((k, v) in parsed.programmes) programmes["$n|$k"] = v
@@ -245,7 +250,9 @@ object Repo {
         for (c in raw) c.guideKey = keys[c.id]
         guide = programmes
         Store.guideLoadedAt = System.currentTimeMillis()
+        val t2 = System.currentTimeMillis()
         try { writeGuide() } catch (e: Exception) { Log.w("Dingus", "save guide", e) }
+        Log.i("Dingus", "Update: guide saved in ${System.currentTimeMillis() - t2} ms")
         changed()
     }
 

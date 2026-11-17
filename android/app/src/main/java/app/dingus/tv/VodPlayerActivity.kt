@@ -111,6 +111,8 @@ class VodPlayerActivity : BaseActivity() {
             setOnClickListener { openEpisodes() }
         }
         upNext.setOnClickListener { playIndex(index + 1) }
+        findViewById<View>(R.id.upNextPlay).setOnClickListener { playIndex(index + 1) }
+        findViewById<View>(R.id.upNextEpisodes).setOnClickListener { openEpisodes() }
         showTitle()
     }
 
@@ -218,6 +220,8 @@ class VodPlayerActivity : BaseActivity() {
     // ------------------------------------------------------------------ the controls
 
     private val hideControls = Runnable { hideControlsNow() }
+    /** The "Next episode" card comes up this long before the end. */
+    private val UP_NEXT_MS = 45_000L
 
     private fun showControls(focusBar: Boolean = false) {
         if (epPanel.visibility == View.VISIBLE) return
@@ -269,17 +273,24 @@ class VodPlayerActivity : BaseActivity() {
             }
             pausedLine.progress = if (len > 0) (pos * 1000 / len).toInt() else 0
         }
-        // Near the end of an episode: Up next.
-        val nearEnd = kind == Vod.SERIES && index + 1 < ids.size && len > 5 * 60_000L && len - pos in 1..45_000L
+        // Near the end of an episode: the next one, with a countdown when Auto-play is on (it then plays by itself at the end).
+        val nearEnd = kind == Vod.SERIES && index + 1 < ids.size && len > 5 * 60_000L && len - pos in 1..UP_NEXT_MS
         if (nearEnd && upNextDismissed != index && upNext.visibility != View.VISIBLE && epPanel.visibility != View.VISIBLE) {
             upNext.visibility = View.VISIBLE
-            val n = Regex("""S\d+ E(\d+)\s*(.*)$""").find(titles[index + 1])
+            val n = Regex("""S(\d+) E(\d+)\s*(.*)$""").find(titles[index + 1])
             findViewById<TextView>(R.id.upNextTitle).text = n?.let { m ->
-                val (num, name) = m.destructured; if (name.isBlank()) "Episode $num" else "Episode $num  ·  $name" } ?: titles[index + 1]
-            Posters.load(findViewById(R.id.upNextPic), images.getOrNull(index + 1)?.ifEmpty { null }, Ui.dp(this, 140), wide = true)
-            upNext.requestFocus()
+                val (_, num, name) = m.destructured; if (name.isBlank()) "Episode $num" else "Episode $num  ·  $name" } ?: titles[index + 1]
+            findViewById<TextView>(R.id.upNextSub).text = n?.let { m -> "S${m.groupValues[1]}  ·  E${m.groupValues[2]}" } ?: ""
+            findViewById<View>(R.id.upNextTrack).visibility = if (Store.autoNext) View.VISIBLE else View.GONE
+            Posters.load(findViewById(R.id.upNextPic), images.getOrNull(index + 1)?.ifEmpty { null }, Ui.dp(this, 150), wide = true)
+            findViewById<View>(R.id.upNextPlay).requestFocus()
             Ui.test("vod-up-next")
         } else if (!nearEnd && upNext.visibility == View.VISIBLE) upNext.visibility = View.GONE
+        if (upNext.visibility == View.VISIBLE) {
+            val left = (len - pos).coerceIn(0L, UP_NEXT_MS)
+            findViewById<View>(R.id.upNextFill).apply { pivotX = 0f; scaleX = left.toFloat() / UP_NEXT_MS }
+            findViewById<TextView>(R.id.upNextPlay).text = if (Store.autoNext) "Play now  ·  ${(left + 999) / 1000}" else "Play now"
+        }
     }
 
     private var skipFrom = -1L
@@ -317,10 +328,19 @@ class VodPlayerActivity : BaseActivity() {
         }
         // The Up next card, when it has the remote: OK plays it, BACK puts it away.
         if (upNext.visibility == View.VISIBLE && upNext.hasFocus()) {
+            val onEpisodes = findViewById<View>(R.id.upNextEpisodes).hasFocus()
+            fun putAway() { if (down) { upNextDismissed = index; upNext.visibility = View.GONE; showControls(focusBar = true) }; return }
             when (code) {
-                KeyEvent.KEYCODE_BACK -> { if (!down) { upNextDismissed = index; upNext.visibility = View.GONE; showControls(focusBar = true) }; return true }
-                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> { if (!down && event.repeatCount == 0) playIndex(index + 1); return true }
-                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_DOWN -> { if (down) { upNextDismissed = index; showControls(focusBar = true) }; return true }
+                KeyEvent.KEYCODE_BACK -> { if (!down) putAway(); return true }
+                // Play now is the card's OK; Episodes is a button, so it works as one.
+                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                    if (onEpisodes) return super.dispatchKeyEvent(event)
+                    if (!down && event.repeatCount == 0) playIndex(index + 1)
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_RIGHT -> return super.dispatchKeyEvent(event)
+                KeyEvent.KEYCODE_DPAD_LEFT -> if (onEpisodes) return super.dispatchKeyEvent(event) else { putAway(); return true }
+                KeyEvent.KEYCODE_DPAD_DOWN -> { putAway(); return true }
             }
         }
         if (!down) {
