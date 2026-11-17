@@ -39,7 +39,8 @@ class PlayBar @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = nul
 
     override fun onDraw(c: Canvas) {
         val w = width.toFloat()
-        val y = height - 14 * d
+        // (The bar is taller than the track: the knob, its ring and the skip bubble need the room above and below.)
+        val y = height - 30 * d
         val th = 6 * d
         val left = 0f; val right = w
         fun xOf(t: Long) = if (duration > 0) left + (right - left) * (t.coerceIn(0, duration).toFloat() / duration) else left

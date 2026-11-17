@@ -14,6 +14,8 @@ import kotlin.math.roundToInt
  */
 object FrameRate {
     private var switched = false
+    /** The TV's own mode before the first switch: what going back to the guide returns to. */
+    private var baseModeId = 0
 
     fun match(a: Activity, fps: Float) {
         if (!Store.matchFrameRate || fps <= 0f || Build.VERSION.SDK_INT < 23) return
@@ -27,6 +29,7 @@ object FrameRate {
             if (best.modeId == current.modeId && !switched) return
             val lp = a.window.attributes
             if (lp.preferredDisplayModeId == best.modeId) return
+            if (!switched) baseModeId = current.modeId
             lp.preferredDisplayModeId = best.modeId
             a.window.attributes = lp
             switched = true
@@ -44,13 +47,15 @@ object FrameRate {
         return modes.mapNotNull { m -> fits(m.refreshRate)?.let { m to it } }.minByOrNull { it.second }?.first
     }
 
+    /** Back to the TV's own rate (the guide, the menus): the mode it had before, not "no preference". */
     fun reset(a: Activity) {
         if (!switched) return
         try {
             val lp = a.window.attributes
-            lp.preferredDisplayModeId = 0
+            lp.preferredDisplayModeId = baseModeId
             a.window.attributes = lp
-        } catch (_: Exception) {}
+            Ui.test("frame-rate back to ${baseModeId}")
+        } catch (e: Exception) { Log.w("Dingus", "frame rate reset", e) }
         switched = false
     }
 }
