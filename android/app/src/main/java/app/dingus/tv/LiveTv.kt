@@ -151,7 +151,8 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
      */
     private fun updateSurface() {
         val p = player ?: return
-        val want = !fullScreen && isHdr(p)
+        // In full screen an HDR channel uses the TV's video layer (HDR) only if dynamic range matching is on.
+        val want = isHdr(p) && (!fullScreen || !Store.matchDynamicRange)
         if (want == sdrPreview) return
         sdrPreview = want
         if (want) {
@@ -162,12 +163,12 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
             tv.visibility = View.VISIBLE
             video.player = null
             // Hide the video's surface too: left on screen, the TV can stay in HDR mode and the guide looks washed out.
-            video.visibility = View.GONE
+            video.videoSurfaceView?.visibility = View.GONE // (the texture sits inside the player view, so only its surface goes)
             p.setVideoTextureView(tv)
             Ui.test("preview-sdr")
         } else {
             previewTexture?.let { p.clearVideoTextureView(it); it.visibility = View.GONE }
-            video.visibility = View.VISIBLE
+            video.videoSurfaceView?.visibility = View.VISIBLE
             video.player = p
         }
     }

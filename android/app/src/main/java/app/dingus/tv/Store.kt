@@ -146,6 +146,11 @@ object Store {
         get() = prefs.getBoolean("matchFrameRate", true)
         set(v) = prefs.edit().putBoolean("matchFrameRate", v).apply()
 
+    /** Live TV: an HDR channel in full screen switches the TV into HDR. Off, it plays as a normal picture. */
+    var matchDynamicRange: Boolean
+        get() = prefs.getBoolean("matchDynamicRange", true)
+        set(v) = prefs.edit().putBoolean("matchDynamicRange", v).apply()
+
     /** Live channels from an Xtream login as "ts" (MPEG-TS) or "hls". */
     var streamFormat: String
         get() = prefs.getString("streamFormat", "ts")!!
