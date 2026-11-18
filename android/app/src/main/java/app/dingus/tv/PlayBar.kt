@@ -49,7 +49,8 @@ class PlayBar @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = nul
         p.color = 0x66FFFFFF; r.set(left, y - th / 2, xOf(buffered), y + th / 2); c.drawRoundRect(r, th / 2, th / 2, p)
         p.color = 0xFFFFFFFF.toInt(); r.set(left, y - th / 2, xOf(position), y + th / 2); c.drawRoundRect(r, th / 2, th / 2, p)
         // The knob: play/pause in it; a soft ring round it when the remote's on the bar.
-        val kx = xOf(position).coerceIn(17 * d, w - 17 * d)
+        // Kept far enough in for the focus ring (23dp) to show at either end, not just the knob (17dp).
+        val kx = xOf(position).coerceIn(23 * d, w - 23 * d)
         val kr = 17 * d
         if (isFocused) { p.color = 0x40FFFFFF; c.drawCircle(kx, y, kr + 6 * d, p) }
         p.color = 0xFFFFFFFF.toInt(); p.setShadowLayer(6 * d, 0f, 2 * d, 0x80000000.toInt())
