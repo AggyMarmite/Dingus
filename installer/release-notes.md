@@ -1,3 +1,10 @@
+## What's new in Dingus 0.15.19
+
+* Fire TV: fixes to the TV's refresh rate when leaving full screen.
+* Fire TV: the dropped-frame count now starts again for each channel.
+* Fire TV: a steadier playback bar at the start of a film.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.18
 
 * Fire TV: a steadier picture in the guide, with no washed-out look after an HDR channel.
