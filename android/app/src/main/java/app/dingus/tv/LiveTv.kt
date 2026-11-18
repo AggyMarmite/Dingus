@@ -238,6 +238,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
 
     private fun startChannel() {
         val p = player ?: return
+        dropped = 0 // the player is reused between channels, so the count starts again for each channel
         val c = version ?: list.getOrNull(index)?.let { if (Store.mergeChannels) Repo.versions(it).first() else it } ?: return
         Ui.test("load ${c.name}")
         message.text = if (fullScreen) "" else "Loading…"
