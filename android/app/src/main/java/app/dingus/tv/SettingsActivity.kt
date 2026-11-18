@@ -127,6 +127,7 @@ class SettingsActivity : BaseActivity() {
         row("Subtitle language", { "" }, { java.util.Locale(Store.subtitleLanguage).displayLanguage.ifEmpty { Store.subtitleLanguage } }) { subtitleLanguage() }
         toggle("Play the next episode automatically", "Otherwise “Up next” waits for you near the end", { Store.autoNext }) { Store.autoNext = it }
         toggle("Match the TV's frame rate", "Smoother motion (50 Hz for UK TV, 24 Hz for films)", { Store.matchFrameRate }) { Store.matchFrameRate = it }
+        toggle("Match the TV's dynamic range", "HDR channels in full screen switch the TV to HDR", { Store.matchDynamicRange }) { Store.matchDynamicRange = it }
     }
 
     private fun lookSection() {
