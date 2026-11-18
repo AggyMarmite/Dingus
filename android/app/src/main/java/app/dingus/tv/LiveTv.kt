@@ -161,10 +161,13 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
             }
             tv.visibility = View.VISIBLE
             video.player = null
+            // Hide the video's surface too: left on screen, the TV can stay in HDR mode and the guide looks washed out.
+            video.visibility = View.GONE
             p.setVideoTextureView(tv)
             Ui.test("preview-sdr")
         } else {
             previewTexture?.let { p.clearVideoTextureView(it); it.visibility = View.GONE }
+            video.visibility = View.VISIBLE
             video.player = p
         }
     }
