@@ -14,12 +14,15 @@ import kotlin.math.roundToInt
  */
 object FrameRate {
     private var switched = false
+    /** The TV's own mode before the first switch: what going back to the guide returns to. */
+    private var baseModeId = 0
 
     fun match(a: Activity, fps: Float) {
         if (!Store.matchFrameRate || fps <= 0f || Build.VERSION.SDK_INT < 23) return
         try {
             val display = a.windowManager.defaultDisplay
             val current = display.mode
+            if (!switched) baseModeId = current.modeId // recorded before anything can return early
             val modes = display.supportedModes.filter {
                 it.physicalWidth == current.physicalWidth && it.physicalHeight == current.physicalHeight
             }
@@ -45,18 +48,17 @@ object FrameRate {
     }
 
     /**
-     * Back to the TV's own rate (the guide, the menus): the display's default mode, every time, not only when this
-     * screen switched it. Otherwise a rate set earlier (a film's 24 Hz, say) could stay on after leaving full screen.
+     * Back to the TV's own rate (the guide, the menus), every time, not only when this screen switched it. Otherwise
+     * a rate set earlier (a film's 24 Hz, say) could stay on after leaving full screen.
      */
     fun reset(a: Activity) {
         try {
-            val home = a.windowManager.defaultDisplay.defaultMode.modeId
             val lp = a.window.attributes
-            if (lp.preferredDisplayModeId != home) {
-                lp.preferredDisplayModeId = home
+            if (lp.preferredDisplayModeId != baseModeId) {
+                lp.preferredDisplayModeId = baseModeId
                 a.window.attributes = lp
             }
-            Ui.test("frame-rate back to $home")
+            Ui.test("frame-rate back to $baseModeId")
         } catch (e: Exception) { Log.w("Dingus", "frame rate reset", e) }
         switched = false
     }
