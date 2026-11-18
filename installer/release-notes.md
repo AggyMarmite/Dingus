@@ -1,3 +1,11 @@
+## What's new in Dingus 0.15.18
+
+* Fire TV: a steadier picture in the guide, with no washed-out look after an HDR channel.
+* Fire TV: a new setting to match the TV's dynamic range.
+* Fire TV: categories stay centred as you move through them.
+* Fire TV: fixes to the next-episode card and the playback bar.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.17
 
 * Fire TV: a tidier progress bar when watching films and shows.
