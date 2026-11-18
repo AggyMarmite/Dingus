@@ -6,6 +6,7 @@ import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
 /**
@@ -32,6 +33,12 @@ class CategoryList(
         if (now >= 0) notifyItemChanged(now)
     }
     fun indexOf(id: String?) = items.indexOfFirst { it.id == id }
+
+    /** Keeps the focused category in the middle of the column (at the top and bottom, the ends sit at the edge). */
+    private fun centre(rv: RecyclerView, pos: Int) {
+        val v = (rv.layoutManager as? LinearLayoutManager)?.findViewByPosition(pos) ?: return
+        rv.smoothScrollBy(0, (v.top + v.height / 2) - rv.height / 2)
+    }
     /** Show what's pending straight away (e.g. when leaving the list). */
     fun flush() { handler.removeCallbacks(pending); pending.run() }
 
@@ -60,8 +67,8 @@ class CategoryList(
                 val t = if (code == KeyEvent.KEYCODE_DPAD_DOWN) p + 1 else p - 1
                 if (rv != null && t in items.indices) {
                     val next = rv.findViewHolderForAdapterPosition(t)?.itemView
-                    if (next != null && next.isShown) next.requestFocus()
-                    else { rv.scrollToPosition(t); rv.post { rv.findViewHolderForAdapterPosition(t)?.itemView?.requestFocus() } }
+                    if (next != null && next.isShown) { next.requestFocus(); centre(rv, t) }
+                    else { rv.scrollToPosition(t); rv.post { rv.findViewHolderForAdapterPosition(t)?.itemView?.requestFocus(); centre(rv, t) } }
                     return@setOnKeyListener true
                 }
                 if (code == KeyEvent.KEYCODE_DPAD_DOWN) return@setOnKeyListener true // the last one: stay
