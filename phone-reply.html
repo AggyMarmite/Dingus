@@ -1,0 +1,19 @@
+<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Dingus VPN setup</title>
+<style>body{font-family:system-ui,sans-serif;background:#0b0e14;color:#e8ecf3;margin:0;padding:20px;max-width:640px}
+h1{font-size:22px}label{display:block;margin:16px 0 6px;color:#8b94a7;font-size:14px}
+input,textarea{width:100%;box-sizing:border-box;background:#141923;color:#e8ecf3;border:1px solid #262e3d;border-radius:8px;padding:12px;font-size:16px}
+textarea{height:180px;font-family:monospace;font-size:13px}button{margin-top:20px;background:#3b82f6;color:#fff;border:0;border-radius:8px;padding:14px 22px;font-size:16px}
+.note{padding:12px;border-radius:8px;background:#14532d;margin:12px 0}small{color:#8b94a7}</style></head><body>
+<h1>Dingus VPN setup</h1><div class=note>✓ Saved: 1 config file. You can close this page.</div>
+<form method=post action=/save>
+<label>Code shown on the TV</label><input name=code inputmode=numeric autocomplete=off required>
+<h2 style="font-size:17px;margin-top:28px">Surfshark</h2>
+<small>From Surfshark's website: VPN → Manual setup → Desktop or mobile → WireGuard → "I don't have a key pair" → generate, then copy both.</small>
+<label>WireGuard private key</label><input name=key autocomplete=off placeholder="e.g. aBcD…=">
+<label>Tunnel address</label><input name=address autocomplete=off placeholder="e.g. 10.14.0.2/16">
+<h2 style="font-size:17px;margin-top:28px">Or WireGuard config files (ProtonVPN and others)</h2>
+<small>Paste the contents of one or more .conf files. Each one becomes a location.</small>
+<label>Name (optional)</label><input name=name placeholder="e.g. UK London">
+<label>Config file(s)</label><textarea name=conf placeholder="[Interface]&#10;PrivateKey = …&#10;Address = …&#10;&#10;[Peer]&#10;PublicKey = …&#10;Endpoint = …"></textarea>
+<button type=submit>Send to the TV</button></form></body></html>
