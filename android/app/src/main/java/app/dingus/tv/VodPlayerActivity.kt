@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
@@ -68,6 +69,12 @@ class VodPlayerActivity : BaseActivity() {
     private var retries = 0
     private var resumeAt = -1L
     private var upNextDismissed = -1
+    // Sound but no picture (some 4K / HDR files on the TV's video layer): after a few seconds, draw the picture
+    // the way the rest of the screen is drawn instead, and say what the file is.
+    private var rendered = false
+    private var textured = false
+    private var texture: android.view.TextureView? = null
+    private val noPicture = Runnable { checkPicture() }
     private val save = object : Runnable {
         override fun run() { savePosition(); handler.postDelayed(this, 10_000) }
     }
@@ -127,6 +134,7 @@ class VodPlayerActivity : BaseActivity() {
                     Player.STATE_READY -> {
                         retries = 0
                         message.text = ""
+                        if (!rendered) { handler.removeCallbacks(noPicture); handler.postDelayed(noPicture, 4_000) }
                         Ui.test("vod-playing ${titles[index]}")
                         Account.soon()
                     }
@@ -135,6 +143,12 @@ class VodPlayerActivity : BaseActivity() {
                 }
             }
             override fun onIsPlayingChanged(isPlaying: Boolean) { tickNow() }
+            override fun onRenderedFirstFrame() {
+                rendered = true
+                handler.removeCallbacks(noPicture)
+                if (message.text.startsWith("No picture") || message.text.startsWith("Still no picture")) message.text = ""
+                Ui.test("vod-first-frame${if (textured) " (texture)" else ""}")
+            }
             override fun onPlayerError(error: PlaybackException) {
                 Ui.test("vod-error ${error.errorCodeName}")
                 val pos = player?.currentPosition ?: 0
@@ -146,6 +160,9 @@ class VodPlayerActivity : BaseActivity() {
         })
         video.player = p
         player = p
+        textured = false
+        texture?.visibility = View.GONE
+        video.videoSurfaceView?.visibility = View.VISIBLE
         val start = when {
             resumeAt >= 0 -> resumeAt
             fromStart -> 0L
@@ -167,8 +184,38 @@ class VodPlayerActivity : BaseActivity() {
         video.player = null
     }
 
+    /** Called a few seconds after playing starts: no first frame means a black screen, so try the other surface. */
+    private fun checkPicture() {
+        val p = player ?: return
+        val f = p.videoFormat ?: return // no video track (or not chosen yet): nothing to show
+        if (rendered || p.playbackState != Player.STATE_READY || !p.playWhenReady) return
+        val hdr = f.colorInfo?.colorTransfer.let {
+            if (it == androidx.media3.common.C.COLOR_TRANSFER_ST2084) " · HDR10/Dolby Vision"
+            else if (it == androidx.media3.common.C.COLOR_TRANSFER_HLG) " · HLG" else ""
+        }
+        val info = "${f.sampleMimeType?.removePrefix("video/") ?: "?"} ${f.width}x${f.height}$hdr · ${Players.lastDecoder.ifEmpty { "decoder ?" }}"
+        Log.w("Dingus", "No picture: $info")
+        if (textured) { message.text = "Still no picture.\n$info"; Ui.test("vod-no-picture $info"); return }
+        textured = true
+        message.text = "No picture yet, trying another way…\n$info"
+        Ui.test("vod-texture-fallback $info")
+        // The texture goes inside the player view's own picture frame, so the picture keeps its shape.
+        val frame = video.findViewById<android.view.ViewGroup>(androidx.media3.ui.R.id.exo_content_frame) ?: video
+        val tv = texture ?: android.view.TextureView(this).also {
+            frame.addView(it, android.widget.FrameLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT))
+            texture = it
+        }
+        tv.visibility = View.VISIBLE
+        video.videoSurfaceView?.visibility = View.GONE
+        p.setVideoTextureView(tv)
+        handler.postDelayed(noPicture, 5_000)
+    }
+
     private fun open(at: Long) {
         val p = player ?: return
+        rendered = false
+        handler.removeCallbacks(noPicture)
+        handler.postDelayed(noPicture, 5_000)
         p.setMediaItem(MediaItem.fromUri(Uri.parse(urls[index])), at)
         p.prepare()
         p.playWhenReady = true

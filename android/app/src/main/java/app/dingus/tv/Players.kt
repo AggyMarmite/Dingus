@@ -26,6 +26,9 @@ object StreamMeter : androidx.media3.datasource.TransferListener {
 /** One place that makes the video player, for full screen and the guide's preview. */
 @OptIn(UnstableApi::class)
 object Players {
+    /** The video decoder the player last started (for the "no picture" note). */
+    @Volatile var lastDecoder = ""
+
     fun create(ctx: Context, small: Boolean = false): ExoPlayer {
         val http = DefaultHttpDataSource.Factory()
             .setUserAgent(Net.USER_AGENT)
@@ -51,6 +54,7 @@ object Players {
         p.addAnalyticsListener(object : androidx.media3.exoplayer.analytics.AnalyticsListener {
             override fun onVideoDecoderInitialized(eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
                                                    decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long) {
+                lastDecoder = decoderName
                 android.util.Log.i("Dingus", "Video decoder: $decoderName")
                 Ui.test("video-decoder $decoderName")
             }
