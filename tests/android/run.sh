@@ -184,6 +184,8 @@ fresh
 key KEYCODE_DPAD_CENTER 3
 check "vod-playing" 40 "an episode plays"
 key KEYCODE_DPAD_DOWN 1; key KEYCODE_DPAD_RIGHT 0.5; key KEYCODE_DPAD_RIGHT 0.5; shot 14a-player-buttons
+# The screenshot takes long enough for the controls to hide (then OK would pause instead): wake them, back on Episodes.
+key KEYCODE_DPAD_LEFT 0.3; key KEYCODE_DPAD_RIGHT 0.3
 key KEYCODE_DPAD_CENTER 2
 check "vod-episodes 4" 5 "Episodes in the player lists the show's episodes"
 shot 14b-player-episodes
