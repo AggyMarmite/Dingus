@@ -9,6 +9,7 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 
@@ -37,13 +38,27 @@ object Players {
             .setBufferDurationsMs(if (small) 4_000 else 8_000, if (small) 12_000 else 30_000, 1_000, 2_000)
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()
-        val p = ExoPlayer.Builder(ctx)
+        // If the first-choice video decoder can't start for a stream (some 4K / Dolby Vision files), try the next one
+        // instead of playing the sound over a black picture.
+        val renderers = DefaultRenderersFactory(ctx).setEnableDecoderFallback(true)
+        val p = ExoPlayer.Builder(ctx, renderers)
             .setMediaSourceFactory(DefaultMediaSourceFactory(http))
             .setLoadControl(load)
             .build()
         p.videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
         if (!small && Store.matchFrameRate) noAutoFrameRate(p)
         subtitles(p)
+        p.addAnalyticsListener(object : androidx.media3.exoplayer.analytics.AnalyticsListener {
+            override fun onVideoDecoderInitialized(eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+                                                   decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long) {
+                android.util.Log.i("Dingus", "Video decoder: $decoderName")
+                Ui.test("video-decoder $decoderName")
+            }
+            override fun onVideoCodecError(eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime, videoCodecError: Exception) {
+                android.util.Log.w("Dingus", "Video codec error", videoCodecError)
+                Ui.test("video-codec-error ${videoCodecError.message}")
+            }
+        })
         return p
     }
 
