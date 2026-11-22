@@ -125,6 +125,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         player?.release()
         player = null
         video.player = null
+        video.videoSurfaceView?.visibility = View.VISIBLE // (an HDR preview hides it; the next channel needs it back)
         sdrPreview = false
         previewTexture?.visibility = View.GONE
         buffer?.close()

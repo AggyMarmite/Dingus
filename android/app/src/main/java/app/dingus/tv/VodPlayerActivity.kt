@@ -329,7 +329,7 @@ class VodPlayerActivity : BaseActivity() {
         // The Up next card, when it has the remote: OK plays it, BACK puts it away.
         if (upNext.visibility == View.VISIBLE && upNext.hasFocus()) {
             val onEpisodes = findViewById<View>(R.id.upNextEpisodes).hasFocus()
-            fun putAway() { if (down) { upNextDismissed = index; upNext.visibility = View.GONE; showControls(focusBar = true) }; return }
+            fun putAway() { upNextDismissed = index; upNext.visibility = View.GONE; showControls(focusBar = true) }
             when (code) {
                 KeyEvent.KEYCODE_BACK -> { if (!down) putAway(); return true }
                 // Play now is the card's OK; Episodes is a button, so it works as one.
@@ -339,8 +339,8 @@ class VodPlayerActivity : BaseActivity() {
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_RIGHT -> return super.dispatchKeyEvent(event)
-                KeyEvent.KEYCODE_DPAD_LEFT -> if (onEpisodes) return super.dispatchKeyEvent(event) else { putAway(); return true }
-                KeyEvent.KEYCODE_DPAD_DOWN -> { putAway(); return true }
+                KeyEvent.KEYCODE_DPAD_LEFT -> if (onEpisodes) return super.dispatchKeyEvent(event) else { if (down) putAway(); return true }
+                KeyEvent.KEYCODE_DPAD_DOWN -> { if (down) putAway(); return true }
             }
         }
         if (!down) {
@@ -396,6 +396,7 @@ class VodPlayerActivity : BaseActivity() {
 
     private fun openEpisodes() {
         hideControlsNow()
+        upNextDismissed = index // (so the card doesn't pop back up behind the list)
         upNext.visibility = View.GONE
         epPanel.visibility = View.VISIBLE
         pausedPill.visibility = View.GONE; pausedLine.visibility = View.GONE

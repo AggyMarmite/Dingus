@@ -8,6 +8,7 @@ import java.net.URLEncoder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.supervisorScope
 
 /** Reads a playlist's categories and live channels (Xtream Codes login, or an M3U link). */
 object Sources {
@@ -33,13 +34,13 @@ object Sources {
         val auth = "username=${enc(p.user)}&password=${enc(p.pass)}"
         // The login, the categories and the channel list don't need each other, so they come down together (a wrong
         // login still stops everything: the login's error is the one shown, as before).
-        return runBlocking {
+        return runBlocking { supervisorScope {
             val login = async(Dispatchers.IO) { xtreamLogin(base, auth) }
             val cats = async(Dispatchers.IO) { xtreamCategories(base, auth) }
             val chans = async(Dispatchers.IO) { xtreamChannels(p, base, auth) }
             login.await()
             Result(cats.await(), chans.await(), "$base/xmltv.php?$auth")
-        }
+        } }
     }
 
     private fun xtreamLogin(base: String, auth: String) {
