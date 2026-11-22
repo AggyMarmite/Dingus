@@ -1,3 +1,8 @@
+## What's new in Dingus 0.15.21
+
+* Fire TV: films and episodes that played sound with a black picture now try another way to show it.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.20
 
 * Fire TV: better handling of 4K shows that played sound with a black picture.
