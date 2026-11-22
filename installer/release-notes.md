@@ -1,3 +1,10 @@
+## What's new in Dingus 0.15.20
+
+* Fire TV: better handling of 4K shows that played sound with a black picture.
+* Fire TV: fixes to the next-episode card and the Episodes list.
+* Fire TV: steadier live TV after an HDR preview, and clearer login errors.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.19
 
 * Fire TV: fixes to the TV's refresh rate when leaving full screen.
