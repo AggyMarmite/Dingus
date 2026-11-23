@@ -38,9 +38,9 @@ class VpnActivity : BaseActivity() {
         val first = row("VPN", { statusLine() }) { toggle() }
         statusRow = first
         row("Location", { locationLine() }) { chooseLocation() }
-        row("Provider", { if (Vpn.provider == Vpn.SURFSHARK) "Surfshark" else "WireGuard config files (ProtonVPN and others)" }) { chooseProvider() }
+        row("Provider", { providerName() }) { chooseProvider() }
         row("Set up from your phone", { setupLine() }) { phoneSetup() }
-        row("Type them in with the remote", { "Private key and tunnel address (Surfshark), or a link to a config file" }) { typeIn() }
+        row("Type them in with the remote", { "Private key and tunnel address, or a link to a config file" }) { typeIn() }
         row("Connect when Dingus starts", { (if (Vpn.auto) "On" else "Off") + "  ·  your playlist and streams go through the VPN from the start" }) {
             Vpn.auto = !Vpn.auto; update()
         }
@@ -108,6 +108,12 @@ class VpnActivity : BaseActivity() {
         Vpn.Status.OFF -> if (Vpn.ready) "Off  ·  press OK to connect" else "Off  ·  set up your provider below first"
     }
 
+    private fun providerName() = when (Vpn.provider) {
+        Vpn.SURFSHARK -> "Surfshark"
+        Vpn.PROTON -> "Proton VPN"
+        else -> "WireGuard config files"
+    }
+
     private fun locationLine(): String {
         if (Vpn.provider == Vpn.CONFIGS && Vpn.configs.isEmpty()) return "Add WireGuard config files first"
         val cur = Vpn.current(locations) ?: return if (locations.isEmpty()) "Loading locations…" else "Choose a location"
@@ -116,6 +122,7 @@ class VpnActivity : BaseActivity() {
 
     private fun setupLine(): String = when {
         Vpn.provider == Vpn.SURFSHARK && Vpn.privateKey.isNotEmpty() -> "Key and address saved (${Vpn.address})  ·  send new ones from your phone"
+        Vpn.provider == Vpn.PROTON && Vpn.protonKey.isNotEmpty() -> "Key and address saved (${Vpn.protonAddress})  ·  send new ones from your phone"
         Vpn.provider == Vpn.CONFIGS && Vpn.configs.isNotEmpty() -> "${Vpn.configs.size} config files  ·  add more from your phone"
         else -> "Easiest: paste your key and address (or config files) on your phone"
     }
@@ -159,7 +166,7 @@ class VpnActivity : BaseActivity() {
     private fun chooseLocation() {
         if (locations.isEmpty()) { scope.launch { loadLocations(); if (locations.isNotEmpty()) chooseLocation() }; return }
         if (Vpn.provider == Vpn.CONFIGS) { pick(locations); return }
-        // Surfshark has many: country first, then the city if there's more than one.
+        // Surfshark and Proton have many: country first, then the city if there's more than one.
         val byCountry = locations.groupBy { it.country }
         val countries = byCountry.keys.toList()
         val cur = Vpn.current(locations)
@@ -175,7 +182,7 @@ class VpnActivity : BaseActivity() {
     private fun pick(options: List<Vpn.Location>) {
         val cur = Vpn.current(locations)
         val names = options.map { (if (it.city.isNotEmpty()) it.city else it.label) + if (it.load >= 0) "   (${it.load}% busy)" else "" }
-        Dialogs.builder(this).setTitle(options.firstOrNull()?.country?.takeIf { Vpn.provider == Vpn.SURFSHARK } ?: "Location")
+        Dialogs.builder(this).setTitle(options.firstOrNull()?.country?.takeIf { Vpn.provider != Vpn.CONFIGS } ?: "Location")
             .setSingleChoiceItems(names.toTypedArray(), options.indexOfFirst { it.id == cur?.id }) { d, i -> d.dismiss(); select(options[i]) }
             .show()
     }
@@ -188,11 +195,12 @@ class VpnActivity : BaseActivity() {
     }
 
     private fun chooseProvider() {
-        val opts = listOf("Surfshark", "WireGuard config files (ProtonVPN and others)")
+        val ids = listOf(Vpn.SURFSHARK, Vpn.PROTON, Vpn.CONFIGS)
+        val opts = listOf("Surfshark", "Proton VPN", "WireGuard config files")
         Dialogs.builder(this).setTitle("Provider")
-            .setSingleChoiceItems(opts.toTypedArray(), if (Vpn.provider == Vpn.SURFSHARK) 0 else 1) { d, i ->
+            .setSingleChoiceItems(opts.toTypedArray(), ids.indexOf(Vpn.provider).coerceAtLeast(0)) { d, i ->
                 d.dismiss()
-                Vpn.provider = if (i == 0) Vpn.SURFSHARK else Vpn.CONFIGS
+                Vpn.provider = ids[i]
                 Vpn.locationId = ""
                 locations = emptyList()
                 update()
@@ -216,19 +224,27 @@ class VpnActivity : BaseActivity() {
         }
         phone = p
         phoneDialog = Dialogs.builder(this).setTitle("Set up from your phone")
-            .setMessage("On a phone or computer on the same Wi-Fi, open:\n\n$url\n\nand enter the code  ${p.code}\n\nThen paste your Surfshark private key and tunnel address, or your WireGuard config files.")
+            .setMessage("On a phone or computer on the same Wi-Fi, open:\n\n$url\n\nand enter the code  ${p.code}\n\nThen paste your VPN private key and tunnel address (Proton VPN or Surfshark), or your WireGuard config files.")
             .setPositiveButton("Done") { _, _ -> }
             .setOnDismissListener { p.stop(); if (phone === p) phone = null }
             .show()
     }
 
     private fun typeIn() {
-        val opts = listOf("Surfshark private key", "Surfshark tunnel address", "WireGuard config file from a link")
+        val proton = Vpn.provider == Vpn.PROTON
+        val name = if (proton) "Proton" else "Surfshark"
+        val opts = listOf("$name private key", "$name tunnel address", "WireGuard config file from a link")
         Dialogs.builder(this).setTitle("Type them in")
             .setItems(opts.toTypedArray()) { _, i ->
                 when (i) {
-                    0 -> Dialogs.input(this, "WireGuard private key", Vpn.privateKey, "e.g. aBcD…=") { Vpn.privateKey = it; Vpn.provider = Vpn.SURFSHARK; update() }
-                    1 -> Dialogs.input(this, "Tunnel address", Vpn.address, "e.g. 10.14.0.2/16") { Vpn.address = it; Vpn.provider = Vpn.SURFSHARK; update() }
+                    0 -> Dialogs.input(this, "WireGuard private key", if (proton) Vpn.protonKey else Vpn.privateKey, "e.g. aBcD…=") {
+                        if (proton) Vpn.protonKey = it else Vpn.privateKey = it
+                        Vpn.provider = if (proton) Vpn.PROTON else Vpn.SURFSHARK; locations = emptyList(); scope.launch { loadLocations() }; update()
+                    }
+                    1 -> Dialogs.input(this, "Tunnel address", if (proton) Vpn.protonAddress else Vpn.address, if (proton) "e.g. 10.2.0.2/32" else "e.g. 10.14.0.2/16") {
+                        if (proton) Vpn.protonAddress = it else Vpn.address = it
+                        Vpn.provider = if (proton) Vpn.PROTON else Vpn.SURFSHARK; update()
+                    }
                     2 -> Dialogs.input(this, "Link to a .conf file", "", "http://…/uk.conf") { url ->
                         if (url.isEmpty()) return@input
                         scope.launch {

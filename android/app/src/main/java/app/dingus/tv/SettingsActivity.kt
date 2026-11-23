@@ -221,7 +221,7 @@ class SettingsActivity : BaseActivity() {
     private fun vpnSummary(): String = when (Vpn.status) {
         Vpn.Status.ON -> "On  ·  ${Vpn.connectedTo?.label ?: ""}  ·  Dingus only"
         Vpn.Status.CONNECTING -> "Connecting…"
-        else -> if (Vpn.ready) "Off  ·  ${if (Vpn.provider == Vpn.SURFSHARK) "Surfshark" else "${Vpn.configs.size} config files"}" else "Off  ·  Surfshark or any WireGuard VPN, for Dingus only"
+        else -> if (Vpn.ready) "Off  ·  ${when (Vpn.provider) { Vpn.SURFSHARK -> "Surfshark"; Vpn.PROTON -> "Proton VPN"; else -> "${Vpn.configs.size} config files" }}" else "Off  ·  Surfshark, Proton VPN or any WireGuard VPN, for Dingus only"
     }
 
     // ------------------------------------------------------------------ playlists

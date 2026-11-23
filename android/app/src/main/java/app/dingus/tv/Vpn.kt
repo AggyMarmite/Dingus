@@ -15,6 +15,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.IOException
 
 /**
  * Dingus's own VPN (WireGuard). Only Dingus's traffic goes through it – other apps on the Fire TV aren't affected.
@@ -22,10 +23,13 @@ import java.io.File
  * Two kinds of provider:
  *  - Surfshark: you give your WireGuard private key and tunnel address once; the locations come from Surfshark's
  *    public server list.
- *  - WireGuard config files (ProtonVPN and others): each file you add is a location.
+ *  - Proton VPN: the same, with the private key and tunnel address from a Proton WireGuard config; the locations
+ *    come from a public copy of Proton's server list (their own list needs a login).
+ *  - WireGuard config files (any other provider): each file you add is a location.
  */
 object Vpn {
     const val SURFSHARK = "surfshark"
+    const val PROTON = "proton"
     const val CONFIGS = "configs"
 
     enum class Status { OFF, CONNECTING, ON, ERROR }
@@ -83,6 +87,13 @@ object Vpn {
     var address: String
         get() = Store.prefsString("vpnAddress", "")
         set(v) = Store.putString("vpnAddress", v.trim())
+    /** Proton VPN's own key and address (kept apart, so switching provider doesn't lose Surfshark's). */
+    var protonKey: String
+        get() = Store.prefsString("vpnProtonKey", "")
+        set(v) = Store.putString("vpnProtonKey", v.trim())
+    var protonAddress: String
+        get() = Store.prefsString("vpnProtonAddress", "").ifEmpty { "10.2.0.2/32" }
+        set(v) = Store.putString("vpnProtonAddress", v.trim())
     var locationId: String
         get() = Store.prefsString("vpnLocation", "")
         set(v) = Store.putString("vpnLocation", v)
@@ -112,23 +123,36 @@ object Vpn {
 
     val ready: Boolean get() = when (provider) {
         SURFSHARK -> privateKey.isNotEmpty() && address.isNotEmpty()
+        PROTON -> protonKey.isNotEmpty()
         else -> configs.isNotEmpty()
     }
 
     // ------------------------------------------------------------------ locations
 
     @Volatile private var surfshark: List<Location>? = null
+    @Volatile private var proton: List<Location>? = null
 
-    /** The locations for the chosen provider (Surfshark's list is fetched once, then kept for a day). */
+    /** The locations for the chosen provider (the server lists are fetched once, then kept for a day). */
     suspend fun locations(): List<Location> = withContext(Dispatchers.IO) {
-        if (provider != SURFSHARK) return@withContext configs.map { (n, c) -> Location("cfg:$n", n, "", "", conf = c) }
-        surfshark?.let { return@withContext it }
-        val cache = File(app.filesDir, "surfshark.json")
-        val text = if (cache.exists() && System.currentTimeMillis() - cache.lastModified() < 86_400_000L) cache.readText()
+        when (provider) {
+            SURFSHARK -> surfsharkList()
+            PROTON -> protonList()
+            else -> configs.map { (n, c) -> Location("cfg:$n", n, "", "", conf = c) }
+        }
+    }
+
+    /** A list from the web, kept in a file for a day (and still used if the web is down). */
+    private fun cached(name: String, url: String): String {
+        val cache = File(app.filesDir, name)
+        return if (cache.exists() && System.currentTimeMillis() - cache.lastModified() < 86_400_000L) cache.readText()
         else try {
-            Net.open("https://api.surfshark.com/v4/server/clusters/generic", 20_000).use { it.readBytes().toString(Charsets.UTF_8) }
-                .also { cache.writeText(it) }
+            Net.open(url, 20_000).use { it.readBytes().toString(Charsets.UTF_8) }.also { cache.writeText(it) }
         } catch (e: Exception) { if (cache.exists()) cache.readText() else throw e }
+    }
+
+    private fun surfsharkList(): List<Location> {
+        surfshark?.let { return it }
+        val text = cached("surfshark.json", "https://api.surfshark.com/v4/server/clusters/generic")
         val a = JSONArray(text)
         val list = ArrayList<Location>()
         for (i in 0 until a.length()) {
@@ -141,7 +165,52 @@ object Vpn {
         }
         list.sortWith(compareBy({ it.country }, { it.city }, { it.load }))
         surfshark = list
-        list
+        return list
+    }
+
+    /** Proton's server list is public only as a daily copy kept by a community project. */
+    private const val PROTON_LIST = "https://raw.githubusercontent.com/tn3w/ProtonVPN-IPs/master/protonvpn_logicals.json"
+
+    private fun protonList(): List<Location> {
+        proton?.let { return it }
+        val list = parseProton(cached("protonvpn.json", PROTON_LIST))
+        if (list.isEmpty()) throw IOException("No Proton VPN servers in the list")
+        proton = list
+        return list
+    }
+
+    /**
+     * One place per country and city (the least busy server there), with the free servers as their own entries
+     * ("Amsterdam (Free)") for accounts on the free plan. Secure Core and Tor servers are left out.
+     */
+    internal fun parseProton(text: String): List<Location> {
+        val servers = JSONObject(text).getJSONArray("LogicalServers")
+        val best = HashMap<String, Location>()
+        for (i in 0 until servers.length()) {
+            val o = servers.getJSONObject(i)
+            if ((o.optInt("Features", 0) and 3) != 0) continue // 1 = Secure Core, 2 = Tor
+            if (o.optInt("Status", 1) != 1) continue
+            val cc = if (o.isNull("ExitCountry")) continue else o.getString("ExitCountry")
+            val city = if (o.isNull("City")) "" else o.getString("City")
+            val phys = o.optJSONArray("Servers") ?: continue
+            var entry = ""; var key = ""
+            for (j in 0 until phys.length()) {
+                val p = phys.getJSONObject(j)
+                if (p.optInt("Status", 1) != 1 || p.optInt("ServicesDown", 0) != 0 || p.isNull("X25519PublicKey") || p.isNull("EntryIP")) continue
+                entry = p.getString("EntryIP"); key = p.getString("X25519PublicKey")
+                if (entry.isNotEmpty() && key.isNotEmpty()) break
+            }
+            if (entry.isEmpty() || key.isEmpty()) continue
+            val free = o.optInt("Tier", 2) == 0
+            val load = o.optInt("Load", -1)
+            val id = "proton:$cc:$city:${if (free) "free" else "plus"}"
+            // (Proton writes "UK" for the United Kingdom; the standard code is GB.)
+            val country = java.util.Locale("", if (cc == "UK") "GB" else cc).getDisplayCountry(java.util.Locale.ENGLISH).ifEmpty { cc }
+            val place = if (free) (if (city.isEmpty()) "Free servers" else "$city (Free)") else city
+            val cur = best[id]
+            if (cur == null || (load >= 0 && (cur.load < 0 || load < cur.load))) best[id] = Location(id, country, place, cc, entry, key, load)
+        }
+        return best.values.sortedWith(compareBy({ it.country }, { it.city }, { it.load }))
     }
 
     fun current(list: List<Location>): Location? = list.firstOrNull { it.id == locationId } ?: list.firstOrNull()
@@ -149,11 +218,12 @@ object Vpn {
     // ------------------------------------------------------------------ connecting
 
     private fun configFor(loc: Location): Config {
+        val isProton = provider == PROTON
         val text = loc.conf ?: """
             [Interface]
-            PrivateKey = $privateKey
-            Address = $address
-            DNS = 162.252.172.57, 149.154.159.92
+            PrivateKey = ${if (isProton) protonKey else privateKey}
+            Address = ${if (isProton) protonAddress else address}
+            DNS = ${if (isProton) "10.2.0.1" else "162.252.172.57, 149.154.159.92"}
 
             [Peer]
             PublicKey = ${loc.publicKey}

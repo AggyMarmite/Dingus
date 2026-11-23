@@ -78,7 +78,10 @@ class PhoneSetup(private val onPlaylist: ((Map<String, String>) -> Unit)? = null
         }
         val done = ArrayList<String>()
         try {
-            f["key"]?.trim()?.takeIf { it.isNotEmpty() }?.let { Vpn.privateKey = it; done.add("private key") }
+            f["pkey"]?.trim()?.takeIf { it.isNotEmpty() }?.let { Vpn.protonKey = it; Vpn.provider = Vpn.PROTON; done.add("Proton VPN private key") }
+            // (The address box comes pre-filled, so it only counts together with a key.)
+            if (!f["pkey"].isNullOrBlank()) f["paddress"]?.trim()?.takeIf { it.isNotEmpty() }?.let { Vpn.protonAddress = it; done.add("Proton VPN tunnel address") }
+            f["key"]?.trim()?.takeIf { it.isNotEmpty() }?.let { Vpn.privateKey = it; Vpn.provider = Vpn.SURFSHARK; done.add("private key") }
             f["address"]?.trim()?.takeIf { it.isNotEmpty() }?.let { Vpn.address = it; done.add("tunnel address") }
             f["conf"]?.trim()?.takeIf { it.isNotEmpty() }?.let { text ->
                 // Several files can be pasted one after another: each starts with [Interface].
@@ -89,7 +92,7 @@ class PhoneSetup(private val onPlaylist: ((Map<String, String>) -> Unit)? = null
                     Vpn.addConfig(n.ifEmpty { guessName(c) }, c)
                 }
                 done.add(if (parts.size == 1) "1 config file" else "${parts.size} config files")
-                if (f["key"].isNullOrBlank()) Vpn.provider = Vpn.CONFIGS
+                if (f["key"].isNullOrBlank() && f["pkey"].isNullOrBlank()) Vpn.provider = Vpn.CONFIGS
             }
         } catch (e: Exception) {
             return page("That didn't look like a WireGuard config: ${e.message}")
@@ -144,6 +147,10 @@ textarea{height:180px;font-family:monospace;font-size:13px}button{margin-top:20p
 <h1>Dingus VPN setup</h1>${if (note != null) "<div class=note>${esc(note)}</div>" else ""}
 <form method=post action=/save>
 <label>Code shown on the TV</label><input name=code inputmode=numeric autocomplete=off required>
+<h2 style="font-size:17px;margin-top:28px">Proton VPN</h2>
+<small>account.proton.me → Downloads → WireGuard configuration → create a config, then copy PrivateKey and Address from it.</small>
+<label>WireGuard private key</label><input name=pkey autocomplete=off placeholder="e.g. aBcD…=">
+<label>Tunnel address</label><input name=paddress autocomplete=off value="10.2.0.2/32">
 <h2 style="font-size:17px;margin-top:28px">Surfshark</h2>
 <small>From Surfshark's website: VPN → Manual setup → Desktop or mobile → WireGuard → "I don't have a key pair" → generate, then copy both.</small>
 <label>WireGuard private key</label><input name=key autocomplete=off placeholder="e.g. aBcD…=">
