@@ -58,6 +58,17 @@ dotnet run --project linux/Dingus.Linux.csproj
 linux/package/build-appimage.sh 0.9.0 out    # builds the AppImage (on Ubuntu 22.04)
 ```
 
+### Fire TV
+
+Install the Fire TV app with the **Downloader** app (free from the Amazon Appstore):
+
+1. Open Downloader and type the code **9015926** into the URL box, then press **Go**.
+2. When the download finishes, choose **Install**.
+
+If Fire TV asks, allow Downloader to install unknown apps (Settings → My Fire TV → Developer options). Prefer to
+download it yourself? Get `Dingus.apk` from the [latest release](https://github.com/AggyMarmite/Dingus/releases/latest).
+The code always fetches the newest version, and Dingus updates itself from the releases page.
+
 ### Making a release
 
 Releases are made by hand: raise `<Version>` in `Dingus.csproj`, update `installer/release-notes.md`, push, then
