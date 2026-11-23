@@ -2,7 +2,10 @@
 
 # Dingus
 
-A lightweight, modern IPTV player for Windows 10/11 and Linux (.NET 8 and the VLC video engine; WPF on Windows, Avalonia on Linux).
+A lightweight, modern IPTV player for Windows, Linux and Android (including Fire OS).
+
+> **Note:** Dingus is only a media player. It doesn't provide, host or include any content, channels or playlists.
+> You need to add your own playlist or login from a provider you have a subscription with.
 
 ## Build & run
 
