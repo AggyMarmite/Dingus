@@ -35,7 +35,12 @@ key KEYCODE_DPAD_CENTER 2
 check "reminder-set true" 5 "OK on a later programme sets a reminder"
 shot 02c-reminder-set
 fresh
-key KEYCODE_DPAD_LEFT; key KEYCODE_DPAD_LEFT; key KEYCODE_DPAD_LEFT 2
+# LEFT until the categories open (how many it takes depends on where the guide's focus starts, so not a fixed three).
+for _ in 1 2 3 4; do
+  key KEYCODE_DPAD_LEFT 1
+  adb logcat -d -s DINGUS-TEST:I | grep -q "categories-open" && break
+done
+sleep 1
 check "categories-open" 5 "LEFT from what's on now shows the categories"
 shot 03-categories
 # Scrolling slowly through the categories (each one shows behind) mustn't jump back to "All channels".
