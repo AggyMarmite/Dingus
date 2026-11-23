@@ -96,10 +96,13 @@ object TitleLogos {
     }
 
     /** A TV programme as something to look a logo up for: films by film, everything else as a TV show. */
+    // (Built once: this runs for every programme the guide's highlight passes over.)
+    private val prefixRx = Regex("""^(new|live|premiere|repeat)\s*[:\-–]\s*""", RegexOption.IGNORE_CASE)
+    private val suffixRx = Regex("""\s*\((?:s\d+|series|season|ep|episode|\d{4}|new|repeat)[^)]*\)\s*$""", RegexOption.IGNORE_CASE)
+
     fun forProgramme(p: Programme): Pair<String, VodItem>? {
         var t = p.title.trim()
-        t = t.replace(Regex("""^(new|live|premiere|repeat)\s*[:\-–]\s*""", RegexOption.IGNORE_CASE), "")
-        t = t.replace(Regex("""\s*\((?:s\d+|series|season|ep|episode|\d{4}|new|repeat)[^)]*\)\s*$""", RegexOption.IGNORE_CASE), "")
+        t = t.replace(prefixRx, "").replace(suffixRx, "")
         t = t.trimEnd('.', '…', ' ')
         if (t.length < 2) return null
         val kind = if (p.genre == Genres.FILM) Vod.MOVIES else Vod.SERIES

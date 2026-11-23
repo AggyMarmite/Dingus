@@ -95,7 +95,23 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
     private var sel: Programme? = null
     private var selIdx = -1
     private var anchor = 0L       // the time the selection follows when moving up and down
-    private var start = 0L        // time at the left edge
+    private var start = 0L        // time at the left edge (as drawn: it glides to [goal])
+    private var goal = 0L         // where the left edge is heading
+    private var glide: android.animation.ValueAnimator? = null
+
+    /** Moves the time axis to [t]: a short glide, not a jump (straight there in lite mode, or for a long way). */
+    private fun scrollTo(t: Long) {
+        goal = t
+        glide?.cancel()
+        if (Ui.lite || !isShown || t == start || kotlin.math.abs(t - start) > 12 * 3_600_000L) { start = t; invalidate(); return }
+        val from = start
+        glide = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 170
+            interpolator = android.view.animation.DecelerateInterpolator()
+            addUpdateListener { start = from + ((t - from) * it.animatedFraction).toLong(); invalidate() }
+            start()
+        }
+    }
 
     private fun col(attr: Int) = Themes.color(context, attr)
     private val cBg = col(R.attr.dBg)
@@ -146,7 +162,7 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
     fun setChannels(list: List<Channel>, focusId: String?) {
         channels = list
         row = list.indexOfFirst { it.id == focusId }.coerceAtLeast(0)
-        start = floor30(now())
+        glide?.cancel(); start = floor30(now()); goal = start
         anchor = now()
         top = 0
         keepRowVisible(centre = true)
@@ -169,7 +185,7 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         val past = sel?.let { it.stop <= now() } == true
         if (!past) {
             val minStart = floor30(now())
-            if (start < minStart) start = minStart
+            if (goal < minStart) scrollTo(minStart)
             if (anchor < now()) anchor = now()
         }
         val s = sel
@@ -187,7 +203,7 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         val list = Repo.programmes(c)
         selIdx = indexAt(list, anchor)
         sel = list.getOrNull(selIdx)
-        sel?.let { ensureVisible(it) }
+        sel?.let { ensureVisible(it, sameTime = true) }
         invalidate()
         listener?.onSelected(c, sel)
     }
@@ -202,11 +218,20 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         return found
     }
 
-    private fun ensureVisible(p: Programme) {
-        val end = start + spanMin * 60_000L
-        if (p.start >= end - 30 * 60_000L) start = floor30(p.start) - 30 * 60_000L
-        else if (p.start < start) start = if (p.stop <= now()) floor30(p.start) else maxOf(floor30(now()), floor30(p.start))
-        if (end <= start) start = floor30(now())
+    /**
+     * Scrolls the time axis so [p] is in view. Moving up or down ([sameTime]) leaves the axis alone when you can
+     * still see a good part of the programme there – it used to snap back toward "now" every time you changed channel
+     * while looking at the evening.
+     */
+    private fun ensureVisible(p: Programme, sameTime: Boolean = false) {
+        val cur = goal
+        val end = cur + spanMin * 60_000L
+        var ns = cur
+        if (p.start >= end - 30 * 60_000L) ns = floor30(p.start) - 30 * 60_000L
+        else if (p.start < cur && !(sameTime && p.stop - cur >= 20 * 60_000L))
+            ns = if (p.stop <= now()) floor30(p.start) else maxOf(floor30(now()), floor30(p.start))
+        if (end <= ns) ns = floor30(now())
+        if (ns != cur) scrollTo(ns)
     }
 
     private fun keepRowVisible(centre: Boolean = false) {
@@ -250,7 +275,16 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
                 // From what's on now, LEFT shows the categories (past programmes are under ≡ → Catch up). Already
                 // back in the past (from there), LEFT keeps going back as far as catch-up allows.
                 val inPast = (sel?.stop ?: Long.MAX_VALUE) <= now()
-                if (sel == null || prev == null || (prev.stop <= now() && !(inPast && Repo.canCatchUp(c, prev)))) { listener?.onLeftEdge(); return true }
+                // Looking at the future where this channel has no listings: back to the last one it has.
+                if (sel == null) {
+                    val last = list.lastOrNull()
+                    if (last != null && last.stop > now()) {
+                        selIdx = list.size - 1; sel = last; anchor = maxOf(last.start, now())
+                        ensureVisible(last); invalidate(); listener?.onSelected(c, last)
+                    } else listener?.onLeftEdge()
+                    return true
+                }
+                if (prev == null || (prev.stop <= now() && !(inPast && Repo.canCatchUp(c, prev)))) { listener?.onLeftEdge(); return true }
                 selIdx--; sel = prev; anchor = if (prev.stop <= now()) prev.start else maxOf(prev.start, now())
                 ensureVisible(prev); invalidate(); listener?.onSelected(c, prev)
                 return true
