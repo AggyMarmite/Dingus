@@ -405,26 +405,50 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         TransitionManager.beginDelayedTransition(target, ChangeBounds().setDuration(ms).setInterpolator(DecelerateInterpolator()))
     }
 
-    /** The preview grows to fill the screen; if it's already showing this channel, the stream just carries on. */
+    /** Only the picture moves (the rest of the screen isn't animated along with it, which is what made it janky). */
+    private fun animateStage(ms: Long, delay: Long = 0) {
+        TransitionManager.beginDelayedTransition(root, ChangeBounds().setDuration(ms).setStartDelay(delay)
+            .setInterpolator(DecelerateInterpolator()).addTarget(stage))
+    }
+
+    /** The whole guide (picture area, categories, grid): fades away behind the full-screen picture and back. */
+    private val guideScreen: View by lazy { findViewById(R.id.guideScreen) }
+    private val hideSide = Runnable { if (live.fullScreen) side.setHidden(true) }
+
+    /** The preview grows to fill the screen while the guide fades out, then the info bar fades in. */
     private fun goFullScreen(c: Channel, list: List<Channel> = Repo.channelsIn(current), animate: Boolean = true) {
         handler.removeCallbacks(startPreview)
+        handler.removeCallbacks(hideSide)
         if (live.current?.id != c.id) placeStage()
         live.play(list, c)
         stage.visibility = View.VISIBLE
-        if (animate && live.current != null) smoothly(root, 280)
+        val grow = animate && live.current != null && !Ui.lite
+        live.animatedEnter = grow
+        guideScreen.animate().cancel()
+        if (grow) {
+            animateStage(320)
+            guideScreen.animate().alpha(0f).setStartDelay(0).setDuration(220).withLayer().start()
+        } else guideScreen.alpha = 0f
         stage.layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         stage.setBackgroundColor(0xFF000000.toInt())
-        side.setHidden(true)
+        if (grow) handler.postDelayed(hideSide, 320) else side.setHidden(true)
         live.enterFullScreen()
     }
 
-    /** BACK from full screen: the picture shrinks back into the preview, and the guide is on the channel you were watching. */
+    /** BACK from full screen: the info bar fades, the picture shrinks back into the preview and the guide fades in around it, on the channel you were watching. */
     private fun leaveFullScreen() {
         val c = live.current
+        val infoWas = live.infoShowing
         live.leaveFullScreen()
+        handler.removeCallbacks(hideSide)
         side.setHidden(false)
         stage.background = null
-        smoothly(root, 260)
+        guideScreen.animate().cancel()
+        if (Ui.lite) guideScreen.alpha = 1f
+        else {
+            animateStage(300, if (infoWas) 100 else 0)
+            guideScreen.animate().alpha(1f).setStartDelay(if (infoWas) 120 else 40).setDuration(280).withLayer().start()
+        }
         placeStage()
         if (c != null) { if (gridIds.contains(c.id)) grid.focusChannel(c.id) else showCategory(current, c.id) }
         if (!Store.preview) { live.release(); stage.visibility = View.INVISIBLE }

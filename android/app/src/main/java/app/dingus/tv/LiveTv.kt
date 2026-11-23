@@ -52,7 +52,13 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     private var versionTry = 0
     private var version: Channel? = null
     private var zapPending: Runnable? = null
-    private val hideInfo = Runnable { info.animate().alpha(0f).setDuration(if (Ui.lite) 0 else 250).withEndAction { info.visibility = View.GONE } }
+    private val hideInfo = Runnable {
+        info.animate().alpha(0f).setStartDelay(0).setInterpolator(android.view.animation.AccelerateDecelerateInterpolator())
+            .setDuration(if (Ui.lite) 0 else 250).withEndAction { info.visibility = View.GONE; info.translationY = 0f }
+    }
+
+    /** Whether the info bar is on screen (and not already on its way out). */
+    val infoShowing: Boolean get() = info.visibility == View.VISIBLE && info.alpha > 0.3f
     private val retry = Runnable { startChannel() }
 
     /**
@@ -261,6 +267,9 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
 
     // ------------------------------------------------------------------ full screen
 
+    /** Set by the screen when the picture is growing into full screen (so the info bar waits for it). */
+    var animatedEnter = false
+
     fun enterFullScreen() {
         fullScreen = true
         updateSurface()
@@ -269,7 +278,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         list.getOrNull(index)?.let { Store.noteWatched(it.id); Ui.test("fullscreen ${it.name}") }
         player?.videoFormat?.frameRate?.let { FrameRate.match(a, it) }
         showShift()
-        showInfo()
+        showInfo(delay = if (animatedEnter) 240 else 0)
         handler.removeCallbacks(statsTick); handler.post(statsTick)
     }
 
@@ -284,7 +293,11 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         pendingJump = -1; handler.removeCallbacks(doJump)
         handler.removeCallbacks(hideInfo)
         info.animate().cancel()
-        info.visibility = View.GONE
+        if (!Ui.lite && infoShowing) {
+            // The info bar fades first (120 ms), then the picture shrinks.
+            info.animate().alpha(0f).setStartDelay(0).setInterpolator(android.view.animation.AccelerateDecelerateInterpolator())
+                .setDuration(120).withEndAction { info.visibility = View.GONE; info.translationY = 0f }
+        } else { info.visibility = View.GONE; info.translationY = 0f }
         // Paused or behind live: the preview carries on from live.
         if (pausedAt > 0 || behindMs > 0) { pausedAt = 0; if (buffer != null) seekBehind(0) else player?.playWhenReady = true }
         shift.visibility = View.GONE
@@ -348,7 +361,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
      * The info bar. Opening a stream or changing channel shows the channel, what's on, its description and the
      * stream stats; OK adds the times and progress, what's next and the keys.
      */
-    fun showInfo(full: Boolean = false) {
+    fun showInfo(full: Boolean = false, delay: Long = 0) {
         val c = list.getOrNull(index) ?: return
         infoFull = full
         overlay.findViewById<TextView>(R.id.name).text = c.name
@@ -373,8 +386,18 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         overlay.findViewById<View>(R.id.keys).visibility = if (full) View.VISIBLE else View.GONE
         updateStats()
         info.animate().cancel()
-        info.alpha = 1f
-        info.visibility = View.VISIBLE
+        if (!Ui.lite && (info.visibility != View.VISIBLE || info.alpha < 0.5f)) {
+            // Fades in with a small rise (when it's already showing it just stays, with the new details).
+            info.alpha = 0f
+            info.translationY = Ui.dp(a, 12).toFloat()
+            info.visibility = View.VISIBLE
+            info.animate().alpha(1f).translationY(0f).setStartDelay(delay)
+                .setInterpolator(android.view.animation.DecelerateInterpolator()).setDuration(220).start()
+        } else {
+            info.alpha = 1f
+            info.translationY = 0f
+            info.visibility = View.VISIBLE
+        }
         handler.removeCallbacks(hideInfo)
         handler.postDelayed(hideInfo, if (full) 8_000 else 4_000)
         Ui.test(if (full) "info full" else "info short")
