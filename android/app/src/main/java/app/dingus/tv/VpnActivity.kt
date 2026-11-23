@@ -37,6 +37,7 @@ class VpnActivity : BaseActivity() {
         header("Built-in VPN")
         val first = row("VPN", { statusLine() }) { toggle() }
         statusRow = first
+        row("⚡  Quick Connect", { quickLine() }) { quickConnect() }
         row("Location", { locationLine() }) { chooseLocation() }
         row("Provider", { providerName() }) { chooseProvider() }
         row("Set up from your phone", { setupLine() }) { phoneSetup() }
@@ -114,6 +115,12 @@ class VpnActivity : BaseActivity() {
         else -> "WireGuard config files"
     }
 
+    private fun quickLine(): String {
+        val here = Vpn.region().let { if (it.isEmpty()) "" else java.util.Locale("", it).getDisplayCountry(java.util.Locale.ENGLISH) }
+        return if (Vpn.status == Vpn.Status.ON) "Connected to ${Vpn.connectedTo?.label ?: ""}  ·  OK to pick the least busy again"
+        else "Least busy server " + if (here.isEmpty()) "anywhere" else "near you ($here)"
+    }
+
     private fun locationLine(): String {
         if (Vpn.provider == Vpn.CONFIGS && Vpn.configs.isEmpty()) return "Add WireGuard config files first"
         val cur = Vpn.current(locations) ?: return if (locations.isEmpty()) "Loading locations…" else "Choose a location"
@@ -177,6 +184,21 @@ class VpnActivity : BaseActivity() {
                 if (cities.size == 1) select(cities[0]) else pick(cities)
             }
             .show()
+    }
+
+    private fun quickConnect() {
+        if (!Vpn.ready) { phoneSetup(); return }
+        scope.launch {
+            if (locations.isEmpty()) loadLocations()
+            val pick = Vpn.best(locations)
+            if (pick == null) {
+                Dialogs.builder(this@VpnActivity).setTitle("Quick Connect").setMessage("No VPN locations are available yet. Check the Fire TV's connection and try again.").setPositiveButton("OK", null).show()
+                return@launch
+            }
+            Vpn.locationId = pick.id
+            update()
+            connect(pick)
+        }
     }
 
     private fun pick(options: List<Vpn.Location>) {

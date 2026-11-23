@@ -213,7 +213,33 @@ object Vpn {
         return best.values.sortedWith(compareBy({ it.country }, { it.city }, { it.load }))
     }
 
-    fun current(list: List<Location>): Location? = list.firstOrNull { it.id == locationId } ?: list.firstOrNull()
+    /** The saved location, or (when none is chosen yet) the one Quick Connect would pick. */
+    fun current(list: List<Location>): Location? = list.firstOrNull { it.id == locationId } ?: best(list)
+
+    /** The country the Fire TV is set to, as a standard code ("GB"); empty when unknown. */
+    fun region(): String = normCountry(java.util.Locale.getDefault().country)
+
+    /** Proton writes "UK" for the United Kingdom; the standard code is GB. */
+    private fun normCountry(c: String) = c.uppercase().let { if (it == "UK") "GB" else it }
+
+    /**
+     * Quick Connect's pick: the least busy server in your country (or anywhere, if there's none there). Proton's free
+     * servers are left out unless you've chosen a free one before, since a free account can't use the others.
+     */
+    fun best(list: List<Location>): Location? {
+        val freeOnly = provider == PROTON && locationId.endsWith(":free")
+        val pool = if (provider == PROTON) list.filter { it.id.endsWith(":free") == freeOnly }.ifEmpty { list } else list
+        val here = region()
+        val near = pool.filter { here.isNotEmpty() && normCountry(it.countryCode) == here }.ifEmpty { pool }
+        return near.filter { it.load >= 0 }.minByOrNull { it.load } ?: near.firstOrNull()
+    }
+
+    /** Connects to [best]; returns an error message, or null when connected. */
+    suspend fun quickConnect(): String? {
+        val target = best(locations()) ?: return "No VPN locations".also { set(Status.ERROR, it) }
+        Ui.test("vpn-quick ${target.label}")
+        return connect(target)
+    }
 
     // ------------------------------------------------------------------ connecting
 

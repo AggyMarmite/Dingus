@@ -158,6 +158,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             Vpn.provider = Vpn.CONFIGS
             scope.launch { Vpn.connect(Vpn.locations().firstOrNull { it.country == name }) }
         }
+        if (i.getBooleanExtra("dingus_test_vpn_quick", false)) { Vpn.provider = Vpn.CONFIGS; scope.launch { Vpn.quickConnect() } }
         if (i.getBooleanExtra("dingus_test_vpn_off", false)) scope.launch { Vpn.disconnect() }
         if (i.getBooleanExtra("dingus_test_reminder", false)) Reminders.testSoon()
         if (i.getBooleanExtra("dingus_test_numbers_off", false)) { Store.showNumbers = false; grid.showNumbers = false; Ui.test("numbers false") }

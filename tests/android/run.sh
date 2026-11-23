@@ -329,6 +329,12 @@ if [ -n "${WG_CONF:-}" ] && [ -f "$WG_CONF" ]; then
   fresh
   adb shell am start -n $PKG/.MainActivity --ez dingus_test_vpn_off true
   check "vpn off" 15 "VPN: disconnects"
+  fresh
+  adb shell am start -n $PKG/.MainActivity --ez dingus_test_vpn_quick true
+  check "vpn on Test" 30 "VPN: Quick Connect connects"
+  fresh
+  adb shell am start -n $PKG/.MainActivity --ez dingus_test_vpn_off true
+  check "vpn off" 15 "VPN: disconnects again"
 fi
 
 adb shell dumpsys gfxinfo $PKG | grep -E "Total frames rendered|Janky frames|90th percentile" | sed 's/^ */frames: /' | tee -a "$OUT/result.txt"
