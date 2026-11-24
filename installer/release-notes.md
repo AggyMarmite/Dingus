@@ -1,3 +1,11 @@
+## What's new in Dingus 0.15.22
+
+* Fire TV: Proton VPN support, and a Quick Connect button for the VPN.
+* Fire TV: smoother moves between the guide and full screen, and a gentler info bar.
+* Fire TV: smoother scrolling through the guide's future listings.
+* Fire TV: the Films and TV Shows category list now fills the screen height.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.21
 
 * Fire TV: films and episodes that played sound with a black picture now try another way to show it.
