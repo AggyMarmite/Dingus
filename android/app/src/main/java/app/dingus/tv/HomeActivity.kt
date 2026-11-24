@@ -178,7 +178,7 @@ class HomeActivity : BaseActivity() {
 
     private val tick = object : Runnable {
         override fun run() {
-            findViewById<TextView>(R.id.clock).text = Ui.time(System.currentTimeMillis())
+            findViewById<TextView?>(R.id.clock)?.text = Ui.time(System.currentTimeMillis())
             handler.postDelayed(this, 60_000L - System.currentTimeMillis() % 60_000L)
         }
     }

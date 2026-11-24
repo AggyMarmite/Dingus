@@ -90,7 +90,15 @@ class SideMenu(
     }
     val panel: View = LayoutInflater.from(a).inflate(R.layout.side_menu, root, false)
     private val edge: View = panel.findViewById(R.id.sideEdge)
-    private val fading = listOf<View>(panel.findViewById(R.id.sideName), panel.findViewById(R.id.sideHeader), panel.findViewById(R.id.status))
+    private val fading = listOf<View>(panel.findViewById(R.id.sideName), panel.findViewById(R.id.sideHeader), panel.findViewById(R.id.status), panel.findViewById(R.id.sideVpnPlace))
+    private val clock: TextView = panel.findViewById(R.id.sideClock)
+    /** The time under the logo (every minute, on the minute). */
+    private val tick = object : Runnable {
+        override fun run() {
+            clock.text = Ui.time(System.currentTimeMillis())
+            clock.postDelayed(this, 60_000L - System.currentTimeMillis() % 60_000L + 50)
+        }
+    }
     private val rows: List<TextView> = listOf(R.id.navHome, R.id.navGuide, R.id.navFilms, R.id.navShows, R.id.navSearch, R.id.settings, R.id.navRefresh)
         .map { panel.findViewById<TextView>(it) }
     private val playlistRow: TextView = panel.findViewById(R.id.navPlaylist)
@@ -136,6 +144,11 @@ class SideMenu(
         playlistRow.setOnClickListener { switchPlaylist() }
         showDetails()
         apply()
+        clock.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) { clock.removeCallbacks(tick); tick.run() }
+            override fun onViewDetachedFromWindow(v: View) { clock.removeCallbacks(tick) }
+        })
+        panel.findViewById<TextView>(R.id.sideVpn)?.let { VpnIndicator.bind(it); showVpnPlace(it) }
     }
 
     private fun rowFor(p: Page): TextView = rows[p.ordinal]
@@ -373,6 +386,14 @@ class SideMenu(
     }
 
     companion object {
+        /** The VPN's location beside its indicator (seen once the menu's open). */
+        fun showVpnPlace(indicator: TextView) {
+            val place = (indicator.parent as? View)?.findViewById<TextView>(R.id.sideVpnPlace) ?: return
+            val on = Vpn.status == Vpn.Status.ON
+            place.text = if (on) Vpn.connectedTo?.label ?: "" else if (Vpn.status == Vpn.Status.CONNECTING) "Connecting…" else "VPN not connected"
+            place.visibility = indicator.visibility
+        }
+
         @Volatile private var checking = false
 
         /** The menu on a screen whose whole layout moves across for the strip. */

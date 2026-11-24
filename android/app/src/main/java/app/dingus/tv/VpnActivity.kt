@@ -12,11 +12,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
-/** Settings → VPN: provider, your key or config files, location, on/off. */
+/** Settings → VPN → More VPN settings: the provider, your key or config files, connecting at start. (On/off, Quick Connect and Location are in Settings → VPN.) */
 class VpnActivity : BaseActivity() {
     companion object {
         const val PHONE = "phone"
-        private const val ASK_PERMISSION = 7
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -24,22 +23,20 @@ class VpnActivity : BaseActivity() {
     private val subtitles = ArrayList<Pair<View, () -> String>>()
     private var phone: PhoneSetup? = null
     private var phoneDialog: android.app.AlertDialog? = null
-    private var locations: List<Vpn.Location> = emptyList()
-    private var connectAfterPermission = false
+    private val controls by lazy { VpnControls(this, scope, { update() }, { phoneSetup() }) }
+    private var locations: List<Vpn.Location>
+        get() = controls.locations
+        set(v) { controls.locations = v }
     private val vpnListener: () -> Unit = { update() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         list = findViewById(R.id.list)
-        list.findViewById<TextView>(R.id.settingsTitle)?.text = "VPN"
+        list.findViewById<TextView>(R.id.settingsTitle)?.text = "More VPN settings"
 
-        header("Built-in VPN")
-        val first = row("VPN", { statusLine() }) { toggle() }
-        statusRow = first
-        row("⚡  Quick Connect", { quickLine() }) { quickConnect() }
-        row("Location", { locationLine() }) { chooseLocation() }
-        row("Provider", { providerName() }) { chooseProvider() }
+        header("More VPN settings")
+        val first = row("Provider", { controls.providerName() }) { chooseProvider() }
         row("Set up from your phone", { setupLine() }) { phoneSetup() }
         row("Type them in with the remote", { "Private key and tunnel address, or a link to a config file" }) { typeIn() }
         row("Connect when Dingus starts", { (if (Vpn.auto) "On" else "Off") + "  ·  your playlist and streams go through the VPN from the start" }) {
@@ -58,11 +55,7 @@ class VpnActivity : BaseActivity() {
     override fun onResume() { super.onResume(); update(); Ui.test("vpn-screen") }
     override fun onDestroy() { Vpn.removeListener(vpnListener); phone?.stop(); scope.cancel(); super.onDestroy() }
 
-    private suspend fun loadLocations() {
-        locations = try { Vpn.locations() } catch (e: Exception) { emptyList() }
-        Ui.test("vpn-locations ${locations.size}")
-        update()
-    }
+    private suspend fun loadLocations() = controls.loadLocations()
 
     // ------------------------------------------------------------------ rows
 
@@ -81,50 +74,8 @@ class VpnActivity : BaseActivity() {
         return v
     }
 
-    private var statusRow: View? = null
-
     private fun update() {
         for ((v, f) in subtitles) v.findViewById<TextView>(R.id.subtitle).text = f()
-        // The status card on top: big, and green while connected (white when the remote's on it, like every row).
-        statusRow?.let { v ->
-            val d = resources.displayMetrics.density
-            val on = Vpn.status == Vpn.Status.ON
-            v.findViewById<TextView>(R.id.title).apply {
-                text = when (Vpn.status) { Vpn.Status.ON -> "⛨  Connected"; Vpn.Status.CONNECTING -> "⛨  Connecting…"; else -> "⛨  Not connected" }
-                textSize = 21f; setTypeface(null, android.graphics.Typeface.BOLD)
-            }
-            v.background = android.graphics.drawable.StateListDrawable().apply {
-                addState(intArrayOf(android.R.attr.state_focused), android.graphics.drawable.GradientDrawable().apply { setColor(0xFFFFFFFF.toInt()); cornerRadius = 18 * d })
-                addState(intArrayOf(), android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
-                    if (on) intArrayOf(0x5522C55E, 0x8C1E2636.toInt()) else intArrayOf(0x8C1E2636.toInt(), 0x8C1E2636.toInt())).apply { cornerRadius = 18 * d })
-            }
-            v.setPadding((22 * d).toInt(), (18 * d).toInt(), (22 * d).toInt(), (18 * d).toInt())
-        }
-    }
-
-    private fun statusLine() = when (Vpn.status) {
-        Vpn.Status.ON -> "On  ·  connected to ${Vpn.connectedTo?.label ?: ""}"
-        Vpn.Status.CONNECTING -> "Connecting to ${Vpn.message}…"
-        Vpn.Status.ERROR -> "Off  ·  ${Vpn.message}"
-        Vpn.Status.OFF -> if (Vpn.ready) "Off  ·  press OK to connect" else "Off  ·  set up your provider below first"
-    }
-
-    private fun providerName() = when (Vpn.provider) {
-        Vpn.SURFSHARK -> "Surfshark"
-        Vpn.PROTON -> "Proton VPN"
-        else -> "WireGuard config files"
-    }
-
-    private fun quickLine(): String {
-        val here = Vpn.region().let { if (it.isEmpty()) "" else java.util.Locale("", it).getDisplayCountry(java.util.Locale.ENGLISH) }
-        return if (Vpn.status == Vpn.Status.ON) "Connected to ${Vpn.connectedTo?.label ?: ""}  ·  OK to pick the least busy again"
-        else "Least busy server " + if (here.isEmpty()) "anywhere" else "near you ($here)"
-    }
-
-    private fun locationLine(): String {
-        if (Vpn.provider == Vpn.CONFIGS && Vpn.configs.isEmpty()) return "Add WireGuard config files first"
-        val cur = Vpn.current(locations) ?: return if (locations.isEmpty()) "Loading locations…" else "Choose a location"
-        return cur.label + (if (cur.load >= 0) "  ·  ${cur.load}% busy" else "") + "  ·  ${locations.size} locations"
     }
 
     private fun setupLine(): String = when {
@@ -136,84 +87,10 @@ class VpnActivity : BaseActivity() {
 
     // ------------------------------------------------------------------ actions
 
-    private fun toggle() {
-        if (Vpn.status == Vpn.Status.ON || Vpn.status == Vpn.Status.CONNECTING) { scope.launch { Vpn.disconnect() }; return }
-        connect(null)
-    }
-
-    private fun connect(loc: Vpn.Location?) {
-        if (!Vpn.ready) { phoneSetup(); return }
-        // Android asks once whether Dingus may set up a VPN.
-        val ask = Vpn.permissionIntent(this)
-        if (ask != null) {
-            connectAfterPermission = true
-            pendingLocation = loc
-            try { startActivityForResult(ask, ASK_PERMISSION) } catch (e: Exception) {
-                Dialogs.builder(this).setTitle("VPN").setMessage("This device didn't let Dingus ask for VPN permission.").setPositiveButton("OK", null).show()
-            }
-            return
-        }
-        scope.launch {
-            val err = Vpn.connect(loc)
-            if (err != null) Dialogs.builder(this@VpnActivity).setTitle("Couldn't connect").setMessage(err).setPositiveButton("OK", null).show()
-        }
-    }
-
-    private var pendingLocation: Vpn.Location? = null
-
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == ASK_PERMISSION && connectAfterPermission) {
-            connectAfterPermission = false
-            if (resultCode == RESULT_OK) connect(pendingLocation) else update()
-        }
-    }
-
-    private fun chooseLocation() {
-        if (locations.isEmpty()) { scope.launch { loadLocations(); if (locations.isNotEmpty()) chooseLocation() }; return }
-        if (Vpn.provider == Vpn.CONFIGS) { pick(locations); return }
-        // Surfshark and Proton have many: country first, then the city if there's more than one.
-        val byCountry = locations.groupBy { it.country }
-        val countries = byCountry.keys.toList()
-        val cur = Vpn.current(locations)
-        Dialogs.builder(this).setTitle("Country")
-            .setSingleChoiceItems(countries.toTypedArray(), countries.indexOf(cur?.country)) { d, i ->
-                d.dismiss()
-                val cities = byCountry.getValue(countries[i])
-                if (cities.size == 1) select(cities[0]) else pick(cities)
-            }
-            .show()
-    }
-
-    private fun quickConnect() {
-        if (!Vpn.ready) { phoneSetup(); return }
-        scope.launch {
-            if (locations.isEmpty()) loadLocations()
-            val pick = Vpn.best(locations)
-            if (pick == null) {
-                Dialogs.builder(this@VpnActivity).setTitle("Quick Connect").setMessage("No VPN locations are available yet. Check the Fire TV's connection and try again.").setPositiveButton("OK", null).show()
-                return@launch
-            }
-            Vpn.locationId = pick.id
-            update()
-            connect(pick)
-        }
-    }
-
-    private fun pick(options: List<Vpn.Location>) {
-        val cur = Vpn.current(locations)
-        val names = options.map { (if (it.city.isNotEmpty()) it.city else it.label) + if (it.load >= 0) "   (${it.load}% busy)" else "" }
-        Dialogs.builder(this).setTitle(options.firstOrNull()?.country?.takeIf { Vpn.provider != Vpn.CONFIGS } ?: "Location")
-            .setSingleChoiceItems(names.toTypedArray(), options.indexOfFirst { it.id == cur?.id }) { d, i -> d.dismiss(); select(options[i]) }
-            .show()
-    }
-
-    /** Picking a location connects to it straight away (or just remembers it while the VPN is off). */
-    private fun select(loc: Vpn.Location) {
-        Vpn.locationId = loc.id
-        update()
-        if (Vpn.status == Vpn.Status.ON) connect(loc)
+        controls.onActivityResult(requestCode, resultCode)
     }
 
     private fun chooseProvider() {

@@ -54,6 +54,10 @@ class SettingsActivity : BaseActivity() {
             sectionViews.add(t)
         }
         showSection(0)
+        // (Self-test: open on a section by name.)
+        if (BuildConfig.DEBUG) intent.getStringExtra("dingus_test_section")?.let { n ->
+            sections.indexOfFirst { it.first == n }.takeIf { it >= 0 }?.let { i -> sectionViews[i].requestFocus(); showSection(i) }
+        }
         sectionViews[0].requestFocus()
         val accent = Themes.color(this, R.attr.dAccent)
         findViewById<View>(R.id.settingsGlow).background = android.graphics.drawable.GradientDrawable().apply {
@@ -82,7 +86,7 @@ class SettingsActivity : BaseActivity() {
         section = i
         sectionViews.forEachIndexed { n, v -> v.isActivated = n == i; CatPill.style(v) }
         list.removeAllViews(); subtitles.clear(); values.clear(); switches.clear()
-        refreshRow = null; updateRow = null; accountRow = null
+        refreshRow = null; updateRow = null; accountRow = null; vpnRow = null
         header(sections[i].first)
         sections[i].second()
         findViewById<View>(R.id.pane).scrollTo(0, 0)
@@ -142,11 +146,43 @@ class SettingsActivity : BaseActivity() {
         toggle("Lite mode", "Simpler Home, fewer animations", { Store.homeLite }) { Store.homeLite = it }
         toggle("Title logos", "Official film and show logos, from TMDB", { Store.titleLogos }) { Store.titleLogos = it }
         row("Theme", { "" }, { "${Themes.background().name}  ·  ${Themes.accent().name}" }) { theme() }
+        row("VPN indicator", { "Shown under the clock while the VPN is on" }, { if (Store.vpnIndicator == "text") "“VPN”" else "Shield" }) {
+            choose("VPN indicator", listOf("Shield", "The word “VPN”"), if (Store.vpnIndicator == "text") 1 else 0) { n ->
+                Store.vpnIndicator = if (n == 1) "text" else "shield"; update()
+                findViewById<TextView>(R.id.sideVpn)?.let { VpnIndicator.bind(it) }
+            }
+        }
     }
 
+    // ------------------------------------------------------------------ VPN
+
+    private val vpn by lazy { VpnControls(this, scope, { update(); styleVpnRow() }, { vpn.openSetup(phone = true) }) }
+    private var vpnRow: View? = null
+    private val vpnListener: () -> Unit = { update(); styleVpnRow(); vpn.onVpnChanged() }
+
+    private fun styleVpnRow() { vpnRow?.let { vpn.styleStatus(it, it.findViewById(R.id.title)) } }
+
+    /** On/off with who you're connected to, Quick Connect, Location and the IP address; setting it up is a step further in. */
     private fun vpnSection() {
-        row("Built-in VPN", { vpnSummary() }, { "›" }) { startActivity(Intent(this, VpnActivity::class.java)) }
+        vpnRow = row("VPN", { vpn.statusLine() }) { vpn.toggle() }
+        styleVpnRow()
+        row("⚡  Quick Connect", { vpn.quickLine() }) { vpn.quickConnect() }
+        row("Location", { vpn.locationLine() }, { "›" }) { vpn.chooseLocation() }
+        row("IP address", { vpn.ipLine() }, { vpn.ipValue() }) { vpn.checkIp() }
+        row("More VPN settings", { "Provider, set up from your phone, keys, config files, connect when Dingus starts" }, { "›" }) { vpn.openSetup() }
+        row("Only Dingus uses this VPN", { "Other apps on your Fire TV aren't affected." }) {}
+        if (vpn.locations.isEmpty()) scope.launch { vpn.loadLocations() }
+        if (!VpnControls.ipCurrent) scope.launch { VpnControls.lookUpIp(); update() }
+        Ui.test("vpn-section")
     }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        vpn.onActivityResult(requestCode, resultCode)
+    }
+
+    override fun onPause() { Vpn.removeListener(vpnListener); super.onPause() }
 
     private fun aboutSection() {
         updateRow = row("Check for updates", { "" }, { "Version ${BuildConfig.VERSION_NAME}" }) {
@@ -157,7 +193,7 @@ class SettingsActivity : BaseActivity() {
     }
 
     override fun onResume() {
-        super.onResume(); update(); Ui.test("settings-shown")
+        super.onResume(); update(); styleVpnRow(); Vpn.onChanged(vpnListener); Ui.test("settings-shown")
         // Expiry, connections in use and whether the server's online, fresh each time (at most every 20 seconds).
         val p = Store.playlist
         if (p != null && System.currentTimeMillis() - Account.lastCheck > 20_000L)
@@ -219,12 +255,6 @@ class SettingsActivity : BaseActivity() {
         Dialogs.builder(this).setTitle(title)
             .setSingleChoiceItems(options.toTypedArray(), current) { d, i -> d.dismiss(); done(i) }
             .show()
-    }
-
-    private fun vpnSummary(): String = when (Vpn.status) {
-        Vpn.Status.ON -> "On  ·  ${Vpn.connectedTo?.label ?: ""}  ·  Dingus only"
-        Vpn.Status.CONNECTING -> "Connecting…"
-        else -> if (Vpn.ready) "Off  ·  ${when (Vpn.provider) { Vpn.SURFSHARK -> "Surfshark"; Vpn.PROTON -> "Proton VPN"; else -> "${Vpn.configs.size} config files" }}" else "Off  ·  Surfshark, Proton VPN or any WireGuard VPN, for Dingus only"
     }
 
     // ------------------------------------------------------------------ playlists

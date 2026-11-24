@@ -22,14 +22,7 @@
     <!-- Under the clock once the rows have scrolled up (the rows fade out beneath it). -->
     <View android:id="@+id/topFade" android:layout_width="match_parent" android:layout_height="20dp"
         android:visibility="gone" />
-    <!-- The clock (and the VPN's state), top right. The menu is down the left (SideMenu). -->
-    <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="top|end"
-        android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="22dp" android:paddingEnd="48dp">
-        <TextView android:id="@+id/vpnBadge" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginEnd="18dp" android:textSize="14sp" android:textColor="#4ADE80" android:visibility="gone" />
-        <TextView android:id="@+id/clock" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:textSize="18sp" android:textColor="?attr/dMuted" />
-    </LinearLayout>
+    <!-- (The clock and the VPN are under the logo in the side menu.) -->
     <include layout="@layout/loading_screen" />
     <TextView android:id="@+id/empty" android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:layout_gravity="center" android:layout_marginTop="80dp" android:gravity="center" android:textSize="18sp"

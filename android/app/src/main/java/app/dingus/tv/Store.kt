@@ -275,6 +275,11 @@ object Store {
         set(v) = prefs.edit().putString(k("account"), v).apply()
 
     /** Show official title logos for films and shows (when TMDB has one). */
+    /** How the VPN shows next to the clock: "shield" or "text" (the word VPN). */
+    var vpnIndicator: String
+        get() = prefs.getString("vpnIndicator", "shield")!!
+        set(v) = prefs.edit().putString("vpnIndicator", v).apply()
+
     var titleLogos: Boolean
         get() = prefs.getBoolean("titleLogos", true)
         set(v) = prefs.edit().putBoolean("titleLogos", v).apply()

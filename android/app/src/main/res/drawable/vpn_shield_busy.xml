@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The VPN is connecting: a grey shield (it pulses). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="20dp" android:height="20dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#9AA4B2" android:pathData="M12,2L4,5v6c0,5 3.4,9.4 8,11 4.6,-1.6 8,-6 8,-11V5l-8,-3z" />
+</vector>
