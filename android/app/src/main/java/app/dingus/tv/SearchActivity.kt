@@ -70,6 +70,7 @@ class SearchActivity : BaseActivity() {
             } else false
         }
         // Speaking or typing into the box (Fire TV's keyboard): BACK or DOWN once it's closed comes back out.
+        (query as? SearchBox)?.onBack = { endTyping(); voice.requestFocus() }
         query.setOnKeyListener { _, code, ev ->
             if (ev.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
             when (code) {
@@ -162,6 +163,7 @@ class SearchActivity : BaseActivity() {
         (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(query.windowToken, 0)
         query.isFocusable = false; query.isFocusableInTouchMode = false
         if (query.text.isNotBlank()) Store.addRecentSearch(query.text.toString())
+        Ui.test("search-typing-done")
     }
 
     private fun buildKeys() {

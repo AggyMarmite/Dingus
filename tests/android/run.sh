@@ -205,6 +205,15 @@ fresh
 adb shell am start -n $PKG/.MainActivity --es dingus_test_search test
 check "search \"test\" [1-9]" 30 "search finds channels, films and shows"
 sleep 2; shot 15-search
+# Voice search: OK on "Voice search" brings up the keyboard, and BACK always closes it again.
+fresh
+adb shell am start -n $PKG/.SearchActivity
+sleep 3; key KEYCODE_DPAD_CENTER 2
+check "search-voice" 10 "Voice search opens the keyboard"
+shot 15a-search-keyboard
+key KEYCODE_BACK 1.5
+check "search-typing-done" 10 "BACK closes the voice search keyboard"
+shot 15b-search-keyboard-closed
 
 # ---- Home
 fresh
