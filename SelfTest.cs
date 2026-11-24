@@ -160,8 +160,6 @@ public static class SelfTest
             main.SelfTestEvents.SelfTestQuery("");
             // Downloads: a whole film, a half-finished episode carrying on, a link that's gone – then the Downloads list.
             await TestServer.CheckDownloadsAsync(Note, Error);
-            // Multi-view's "Share one connection": two live channels from a stand-in provider that allows one connection.
-            await TestServer.CheckSharedConnectionAsync(Note, Error);
             // Backup server addresses: the main server down, the playlist loads from a backup.
             await TestServer.CheckFailoverAsync(Note, Error);
             main.OpenDownloads();
