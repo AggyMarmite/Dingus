@@ -204,9 +204,16 @@ class HomeActivity : BaseActivity() {
 
     /** TMDB's trending films and shows today, and the top films, that are in your playlist (Charts). */
     private fun chartRows(out: ArrayList<Row>) {
-        Vod.trending(Vod.MOVIES).takeIf { it.size >= 3 }?.let { out.add(Row("Trending films", it.take(24).map { m -> Card.Title(Vod.MOVIES, m) })) }
-        Vod.trending(Vod.SERIES).takeIf { it.size >= 3 }?.let { out.add(Row("Trending TV shows", it.take(24).map { m -> Card.Title(Vod.SERIES, m) })) }
         Charts.cached(Charts.TOP, Vod.MOVIES).takeIf { it.size >= 5 }?.let { out.add(Row("Top films", it.take(24).map { m -> Card.Title(Vod.MOVIES, m) })) }
+    }
+
+    /** Trending films and TV shows, straight under the showcase: up to 10 each, then "View all". */
+    private fun trendingRows(out: ArrayList<Row>) {
+        for ((kind, name) in listOf(Vod.MOVIES to "Trending films", Vod.SERIES to "Trending TV shows")) {
+            val items = Vod.trending(kind).takeIf { it.size >= 3 } ?: continue
+            out.add(Row(name, items.take(10).map { m -> Card.Title(kind, m) } +
+                (if (items.size > 10) listOf(Card.SeeAll(kind, Vod.TRENDING, "Trending")) else emptyList())))
+        }
     }
 
     /** Looks up TMDB's charts when they're due, then builds Home again with them. */
@@ -214,7 +221,16 @@ class HomeActivity : BaseActivity() {
         if (!Charts.enabled || !Vod.available) return
         val due = listOf(Charts.TRENDING to Vod.MOVIES, Charts.TRENDING to Vod.SERIES, Charts.TOP to Vod.MOVIES).filter { (l, k) -> Charts.stale(l, k) }
         if (due.isEmpty()) return
-        scope.launch { due.forEach { (l, k) -> Charts.load(l, k) }; build() }
+        scope.launch { due.forEach { (l, k) -> Charts.load(l, k) }; build(); slideDetails() }
+    }
+
+    /** The showcase's trending films and show get their plot, genre and picture (looked up once, then kept). */
+    private fun slideDetails() {
+        if (!Vod.available) return
+        val want = Vod.trending(Vod.MOVIES).take(2).map { Vod.MOVIES to it } + Vod.trending(Vod.SERIES).take(1).map { Vod.SERIES to it }
+        val missing = want.filter { (k, m) -> Vod.cachedDetails(k, m.id) == null }
+        if (missing.isEmpty()) return
+        scope.launch { for ((k, m) in missing) try { Vod.details(k, m) } catch (_: Exception) {}; build() }
     }
 
     /** Channels and guide from the saved copy (refreshed when old), films and shows if the playlist has them. */
@@ -234,6 +250,7 @@ class HomeActivity : BaseActivity() {
                 reads.forEach { it.await() }
                 build()
                 loadCharts()
+                slideDetails()
                 // The guide's channel logos, ready before Live TV is opened (at the size the guide draws them).
                 Logos.prefetch(Repo.channelsIn(Repo.ALL).take(150).map { it.logo }, GuideGrid.logoHeight(this@HomeActivity))
                 Vpn.startup() // "connect when Dingus starts": before anything goes online
@@ -336,6 +353,7 @@ class HomeActivity : BaseActivity() {
             }
         }
         Vod.cached(Vod.SERIES)?.let { lib -> Vod.continueList(Vod.SERIES, lib).forEach { cont.add(Card.Title(Vod.SERIES, it, label = "Continue")) } }
+        trendingRows(out)
         if (cont.isNotEmpty()) out.add(Row("Continue watching", cont.take(20)))
         MyList.row()?.let { out.add(it) }
         val favs = Repo.channelsIn(Repo.FAV)
@@ -467,7 +485,23 @@ class HomeActivity : BaseActivity() {
             if (slides.none { it.title == p.title }) slides.add(Slide("Live sport", p.title, "${s.channel.name}  ·  ${Ui.span(p)}  ·  ${left(p, now)}", p.desc,
                 Ui.progress(p) / 1000f, watch = { watch(s.channel) }, ref = "ch:${s.channel.id}", second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(p), until = p.stop))
         }
-        Vod.cached(Vod.MOVIES)?.newest?.firstOrNull()?.let { m ->
+        // Tonight: the first film or sport this evening on your channels (or any).
+        tonight.filter { it.second.start > now }.minByOrNull { it.second.start }?.let { (c, q) ->
+            if (slides.none { it.title == q.title }) slides.add(Slide("Tonight", q.title,
+                listOfNotNull(c.name, "${Ui.time(q.start)} – ${Ui.time(q.stop)}", Genres.name(q.genre)).joinToString("  ·  "), q.desc,
+                watch = { watch(c) }, ref = "ch:${c.id}", second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(q), until = q.start))
+        }
+        // Trending films and shows (TMDB) that are in your playlist, with their details.
+        fun vodSlide(kicker: String, kind: String, m: VodItem) {
+            val d = Vod.cachedDetails(kind, m.id)
+            slides.add(Slide(kicker, d?.title ?: m.name,
+                listOfNotNull((d?.year?.takeIf { it > 0 } ?: m.year).takeIf { it > 0 }?.toString(), (d?.rating?.toFloatOrNull() ?: m.rating).takeIf { it > 0 }?.let { "★ %.1f".format(it) }, d?.genre, d?.duration).joinToString("  ·  "),
+                d?.plot, art = d?.backdrop ?: m.poster, watch = { openTitle(kind, m) }, ref = "vod:$kind:${m.id}",
+                second = (if (kind == Vod.MOVIES) "Films" else "TV Shows") to { startActivity(Intent(this, BrowseActivity::class.java).putExtra(BrowseActivity.KIND, kind)) }, title_ = kind to m))
+        }
+        Vod.trending(Vod.MOVIES).take(2).forEach { vodSlide("Trending film", Vod.MOVIES, it) }
+        Vod.trending(Vod.SERIES).firstOrNull()?.let { vodSlide("Trending TV show", Vod.SERIES, it) }
+        if (Vod.trending(Vod.MOVIES).isEmpty()) Vod.cached(Vod.MOVIES)?.newest?.firstOrNull()?.let { m ->
             slides.add(Slide("New film", m.name, listOfNotNull(m.year.takeIf { it > 0 }?.toString(), m.rating.takeIf { it > 0 }?.let { "★ %.1f".format(it) }).joinToString("  ·  "),
                 Vod.cachedDetails(Vod.MOVIES, m.id)?.plot, art = m.poster, watch = { openTitle(Vod.MOVIES, m) }, ref = "vod:${Vod.MOVIES}:${m.id}",
                 second = "Films" to { startActivity(Intent(this, BrowseActivity::class.java).putExtra(BrowseActivity.KIND, Vod.MOVIES)) }, title_ = Vod.MOVIES to m))
@@ -477,6 +511,7 @@ class HomeActivity : BaseActivity() {
             slides.add(Slide("On now", p.title, "${c.name}  ·  ${Ui.span(p)}", p.desc, Ui.progress(p) / 1000f, watch = { watch(c) }, ref = "ch:${c.id}", second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(p), until = p.stop))
         }
 
+        trendingRows(out)
         if (cont.isNotEmpty()) out.add(Row("Continue watching", cont.take(20)))
         MyList.row()?.let { out.add(it) }
         if (favs.isNotEmpty()) out.add(Row("Favourite channels", favs.take(30).map { c -> Card.Show(c, Repo.nowNext(c).first) }))
@@ -493,6 +528,6 @@ class HomeActivity : BaseActivity() {
         Vod.cached(Vod.MOVIES)?.let { lib -> if (lib.items.isNotEmpty()) out.add(Row("New films", lib.newest.take(24).map { Card.Title(Vod.MOVIES, it, isNew = true) })) }
         Vod.cached(Vod.SERIES)?.let { lib -> if (lib.items.isNotEmpty()) out.add(Row("New TV shows", lib.newest.take(24).map { Card.Title(Vod.SERIES, it, isNew = true) })) }
 
-        return slides.take(5) to HomeRows.arrange(out)
+        return slides.take(8) to HomeRows.arrange(out)
     }
 }

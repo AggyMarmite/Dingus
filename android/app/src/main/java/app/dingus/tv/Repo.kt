@@ -24,6 +24,8 @@ object Repo {
     const val ALL = "\u0001all"
 
     @Volatile var categories: List<Category> = emptyList(); private set
+    /** The playlist's own categories (before matching ones are merged): what's saved, and what a settings change starts from. */
+    @Volatile private var rawCategories: List<Category> = emptyList()
     /** Every channel, with your edits (new names/numbers) applied – hidden ones included. */
     @Volatile var channels: List<Channel> = emptyList(); private set
     /** The channels exactly as the playlist has them (what's saved). */
@@ -119,7 +121,7 @@ object Repo {
     fun reapply() {
         val keys = channels.associate { it.id to it.guideKey }
         raw.forEach { r -> keys[r.id]?.let { r.guideKey = it } }
-        set(categories, raw, guideUrl)
+        set(rawCategories, raw, guideUrl)
         changed()
     }
 
@@ -143,19 +145,65 @@ object Repo {
     // ------------------------------------------------------------------ loading
 
     private fun set(cats: List<Category>, chans: List<Channel>, url: String?) {
-        val edited = ChannelEdits.apply(chans, includeHidden = true)
+        // Divider "channels" ("##### UK #####") left out (Settings → Live TV → Remove divider channels).
+        val edited = ChannelEdits.apply(chans, includeHidden = true).let { l -> if (Store.removeDividers) l.filterNot { isDivider(it.name) } else l }
         val edits = ChannelEdits.all()
-        categories = cats
         raw = chans
+        rawCategories = cats
         channels = edited
         hiddenIds = edits.filterValues { it.hidden }.keys
         renumbered = edits.values.any { it.number != null }
         byId = edited.associateBy { it.id }
-        byCategory = edited.groupBy { it.categoryId }
+        val grouped = edited.groupBy { it.categoryId }
+        if (Store.mergeCategories) {
+            val (c, b) = mergeCategories(cats, grouped)
+            categories = c; byCategory = b
+        } else { categories = cats; byCategory = grouped }
         guideUrl = url
         synchronized(listCache) { listCache.clear() }
         Merge.clear()
         if (Store.mergeChannels) edited.forEach { Merge.key(it) } // worked out now (in the background when loading)
+    }
+
+    // ------------------------------------------------------------------ dividers and matching categories
+
+    private val dividerRx = Regex("""#{3,}|={3,}|\*{3,}|~{3,}|▬{2,}|━{2,}|—{3,}|-{5,}|_{4,}|•{3,}|★{3,}""")
+    /** "##### UK #####", "===== SPORT =====" or a name with no letters or numbers at all: a divider, not a channel. */
+    fun isDivider(name: String) = dividerRx.containsMatchIn(name) || name.none { it.isLetterOrDigit() }
+
+    private val catQualityRx = Regex("""\b(?:hevc|h\.?265|x265|fhd|uhd|4k|hd|sd|50\s*fps|60\s*fps|raw|backup|b/u|vip|plus|\+)\b""", RegexOption.IGNORE_CASE)
+    /** "UK| GENERAL HEVC" → "uk|general": categories that differ only by quality are the same category. */
+    fun categoryKey(name: String) = catQualityRx.replace(name, " ").lowercase().replace(Regex("""[\s\-–:|/]+"""), " ").trim()
+
+    /**
+     * "UK| GENERAL" and "UK| GENERAL HEVC" become one category (the first one's name and place), keeping its own
+     * order, each channel from the other with the channel it matches ("Comedy Central FHD" and "Comedy Central HEVC
+     * FHD" side by side); ones that match nothing go at the end.
+     */
+    private fun mergeCategories(cats: List<Category>, grouped: Map<String, List<Channel>>): Pair<List<Category>, Map<String, List<Channel>>> {
+        val groups = LinkedHashMap<String, MutableList<Category>>()
+        for (c in cats) groups.getOrPut(categoryKey(c.name).ifEmpty { "\u0000" + c.id }) { ArrayList(1) }.add(c)
+        if (groups.size == cats.size) return cats to grouped
+        val out = HashMap<String, List<Channel>>(grouped)
+        val keptCats = ArrayList<Category>()
+        for (g in groups.values) {
+            val first = g[0]
+            keptCats.add(first)
+            if (g.size == 1) continue
+            val list = ArrayList<Channel>(grouped[first.id] ?: emptyList())
+            for (other in g.drop(1)) {
+                val extra = grouped[other.id] ?: continue
+                out.remove(other.id)
+                for (ch in extra) {
+                    val k = Merge.key(ch)
+                    // After the last channel with the same name (so versions sit together), or at the end.
+                    val at = if (k.isEmpty()) -1 else list.indexOfLast { Merge.key(it) == k }
+                    if (at >= 0) list.add(at + 1, ch) else list.add(ch)
+                }
+            }
+            out[first.id] = list
+        }
+        return keptCats to out
     }
 
     /** What was saved last time (instant start). False when there's nothing yet. */
@@ -327,8 +375,8 @@ object Repo {
         out("channels.bin").use { o ->
             o.writeInt(3)
             o.str(guideUrl)
-            o.writeInt(categories.size)
-            for (c in categories) { o.writeUTF(c.id); o.writeUTF(c.name) }
+            o.writeInt(rawCategories.size)
+            for (c in rawCategories) { o.writeUTF(c.id); o.writeUTF(c.name) }
             o.writeInt(raw.size)
             for (c in raw) {
                 c.guideKey = byId[c.id]?.guideKey ?: c.guideKey

@@ -87,8 +87,9 @@ class HomeFeature(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): H {
         val v = LayoutInflater.from(a).inflate(R.layout.item_home_hero, parent, false)
-        // As tall as the screen, less a peek of the first row underneath.
-        v.layoutParams = v.layoutParams.apply { height = (parent.height.takeIf { it > 0 } ?: a.resources.displayMetrics.heightPixels) - (150 * a.resources.displayMetrics.density).toInt() }
+        // As tall as the screen, less a peek of the first row underneath (its title and the top of its cards, so it's
+        // clear there's more below).
+        v.layoutParams = v.layoutParams.apply { height = (parent.height.takeIf { it > 0 } ?: a.resources.displayMetrics.heightPixels) - (104 * a.resources.displayMetrics.density).toInt() }
         // A soft glow in the theme's accent colour (top right), fading into the background – drawn in code, no image.
         val accent = Themes.color(a, R.attr.dAccent)
         val bg = Themes.color(a, R.attr.dBg)

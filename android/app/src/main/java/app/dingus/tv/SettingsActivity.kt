@@ -194,6 +194,8 @@ class SettingsActivity : BaseActivity() {
         row("Stream format", { "" }, { if (Store.streamFormat == "hls") "HLS" else "MPEG-TS" }) { streamFormat() }
         subhead("Channels")
         toggle("Merge duplicate channels", "HD, FHD and backups shown as one", { Store.mergeChannels }) { Store.mergeChannels = it; Repo.reapply() }
+        toggle("Merge matching categories", "e.g. “UK| GENERAL” and “UK| GENERAL HEVC” as one, each channel beside its match", { Store.mergeCategories }) { Store.mergeCategories = it; Repo.reapply() }
+        toggle("Remove divider channels", "Leave out “##### UK #####” and the like", { Store.removeDividers }) { Store.removeDividers = it; Repo.reapply() }
         row("Edit channels", { "Rename, renumber or hide" }, { "›" }) { startActivity(Intent(this, ChannelEditorActivity::class.java)) }
         row("Categories", { hiddenSummary() + "  ·  " + (if (listOf("live", "movies", "series").any { Store.categoryOrder(it).isNotEmpty() }) "your own order" else "the playlist's order") }, { "›" }) {
             val opts = listOf("Show hidden categories", "Put them back in the playlist's order")

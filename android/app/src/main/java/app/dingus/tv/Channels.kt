@@ -81,6 +81,9 @@ object Genres {
         }
     }
 
+    /** "Film", "Sport" … for the showcase (null when the guide doesn't say). */
+    fun name(g: Byte): String? = when (g) { SPORT -> "Sport"; FILM -> "Film"; NEWS -> "News"; KIDS -> "Kids"; FACTUAL -> "Factual"; ENTERTAINMENT -> "Entertainment"; else -> null }
+
     fun color(g: Byte): Int = when (g) {
         SPORT -> 0xFF22C55E.toInt()
         FILM -> 0xFFA855F7.toInt()

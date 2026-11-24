@@ -7,8 +7,8 @@ package app.dingus.tv
 object HomeRows {
     /** Every row Home can show, in its usual order. */
     val all = listOf(
-        "Continue watching", "My list", "Favourite channels", "Coming up next", "Live sport now", "Tonight's picks",
-        "Recently watched", "Channels", "Trending films", "Trending TV shows", "Top films", "New films", "New TV shows",
+        "Trending films", "Trending TV shows", "Continue watching", "My list", "Favourite channels", "Coming up next",
+        "Live sport now", "Tonight's picks", "Recently watched", "Channels", "Top films", "New films", "New TV shows",
     )
 
     private fun lines(key: String) = try { Store.prefsString(key, "").split('\n').filter { it.isNotBlank() } } catch (_: Exception) { emptyList() }

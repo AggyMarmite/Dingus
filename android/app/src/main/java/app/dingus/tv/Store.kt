@@ -280,6 +280,16 @@ object Store {
         set(v) = prefs.edit().putString(k("account"), v).apply()
 
     /** Show official title logos for films and shows (when TMDB has one). */
+    /** Settings → Live TV → Remove divider channels ("##### UK #####"). */
+    var removeDividers: Boolean
+        get() = try { prefs.getBoolean("removeDividers", true) } catch (_: Exception) { true }
+        set(v) = prefs.edit().putBoolean("removeDividers", v).apply()
+
+    /** Settings → Live TV → Merge matching categories ("UK| GENERAL" with "UK| GENERAL HEVC"). */
+    var mergeCategories: Boolean
+        get() = try { prefs.getBoolean("mergeCategories", true) } catch (_: Exception) { true }
+        set(v) = prefs.edit().putBoolean("mergeCategories", v).apply()
+
     /** Settings → Playlist → Channel logo priority: the TV guide's logos before the playlist's. */
     var guideLogosFirst: Boolean
         get() = try { prefs.getBoolean("guideLogosFirst", false) } catch (_: Exception) { false }
