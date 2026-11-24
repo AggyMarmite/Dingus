@@ -1,3 +1,15 @@
+## What's new in Dingus 0.15.23
+
+* Backup server addresses for playlists.
+* Fire TV: a mini guide, Start over and series reminders.
+* Fire TV: Trending and top films and shows, and a richer Home page.
+* Fire TV: plays more kinds of files and streams.
+* Fire TV: easier VPN settings, a VPN indicator and the clock by the logo.
+* Fire TV: tidier settings, with a text size option, picture size and more.
+* Steadier playback: smarter channel fallback and cleaner reconnects.
+* The new Dingus logo everywhere.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.22
 
 * Fire TV: Proton VPN support, and a Quick Connect button for the VPN.
