@@ -12,7 +12,7 @@ public class XtreamClient
     public string BaseUrl { get; }
     readonly string _user, _pass;
 
-    public XtreamClient(PlaylistConfig p) : this(p.Server, p.Username, p.Password) { }
+    public XtreamClient(PlaylistConfig p) : this(Failover.Active(p), p.Username, p.Password) { }
 
     public XtreamClient(string server, string user, string pass)
     {

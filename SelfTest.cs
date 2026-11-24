@@ -162,6 +162,8 @@ public static class SelfTest
             await TestServer.CheckDownloadsAsync(Note, Error);
             // Multi-view's "Share one connection": two live channels from a stand-in provider that allows one connection.
             await TestServer.CheckSharedConnectionAsync(Note, Error);
+            // Backup server addresses: the main server down, the playlist loads from a backup.
+            await TestServer.CheckFailoverAsync(Note, Error);
             main.OpenDownloads();
             await Idle(2000);
             Snap(main.SelfTestRoot, "23-downloads");

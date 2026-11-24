@@ -89,8 +89,18 @@ object Players {
         return b.build()
     }
 
+    /** Whether a stream failed because the server can't be reached (a backup server may be worth trying). */
+    fun serverDown(e: androidx.media3.common.PlaybackException): Boolean {
+        if (e.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
+            e.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT) return true
+        val code = (e.cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCode)?.responseCode ?: return false
+        return code >= 500 || code == 404
+    }
+
     /** The channel's address in the chosen stream format (Xtream logins offer MPEG-TS and HLS). */
-    fun liveUrl(c: Channel): String =
+    fun liveUrl(c: Channel): String = Failover.rewrite(liveUrlRaw(c))
+
+    private fun liveUrlRaw(c: Channel): String =
         if (Store.streamFormat == "hls" && Store.playlist?.type == "xtream" && c.url.contains("/live/") && c.url.endsWith(".ts"))
             c.url.removeSuffix(".ts") + ".m3u8"
         else c.url

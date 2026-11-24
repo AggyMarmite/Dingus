@@ -27,6 +27,7 @@ public partial class PlaylistDialog : Window
             PassBox.Text = existing.Password;
             M3uBox.Text = existing.M3uUrl;
             EpgBox.Text = existing.EpgUrl;
+            BackupBox.Text = string.Join(Environment.NewLine, existing.BackupServers);
             (existing.Type == PlaylistType.M3U ? TypeM3u : TypeXtream).IsChecked = true;
         }
         else TypeXtream.IsChecked = true;
@@ -70,6 +71,7 @@ public partial class PlaylistDialog : Window
         var pass = (PassBox.Text ?? "").Trim();
         var m3u = (M3uBox.Text ?? "").Trim();
         var epg = (EpgBox.Text ?? "").Trim();
+        var backups = Failover.ParseList(BackupBox.Text, IsXtream ? server : m3u);
 
         if (name.Length == 0) { ShowError("Give the playlist a name."); return; }
         if (IsXtream)
@@ -80,7 +82,7 @@ public partial class PlaylistDialog : Window
             try
             {
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(25));
-                await new XtreamClient(server, user, pass).LoginAsync(cts.Token);
+                await Failover.SignInAsync(server, backups, user, pass, cts.Token);
             }
             catch (Exception ex)
             {
@@ -107,6 +109,9 @@ public partial class PlaylistDialog : Window
         p.Password = IsXtream ? pass : "";
         p.M3uUrl = IsXtream ? "" : m3u;
         p.EpgUrl = epg;
+        var normal = IsXtream ? backups.Select(XtreamClient.NormalizeServer).ToList() : backups;
+        if (!normal.SequenceEqual(p.BackupServers)) p.ActiveServerIndex = 0; // the list changed: start from the main one again
+        p.BackupServers = normal;
         Result = p;
         Close(true);
     }

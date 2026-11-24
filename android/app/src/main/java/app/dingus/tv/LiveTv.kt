@@ -49,6 +49,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     var onChannel: ((Channel) -> Unit)? = null
 
     private var retries = 0
+    private var triedBackup = false // (a backup server has been tried for this stream)
     private var versionTry = 0
     private var version: Channel? = null
     private var zapPending: Runnable? = null
@@ -104,7 +105,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         list = if (i >= 0) channels else listOf(c) + channels
         index = if (i >= 0) i else 0
         if (playingSame) return
-        version = null; versionTry = 0; retries = 0
+        version = null; versionTry = 0; retries = 0; triedBackup = false
         makePlayer()
         startChannel()
         startWatchdog()
@@ -191,7 +192,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
             override fun onPlaybackStateChanged(state: Int) {
                 when (state) {
                     Player.STATE_READY -> {
-                        retries = 0
+                        retries = 0; triedBackup = false
                         message.text = ""
                         val name = list.getOrNull(index)?.name
                         Ui.test(if (fullScreen) "playing $name ${p.videoSize.width}x${p.videoSize.height}" else "preview $name")
@@ -213,18 +214,32 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
                 Ui.test("error ${error.errorCodeName}")
                 if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) { p.seekToDefaultPosition(); p.prepare(); return }
                 if (retries < 3) { scheduleRetry("Reconnecting…"); return }
-                // Merged duplicates: try the channel's next version before giving up.
-                val next = list.getOrNull(index)?.let { Repo.versions(it).getOrNull(++versionTry) }
-                if (next != null) {
-                    version = next; retries = 0
-                    message.text = "Trying another version…"
-                    Ui.test("fallback ${next.name}")
-                    handler.postDelayed({ startChannel() }, 500)
-                } else message.text = (if (fullScreen) "This channel isn't playing right now.\n" else "Not playing\n") + describe(error)
+                // The server can't be reached: try the playlist's backup server addresses, if it has any.
+                if (!triedBackup && Failover.hasBackups() && Players.serverDown(error)) {
+                    triedBackup = true
+                    message.text = "Trying a backup server…"
+                    Thread {
+                        val ok = Failover.recover()
+                        handler.post { if (ok) { retries = 0; startChannel() } else giveUp(error) }
+                    }.start()
+                    return
+                }
+                giveUp(error)
             }
         })
         video.player = p
         player = p
+    }
+
+    /** Merged duplicates: try the channel's next version before giving up. */
+    private fun giveUp(error: PlaybackException) {
+        val next = list.getOrNull(index)?.let { Repo.versions(it).getOrNull(++versionTry) }
+        if (next != null) {
+            version = next; retries = 0
+            message.text = "Trying another version…"
+            Ui.test("fallback ${next.name}")
+            handler.postDelayed({ startChannel() }, 500)
+        } else message.text = (if (fullScreen) "This channel isn't playing right now.\n" else "Not playing\n") + describe(error)
     }
 
     private fun describe(e: PlaybackException) = when (e.errorCode) {
@@ -358,8 +373,8 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     private var infoFull = false
 
     /**
-     * The info bar. Opening a stream or changing channel shows the channel, what's on, its description and the
-     * stream stats; OK adds the times and progress, what's next and the keys.
+     * The info bar. Opening a stream or changing channel shows the channel, what's on with its times and progress,
+     * its description and the stream stats; OK adds what's next and the keys.
      */
     fun showInfo(full: Boolean = false, delay: Long = 0) {
         val c = list.getOrNull(index) ?: return
@@ -378,7 +393,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         nowV.text = now?.title ?: "No guide information"
         times.text = now?.let { Ui.span(it) } ?: ""
         now?.let { prog.progress = Ui.progress(it) }
-        (times.parent as View).visibility = if (full && now != null) View.VISIBLE else View.GONE
+        (times.parent as View).visibility = if (now != null) View.VISIBLE else View.GONE // (the times and progress bar always show)
         desc.text = now?.desc ?: ""
         desc.visibility = if (desc.text.isNotEmpty()) View.VISIBLE else View.GONE
         nextV.text = next?.let { "Next  ${Ui.time(it.start)}  ${it.title}" } ?: ""

@@ -223,6 +223,40 @@ public sealed class TestServer : IDisposable
     /// half-finished one where it stopped, checks both files match the original byte for byte and that the player would use
     /// the file, then removes them. Returns the scratch folder's download (still there) for the page's screenshot.
     /// </summary>
+    /// <summary>Backup servers: with the main address down, a refresh uses the backup, stream addresses follow it, and a refused login doesn't skip ahead.</summary>
+    public static async Task CheckFailoverAsync(Action<string> note, Action<Exception> error)
+    {
+        using var server = new TestServer(null);
+        var l = new TcpListener(IPAddress.Loopback, 0);
+        l.Start();
+        var dead = $"http://127.0.0.1:{((IPEndPoint)l.LocalEndpoint).Port}";
+        l.Stop(); // nothing listens there now: "the main server is down"
+        var backup = server.Base.TrimEnd('/');
+        var p = new Models.PlaylistConfig { Name = "Failover test", Type = Models.PlaylistType.Xtream, Server = dead, Username = "u", Password = "p", BackupServers = new() { backup } };
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            var used = await Failover.LoadAsync(p, () => Task.FromResult(Failover.Active(p)), cts.Token);
+            note($"backup servers: main down → loaded from {(used == backup ? "the backup" : used)} · {Failover.Status(p) ?? "no status"}");
+            if (used != backup || p.ActiveServerIndex != 1) error(new Exception("With the main server down, the playlist didn't load from its backup server."));
+            var moved = Failover.Rewrite(p, dead + "/live/u/p/1.ts");
+            if (moved != backup + "/live/u/p/1.ts") error(new Exception("A stream address still pointed at the main server after switching to the backup: " + moved));
+            // A refused login is the login's problem: it mustn't be mistaken for a server that's down.
+            p.ActiveServerIndex = 0;
+            p.Server = backup; p.BackupServers = new() { dead };
+            bool refused = false;
+            try { await Failover.LoadAsync<string>(p, () => throw new InvalidOperationException("wrong password"), cts.Token); }
+            catch (InvalidOperationException) { refused = true; }
+            if (!refused || p.ActiveServerIndex != 0) error(new Exception("A refused login made Dingus try the backup server."));
+            // A stream that won't start: moves on to the next address that answers.
+            p.Server = dead; p.BackupServers = new() { "http://127.0.0.1:1", backup }; p.ActiveServerIndex = 0;
+            bool recovered = await Failover.RecoverAsync(p, cts.Token);
+            note($"backup servers: a stream failing → {(recovered ? "moved to backup " + p.ActiveServerIndex : "stayed put")}");
+            if (!recovered || p.ActiveServerIndex != 2) error(new Exception("When the stream failed, Dingus didn't move to the backup server that answers."));
+        }
+        catch (Exception ex) { error(ex); }
+    }
+
     public static async Task CheckDownloadsAsync(Action<string> note, Action<Exception> error)
     {
         var dir = Path.Combine(Path.GetTempPath(), "dingus-selftest-downloads");

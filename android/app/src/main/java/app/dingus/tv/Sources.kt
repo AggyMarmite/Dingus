@@ -17,7 +17,7 @@ object Sources {
 
     class Result(val categories: List<Category>, val channels: List<Channel>, val guideUrl: String?)
 
-    fun load(p: Playlist): Result = if (p.type == "xtream") xtream(p) else m3u(p)
+    fun load(p: Playlist): Result = Failover.load(p) { q -> if (q.type == "xtream") xtream(q) else m3u(q) }
 
     // ------------------------------------------------------------------ Xtream Codes
 

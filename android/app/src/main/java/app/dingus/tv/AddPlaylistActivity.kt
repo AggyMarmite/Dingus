@@ -95,6 +95,7 @@ class AddPlaylistActivity : BaseActivity() {
             epgUrl = (listOf(epg.text.toString().trim()) + (editing?.epgUrls?.drop(1) ?: emptyList())).filter { it.isNotEmpty() }.joinToString("\n"),
             id = editing?.id ?: Store.newId(),
             useProviderGuide = editing?.useProviderGuide ?: true,
+            backups = editing?.backups ?: "", // (added in Settings; editing keeps them)
         )
         if (type == "xtream" && (p.server.isEmpty() || p.user.isEmpty())) return showError("Enter the server address, username and password.")
         if (type == "m3u" && p.m3uUrl.isEmpty()) return showError("Enter the M3U address.")

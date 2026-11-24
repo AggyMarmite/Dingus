@@ -55,6 +55,13 @@
             <TextBox x:Name="EpgBox" Tag="Optional – used first, with the provider's guide filling any gaps"/>
         </StackPanel>
 
+        <StackPanel>
+            <TextBlock Style="{StaticResource FieldLabel}" Text="Backup server addresses (optional, one per line)"/>
+            <TextBox x:Name="BackupBox" AcceptsReturn="True" TextWrapping="NoWrap" MinHeight="58" MaxHeight="110"
+                     VerticalScrollBarVisibility="Auto" VerticalContentAlignment="Top"
+                     Tag="Tried in order if the main server stops answering"/>
+        </StackPanel>
+
         <TextBlock x:Name="ErrorText" Foreground="#FCA5A5" TextWrapping="Wrap" Margin="0,14,0,0" Visibility="Collapsed"/>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">

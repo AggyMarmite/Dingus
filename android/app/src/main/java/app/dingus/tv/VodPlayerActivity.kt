@@ -69,6 +69,7 @@ class VodPlayerActivity : BaseActivity() {
     private var retries = 0
     private var resumeAt = -1L
     private var upNextDismissed = -1
+    private var triedBackup = false
     // Sound but no picture (some 4K / HDR files on the TV's video layer): after a few seconds, draw the picture
     // the way the rest of the screen is drawn instead, and say what the file is.
     private var rendered = false
@@ -132,7 +133,7 @@ class VodPlayerActivity : BaseActivity() {
             override fun onPlaybackStateChanged(state: Int) {
                 when (state) {
                     Player.STATE_READY -> {
-                        retries = 0
+                        retries = 0; triedBackup = false
                         message.text = ""
                         if (!rendered) { handler.removeCallbacks(noPicture); handler.postDelayed(noPicture, 4_000) }
                         Ui.test("vod-playing ${titles[index]}")
@@ -155,6 +156,13 @@ class VodPlayerActivity : BaseActivity() {
                 if (retries++ < 2) {
                     message.text = "Reconnecting…"
                     handler.postDelayed({ open(pos) }, 1_500L * retries)
+                } else if (!triedBackup && Failover.hasBackups() && Players.serverDown(error)) {
+                    triedBackup = true
+                    message.text = "Trying a backup server…"
+                    Thread {
+                        val ok = Failover.recover()
+                        runOnUiThread { if (ok) { retries = 0; open(pos) } else message.text = "This won't play right now.\n${error.errorCodeName}" }
+                    }.start()
                 } else message.text = "This won't play right now.\n${error.errorCodeName}"
             }
         })
@@ -216,7 +224,7 @@ class VodPlayerActivity : BaseActivity() {
         rendered = false
         handler.removeCallbacks(noPicture)
         handler.postDelayed(noPicture, 5_000)
-        p.setMediaItem(MediaItem.fromUri(Uri.parse(urls[index])), at)
+        p.setMediaItem(MediaItem.fromUri(Uri.parse(Failover.rewrite(urls[index]))), at)
         p.prepare()
         p.playWhenReady = true
         showTitle()

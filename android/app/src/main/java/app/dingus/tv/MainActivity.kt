@@ -152,6 +152,13 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             current = Repo.ALL
             Repo.clear(); Vod.clear()
         }
+        i.getStringExtra("dingus_test_xtream_backup")?.let { url ->
+            // The main server is down (nothing there); the backup is the real test server.
+            Store.playlist = Playlist("Test Backup", "xtream", server = "http://10.0.2.2:9", user = "test", pass = "test", id = "test-failover", backups = url)
+            Store.lastCategory = null
+            current = Repo.ALL
+            Repo.clear(); Vod.clear()
+        }
         if (i.getBooleanExtra("dingus_test_add_playlist", false)) startActivity(Intent(this, AddPlaylistActivity::class.java).putExtra(AddPlaylistActivity.NEW, true))
         if (i.getBooleanExtra("dingus_test_vpn_phone", false)) startActivity(Intent(this, VpnActivity::class.java).putExtra(VpnActivity.PHONE, true))
         i.getStringExtra("dingus_test_vpn_connect")?.let { name ->

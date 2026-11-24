@@ -49,6 +49,9 @@ data class Playlist(
     val id: String = "",
     /** Also use the guide the provider gives (after your own). */
     val useProviderGuide: Boolean = true,
+    /** Backup server addresses (an Xtream server, or an M3U link), one per line, tried in order if the main one is down. */
+    val backups: String = "",
 ) {
+    val backupUrls: List<String> get() = backups.split('\n').map { it.trim() }.filter { it.isNotEmpty() }
     val epgUrls: List<String> get() = epgUrl.split('\n').map { it.trim() }.filter { it.isNotEmpty() }
 }

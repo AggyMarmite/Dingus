@@ -154,7 +154,7 @@ object Vod {
 
     // ------------------------------------------------------------------ addresses
 
-    private fun base(p: Playlist) = Sources.xtreamBase(p.server)
+    private fun base(p: Playlist) = Failover.base(p)
     fun movieUrl(m: VodItem): String { val p = Store.playlist!!; return "${base(p)}/movie/${Sources.enc(p.user)}/${Sources.enc(p.pass)}/${m.id}.${m.ext}" }
     fun episodeUrl(e: Episode): String { val p = Store.playlist!!; return "${base(p)}/series/${Sources.enc(p.user)}/${Sources.enc(p.pass)}/${e.id}.${e.ext}" }
 

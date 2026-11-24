@@ -123,6 +123,12 @@ check "update-installer-opened|update-needs-permission" 15 "hands the update to 
 sleep 2; shot 08-update
 key KEYCODE_BACK 2
 
+# ---- Backup servers: the main server is down, so the playlist loads from the backup.
+fresh
+adb shell am start -n $PKG/.MainActivity --es dingus_test_xtream_backup http://10.0.2.2:8000
+check "server-in-use 1" 90 "Backup server: used when the main server is down"
+check "channels 3 categories 2" 60 "Backup server: the playlist loads from it"
+
 # ---- An Xtream Codes login: films and TV shows.
 fresh
 adb shell am start -n $PKG/.MainActivity --es dingus_test_xtream http://10.0.2.2:8000

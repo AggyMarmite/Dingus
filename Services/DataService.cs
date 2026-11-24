@@ -228,7 +228,7 @@ public sealed class DataService
         SetBusy(true, "Connecting…");
         try
         {
-            var data = p.Type == PlaylistType.Xtream ? await FetchXtreamAsync(p, ct) : await FetchM3uAsync(p, ct);
+            var data = await Failover.LoadAsync(p, () => p.Type == PlaylistType.Xtream ? FetchXtreamAsync(p, ct) : FetchM3uAsync(p, ct), ct);
             if (gen != _gen) return;
             var file = CatalogFile(p);
             bool showingSaved = Catalog.Channels.Count + Catalog.Movies.Count + Catalog.Series.Count > 0;
@@ -246,7 +246,7 @@ public sealed class DataService
                 if (!File.Exists(Path.ChangeExtension(file, ".bin")))
                     _ = Task.Run(() => { try { WriteCatalog(file, data); } catch (Exception ex) { Log.Error(ex); } });
                 AccountChanged?.Invoke();
-                Message?.Invoke($"Playlist up to date · {Catalog.Channels.Count:N0} channels · {Catalog.Movies.Count:N0} films · {Catalog.Series.Count:N0} shows");
+                Message?.Invoke($"Playlist up to date · {Catalog.Channels.Count:N0} channels · {Catalog.Movies.Count:N0} films · {Catalog.Series.Count:N0} shows{BackupNote(p)}");
             }
             else
             {
@@ -254,7 +254,7 @@ public sealed class DataService
                 Catalog = data;
                 Raise(CatalogChanged, "new playlist");
                 Memory.CompactSoon();
-                Message?.Invoke($"Playlist updated · {data.Channels.Count:N0} channels · {data.Movies.Count:N0} films · {data.Series.Count:N0} shows");
+                Message?.Invoke($"Playlist updated · {data.Channels.Count:N0} channels · {data.Movies.Count:N0} films · {data.Series.Count:N0} shows{BackupNote(p)}");
             }
             ok = true;
         }
@@ -272,6 +272,25 @@ public sealed class DataService
         if (guideDue) await RefreshEpgAsync();
         else if (!unchanged) await ReloadEpgAsync(); // re-match the saved guide to the updated channel list
     }
+
+    /// <summary>Whether the playlist in use has backup server addresses.</summary>
+    public bool HasBackups => Failover.HasBackups(Active);
+
+    static string BackupNote(PlaylistConfig p) => Failover.Status(p) is { } s ? " · " + s : "";
+
+    /// <summary>A stream won't start: the server may be down. Moves to the first backup address that answers; true if it moved.</summary>
+    public async Task<bool> TryBackupAsync()
+    {
+        var p = Active;
+        if (p == null || !Failover.HasBackups(p)) return false;
+        if (!await Failover.RecoverAsync(p, _cts.Token)) return false;
+        if (p.Type == PlaylistType.Xtream) Xtream = new XtreamClient(p);
+        Message?.Invoke(Failover.Status(p) ?? "");
+        return true;
+    }
+
+    /// <summary>A saved stream address, with the server swapped for the one in use.</summary>
+    public string UseActiveServer(string url) => Failover.Rewrite(Active, url);
 
     async Task<CatalogData> FetchXtreamAsync(PlaylistConfig p, CancellationToken ct)
     {
@@ -317,7 +336,7 @@ public sealed class DataService
 
     async Task<CatalogData> FetchM3uAsync(PlaylistConfig p, CancellationToken ct)
     {
-        var src = p.M3uUrl?.Trim() ?? "";
+        var src = Failover.Active(p)?.Trim() ?? "";
         SetBusy(true, "Downloading playlist…");
         if (File.Exists(src))
             return await Task.Run(() => { using var r = new StreamReader(src); return M3uParser.Parse(r); }, ct);

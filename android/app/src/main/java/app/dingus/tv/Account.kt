@@ -96,7 +96,7 @@ object Account {
 
     /** The panel address and login for a playlist: an Xtream login, or an M3U link from an Xtream panel (get.php?username=…&password=…). */
     private fun login(p: Playlist): Triple<String, String, String>? {
-        if (p.type == "xtream") return Triple(Sources.xtreamBase(p.server), p.user, p.pass)
+        if (p.type == "xtream") return Triple(Failover.base(p), p.user, p.pass)
         return try {
             val u = URI(p.m3uUrl.trim())
             val q = (u.rawQuery ?: return null).split('&').associate { it.substringBefore('=') to java.net.URLDecoder.decode(it.substringAfter('=', ""), "UTF-8") }

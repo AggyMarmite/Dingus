@@ -25,12 +25,12 @@ object Store {
 
     private fun toJson(p: Playlist) = JSONObject()
         .put("id", p.id).put("name", p.name).put("type", p.type).put("server", p.server).put("user", p.user)
-        .put("pass", p.pass).put("m3uUrl", p.m3uUrl).put("epgUrl", p.epgUrl).put("providerGuide", p.useProviderGuide)
+        .put("pass", p.pass).put("m3uUrl", p.m3uUrl).put("epgUrl", p.epgUrl).put("providerGuide", p.useProviderGuide).put("backups", p.backups)
 
     private fun fromJson(o: JSONObject) = Playlist(
         o.optString("name"), o.optString("type"), o.optString("server"), o.optString("user"),
         o.optString("pass"), o.optString("m3uUrl"), o.optString("epgUrl"), o.optString("id").ifEmpty { "p1" },
-        o.optBoolean("providerGuide", true),
+        o.optBoolean("providerGuide", true), o.optString("backups"),
     )
 
     @Volatile private var cachedPlaylists: List<Playlist>? = null

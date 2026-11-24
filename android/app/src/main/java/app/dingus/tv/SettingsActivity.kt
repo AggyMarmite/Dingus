@@ -92,6 +92,7 @@ class SettingsActivity : BaseActivity() {
 
     private fun playlistSection() {
         accountRow = row("Playlists", { playlistsSummary() }, { Store.playlist?.name ?: "" }) { playlists() }
+        row("Backup servers", { backupSummary() }) { backupServers() }
         refreshRow = row("Update now", { refreshSummary() }) { refresh() }
         row("Update every", { "" }, { hoursName(Store.refreshHours) }) { refreshInterval() }
         row("TV guide sources", { guideSummary() }) { guideSources() }
@@ -232,6 +233,7 @@ class SettingsActivity : BaseActivity() {
         val all = Store.playlists
         val p = Store.playlist ?: return "Add your playlist"
         return "${p.name}  ·  ${typeName(p)}" + (if (all.size > 1) "  ·  ${all.size} playlists" else "") +
+            (Failover.status(p)?.let { "\n$it" } ?: "") +
             (Account.saved()?.let { "\n" + it.summary() } ?: "") +
             when (Account.online(p)) { true -> "\nStatus: online"; false -> "\nStatus: offline"; null -> "" }
     }
@@ -287,6 +289,51 @@ class SettingsActivity : BaseActivity() {
             p.useProviderGuide -> "$own of your own, then the provider's"
             else -> "$own of your own"
         }
+    }
+
+    // ------------------------------------------------------------------ backup servers
+
+    private fun backupSummary(): String {
+        val p = Store.playlist ?: return "Add a playlist first"
+        val n = p.backupUrls.size
+        return if (n == 0) "None  ·  add another address to fall back on if the main server is down"
+        else "$n set  ·  tried in order if the main server is down" + (Failover.status(p)?.let { "\n$it" } ?: "")
+    }
+
+    private fun saveBackups(p: Playlist, list: List<String>) {
+        Store.playlist = p.copy(backups = list.map { it.trim() }.filter { it.isNotEmpty() }.distinct().joinToString("\n"))
+        update()
+    }
+
+    private fun backupServers() {
+        val p = Store.playlist ?: return
+        val urls = p.backupUrls
+        val items = urls.mapIndexed { i, u -> "Backup ${i + 1}:  $u" } + "+  Add a backup server"
+        val hint = if (p.type == "xtream") "http://server:port" else "http://…/playlist.m3u"
+        Dialogs.builder(this).setTitle("Backup servers for “${p.name}” (tried in this order)")
+            .setItems(items.toTypedArray()) { _, i ->
+                if (i < urls.size) backupOptions(p, i)
+                else Dialogs.input(this, "Add a backup server", "", hint) { u -> if (u.isNotEmpty()) saveBackups(p, urls + u) }
+            }
+            .show()
+    }
+
+    private fun backupOptions(p: Playlist, i: Int) {
+        val urls = p.backupUrls.toMutableList()
+        val opts = listOfNotNull(if (i > 0) "Move up (try sooner)" else null, if (i < urls.size - 1) "Move down" else null, "Edit", "Remove")
+        Dialogs.builder(this).setTitle(urls[i])
+            .setItems(opts.toTypedArray()) { _, k ->
+                when (opts[k]) {
+                    "Move up (try sooner)" -> { urls.add(i - 1, urls.removeAt(i)); saveBackups(p, urls) }
+                    "Move down" -> { urls.add(i + 1, urls.removeAt(i)); saveBackups(p, urls) }
+                    "Edit" -> Dialogs.input(this, "Backup server", urls[i], "http://server:port") { u ->
+                        if (u.isEmpty()) urls.removeAt(i) else urls[i] = u
+                        saveBackups(p, urls)
+                    }
+                    "Remove" -> { urls.removeAt(i); saveBackups(p, urls) }
+                }
+            }
+            .show()
     }
 
     private fun savePlaylist(p: Playlist) {

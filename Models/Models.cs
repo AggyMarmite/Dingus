@@ -19,6 +19,10 @@ public class PlaylistConfig
     public string M3uUrl { get; set; } = "";
     /// <summary>Optional EPG override. Empty = use the provider's guide.</summary>
     public string EpgUrl { get; set; } = "";
+    /// <summary>Backup server addresses (an Xtream server, or an M3U link), tried in order if the main one is down.</summary>
+    public List<string> BackupServers { get; set; } = new();
+    /// <summary>Which address is in use (0 = the main one); remembered between runs.</summary>
+    public int ActiveServerIndex { get; set; }
     public List<string> HiddenCategories { get; set; } = new();
     public List<string> Favourites { get; set; } = new();
     /// <summary>Channel editor: your own names (channel id → name), kept across refreshes.</summary>

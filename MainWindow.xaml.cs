@@ -52,6 +52,7 @@ public partial class MainWindow : Window
     // ----- stream health / reconnect
     DateTime _lastProgressUtc, _lastReconnectUtc, _lastSaveUtc;
     int _lastShown, _lastLost, _reconnects;
+    bool _triedBackup, _backupBusy; // the playlist's backup server has been tried for this stream / is being tried now
     long _lastTime, _lastVodTime, _lastVodLen;
     readonly Queue<int> _lostWindow = new();
     bool _healthPinned, _reconnecting, _cpuWarned, _rateMatched, _trimmedThisStream;
@@ -1687,6 +1688,7 @@ public partial class MainWindow : Window
         _trimmedThisStream = false;
         _streamStartedUtc = DateTime.UtcNow;
         _reconnects = 0;
+        _triedBackup = false;
         HealthText.Text = "Connecting…";
         HealthDot.Fill = Amber;
     }
@@ -1970,7 +1972,7 @@ public partial class MainWindow : Window
     async void Reconnect()
     {
         var url = _currentUrl;
-        if (url == null || _svc == null) return;
+        if (url == null || _svc == null || _backupBusy) return;
 
         // Merged channel: after one failed retry, move on to the next version instead of hammering this one.
         if (_nowLive && _reconnects >= 1 && _variantIdx + 1 < _variants.Count)
@@ -1980,6 +1982,26 @@ public partial class MainWindow : Window
             _reconnecting = false;
             SwitchVariant(_variantIdx + 1, $"{name}: that version stopped working – switched to {ChannelMerger.Label(next)}.");
             return;
+        }
+
+        // Out of retries: the server itself may be down. If the playlist has backup servers, move to one that answers.
+        if (_reconnects >= MaxReconnects && !_triedBackup && DataService.Instance.HasBackups && !url.StartsWith("file:"))
+        {
+            _triedBackup = true;
+            _backupBusy = _reconnecting = true;
+            SetBuffering("Trying a backup server…");
+            bool moved = false;
+            try { moved = await DataService.Instance.TryBackupAsync(); }
+            catch (Exception ex) { Log.Error(ex); }
+            finally { _backupBusy = false; }
+            if (_currentUrl != url) return; // you changed channel meanwhile
+            if (moved)
+            {
+                url = DataService.Instance.UseActiveServer(url);
+                _currentUrl = url;
+                _reconnects = 0;
+                ShowToast(Failover.Status(DataService.Instance.Active) ?? "Switched to a backup server");
+            }
         }
 
         if (_reconnects >= MaxReconnects)

@@ -271,7 +271,7 @@ object Repo {
         val tz = Store.serverTimeZone?.let { java.util.TimeZone.getTimeZone(it) } ?: java.util.TimeZone.getDefault()
         val f = java.text.SimpleDateFormat("yyyy-MM-dd:HH-mm", java.util.Locale.US).apply { timeZone = tz }
         val mins = ((p.stop - p.start) / 60_000).coerceAtLeast(1)
-        return "${Sources.xtreamBase(pl.server)}/timeshift/${Sources.enc(pl.user)}/${Sources.enc(pl.pass)}/$mins/${f.format(java.util.Date(p.start))}/${c.id}.ts"
+        return "${Failover.base(pl)}/timeshift/${Sources.enc(pl.user)}/${Sources.enc(pl.pass)}/$mins/${f.format(java.util.Date(p.start))}/${c.id}.ts"
     }
 
     fun clear() {
