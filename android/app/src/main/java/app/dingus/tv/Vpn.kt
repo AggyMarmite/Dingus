@@ -280,7 +280,9 @@ object Vpn {
                 if (permissionIntent(app) != null) return@withContext "Dingus needs permission to use a VPN – open Settings → VPN".also { set(Status.ERROR, it) }
                 val target = loc ?: current(locations()) ?: return@withContext "No VPN locations".also { set(Status.ERROR, it) }
                 set(Status.CONNECTING, target.label)
-                backend.setState(tunnel, Tunnel.State.UP, configFor(target))
+                // Close what's playing first, so the provider sees it end instead of counting it for minutes.
+                Streams.closeAll("vpn connecting")
+                try { backend.setState(tunnel, Tunnel.State.UP, configFor(target)) } finally { Streams.reopenAll() }
                 locationId = target.id
                 connectedTo = target
                 set(Status.ON, target.label)
@@ -300,7 +302,9 @@ object Vpn {
 
     suspend fun disconnect() = lock.withLock {
         withContext(Dispatchers.IO) {
+            Streams.closeAll("vpn off")
             try { backend.setState(tunnel, Tunnel.State.DOWN, null) } catch (e: Throwable) { Log.w("Dingus", "vpn down", e) }
+            Streams.reopenAll()
             connectedTo = null
             set(Status.OFF, "")
         }

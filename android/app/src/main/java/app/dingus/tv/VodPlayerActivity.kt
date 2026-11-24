@@ -125,9 +125,17 @@ class VodPlayerActivity : BaseActivity() {
         showTitle()
     }
 
+    /** The VPN or network is about to change: close the stream cleanly (keeping the place), then carry on (Streams). */
+    private var closedAt = -1L
+    private val stream = Streams.Playing(
+        close = { player?.let { closedAt = if (skipTo >= 0) skipTo else it.currentPosition; it.stop(); message.text = "Reconnecting…" } },
+        reopen = { if (player != null && closedAt >= 0) { val t = closedAt; closedAt = -1L; open(t) } },
+    )
+
     override fun onStart() {
         super.onStart()
         if (ids.isEmpty()) return
+        Streams.add(stream)
         val p = Players.create(this)
         Players.watchFrameRate(this, p)
         p.addListener(object : Player.Listener {
@@ -185,6 +193,7 @@ class VodPlayerActivity : BaseActivity() {
 
     override fun onStop() {
         super.onStop()
+        Streams.remove(stream)
         FrameRate.reset(this)
         handler.removeCallbacksAndMessages(null)
         savePosition()

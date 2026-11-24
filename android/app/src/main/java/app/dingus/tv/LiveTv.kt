@@ -137,6 +137,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
 
     /** Stops and lets go of the stream (leaving the screen). */
     fun release() {
+        Streams.remove(stream)
         if (player != null) Account.soon()
         handler.removeCallbacksAndMessages(null)
         slotGen++
@@ -196,8 +197,20 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         }
     }
 
+    /** The VPN or network is about to change: close this stream cleanly, then start it again afterwards (Streams). */
+    private val stream = Streams.Playing(
+        close = {
+            slotGen++; handler.removeCallbacks(retry)
+            player?.stop()
+            buffer?.close(); buffer = null
+            if (player != null) message.text = if (fullScreen) "Reconnecting…" else "Loading…"
+        },
+        reopen = { if (player != null) { retries = 0; startChannel() } },
+    )
+
     private fun makePlayer() {
         if (player != null) return
+        Streams.add(stream)
         val p = Players.create(a)
         dropped = 0; lastBytes = -1; lastFrames = -1; mbps = 0.0; measuredFps = 0.0
         p.addAnalyticsListener(object : androidx.media3.exoplayer.analytics.AnalyticsListener {

@@ -145,7 +145,12 @@ public partial class MainWindow : Window
         Closing += OnClosing;
         PropertyChanged += (_, e) =>
         {
-            if (e.Property == WindowStateProperty) UpdateWindowFrame();
+            if (e.Property == WindowStateProperty)
+            {
+                UpdateWindowFrame();
+                if (WindowState == WindowState.Minimized) { if (!_mini) CloseStreamCleanly("minimised"); }
+                else ReopenStream();
+            }
         };
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
         // Memory is tidied up once you've left the window alone, and Home's slideshow stops when nobody's around.
@@ -1427,6 +1432,7 @@ public partial class MainWindow : Window
         _streamStartedUtc = DateTime.UtcNow;
         _reconnects = 0;
         _triedBackup = false;
+        _streamClosed = false;
         HealthText.Text = "Connecting…";
         HealthDot.Fill = Amber;
     }
@@ -1539,7 +1545,43 @@ public partial class MainWindow : Window
     {
         if (_currentUrl == null) return;
         _netChangedUtc = DateTime.UtcNow;
+        // Close the stream properly and open it again once the new connection has settled.
+        if (_streamClosed || _currentUrl.StartsWith("file:")) return;
+        CloseStreamCleanly("network changed");
+        var url = _currentUrl;
+        _ = Task.Delay(1500).ContinueWith(_ => Dispatcher.UIThread.Post(() => { if (_currentUrl == url && !WindowState == WindowState.Minimized) ReopenStream(); }));
     }
+
+    // =====================================================================================
+    // Closing the stream cleanly (minimised, a network change)
+    // =====================================================================================
+
+    /// <summary>
+    /// A provider counts a stream as in use until it sees it close; one that's simply cut off can keep a
+    /// 1-connection plan "full" for minutes. So the stream is closed properly when Dingus is minimised (not the mini
+    /// player) or the network changes, and opened again when you come back or the new connection is up.
+    /// </summary>
+    bool _streamClosed;
+
+    void CloseStreamCleanly(string why)
+    {
+        if (_streamClosed || _svc == null || _currentUrl == null || _currentUrl.StartsWith("file:")) return;
+        if (!_nowLive) SaveVodProgress();
+        _streamClosed = true;
+        _reconnecting = false;
+        Log.Info("Closing the stream: " + why);
+        try { _svc.Stop(); } catch (Exception ex) { Log.Error(ex); }
+    }
+
+    void ReopenStream()
+    {
+        if (!_streamClosed) return;
+        _streamClosed = false;
+        if (_currentUrl == null || _svc == null) return;
+        _reconnects = 0;
+        Reconnect();
+    }
+
 
     /// <summary>
     /// The channel won't start. If the provider says every connection is in use – usually one that was cut off by a VPN

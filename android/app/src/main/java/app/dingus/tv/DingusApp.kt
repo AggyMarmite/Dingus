@@ -16,6 +16,7 @@ class DingusApp : Application() {
         Posters.init(this)
         Vod.init(this)
         Vpn.init(this)
+        Streams.watchNetwork(this)
         TitleLogos.init(this)
         HomeSnapshot.init(this)
         Reminders.init(this)
