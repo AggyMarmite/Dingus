@@ -252,12 +252,39 @@ class SettingsActivity : BaseActivity() {
                 recreate()
             }
         }
+        row("Home rows", { "Choose which rows Home shows, and their order" }, { if (HomeRows.customised) "Your own" else "As usual" }) { homeRows() }
         row("VPN indicator", { "Shown under the clock while the VPN is on" }, { if (Store.vpnIndicator == "text") "“VPN”" else "Shield" }) {
             choose("VPN indicator", listOf("Shield", "The word “VPN”"), if (Store.vpnIndicator == "text") 1 else 0) { n ->
                 Store.vpnIndicator = if (n == 1) "text" else "shield"; update()
                 findViewById<TextView>(R.id.sideVpn)?.let { VpnIndicator.bind(it) }
             }
         }
+    }
+
+    // ------------------------------------------------------------------ Home rows
+
+    private fun homeRows() {
+        val order = HomeRows.order()
+        val hidden = HomeRows.hidden()
+        val items = order.mapIndexed { i, n -> "${i + 1}.  $n   ·   ${if (n in hidden) "Hidden" else "Shown"}" } + "↺  Put Home back as it was"
+        Dialogs.builder(this).setTitle("Home rows  ·  top is shown first")
+            .setItems(items.toTypedArray()) { _, i ->
+                if (i == order.size) { HomeRows.reset(); update(); Ui.test("home-rows reset"); return@setItems }
+                val name = order[i]
+                val opts = listOfNotNull(if (name in hidden) "Show it" else "Hide it", if (i > 0) "Move up" else null, if (i < order.size - 1) "Move down" else null)
+                Dialogs.builder(this).setTitle(name)
+                    .setItems(opts.toTypedArray()) { _, k ->
+                        when (opts[k]) {
+                            "Show it" -> HomeRows.setHidden(name, false)
+                            "Hide it" -> HomeRows.setHidden(name, true)
+                            else -> { val l = order.toMutableList(); l.add(if (opts[k] == "Move up") i - 1 else i + 1, l.removeAt(i)); HomeRows.setOrder(l) }
+                        }
+                        Ui.test("home-rows ${opts[k]} $name")
+                        update(); homeRows()
+                    }
+                    .show()
+            }
+            .show()
     }
 
     // ------------------------------------------------------------------ VPN
@@ -291,7 +318,7 @@ class SettingsActivity : BaseActivity() {
     override fun onPause() { Vpn.removeListener(vpnListener); super.onPause() }
 
     private fun aboutSection() {
-        updateRow = row("Check for updates", { "" }, { "Version ${BuildConfig.VERSION_NAME}" }) {
+        updateRow = row("Check for updates", { Updater.available?.takeIf { Updater.newer(it.version, BuildConfig.VERSION_NAME) }?.let { "Dingus ${it.version} is ready  ·  OK to update" } ?: "" }, { "Version ${BuildConfig.VERSION_NAME}" }) {
             updateRow?.let { sub(it, "Checking…") }
             Updater.check(this, manual = true) { msg -> updateRow?.let { sub(it, msg) } }
         }

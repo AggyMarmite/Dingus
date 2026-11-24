@@ -51,7 +51,11 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
             field = v
             // Full screen: the spinner while a channel tunes or catches up (the preview says "Loading…" instead).
             video.setShowBuffering(if (v) androidx.media3.ui.PlayerView.SHOW_BUFFERING_WHEN_PLAYING else androidx.media3.ui.PlayerView.SHOW_BUFFERING_NEVER)
+            applyPicture()
         }
+
+    /** Full screen: the channel's own picture size (≡ → Picture size); the guide's window always fits. */
+    private fun applyPicture() = PictureSize.apply(video, if (fullScreen) PictureSize.get(list.getOrNull(index)?.id) else "fit")
     /** Told when the channel changes in full screen (so the guide can follow). */
     var onChannel: ((Channel) -> Unit)? = null
 
@@ -387,6 +391,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         val p = player ?: return
         slotGen++
         playedOnce = false; handler.removeCallbacks(bufferCheck)
+        applyPicture()
         dropped = 0 // the player is reused between channels, so the count starts again for each channel
         val c = version ?: list.getOrNull(index)?.let { if (Store.mergeChannels) Repo.versions(it).first() else it } ?: return
         Ui.test("load ${c.name}")
@@ -628,6 +633,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         if (on != null && Repo.canStartOver(c, on)) items.add("↺  Start over  ·  from ${Ui.time(on.start)}" to { startOver(a, c, on) })
         items.add((if (Store.isFavourite(c.id)) "Remove from Favourites" else "Add to Favourites") to { Store.toggleFavourite(c.id); showInfo(infoFull) })
         items.add("Audio & subtitles" to { app.dingus.tv.Tracks.choose(a, p) })
+        items.add("Picture size  ·  ${PictureSize.label(PictureSize.get(c.id))}" to { PictureSize.choose(a, c.id, c.name) { applyPicture() } })
         if (currentBehind() >= 3_000) items.add("Back to live" to { seekBehind(0) })
         items.add((if (Store.statsPinned) "Hide stream stats" else "Show stream stats") to {
             Store.statsPinned = !Store.statsPinned; updateStats(); Ui.test("stats-pinned ${Store.statsPinned}")

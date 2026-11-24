@@ -32,6 +32,15 @@ object Updater {
     private val scope = CoroutineScope(Dispatchers.Main)
     private var busy = false
 
+    /** A newer version found by the automatic check: Home shows a small "ready to update" pill instead of a pop-up. */
+    @Volatile var available: Release? = null; private set
+    private val listeners = ArrayList<() -> Unit>()
+    fun onAvailable(l: () -> Unit) { synchronized(listeners) { listeners.add(l) } }
+    fun removeListener(l: () -> Unit) { synchronized(listeners) { listeners.remove(l) } }
+
+    /** Downloads and installs [r] (Home's pill, Settings). */
+    fun install(act: Activity, r: Release) = download(act, r)
+
     /** Is [a] newer than [b]? ("0.15.0" vs "0.14.2") */
     fun newer(a: String, b: String): Boolean {
         val x = a.trimStart('v', 'V').split('.', '-').map { it.toIntOrNull() ?: 0 }
@@ -97,9 +106,12 @@ object Updater {
                 return@launch
             }
             Ui.test("update-found ${r.version}")
+            available = r
+            synchronized(listeners) { listeners.toList() }.forEach { it() }
             done?.invoke("Version ${r.version} is available.")
             if (act.isFinishing) return@launch
             if (auto) { download(act, r); return@launch }
+            if (!manual) return@launch // (the automatic check: Home's pill says so, nothing pops up)
             val notes = r.notes.lines().map { it.trim() }.filter { it.startsWith("-") || it.startsWith("*") }
                 .joinToString("\n") { "•  " + it.trimStart('-', '*', ' ') }.take(600)
             Dialogs.builder(act)

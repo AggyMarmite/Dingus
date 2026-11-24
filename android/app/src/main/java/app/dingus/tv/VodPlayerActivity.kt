@@ -178,6 +178,7 @@ class VodPlayerActivity : BaseActivity() {
         })
         video.player = p
         player = p
+        PictureSize.apply(video, PictureSize.get(null))
         textured = false
         texture?.visibility = View.GONE
         video.videoSurfaceView?.visibility = View.VISIBLE
@@ -441,7 +442,12 @@ class VodPlayerActivity : BaseActivity() {
             KeyEvent.KEYCODE_MEDIA_PLAY -> { p.playWhenReady = true; showControls() }
             KeyEvent.KEYCODE_MEDIA_PAUSE -> { p.playWhenReady = false; showControls() }
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> if (event.repeatCount == 0) togglePause()
-            KeyEvent.KEYCODE_MENU -> if (event.repeatCount == 0) Tracks.choose(this, p)
+            KeyEvent.KEYCODE_MENU -> if (event.repeatCount == 0) {
+                val items = listOf("Audio & subtitles", "Picture size  ·  ${PictureSize.label(PictureSize.get(null))}")
+                Dialogs.builder(this).setItems(items.toTypedArray()) { _, i ->
+                    if (i == 0) Tracks.choose(this, p) else PictureSize.choose(this, null, "films and episodes") { PictureSize.apply(video, it) }
+                }.show()
+            }
             KeyEvent.KEYCODE_DPAD_LEFT -> if (onBar) skip(-step) else return super.dispatchKeyEvent(event)
             KeyEvent.KEYCODE_DPAD_RIGHT -> if (onBar) skip(step) else return super.dispatchKeyEvent(event)
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER ->

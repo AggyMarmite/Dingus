@@ -92,6 +92,7 @@ class HomeActivity : BaseActivity() {
         super.onResume()
         if (Store.homeLite != lite) { recreate(); return } // switched in Settings
         Ui.test("home-shown")
+        Updater.onAvailable(showUpdate); showUpdate()
         // (Self-test: hold the loading screen up for a screenshot.)
         if (BuildConfig.DEBUG && intent.getBooleanExtra("dingus_test_loading", false)) {
             intent.removeExtra("dingus_test_loading")
@@ -174,7 +175,25 @@ class HomeActivity : BaseActivity() {
     private fun focusedItem() = RowNav.position(rows, currentFocus)
     private fun focusItem(pos: Int) = RowNav.focus(rows, pos)
 
-    override fun onDestroy() { scope.cancel(); super.onDestroy() }
+    override fun onDestroy() { Updater.removeListener(showUpdate); scope.cancel(); super.onDestroy() }
+
+    /** "Dingus 0.15.24 is ready · OK to update": white when the remote's on it, a soft green dot otherwise. */
+    private val showUpdate: () -> Unit = { runOnUiThread { bindUpdatePill() } }
+    private fun bindUpdatePill() {
+        val v = findViewById<TextView>(R.id.updatePill) ?: return
+        val r = Updater.available?.takeIf { Updater.newer(it.version, BuildConfig.VERSION_NAME) }
+        if (r == null) { v.visibility = View.GONE; return }
+        val d = resources.displayMetrics.density
+        v.text = "●  Dingus ${r.version} is ready  ·  OK to update"
+        v.background = android.graphics.drawable.StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_focused), android.graphics.drawable.GradientDrawable().apply { setColor(0xFFFFFFFF.toInt()); cornerRadius = 99 * d })
+            addState(intArrayOf(), android.graphics.drawable.GradientDrawable().apply { setColor(0x33FFFFFF); cornerRadius = 99 * d })
+        }
+        v.setTextColor(android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()), intArrayOf(0xFF0B0E14.toInt(), 0xFFE6EDF3.toInt())))
+        v.setOnClickListener { Updater.install(this, r) }
+        if (v.visibility != View.VISIBLE) Ui.test("update-pill ${r.version}")
+        v.visibility = View.VISIBLE
+    }
 
     private val tick = object : Runnable {
         override fun run() {
@@ -328,7 +347,7 @@ class HomeActivity : BaseActivity() {
         // Nothing personal yet: start people off with some channels.
         if (favs.isEmpty() && recent.isEmpty() && Repo.channels.isNotEmpty())
             out.add(1.coerceAtMost(out.size), Row("Channels", Repo.channelsIn(Repo.ALL).take(30).map { Card.Live(it) }))
-        return emptyList<Slide>() to out
+        return emptyList<Slide>() to HomeRows.arrange(out)
     }
 
     private fun focusFirstCard() {
@@ -473,6 +492,6 @@ class HomeActivity : BaseActivity() {
         Vod.cached(Vod.MOVIES)?.let { lib -> if (lib.items.isNotEmpty()) out.add(Row("New films", lib.newest.take(24).map { Card.Title(Vod.MOVIES, it, isNew = true) })) }
         Vod.cached(Vod.SERIES)?.let { lib -> if (lib.items.isNotEmpty()) out.add(Row("New TV shows", lib.newest.take(24).map { Card.Title(Vod.SERIES, it, isNew = true) })) }
 
-        return slides.take(5) to out
+        return slides.take(5) to HomeRows.arrange(out)
     }
 }
