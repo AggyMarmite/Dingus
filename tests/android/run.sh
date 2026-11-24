@@ -84,7 +84,14 @@ fresh
 key KEYCODE_DPAD_CENTER 1
 check "info full" 5 "OK adds the times, progress and what's next"
 shot 05a-player-info-full
-sleep 15
+# The mini guide: ▼ in full screen, over the picture; BACK closes it.
+fresh
+key KEYCODE_DPAD_DOWN 1.5
+check "mini-guide open" 5 "DOWN in full screen opens the mini guide"
+key KEYCODE_DPAD_DOWN 1; shot 05aa-mini-guide
+key KEYCODE_BACK 1
+check "mini-guide closed" 5 "BACK closes the mini guide"
+sleep 12
 fresh
 key KEYCODE_DPAD_LEFT 0.3; key KEYCODE_DPAD_LEFT 2
 check "timeshift behind (1[0-9]|2[0-9])s" 10 "LEFT rewinds live TV"

@@ -138,6 +138,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     /** Stops and lets go of the stream (leaving the screen). */
     fun release() {
         Streams.remove(stream)
+        mini.hide()
         if (player != null) Account.soon()
         handler.removeCallbacksAndMessages(null)
         slotGen++
@@ -194,6 +195,21 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
             previewTexture?.let { p.clearVideoTextureView(it); it.visibility = View.GONE }
             video.videoSurfaceView?.visibility = View.VISIBLE
             video.player = p
+        }
+    }
+
+    /** ▼ in full screen: the mini guide over the picture; OK on a channel there watches it. */
+    private val mini by lazy {
+        MiniGuide(a, overlay as android.widget.FrameLayout) { c ->
+            val i = list.indexOfFirst { it.id == c.id }
+            if (i >= 0 && i != index) {
+                version = null; versionTry = 0; slotWaited = false; retries = 0
+                pendingJump = -1; handler.removeCallbacks(doJump)
+                index = i
+                onChannel?.invoke(list[index])
+                startChannel()
+            }
+            showInfo()
         }
     }
 
@@ -362,6 +378,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     }
 
     fun leaveFullScreen() {
+        mini.hide()
         fullScreen = false
         updateSurface()
         handler.removeCallbacks(statsTick)
@@ -384,16 +401,23 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
 
     /** BACK in full screen: hides the info bar first (true = handled here). */
     fun onBack(): Boolean {
+        if (mini.showing) { mini.hide(); return true }
         if (info.visibility == View.VISIBLE && info.alpha > 0.5f) { handler.removeCallbacks(hideInfo); hideInfo.run(); return true }
         return false
     }
 
     fun onKey(keyCode: Int, event: KeyEvent): Boolean {
         val handled = keyCode in HANDLED
+        if (mini.showing && keyCode != KeyEvent.KEYCODE_BACK && mini.onKey(keyCode, event)) return true
         if (event.action != KeyEvent.ACTION_DOWN) return handled
         when (keyCode) {
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_PAGE_UP -> zap(-1)
-            KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_PAGE_DOWN -> zap(1)
+            // ▼: the mini guide (the channel down button still changes channel straight away).
+            KeyEvent.KEYCODE_DPAD_DOWN -> if (event.repeatCount == 0) {
+                handler.removeCallbacks(hideInfo); if (info.visibility == View.VISIBLE) hideInfo.run()
+                mini.show(list, index)
+            }
+            KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_PAGE_DOWN -> zap(1)
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_INFO ->
                 if (event.repeatCount == 0) {
                     // OK: the full info; OK again hides it.
@@ -455,7 +479,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         val desc = overlay.findViewById<TextView>(R.id.desc)
         val nextV = overlay.findViewById<TextView>(R.id.next)
         nowV.text = now?.title ?: "No guide information"
-        times.text = now?.let { Ui.span(it) } ?: ""
+        times.text = now?.let { Ui.span(it) + if (Repo.canStartOver(c, it)) "   ·   ≡ Start over" else "" } ?: ""
         now?.let { prog.progress = Ui.progress(it) }
         (times.parent as View).visibility = if (now != null) View.VISIBLE else View.GONE // (the times and progress bar always show)
         desc.text = now?.desc ?: ""
@@ -553,6 +577,8 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         val c = list.getOrNull(index) ?: return
         val p = player ?: return
         val items = ArrayList<Pair<String, () -> Unit>>()
+        val on = Repo.nowNext(c).first
+        if (on != null && Repo.canStartOver(c, on)) items.add("↺  Start over  ·  from ${Ui.time(on.start)}" to { startOver(a, c, on) })
         items.add((if (Store.isFavourite(c.id)) "Remove from Favourites" else "Add to Favourites") to { Store.toggleFavourite(c.id); showInfo(infoFull) })
         items.add("Audio & subtitles" to { app.dingus.tv.Tracks.choose(a, p) })
         if (currentBehind() >= 3_000) items.add("Back to live" to { seekBehind(0) })
@@ -644,6 +670,14 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     }
 
     companion object {
+        /** Plays what's on now from its beginning (the channel's catch-up); BACK comes back to live TV. */
+        fun startOver(a: Activity, c: Channel, p: Programme) {
+            val url = Repo.catchUpUrl(c, p) ?: return
+            Ui.test("start-over ${c.name} ${p.title}")
+            a.startActivity(VodPlayerActivity.intent(a, VodPlayerActivity.CATCHUP, null,
+                listOf(VodPlayerActivity.Entry("so:${c.id}:${p.start}", "${c.name}  ·  ${p.title}", url)), 0, true, "START OVER  ·  BACK FOR LIVE TV"))
+        }
+
         private val HANDLED = setOf(
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_INFO,

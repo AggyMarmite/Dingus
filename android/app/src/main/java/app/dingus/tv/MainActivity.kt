@@ -496,6 +496,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         val items = ArrayList<Pair<String, () -> Unit>>()
         if (p != null && p.start > now) items.add((if (Reminders.has(c, p)) "Cancel reminder" else "Remind me") to { onPlay(c, p) })
         if (p != null && p.stop <= now && Repo.canCatchUp(c, p)) items.add("Watch from the start (catch-up)" to { onPlay(c, p) })
+        if (p != null && Repo.canStartOver(c, p, now)) items.add(0, "↺  Start over  ·  from ${Ui.time(p.start)}" to { stopPreview(); LiveTv.startOver(this, c, p) })
         val past = Repo.programmes(c).filter { Repo.canCatchUp(c, it, now) }.asReversed().take(60)
         if (past.isNotEmpty()) items.add(0, "Catch up…" to {
             Dialogs.side(this).setTitle("Catch up · ${c.name}")

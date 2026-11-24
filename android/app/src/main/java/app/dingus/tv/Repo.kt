@@ -265,6 +265,10 @@ object Repo {
     fun canCatchUp(c: Channel, p: Programme, now: Long = System.currentTimeMillis()): Boolean =
         c.archiveDays > 0 && p.stop <= now && p.start >= now - c.archiveDays * 86_400_000L && Store.playlist?.type == "xtream"
 
+    /** Start over: what's on now, from its beginning, on a catch-up channel. */
+    fun canStartOver(c: Channel, p: Programme?, now: Long = System.currentTimeMillis()): Boolean =
+        p != null && c.archiveDays > 0 && p.start <= now && p.stop > now && now - p.start > 60_000 && Store.playlist?.type == "xtream"
+
     /** The address of a past programme on a catch-up channel (the provider expects its own time zone). */
     fun catchUpUrl(c: Channel, p: Programme): String? {
         val pl = Store.playlist ?: return null
