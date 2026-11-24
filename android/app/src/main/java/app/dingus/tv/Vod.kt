@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.util.JsonReader
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -76,6 +77,16 @@ object Vod {
     /** After switching playlist: forget what's in memory (saved copies stay). */
     fun reset() { libs = HashMap() }
 
+    /**
+     * An update: films and shows download alongside the channels and TV guide (not one after the other), each saved
+     * as it arrives. Only when they've been loaded before (otherwise they load when Films or TV Shows first opens).
+     */
+    fun refreshInBackground() {
+        if (!available) return
+        for (k in listOf(MOVIES, SERIES)) if (libs.containsKey(k) || java.io.File(dir, "vod_$k.bin").exists())
+            Background.scope.launch(Dispatchers.IO) { try { library(k, fresh = true) } catch (e: Exception) { Log.w("Dingus", "update $k", e) } }
+    }
+
     /** Films and TV shows need an Xtream Codes login (M3U links only carry live channels here). */
     val available: Boolean get() = Store.playlist?.type == "xtream"
 
@@ -112,9 +123,9 @@ object Vod {
                 catch (e: Exception) { Log.w("Dingus", "saved $kind", e) }
             }
             val p = Store.playlist ?: throw IllegalStateException("No playlist")
-            val lib = fetch(p, kind)
+            val lib = Progress.step(if (kind == MOVIES) Progress.FILMS else Progress.SHOWS) { fetch(p, kind) }
             libs = HashMap(libs).apply { put(kind, lib) }
-            try { write(kind, lib) } catch (e: Exception) { Log.w("Dingus", "save $kind", e) }
+            try { Progress.saving { write(kind, lib) } } catch (e: Exception) { Log.w("Dingus", "save $kind", e) }
             lib
         }
     }

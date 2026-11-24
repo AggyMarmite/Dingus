@@ -214,6 +214,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         try {
             setStatus("Updating channels…")
             Notice.working("Updating playlist & TV guide…")
+            Vod.refreshInBackground() // films and shows download alongside, not afterwards
             if (firstTime) showEmpty("Loading your channels…")
             try {
                 Repo.refreshChannels(p)

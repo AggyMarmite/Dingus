@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -169,11 +170,11 @@ class SettingsActivity : BaseActivity() {
                 try {
                     Notice.working("Full refresh: clearing…")
                     Repo.clear(); Vod.clear(); Store.guideLoadedAt = 0
-                    Notice.working("Full refresh: downloading channels…")
+                    // Films and shows download at the same time as the channels and guide.
+                    val vod = if (Vod.available) listOf(Vod.MOVIES, Vod.SERIES).map { k -> async { try { Vod.library(k, fresh = true) } catch (_: Exception) { null } } } else emptyList()
                     Repo.refreshChannels(p)
-                    Notice.working("Full refresh: downloading the TV guide…")
                     Repo.refreshGuide()
-                    if (Vod.available) { Notice.working("Full refresh: downloading films and shows…"); for (k in listOf(Vod.MOVIES, Vod.SERIES)) try { Vod.library(k, fresh = true) } catch (_: Exception) {} }
+                    vod.forEach { it.await() }
                     Notice.done("Full refresh done  ·  ${Repo.channels.size} channels")
                     Ui.test("full-refresh done ${Repo.channels.size}")
                 } catch (e: Exception) {
@@ -587,10 +588,10 @@ class SettingsActivity : BaseActivity() {
             try {
                 sub(row, "Updating channels…")
                 Notice.working("Updating playlist & TV guide…")
+                Vod.refreshInBackground() // films and shows download alongside, not afterwards
                 Repo.refreshChannels(p)
                 sub(row, "Updating the TV guide…")
                 Repo.refreshGuide()
-                Vod.reset()
                 refreshing = false
                 Notice.done("Playlist & TV guide updated")
                 update()

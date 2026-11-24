@@ -49,10 +49,10 @@ object PlaylistUpdate {
         Background.scope.launch {
             try {
                 Notice.working("Updating playlist & TV guide…")
+                Vod.refreshInBackground() // films and shows download alongside, not afterwards
                 Repo.refreshChannels(p)
                 try { Repo.refreshGuide(); Notice.done("Playlist & TV guide updated") }
                 catch (e: Exception) { Notice.done("Playlist updated  ·  TV guide: ${Net.friendly(e)}", 6_000) }
-                Vod.reset()
             } catch (e: Exception) {
                 Notice.done("Couldn't update the playlist: ${Net.friendly(e)}", 6_000)
             } finally { running = false }

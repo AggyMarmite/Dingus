@@ -256,6 +256,7 @@ class HomeActivity : BaseActivity() {
                     build()
                 } else if (Store.refreshDue) {
                     Notice.working("Updating playlist & TV guide…")
+                    Vod.refreshInBackground() // films and shows download alongside, not afterwards
                     try { Repo.refreshChannels(p); Repo.refreshGuide(); Notice.done("Playlist & TV guide updated") }
                     catch (e: Exception) { Notice.done("Couldn't update: ${Net.friendly(e)}", 6_000) }
                     build()

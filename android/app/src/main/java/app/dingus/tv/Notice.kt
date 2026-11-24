@@ -31,8 +31,13 @@ object Notice {
     /** Stays until [done] (or [clear]). */
     fun working(t: String) = post { text = t; working = true; handler.removeCallbacks(hide); render(); Ui.test("notice-working $t") }
 
-    /** Shown for a few seconds. */
-    fun done(t: String, ms: Long = 4_000) = post {
+    /** Shown for a few seconds (once the update's last step has finished, if some are still going). */
+    fun done(t: String, ms: Long = 4_000) {
+        if (Progress.running) { Progress.pendingDone = t to ms; return }
+        show(t, ms)
+    }
+
+    internal fun show(t: String, ms: Long) = post {
         text = t; working = false; until = SystemClock.uptimeMillis() + ms
         handler.removeCallbacks(hide); handler.postDelayed(hide, ms); render(); Ui.test("notice-done $t")
     }

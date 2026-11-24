@@ -217,7 +217,7 @@ object Repo {
 
     private fun refreshChannelsNow(p: Playlist, already: Sources.Result?) {
         val t0 = System.currentTimeMillis()
-        val r = already ?: Sources.load(p)
+        val r = already ?: Progress.step(Progress.LIVE) { Sources.load(p) }
         val t1 = System.currentTimeMillis()
         Sources.accountInfo?.let { Account.remember(it); Sources.accountInfo = null }
         // Keep guide matches from before, so now/next shows straight away until the guide's read again.
@@ -225,7 +225,7 @@ object Repo {
         r.channels.forEach { it.guideKey = oldKeys[it.id]; it.guideLogo = guideLogos[it.id] }
         set(r.categories, r.channels, r.guideUrl)
         channelsIn(ALL) // (worked out here, in the background, not when the guide first draws)
-        try { writeChannels() } catch (e: Exception) { Log.w("Dingus", "save channels", e) }
+        try { Progress.saving { writeChannels() } } catch (e: Exception) { Log.w("Dingus", "save channels", e) }
         Log.i("Dingus", "Update: ${r.channels.size} channels, loaded in ${t1 - t0} ms, saved in ${System.currentTimeMillis() - t1} ms")
         changed()
     }
@@ -253,7 +253,8 @@ object Repo {
         val logos = HashMap<String, String>()
         var lastError: Exception? = null
         var anyWorked = false
-        for ((n, url) in sources.withIndex()) {
+        Progress.begin(Progress.GUIDE)
+        try { for ((n, url) in sources.withIndex()) {
             val todo = chans.filter { !keys.containsKey(it.id) }
             if (todo.isEmpty()) break
             try {
@@ -269,7 +270,7 @@ object Repo {
                 Log.w("Dingus", "guide $n", e)
                 lastError = e
             }
-        }
+        } } finally { Progress.end(Progress.GUIDE) }
         if (!anyWorked) throw lastError ?: IOException("No TV guide")
         for (c in chans) { c.guideKey = keys[c.id]; c.guideLogo = logos[c.id] }
         for (c in raw) { c.guideKey = keys[c.id]; c.guideLogo = logos[c.id] }
@@ -278,7 +279,7 @@ object Repo {
         try { File(dir, "guide-logos.json").writeText(org.json.JSONObject(logos as Map<*, *>).toString()) } catch (e: Exception) { Log.w("Dingus", "save guide logos", e) }
         Store.guideLoadedAt = System.currentTimeMillis()
         val t2 = System.currentTimeMillis()
-        try { writeGuide() } catch (e: Exception) { Log.w("Dingus", "save guide", e) }
+        try { Progress.saving { writeGuide() } } catch (e: Exception) { Log.w("Dingus", "save guide", e) }
         Log.i("Dingus", "Update: guide saved in ${System.currentTimeMillis() - t2} ms")
         changed()
     }
