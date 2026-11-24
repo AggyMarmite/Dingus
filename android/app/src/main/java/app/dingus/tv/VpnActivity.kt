@@ -23,7 +23,7 @@ class VpnActivity : BaseActivity() {
     private val subtitles = ArrayList<Pair<View, () -> String>>()
     private var phone: PhoneSetup? = null
     private var phoneDialog: android.app.AlertDialog? = null
-    private val controls by lazy { VpnControls(this, scope, { update() }, { phoneSetup() }) }
+    private val controls: VpnControls by lazy { VpnControls(this, scope, { update() }, { phoneSetup() }) }
     private var locations: List<Vpn.Location>
         get() = controls.locations
         set(v) { controls.locations = v }

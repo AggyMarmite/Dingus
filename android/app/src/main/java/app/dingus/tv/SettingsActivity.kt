@@ -182,7 +182,7 @@ class SettingsActivity : BaseActivity() {
 
     // ------------------------------------------------------------------ VPN
 
-    private val vpn by lazy { VpnControls(this, scope, { update(); styleVpnRow() }, { vpn.openSetup(phone = true) }) }
+    private val vpn: VpnControls by lazy { VpnControls(this, scope, { update(); styleVpnRow() }, { vpn.openSetup(phone = true) }) }
     private var vpnRow: View? = null
     private val vpnListener: () -> Unit = { update(); styleVpnRow(); vpn.onVpnChanged() }
 
