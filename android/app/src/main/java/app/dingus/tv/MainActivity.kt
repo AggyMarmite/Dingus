@@ -160,6 +160,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             Repo.clear(); Vod.clear()
         }
         if (i.getBooleanExtra("dingus_test_add_playlist", false)) startActivity(Intent(this, AddPlaylistActivity::class.java).putExtra(AddPlaylistActivity.NEW, true))
+        i.getStringExtra("dingus_test_settings")?.let { startActivity(Intent(this, SettingsActivity::class.java).putExtra("section", it)) }
         if (i.getBooleanExtra("dingus_test_vpn_phone", false)) startActivity(Intent(this, VpnActivity::class.java).putExtra(VpnActivity.PHONE, true))
         i.getStringExtra("dingus_test_vpn_connect")?.let { name ->
             Vpn.provider = Vpn.CONFIGS
@@ -472,6 +473,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         if (p != null && p.start > System.currentTimeMillis()) {
             Reminders.ask(this, c, p, watch = { onPlay(c, null) }) { msg ->
                 grid.invalidate()
+                setInfo(c, p) // ("● Reminder set" straight away)
                 setStatus(msg)
                 handler.postDelayed({ if (!loading) setStatus("") }, 2_500)
             }

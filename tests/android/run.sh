@@ -131,7 +131,7 @@ key KEYCODE_DPAD_RIGHT 1; key KEYCODE_DPAD_DOWN 1; shot 07c-settings-live-rows
 key KEYCODE_BACK 1; key KEYCODE_BACK 2
 # Settings → VPN: on/off, Quick Connect, Location and the IP address are right there.
 fresh
-adb shell am start -n $PKG/.SettingsActivity --es dingus_test_section VPN
+adb shell am start -n $PKG/.MainActivity --es dingus_test_settings VPN
 check "vpn-section" 10 "Settings → VPN shows the VPN's controls"
 wait_log "vpn-ip" 20 >/dev/null && echo "note: $(adb logcat -d -s DINGUS-TEST:I | grep -o 'vpn-ip.*' | tail -1)" >> "$OUT/result.txt"
 sleep 1; shot 07d-settings-vpn

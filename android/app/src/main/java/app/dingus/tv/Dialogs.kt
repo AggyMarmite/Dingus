@@ -26,7 +26,11 @@ object Dialogs {
             setSingleChoiceItems(PillAdapter(a, items, checkedItem), checkedItem, listener)
 
         override fun create(): AlertDialog = super.create().also { d ->
-            d.setOnShowListener { style(a, d, side) }
+            d.setOnShowListener {
+                style(a, d, side)
+                // A list starts on its first item (or the one it's set to), so ▼ always moves to the second.
+                d.listView?.let { l -> if (l.adapter != null && l.count > 0) { l.requestFocus(); if (l.selectedItemPosition < 0) l.setSelection(0) } }
+            }
             d.setOnKeyListener { _, code, ev ->
                 if (code != KeyEvent.KEYCODE_DPAD_CENTER && code != KeyEvent.KEYCODE_ENTER && code != KeyEvent.KEYCODE_NUMPAD_ENTER) return@setOnKeyListener false
                 val f = d.currentFocus ?: return@setOnKeyListener false
