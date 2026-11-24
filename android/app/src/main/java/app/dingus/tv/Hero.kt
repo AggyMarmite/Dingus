@@ -53,6 +53,10 @@ class Hero(
                 title.text = m.name
                 val d = Vod.cachedDetails(card.kind, m.id)
                 bindTitle(card, d)
+                // Details already known but not the logo: look it up after a moment (no wait for the provider).
+                if (d != null && TitleLogos.enabled && TitleLogos.cached(card.kind, m) == null && !TitleLogos.knowsBackdrop(card.kind, m)) handler.postDelayed({
+                    job = scope.launch { TitleLogos.find(card.kind, m, d.tmdbId)?.let { if (showing === card) TitleLogos.show(logo, title, it) } }
+                }, 200)
                 if (d == null) handler.postDelayed({
                     job = scope.launch {
                         val got = try { Vod.details(card.kind, m) } catch (e: Exception) { null }

@@ -136,7 +136,11 @@ class RowsAdapter(
             v.setOnLongClickListener { card()?.let(onLong) ?: false }
             v.setOnFocusChangeListener { view, has ->
                 Ui.grow(view, has)
-                if (has) card()?.let(onFocus)
+                if (has) {
+                    card()?.let(onFocus)
+                    // Film and show logos for the next few titles, so they're ready as you move along.
+                    (c.bindingAdapter as? CardsAdapter)?.let { TitleLogos.lookAhead(it.cards, c.bindingAdapterPosition) }
+                }
             }
             return c
         }

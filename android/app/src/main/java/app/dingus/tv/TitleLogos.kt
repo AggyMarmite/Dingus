@@ -41,22 +41,58 @@ object TitleLogos {
     fun cached(kind: String, item: VodItem): String? = synchronized(known) { load(); known[keyFor(kind, item)]?.ifEmpty { null } }
 
     /** Finds the logo: by the provider's TMDB number if it gave one, otherwise by title and year. */
-    suspend fun find(kind: String, item: VodItem, tmdbId: String?): String? = withContext(Dispatchers.IO) {
-        if (!enabled) return@withContext null
+    suspend fun find(kind: String, item: VodItem, tmdbId: String?): String? = withContext(Dispatchers.IO) { findNow(kind, item, tmdbId) }
+
+    private fun findNow(kind: String, item: VodItem, tmdbId: String?): String? {
+        if (!enabled) return null
         val k = keyFor(kind, item)
         // (Looked up before backgrounds were kept too: look again, once, to get the background.)
-        synchronized(known) { load(); if (known.containsKey("bg|$k")) known[k]?.let { return@withContext it.ifEmpty { null } } }
+        synchronized(known) { load(); if (known.containsKey("bg|$k")) known[k]?.let { return it.ifEmpty { null } } }
         val type = if (kind == Vod.MOVIES) "movie" else "tv"
         var bg: String? = null
         val url = try {
             val id = tmdbId?.takeIf { it.isNotBlank() && it != "0" } ?: search(type, item)
             id?.let { val (l, b) = images(type, it); bg = b; l }
-        } catch (e: Exception) { return@withContext null } // not remembered: try again another time
+        } catch (e: Exception) { return null } // not remembered: try again another time
         val copy = synchronized(known) { known[k] = url ?: ""; known["bg|$k"] = bg ?: ""; HashMap(known) }
         synchronized(this) { try { file.writeText(JSONObject(copy as Map<*, *>).toString()) } catch (_: Exception) {} }
         Ui.test("title-logo ${item.name} ${if (url != null) "found" else "none"}")
-        url
+        return url
     }
+
+    // ------------------------------------------------------------------ looking ahead
+
+    /** Titles waiting to be looked up ahead of time, newest first (where you are now matters most). */
+    private val ahead = java.util.LinkedHashMap<String, Pair<String, VodItem>>()
+    private var worker: Thread? = null
+
+    /**
+     * You've stopped on [cards][at] in a row: look up the logos of the next few titles (and the one before) in the
+     * background, and fetch their pictures, so each one is already there when you move on to it.
+     */
+    fun lookAhead(cards: List<Card>, at: Int) {
+        if (!enabled || at < 0) return
+        val near = (at + 1..at + 4).mapNotNull { cards.getOrNull(it) } + listOfNotNull(cards.getOrNull(at - 1))
+        val wanted = near.filterIsInstance<Card.Title>().filter { !knowsBackdrop(it.kind, it.item) }
+        if (wanted.isEmpty()) return
+        synchronized(ahead) {
+            for (t in wanted.asReversed()) { val k = keyFor(t.kind, t.item); ahead.remove(k); ahead[k] = t.kind to t.item }
+            while (ahead.size > 12) ahead.remove(ahead.keys.first()) // only what's near you now: the oldest go
+            if (worker?.isAlive != true) worker = Thread(::work, "title-logos").apply { isDaemon = true; start() }
+        }
+    }
+
+    private fun work() {
+        while (true) {
+            val (kind, item) = synchronized(ahead) { ahead.keys.lastOrNull()?.let { ahead.remove(it) } ?: run { worker = null; return } }
+            if (knowsBackdrop(kind, item)) continue
+            val url = findNow(kind, item, Vod.cachedDetails(kind, item.id)?.tmdbId)
+            if (url != null) Logos.prefetch(listOf(url), logoPx)
+        }
+    }
+
+    /** The height logos are shown at (show() fetches them at this size, so a prefetched one is used as it is). */
+    private val logoPx: Int get() = (96 * android.content.res.Resources.getSystem().displayMetrics.density).toInt()
 
     /** A TMDB look-up (also used for cast and people). */
     fun get(path: String): JSONObject {
@@ -148,6 +184,6 @@ object TitleLogos {
         if (url == null) { logo.visibility = android.view.View.GONE; logo.setImageDrawable(null); logo.tag = null; title.visibility = android.view.View.VISIBLE; return }
         if (logo.tag == url) return
         logo.visibility = android.view.View.VISIBLE
-        Logos.load(logo, url, (96 * logo.resources.displayMetrics.density).toInt(), title)
+        Logos.load(logo, url, logoPx, title)
     }
 }
