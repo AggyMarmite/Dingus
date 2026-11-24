@@ -118,10 +118,13 @@ key KEYCODE_DPAD_CENTER 2
 check "settings-shown" 10 "Settings opens from the menu"
 shot 07-settings
 key KEYCODE_DPAD_DOWN 1
-check "settings-section Live TV" 5 "Settings: moving down the sections shows each one's options"
+check "settings-section TV guide" 5 "Settings: moving down the sections shows each one's options"
+shot 07a-settings-guide
+key KEYCODE_DPAD_DOWN 1
+check "settings-section Live TV" 5 "Settings: Live TV comes after TV guide"
 shot 07b-settings-live
 fresh
-key KEYCODE_DPAD_DOWN 1; key KEYCODE_DPAD_RIGHT 1                                 # from Playback (3rd section)
+key KEYCODE_DPAD_DOWN 1; key KEYCODE_DPAD_RIGHT 1                                 # from Playback (4th section)
 check "settings-into Playback: Subtitles automatically" 3 "RIGHT from a section lands on its first option"
 key KEYCODE_BACK 1; key KEYCODE_DPAD_UP 1
 key KEYCODE_DPAD_RIGHT 1; key KEYCODE_DPAD_DOWN 1; shot 07c-settings-live-rows

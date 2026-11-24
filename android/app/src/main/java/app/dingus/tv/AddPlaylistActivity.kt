@@ -92,7 +92,7 @@ class AddPlaylistActivity : BaseActivity() {
             pass = pass.text.toString(),
             m3uUrl = m3uUrl.text.toString().trim(),
             // The box holds your first guide address; any others (added in Settings) are kept.
-            epgUrl = (listOf(epg.text.toString().trim()) + (editing?.epgUrls?.drop(1) ?: emptyList())).filter { it.isNotEmpty() }.joinToString("\n"),
+            epgUrl = guideList(epg.text.toString().trim(), editing),
             id = editing?.id ?: Store.newId(),
             useProviderGuide = editing?.useProviderGuide ?: true,
             backups = editing?.backups ?: "", // (added in Settings; editing keeps them)
@@ -156,4 +156,12 @@ class AddPlaylistActivity : BaseActivity() {
     }
 
     override fun onDestroy() { scope.cancel(); super.onDestroy() }
+
+    /** The box is the first guide address; the others (and where the provider's guide sits in Source priority) stay. */
+    private fun guideList(first: String, editing: Playlist?): String {
+        val raw = (editing?.epgUrl ?: "").split('\n').map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
+        val i = raw.indexOfFirst { it != Playlist.PROVIDER_GUIDE }
+        if (i >= 0) { if (first.isEmpty()) raw.removeAt(i) else raw[i] = first } else if (first.isNotEmpty()) raw.add(0, first)
+        return raw.joinToString("\n")
+    }
 }

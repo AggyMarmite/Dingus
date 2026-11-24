@@ -280,6 +280,11 @@ object Store {
         set(v) = prefs.edit().putString(k("account"), v).apply()
 
     /** Show official title logos for films and shows (when TMDB has one). */
+    /** Settings → Playlist → Channel logo priority: the TV guide's logos before the playlist's. */
+    var guideLogosFirst: Boolean
+        get() = try { prefs.getBoolean("guideLogosFirst", false) } catch (_: Exception) { false }
+        set(v) = prefs.edit().putBoolean("guideLogosFirst", v).apply()
+
     /** Settings → Look → Text size: "normal", "large" or "larger". */
     var textSize: String
         get() = prefs.getString("textSize", "normal")!!

@@ -137,7 +137,7 @@ object ChannelEdits {
             if (e == null) { out.add(c); continue }
             if (e.hidden && !includeHidden) continue
             if (e.name == null && e.number == null) { out.add(c); continue }
-            out.add(Channel(c.id, e.name ?: c.name, e.number ?: c.number, c.categoryId, c.logo, c.epgId, c.url, c.archiveDays).also { it.guideKey = c.guideKey })
+            out.add(Channel(c.id, e.name ?: c.name, e.number ?: c.number, c.categoryId, c.playlistLogo, c.epgId, c.url, c.archiveDays).also { it.guideKey = c.guideKey; it.guideLogo = c.guideLogo })
         }
         return out
     }

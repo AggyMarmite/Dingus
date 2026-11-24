@@ -174,7 +174,29 @@ object Repo {
 
     /** Then the saved guide (can take a moment for a big one). */
     suspend fun loadSavedGuide() = withContext(Dispatchers.IO) {
-        try { readGuide(); changed() } catch (e: Exception) { Log.w("Dingus", "saved guide", e) }
+        try { readGuide(); readGuideLogos(); changed() } catch (e: Exception) { Log.w("Dingus", "saved guide", e) }
+    }
+
+    /** The guide's channel logos (channel id → address), for Channel logo priority. */
+    @Volatile private var guideLogos: Map<String, String> = emptyMap()
+
+    private fun readGuideLogos() {
+        val o = try { org.json.JSONObject(File(dir, "guide-logos.json").readText()) } catch (e: Exception) { return }
+        val m = HashMap<String, String>(); o.keys().forEach { m[it] = o.getString(it) }
+        guideLogos = m
+        for (c in channels) c.guideLogo = m[c.id]
+        for (c in raw) c.guideLogo = m[c.id]
+    }
+
+    /** Settings → TV guide → Clear TV guide: the saved listings go (they come back with the next update). */
+    fun clearGuide() {
+        guide = emptyMap(); guideLogos = emptyMap()
+        for (c in channels) { c.guideKey = null; c.guideLogo = null }
+        for (c in raw) { c.guideKey = null; c.guideLogo = null }
+        File(dir, "guide.bin").delete(); File(dir, "guide-logos.json").delete()
+        Store.guideLoadedAt = 0
+        guideDone = 0L to ""
+        changed()
     }
 
     /** Fetches the playlist from the provider (throws with a message to show if it can't). */
@@ -200,7 +222,7 @@ object Repo {
         Sources.accountInfo?.let { Account.remember(it); Sources.accountInfo = null }
         // Keep guide matches from before, so now/next shows straight away until the guide's read again.
         val oldKeys = channels.associate { it.id to it.guideKey }
-        r.channels.forEach { it.guideKey = oldKeys[it.id] }
+        r.channels.forEach { it.guideKey = oldKeys[it.id]; it.guideLogo = guideLogos[it.id] }
         set(r.categories, r.channels, r.guideUrl)
         channelsIn(ALL) // (worked out here, in the background, not when the guide first draws)
         try { writeChannels() } catch (e: Exception) { Log.w("Dingus", "save channels", e) }
@@ -221,12 +243,14 @@ object Repo {
 
     private fun refreshGuideNow() {
         val p = Store.playlist
-        // Your own guide addresses first (in your order), then the provider's: each fills in channels the earlier ones missed.
-        val sources = (p?.epgUrls ?: emptyList()) + listOfNotNull(guideUrl.takeIf { p?.useProviderGuide != false })
+        // The guides in your order (Settings → TV guide → Source priority; yours first, then the provider's, unless
+        // you've moved it): each fills in channels the earlier ones missed.
+        val sources = (p?.guideOrder ?: listOf(Playlist.PROVIDER_GUIDE)).mapNotNull { if (it == Playlist.PROVIDER_GUIDE) guideUrl else it }
         if (sources.isEmpty()) return
         val chans = channels
         val keys = HashMap<String, String>()
         val programmes = HashMap<String, Array<Programme>>()
+        val logos = HashMap<String, String>()
         var lastError: Exception? = null
         var anyWorked = false
         for ((n, url) in sources.withIndex()) {
@@ -240,15 +264,18 @@ object Repo {
                 // Keys from different guides could clash, so each guide's are kept apart.
                 for ((k, v) in parsed.programmes) programmes["$n|$k"] = v
                 for ((id, k) in parsed.keysByChannelId) keys[id] = "$n|$k"
+                for ((id, l) in parsed.logosByChannelId) logos.putIfAbsent(id, l)
             } catch (e: Exception) {
                 Log.w("Dingus", "guide $n", e)
                 lastError = e
             }
         }
         if (!anyWorked) throw lastError ?: IOException("No TV guide")
-        for (c in chans) c.guideKey = keys[c.id]
-        for (c in raw) c.guideKey = keys[c.id]
+        for (c in chans) { c.guideKey = keys[c.id]; c.guideLogo = logos[c.id] }
+        for (c in raw) { c.guideKey = keys[c.id]; c.guideLogo = logos[c.id] }
         guide = programmes
+        guideLogos = logos
+        try { File(dir, "guide-logos.json").writeText(org.json.JSONObject(logos as Map<*, *>).toString()) } catch (e: Exception) { Log.w("Dingus", "save guide logos", e) }
         Store.guideLoadedAt = System.currentTimeMillis()
         val t2 = System.currentTimeMillis()
         try { writeGuide() } catch (e: Exception) { Log.w("Dingus", "save guide", e) }
@@ -283,6 +310,8 @@ object Repo {
         guide = emptyMap()
         File(dir, "channels.bin").delete()
         File(dir, "guide.bin").delete()
+        File(dir, "guide-logos.json").delete()
+        channelsDone = 0L to ""; guideDone = 0L to ""
         changed()
     }
 
@@ -303,7 +332,7 @@ object Repo {
             for (c in raw) {
                 c.guideKey = byId[c.id]?.guideKey ?: c.guideKey
                 o.writeUTF(c.id); o.writeUTF(c.name); o.writeInt(c.number); o.writeUTF(c.categoryId)
-                o.str(c.logo); o.str(c.epgId); o.writeUTF(c.url); o.str(c.guideKey); o.writeShort(c.archiveDays)
+                o.str(c.playlistLogo); o.str(c.epgId); o.writeUTF(c.url); o.str(c.guideKey); o.writeShort(c.archiveDays)
             }
         }
         commit("channels.bin")
@@ -321,7 +350,7 @@ object Repo {
                 Channel(i.readUTF(), i.readUTF(), i.readInt(), i.readUTF(), i.str(), i.str(), i.readUTF()).let { c ->
                     val key = i.str()
                     val days = if (version >= 3) i.readShort().toInt() else 0
-                    (if (days > 0) Channel(c.id, c.name, c.number, c.categoryId, c.logo, c.epgId, c.url, days) else c).also { it.guideKey = key }
+                    (if (days > 0) Channel(c.id, c.name, c.number, c.categoryId, c.playlistLogo, c.epgId, c.url, days) else c).also { it.guideKey = key }
                 }
             }
             set(cats, chans, url)

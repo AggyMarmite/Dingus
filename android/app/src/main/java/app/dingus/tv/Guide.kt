@@ -10,7 +10,7 @@ import java.io.InputStream
  * guide id, or else by name.
  */
 object Guide {
-    class Parsed(val programmes: HashMap<String, Array<Programme>>, val keysByChannelId: Map<String, String>)
+    class Parsed(val programmes: HashMap<String, Array<Programme>>, val keysByChannelId: Map<String, String>, val logosByChannelId: Map<String, String> = emptyMap())
 
     /** "BBC One HD", "UK: BBC One FHD" → "bbcone". */
     fun norm(name: String): String {
@@ -42,6 +42,7 @@ object Guide {
         val keyOf = HashMap<String, String>()
         val keysByChannel = HashMap<String, String>()
         val progs = HashMap<String, ArrayList<Programme>>()
+        val logos = HashMap<String, String>() // channel id → the guide's logo for it
 
         val p = Xml.newPullParser()
         p.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
@@ -53,8 +54,10 @@ object Guide {
                     "channel" -> {
                         val id = p.getAttributeValue(null, "id")?.lowercase() ?: ""
                         val names = ArrayList<String>()
+                        var icon: String? = null
                         while (inside(p, "channel")) {
                             if (p.eventType == XmlPullParser.START_TAG && p.name == "display-name") names.add(p.nextText())
+                            else if (p.eventType == XmlPullParser.START_TAG && p.name == "icon" && icon == null) icon = p.getAttributeValue(null, "src")?.trim()?.takeIf { it.startsWith("http") }
                         }
                         if (id.isEmpty()) { ev = p.next(); continue }
                         val matched = byId[id] ?: names.firstNotNullOfOrNull { n ->
@@ -62,7 +65,7 @@ object Guide {
                         } ?: byName[norm(id)]
                         if (matched != null) {
                             keyOf[id] = id
-                            for (c in matched) if (!keysByChannel.containsKey(c.id)) keysByChannel[c.id] = id
+                            for (c in matched) if (!keysByChannel.containsKey(c.id)) { keysByChannel[c.id] = id; icon?.let { logos[c.id] = it } }
                         }
                     }
                     "programme" -> {
@@ -99,7 +102,7 @@ object Guide {
             v.sortBy { it.start }
             out[k] = v.toTypedArray()
         }
-        return Parsed(out, keysByChannel)
+        return Parsed(out, keysByChannel, logos)
     }
 
     /** Moves on one step inside an element; false at its end (or the end of the file). */

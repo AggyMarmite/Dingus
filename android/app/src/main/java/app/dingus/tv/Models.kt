@@ -9,7 +9,8 @@ class Channel(
     val name: String,
     val number: Int,
     val categoryId: String,
-    val logo: String?,
+    /** The logo the playlist gives. */
+    val playlistLogo: String?,
     val epgId: String?,
     val url: String,
     /** Days of catch-up the provider keeps for this channel (0 = none). */
@@ -17,6 +18,10 @@ class Channel(
 ) {
     /** The key its programmes are filed under in the guide (set once the guide's loaded). */
     @Volatile var guideKey: String? = null
+    /** The TV guide's logo for it (<icon> in the guide), if it has one. */
+    @Volatile var guideLogo: String? = null
+    /** The logo to show: Settings → Playlist → Channel logo priority decides which comes first; the other fills in. */
+    val logo: String? get() = if (Store.guideLogosFirst) guideLogo ?: playlistLogo else playlistLogo ?: guideLogo
 }
 
 /** A programme in the TV guide (times in milliseconds since 1970, UTC). */
@@ -53,5 +58,12 @@ data class Playlist(
     val backups: String = "",
 ) {
     val backupUrls: List<String> get() = backups.split('\n').map { it.trim() }.filter { it.isNotEmpty() }
-    val epgUrls: List<String> get() = epgUrl.split('\n').map { it.trim() }.filter { it.isNotEmpty() }
+    val epgUrls: List<String> get() = epgUrl.split('\n').map { it.trim() }.filter { it.isNotEmpty() && it != PROVIDER_GUIDE }
+    /** Every guide in priority order, the provider's as [PROVIDER_GUIDE] (last, unless you've moved it). */
+    val guideOrder: List<String> get() {
+        val all = epgUrl.split('\n').map { it.trim() }.filter { it.isNotEmpty() }
+        val withProvider = if (PROVIDER_GUIDE in all) all else all + PROVIDER_GUIDE
+        return if (useProviderGuide) withProvider else withProvider - PROVIDER_GUIDE
+    }
+    companion object { const val PROVIDER_GUIDE = "@provider" }
 }

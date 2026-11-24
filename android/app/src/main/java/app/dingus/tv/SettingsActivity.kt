@@ -26,7 +26,8 @@ class SettingsActivity : BaseActivity() {
     private var accountRow: View? = null
 
     private val sections = listOf(
-        "Playlists & EPG" to { playlistSection() },
+        "Playlist" to { playlistSection() },
+        "TV guide" to { guideSection() },
         "Live TV" to { liveSection() },
         "Playback" to { playbackSection() },
         "Look" to { lookSection() },
@@ -86,7 +87,7 @@ class SettingsActivity : BaseActivity() {
         section = i
         sectionViews.forEachIndexed { n, v -> v.isActivated = n == i; CatPill.style(v) }
         list.removeAllViews(); subtitles.clear(); values.clear(); switches.clear()
-        refreshRow = null; updateRow = null; accountRow = null; vpnRow = null
+        refreshRow = null; updateRow = null; accountRow = null; vpnRow = null; guideRow = null
         header(sections[i].first)
         sections[i].second()
         findViewById<View>(R.id.pane).scrollTo(0, 0)
@@ -99,8 +100,87 @@ class SettingsActivity : BaseActivity() {
         row("Backup servers", { backupSummary() }) { backupServers() }
         refreshRow = row("Update now", { refreshSummary() }) { refresh() }
         row("Update every", { "" }, { hoursName(Store.refreshHours) }) { refreshInterval() }
-        row("TV guide sources", { guideSummary() }) { guideSources() }
+        row("Channel logo priority", { "Which logo to use when the playlist and the TV guide both have one" }, { if (Store.guideLogosFirst) "TV guide first" else "Playlist first" }) {
+            choose("Channel logo priority", listOf("Playlist first", "TV guide first"), if (Store.guideLogosFirst) 1 else 0) { n ->
+                Store.guideLogosFirst = n == 1; Repo.reapply(); update(); Ui.test("logo-priority ${if (n == 1) "guide" else "playlist"}")
+            }
+        }
+        row("Full refresh", { "Clears the saved channels, films, shows and TV guide, then downloads everything again" }, { "›" }) { fullRefresh() }
+    }
+
+    private fun guideSection() {
+        guideRow = row("Update TV guide now", { guideNowSummary() }) { refreshGuideOnly(force = true) }
+        row("Source priority", { priorityLine() }, { "›" }) { sourcePriority() }
+        row("TV guide sources", { guideSummary() }, { "›" }) { guideSources() }
         row("Keep TV guide for", { "Less is lighter on memory" }, { "${hoursName(Store.guideHours)} ahead" }) { guideLength() }
+        row("Clear TV guide", { "Deletes the saved listings (they come back with the next update)" }, { "›" }) {
+            Dialogs.confirm(this, "Clear the TV guide?", "The saved listings are deleted. They come back the next time the guide updates (or press Update TV guide now).", "Clear TV guide") {
+                Repo.clearGuide(); update(); Notice.done("TV guide cleared", 2_500); Ui.test("guide-cleared")
+            }
+        }
+    }
+
+    private var guideRow: View? = null
+
+    private fun guideNowSummary(): String {
+        val at = Store.guideLoadedAt
+        return if (at > 0) "Updated ${Ui.day(at).trim().ifEmpty { "today" }} at ${Ui.time(at)}  ·  ${hoursName(Store.guideHours)} of listings" else "Not downloaded yet"
+    }
+
+    private fun guideName(u: String) = if (u == Playlist.PROVIDER_GUIDE) "Provider's guide" else u.substringAfterLast('/').substringBefore('?').ifEmpty { u }
+
+    private fun priorityLine(): String {
+        val p = Store.playlist ?: return ""
+        val order = p.guideOrder
+        return if (order.isEmpty()) "No guides  ·  add one in TV guide sources" else order.mapIndexed { i, u -> "${i + 1}. ${guideName(u)}" }.joinToString("  ·  ")
+    }
+
+    /** The guides in the order they're used: the first wins where two have the same channel; the next fills gaps. */
+    private fun sourcePriority() {
+        val p = Store.playlist ?: return
+        val order = p.guideOrder
+        if (order.size < 2) { Notice.done(if (order.isEmpty()) "Add a guide in TV guide sources first" else "There's only one guide, so nothing to order", 3_000); return }
+        Dialogs.builder(this).setTitle("Source priority  ·  top is used first")
+            .setItems(order.mapIndexed { i, u -> "${i + 1}.  ${guideName(u)}" }.toTypedArray()) { _, i ->
+                val opts = listOfNotNull(if (i > 0) "Move up" else null, if (i < order.size - 1) "Move down" else null)
+                Dialogs.builder(this).setTitle(guideName(order[i]))
+                    .setItems(opts.toTypedArray()) { _, k ->
+                        val list = order.toMutableList()
+                        val to = if (opts[k] == "Move up") i - 1 else i + 1
+                        list.add(to, list.removeAt(i))
+                        if (!p.useProviderGuide && Playlist.PROVIDER_GUIDE !in list) list.add(Playlist.PROVIDER_GUIDE)
+                        savePlaylist(p.copy(epgUrl = list.joinToString("\n")))
+                        Ui.test("guide-priority ${list.joinToString(",") { guideName(it) }}")
+                        sourcePriority()
+                    }
+                    .show()
+            }
+            .show()
+    }
+
+    /** Clears everything saved for the playlist and downloads it all again (favourites, My List, reminders and edits stay). */
+    private fun fullRefresh() {
+        val p = Store.playlist ?: return
+        Dialogs.confirm(this, "Full refresh?", "Dingus clears everything it has saved for ${p.name} and downloads it again: channels, films, shows and the TV guide. This can take a few minutes.\n\nYour favourites, My List, reminders and channel edits are kept.", "Full refresh") {
+            if (refreshing) return@confirm
+            refreshing = true
+            Ui.test("full-refresh")
+            scope.launch {
+                try {
+                    Notice.working("Full refresh: clearing…")
+                    Repo.clear(); Vod.clear(); Store.guideLoadedAt = 0
+                    Notice.working("Full refresh: downloading channels…")
+                    Repo.refreshChannels(p)
+                    Notice.working("Full refresh: downloading the TV guide…")
+                    Repo.refreshGuide()
+                    if (Vod.available) { Notice.working("Full refresh: downloading films and shows…"); for (k in listOf(Vod.MOVIES, Vod.SERIES)) try { Vod.library(k, fresh = true) } catch (_: Exception) {} }
+                    Notice.done("Full refresh done  ·  ${Repo.channels.size} channels")
+                    Ui.test("full-refresh done ${Repo.channels.size}")
+                } catch (e: Exception) {
+                    Notice.done("Full refresh didn't finish: ${Net.friendly(e)}", 6_000)
+                } finally { refreshing = false; update() }
+            }
+        }
     }
 
     private fun liveSection() {
@@ -410,37 +490,38 @@ class SettingsActivity : BaseActivity() {
         refreshGuideOnly()
     }
 
+    private fun rawGuides(p: Playlist) = p.epgUrl.split('\n').map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
+
     private fun guideSources() {
         val p = Store.playlist ?: return
         val urls = p.epgUrls
         val items = urls.mapIndexed { i, u -> "${i + 1}.  $u" } +
-            ("Provider's guide (used after yours): " + if (p.useProviderGuide) "On" else "Off") + "+  Add a guide address"
-        Dialogs.builder(this).setTitle("TV guide sources (first is used first)")
+            ("Provider's guide: " + if (p.useProviderGuide) "On" else "Off") + "+  Add a guide address"
+        Dialogs.builder(this).setTitle("TV guide sources  ·  order them in Source priority")
             .setItems(items.toTypedArray()) { _, i ->
                 when {
-                    i < urls.size -> guideSourceOptions(p, i)
+                    i < urls.size -> guideSourceOptions(p, urls[i])
                     i == urls.size -> savePlaylist(p.copy(useProviderGuide = !p.useProviderGuide))
                     else -> Dialogs.input(this, "Add a TV guide address", "", "http://…/guide.xml") { u ->
-                        if (u.isNotEmpty()) savePlaylist(p.copy(epgUrl = (urls + u).joinToString("\n")))
+                        if (u.isNotEmpty()) { val raw = rawGuides(p); val at = raw.indexOf(Playlist.PROVIDER_GUIDE).let { if (it < 0) raw.size else it }; raw.add(at, u); savePlaylist(p.copy(epgUrl = raw.joinToString("\n"))) }
                     }
                 }
             }
             .show()
     }
 
-    private fun guideSourceOptions(p: Playlist, i: Int) {
-        val urls = p.epgUrls.toMutableList()
-        val opts = listOfNotNull(if (i > 0) "Move up (use sooner)" else null, if (i < urls.size - 1) "Move down" else null, "Edit", "Remove")
-        Dialogs.builder(this).setTitle(urls[i])
+    private fun guideSourceOptions(p: Playlist, url: String) {
+        val raw = rawGuides(p)
+        val i = raw.indexOf(url).takeIf { it >= 0 } ?: return
+        val opts = listOf("Edit", "Remove")
+        Dialogs.builder(this).setTitle(url)
             .setItems(opts.toTypedArray()) { _, k ->
                 when (opts[k]) {
-                    "Move up (use sooner)" -> { urls.add(i - 1, urls.removeAt(i)); savePlaylist(p.copy(epgUrl = urls.joinToString("\n"))) }
-                    "Move down" -> { urls.add(i + 1, urls.removeAt(i)); savePlaylist(p.copy(epgUrl = urls.joinToString("\n"))) }
-                    "Edit" -> Dialogs.input(this, "TV guide address", urls[i], "http://…/guide.xml") { u ->
-                        if (u.isEmpty()) urls.removeAt(i) else urls[i] = u
-                        savePlaylist(p.copy(epgUrl = urls.joinToString("\n")))
+                    "Edit" -> Dialogs.input(this, "TV guide address", url, "http://…/guide.xml") { u ->
+                        if (u.isEmpty()) raw.removeAt(i) else raw[i] = u
+                        savePlaylist(p.copy(epgUrl = raw.joinToString("\n")))
                     }
-                    "Remove" -> Dialogs.confirm(this, "Remove this TV guide source?", urls[i], "Remove") { urls.removeAt(i); savePlaylist(p.copy(epgUrl = urls.joinToString("\n"))) }
+                    "Remove" -> Dialogs.confirm(this, "Remove this TV guide source?", url, "Remove") { raw.removeAt(i); savePlaylist(p.copy(epgUrl = raw.joinToString("\n"))) }
                 }
             }
             .show()
@@ -494,19 +575,23 @@ class SettingsActivity : BaseActivity() {
         }
     }
 
-    private fun refreshGuideOnly() {
+    private fun refreshGuideOnly(force: Boolean = false) {
         if (refreshing || Repo.channels.isEmpty()) return
         refreshing = true
+        if (force) Store.guideLoadedAt = 0
         scope.launch {
-            val row = refreshRow ?: return@launch
+            val row = guideRow ?: refreshRow
             try {
-                sub(row, "Updating the TV guide…")
+                row?.let { sub(it, "Updating the TV guide…") }
+                if (force) Notice.working("Updating the TV guide…")
                 Repo.refreshGuide()
                 refreshing = false
+                if (force) { Notice.done("TV guide updated"); Ui.test("guide-updated") }
                 update()
             } catch (e: Exception) {
                 refreshing = false
-                sub(row, "TV guide: ${Net.friendly(e)}")
+                if (force) Notice.done("Couldn't update the TV guide: ${Net.friendly(e)}", 6_000)
+                row?.let { sub(it, "TV guide: ${Net.friendly(e)}") }
             }
         }
     }
