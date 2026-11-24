@@ -90,7 +90,7 @@ object Repo {
     fun versions(c: Channel): List<Channel> {
         if (!Store.mergeChannels) return listOf(c)
         val k = Merge.key(c).ifEmpty { return listOf(c) }
-        val all = Merge.order(channels.filter { it.id !in hiddenIds && Merge.key(it) == k })
+        val all = Merge.order(channels.filter { it.id !in hiddenIds && Merge.key(it) == k }).ifEmpty { return listOf(c) } // (a hidden channel still plays itself)
         // The version you chose (≡ → Choose version) first; the rest stay in order for when one won't play.
         val pick = Store.preferredVersion(k)?.let { id -> all.firstOrNull { it.id == id } } ?: return all
         return listOf(pick) + all.filter { it !== pick }

@@ -269,7 +269,7 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
                 return true
             }
             KeyEvent.KEYCODE_DPAD_LEFT -> {
-                if (c == null) { listener?.onLeftEdge(); return true }
+                if (c == null) return false // no channels: the screen decides (the menu, so its "Press ◀ for settings" is true)
                 val list = Repo.programmes(c)
                 val prev = list.getOrNull(selIdx - 1)
                 // From what's on now, LEFT shows the categories (past programmes are under ≡ → Catch up). Already
@@ -290,7 +290,8 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
                 return true
             }
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                c?.let { listener?.onPlay(it, sel) }; return true
+                if (c == null) return false // no channels: the screen decides ("Press OK to add your playlist")
+                listener?.onPlay(c, sel); return true
             }
             KeyEvent.KEYCODE_MENU -> { if (event.repeatCount == 0) c?.let { listener?.onMenu(it, sel) }; return true }
         }

@@ -46,7 +46,12 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     var list: List<Channel> = emptyList(); private set
     var index = 0; private set
     val current: Channel? get() = if (player != null) list.getOrNull(index) else null
-    var fullScreen = false; private set
+    var fullScreen = false
+        private set(v) {
+            field = v
+            // Full screen: the spinner while a channel tunes or catches up (the preview says "Loading…" instead).
+            video.setShowBuffering(if (v) androidx.media3.ui.PlayerView.SHOW_BUFFERING_WHEN_PLAYING else androidx.media3.ui.PlayerView.SHOW_BUFFERING_NEVER)
+        }
     /** Told when the channel changes in full screen (so the guide can follow). */
     var onChannel: ((Channel) -> Unit)? = null
 
@@ -127,6 +132,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         makePlayer()
         startChannel()
         startWatchdog()
+        if (fullScreen) { handler.removeCallbacks(statsTick); handler.post(statsTick) }
     }
 
     /** Stops and lets go of the stream (leaving the screen). */
@@ -145,6 +151,9 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         buffer = null
         message.text = ""
         shift.visibility = View.GONE
+        // (Its timers were just cancelled: the info bar would otherwise stay up when you come back.)
+        info.animate().cancel(); info.visibility = View.GONE
+        statsBadge.visibility = View.GONE
     }
 
     // ------------------------------------------------------------------ HDR channels in the guide's preview
@@ -252,7 +261,8 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     }
 
     private fun showFailed(error: PlaybackException) {
-        message.text = (if (fullScreen) "This channel isn't playing right now.\n" else "Not playing\n") + describe(error)
+        android.util.Log.w("Dingus", "Channel not playing: ${error.errorCodeName}", error)
+        message.text = if (fullScreen) "This channel isn't playing right now.\n${describe(error)}\nPress ▲ or ▼ for another channel." else "Not playing\n${describe(error)}"
     }
 
     /**
@@ -280,21 +290,16 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
                 }
                 if (first) Ui.test("waiting for a free connection ${info.activeConnections}/${info.maxConnections}")
                 first = false
-                message.text = "Waiting for a free connection  ·  ${info.activeConnections} of ${info.maxConnections} in use\nYour provider is still counting one that has closed (e.g. after switching VPN)"
+                message.text = "Waiting for a free connection  ·  ${info.activeConnections} of ${info.maxConnections} in use\n" +
+                    (if (info.maxConnections == 1) "Your plan allows one connection. If another TV or phone is watching with this login, stop it there; otherwise it frees up by itself in a few minutes."
+                     else "If other TVs or phones are watching with this login, stop one there; otherwise it frees up by itself in a few minutes.")
                 if (System.currentTimeMillis() > until) { showFailed(error); return@launch }
                 delay(15_000)
             }
         }
     }
 
-    private fun describe(e: PlaybackException) = when (e.errorCode) {
-        PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> "The provider refused the stream (too many connections or not in your package?)"
-        PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
-        PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> "Couldn't reach the provider."
-        PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
-        PlaybackException.ERROR_CODE_DECODER_INIT_FAILED -> "This stream's format isn't supported on this device."
-        else -> e.errorCodeName
-    }
+    private fun describe(e: PlaybackException) = Players.plain(e)
 
     private fun scheduleRetry(text: String) {
         retries++
@@ -488,7 +493,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
 
     private fun togglePause() {
         val p = player ?: return
-        if (buffer == null) { p.playWhenReady = !p.playWhenReady; return }
+        if (buffer == null) { p.playWhenReady = !p.playWhenReady; showShift(); return } // (no rewind: still say it's paused)
         if (pausedAt == 0L) { p.playWhenReady = false; pausedAt = System.currentTimeMillis(); Ui.test("timeshift paused") }
         else {
             val b = buffer!!
@@ -504,6 +509,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         if (!fullScreen) { shift.visibility = View.GONE; return }
         val behind = currentBehind()
         when {
+            buffer == null && player?.playWhenReady == false -> { shift.text = "❚❚  Paused  ·  press ▶❚❚ to carry on"; shift.visibility = View.VISIBLE }
             pausedAt > 0 -> { shift.text = "❚❚  Paused  ·  −${clock(behind)}"; shift.visibility = View.VISIBLE }
             behind >= 3_000 -> { shift.text = "−${clock(behind)}  behind live"; shift.visibility = View.VISIBLE }
             else -> shift.visibility = View.GONE

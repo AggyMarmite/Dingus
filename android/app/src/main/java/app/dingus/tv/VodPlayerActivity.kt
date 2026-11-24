@@ -148,7 +148,7 @@ class VodPlayerActivity : BaseActivity() {
             override fun onRenderedFirstFrame() {
                 rendered = true
                 handler.removeCallbacks(noPicture)
-                if (message.text.startsWith("No picture") || message.text.startsWith("Still no picture")) message.text = ""
+                if (message.text.startsWith("No picture") || message.text.startsWith("There's no picture")) message.text = ""
                 Ui.test("vod-first-frame${if (textured) " (texture)" else ""}")
             }
             override fun onPlayerError(error: PlaybackException) {
@@ -163,9 +163,9 @@ class VodPlayerActivity : BaseActivity() {
                     message.text = "Trying a backup server…"
                     Thread {
                         val ok = Failover.recover()
-                        runOnUiThread { if (ok) { retries = 0; open(pos) } else message.text = "This won't play right now.\n${error.errorCodeName}" }
+                        runOnUiThread { if (ok) { retries = 0; open(pos) } else message.text = cantPlay(error) }
                     }.start()
-                } else message.text = "This won't play right now.\n${error.errorCodeName}"
+                } else message.text = cantPlay(error)
             }
         })
         video.player = p
@@ -188,7 +188,8 @@ class VodPlayerActivity : BaseActivity() {
         FrameRate.reset(this)
         handler.removeCallbacksAndMessages(null)
         savePosition()
-        resumeAt = player?.currentPosition ?: -1L
+        resumeAt = if (skipTo >= 0) skipTo else player?.currentPosition ?: -1L
+        skipTo = -1L
         player?.release()
         player = null
         video.player = null
@@ -205,9 +206,9 @@ class VodPlayerActivity : BaseActivity() {
         }
         val info = "${f.sampleMimeType?.removePrefix("video/") ?: "?"} ${f.width}x${f.height}$hdr · ${Players.lastDecoder.ifEmpty { "decoder ?" }}"
         Log.w("Dingus", "No picture: $info")
-        if (textured) { message.text = "Still no picture.\n$info"; Ui.test("vod-no-picture $info"); return }
+        if (textured) { message.text = "There's no picture for this one on this Fire TV.\nPress BACK to go back."; Ui.test("vod-no-picture $info"); return }
         textured = true
-        message.text = "No picture yet, trying another way…\n$info"
+        message.text = "No picture yet, trying another way…"
         Ui.test("vod-texture-fallback $info")
         // The texture goes inside the player view's own picture frame, so the picture keeps its shape.
         val frame = video.findViewById<android.view.ViewGroup>(androidx.media3.ui.R.id.exo_content_frame) ?: video
@@ -219,6 +220,11 @@ class VodPlayerActivity : BaseActivity() {
         video.videoSurfaceView?.visibility = View.GONE
         p.setVideoTextureView(tv)
         handler.postDelayed(noPicture, 5_000)
+    }
+
+    private fun cantPlay(e: PlaybackException): String {
+        Log.w("Dingus", "Won't play: ${e.errorCodeName}", e)
+        return "This won't play right now.\n${Players.plain(e)}\nPress BACK to go back."
     }
 
     private fun open(at: Long) {
@@ -268,7 +274,7 @@ class VodPlayerActivity : BaseActivity() {
         savePosition()
         index = i
         resumeAt = -1
-        guess = 0; retries = 0; triedBackup = false
+        guess = 0; retries = 0; triedBackup = false; skipTo = -1L
         upNext.visibility = View.GONE
         closeEpisodes()
         Ui.test("vod-episode $i")
@@ -312,7 +318,7 @@ class VodPlayerActivity : BaseActivity() {
     private fun tickNow() {
         val p = player ?: return
         val len = p.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: 0L
-        val pos = p.currentPosition
+        val pos = if (skipTo >= 0) skipTo else p.currentPosition // (while skipping: where you're going)
         bar.duration = len; bar.position = pos; bar.buffered = p.bufferedPosition; bar.playing = p.playWhenReady
         bar.invalidate()
         findViewById<TextView>(R.id.vodPos).text = PlayBar.clock(pos)
@@ -354,14 +360,19 @@ class VodPlayerActivity : BaseActivity() {
     private var skipFrom = -1L
     private val endSkip = Runnable { skipFrom = -1L; bar.skipped = null; bar.invalidate() }
 
+    /** Where the skip presses add up to: the player only jumps once they stop (held ◀/▶ repeats many times a second). */
+    private var skipTo = -1L
+    private val doSkip = Runnable { val t = skipTo; skipTo = -1L; if (t >= 0) player?.seekTo(t) }
+
     private fun skip(by: Long) {
         val p = player ?: return
         if (skipFrom < 0) skipFrom = p.currentPosition
         val len = p.duration
-        var t = p.currentPosition + by
+        var t = (if (skipTo >= 0) skipTo else p.currentPosition) + by
         if (len > 0) t = t.coerceAtMost(len - 1_000)
         t = t.coerceAtLeast(0)
-        p.seekTo(t)
+        skipTo = t
+        handler.removeCallbacks(doSkip); handler.postDelayed(doSkip, 450)
         showControls(focusBar = true)
         bar.position = t; bar.skipped = t - skipFrom; bar.invalidate()
         handler.removeCallbacks(endSkip); handler.postDelayed(endSkip, 1_500)

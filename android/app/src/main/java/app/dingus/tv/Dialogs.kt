@@ -143,6 +143,15 @@ object Dialogs {
             .show()
     }
 
+    /** "Are you sure?" before something that can't simply be undone: [yes] names the action (the focused button). */
+    fun confirm(a: Activity, title: String, message: String, yes: String, action: () -> Unit) {
+        builder(a).setTitle(title).setMessage(message)
+            .setPositiveButton(yes) { _, _ -> action() }
+            .setNegativeButton("Cancel", null)
+            .show()
+            .getButton(AlertDialog.BUTTON_POSITIVE)?.requestFocus()
+    }
+
     /** "Hide <category>?" – special categories (Favourites etc.) can't be hidden. */
     fun hideCategory(a: Activity, key: String, name: String, done: () -> Unit) {
         builder(a)

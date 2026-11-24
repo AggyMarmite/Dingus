@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.async
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
@@ -288,7 +289,8 @@ object Vpn {
                 Log.w("Dingus", "vpn", e)
                 val msg = when {
                     e.message?.contains("key", true) == true -> "Your private key doesn't look right"
-                    else -> e.message ?: e.javaClass.simpleName
+                    e is java.net.UnknownHostException || e is java.net.SocketTimeoutException || e is java.net.ConnectException -> "Couldn't reach the VPN. Check the internet connection."
+                    else -> "The VPN couldn't connect. Try another location, or Quick Connect."
                 }
                 set(Status.ERROR, msg)
                 msg
@@ -307,6 +309,9 @@ object Vpn {
     /** At start: if "connect when Dingus starts" is on, connect first (so the playlist loads through the VPN). */
     suspend fun startup() {
         if (!auto || status == Status.ON || !ready) return
-        withTimeoutOrNull(15_000) { connect() }
+        // (The connecting carries on by itself: a timeout can't cut short a slow download or the tunnel starting, so
+        // only the waiting stops after 15 seconds, and the playlist loads.)
+        val job = kotlinx.coroutines.CoroutineScope(Dispatchers.IO).async { connect() }
+        withTimeoutOrNull(15_000) { job.await() }
     }
 }

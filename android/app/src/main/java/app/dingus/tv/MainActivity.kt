@@ -523,11 +523,19 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             }
         })
         items.add("Hide channel" to {
-            val e = ChannelEdits.all()[c.id]
-            ChannelEdits.set(c.id, ChannelEdits.Edit(e?.name, e?.number, true))
-            Repo.reapply()
-            setStatus("${c.name} hidden  ·  Settings → Edit channels to show it again")
-            handler.postDelayed({ if (!loading) setStatus("") }, 3_500)
+            Dialogs.builder(this)
+                .setTitle("Hide “${c.name}”?")
+                .setMessage("It won't show in the guide any more. You can bring it back in Settings → Edit channels.")
+                .setPositiveButton("Hide") { _, _ ->
+                    val e = ChannelEdits.all()[c.id]
+                    ChannelEdits.set(c.id, ChannelEdits.Edit(e?.name, e?.number, true))
+                    Repo.reapply()
+                    setStatus("${c.name} hidden  ·  Settings → Edit channels to show it again")
+                    handler.postDelayed({ if (!loading) setStatus("") }, 3_500)
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+                .getButton(android.app.AlertDialog.BUTTON_POSITIVE)?.requestFocus()
         })
         Dialogs.builder(this).setTitle(c.name)
             .setItems(items.map { it.first }.toTypedArray()) { _, i -> items[i].second() }

@@ -37,7 +37,9 @@ object Account {
                 i.expires < System.currentTimeMillis() -> "Expired ${date(i.expires)}"
                 else -> "Expires ${date(i.expires)}"
             } to 0)
-            if (i.maxConnections > 0) out.add("Active connections ${i.activeConnections}/${i.maxConnections}" to 0)
+            if (i.maxConnections > 0) out.add(
+                if (i.activeConnections >= i.maxConnections) "Active connections ${i.activeConnections}/${i.maxConnections}  ·  all in use" to 0xFFFBBF24.toInt()
+                else "Active connections ${i.activeConnections}/${i.maxConnections}" to 0)
         }
         out.add(when (online(p)) {
             true -> "Status  ● Online" to 0xFF4ADE80.toInt()

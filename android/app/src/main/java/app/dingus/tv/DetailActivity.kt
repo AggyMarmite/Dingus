@@ -74,8 +74,11 @@ class DetailActivity : BaseActivity() {
 
         val id = intent.getStringExtra(ID)
         scope.launch {
-            val lib = try { Vod.library(kind) } catch (e: Exception) { status.text = Net.friendly(e); return@launch }
-            val it = lib.byId[id] ?: run { finish(); return@launch }
+            val lib = try { Vod.library(kind) } catch (e: Exception) { status.text = "Couldn't load this: ${Net.friendly(e)}\nPress BACK to go back."; return@launch }
+            val it = lib.byId[id] ?: run {
+                Notice.done(if (kind == Vod.MOVIES) "That film isn't in your playlist any more" else "That show isn't in your playlist any more", 4_000)
+                finish(); return@launch
+            }
             item = it
             showBasics(it)
             status.text = "Loading details…"
@@ -89,6 +92,7 @@ class DetailActivity : BaseActivity() {
                 if (kind == Vod.SERIES) play.visibility = View.GONE
             }
             refreshButtons()
+            if (play.visibility != View.VISIBLE) findViewById<View>(R.id.myList).requestFocus() // (focus was on Play)
         }
     }
 
@@ -234,7 +238,9 @@ class DetailActivity : BaseActivity() {
     }
 
     private fun playMain(fromStart: Boolean) {
-        val m = item ?: return
+        // (Still loading: say so, rather than nothing happening.)
+        val m = item ?: run { Notice.done("Just a moment – still loading", 2_000); return }
+        if (kind == Vod.SERIES && details == null) { Notice.done("Just a moment – still loading the episodes", 2_000); return }
         if (kind == Vod.MOVIES) {
             startActivity(VodPlayerActivity.intent(this, Vod.MOVIES, null,
                 listOf(VodPlayerActivity.Entry(m.id, m.name, Vod.movieUrl(m))), 0, fromStart,

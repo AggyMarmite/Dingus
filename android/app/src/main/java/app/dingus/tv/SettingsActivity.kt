@@ -116,7 +116,9 @@ class SettingsActivity : BaseActivity() {
             val opts = listOf("Show hidden categories", "Put them back in the playlist's order")
             choose("Categories", opts, -1) { n ->
                 if (n == 0) unhide()
-                else { listOf("live", "movies", "series").forEach { Store.setCategoryOrder(it, emptyList()) }; Repo.reapply(); update() }
+                else Dialogs.confirm(this, "Use the playlist's order?", "Your own order for live TV, films and TV shows categories will be cleared.", "Use the playlist's order") {
+                    listOf("live", "movies", "series").forEach { Store.setCategoryOrder(it, emptyList()) }; Repo.reapply(); update()
+                }
             }
         }
     }
@@ -330,7 +332,7 @@ class SettingsActivity : BaseActivity() {
                         if (u.isEmpty()) urls.removeAt(i) else urls[i] = u
                         saveBackups(p, urls)
                     }
-                    "Remove" -> { urls.removeAt(i); saveBackups(p, urls) }
+                    "Remove" -> Dialogs.confirm(this, "Remove this backup server?", urls[i], "Remove") { urls.removeAt(i); saveBackups(p, urls) }
                 }
             }
             .show()
@@ -373,7 +375,7 @@ class SettingsActivity : BaseActivity() {
                         if (u.isEmpty()) urls.removeAt(i) else urls[i] = u
                         savePlaylist(p.copy(epgUrl = urls.joinToString("\n")))
                     }
-                    "Remove" -> { urls.removeAt(i); savePlaylist(p.copy(epgUrl = urls.joinToString("\n"))) }
+                    "Remove" -> Dialogs.confirm(this, "Remove this TV guide source?", urls[i], "Remove") { urls.removeAt(i); savePlaylist(p.copy(epgUrl = urls.joinToString("\n"))) }
                 }
             }
             .show()

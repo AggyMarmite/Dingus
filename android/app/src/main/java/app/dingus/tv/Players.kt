@@ -112,6 +112,25 @@ object Players {
         return b.build()
     }
 
+    /** What went wrong, in plain words (the error's code goes in the log). */
+    fun plain(e: androidx.media3.common.PlaybackException): String {
+        val http = (e.cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.responseCode
+        return when (e.errorCode) {
+            androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> when (http) {
+                404, 410 -> "The provider doesn't have this at the moment."
+                401, 403 -> "The provider turned it down: all your connections may be in use, or it isn't in your package."
+                else -> "The provider isn't sending it right now."
+            }
+            androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+            androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> "Couldn't reach the provider. Check the internet connection."
+            androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
+            androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
+            androidx.media3.common.PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
+            androidx.media3.common.PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES -> "Its format isn't supported on this Fire TV."
+            else -> "Something went wrong with the stream."
+        }
+    }
+
     /** The player couldn't tell what the data is (worth trying it as HLS or DASH). */
     fun unrecognised(e: androidx.media3.common.PlaybackException) =
         e.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ||

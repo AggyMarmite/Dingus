@@ -51,6 +51,8 @@ object Net {
         is java.net.SocketTimeoutException -> "The server didn't answer in time"
         is java.net.ConnectException -> "Couldn't connect to the server"
         is javax.net.ssl.SSLException -> "A secure connection to the server failed"
-        else -> e.message ?: e.javaClass.simpleName
+        is org.json.JSONException -> "The server sent something unexpected – check the address"
+        is java.io.IOException -> e.message?.takeIf { it.length < 80 && !it.contains("Exception") } ?: "Couldn't talk to the server"
+        else -> "Something went wrong talking to the server"
     }
 }
