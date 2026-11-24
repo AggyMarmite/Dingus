@@ -17,6 +17,8 @@ import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Live TV playback, shared by the guide's preview window and full screen: it's the same player and the same
@@ -52,6 +54,8 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     private var triedBackup = false // (a backup server has been tried for this stream)
     private var guess = 0 // the stream didn't say what it is: 1 = try it as HLS, 2 = as DASH (Players.item)
     private var versionTry = 0
+    private var slotWaited = false // already waited for a free connection for this channel
+    private var slotGen = 0         // bumps whenever a channel starts or the player goes, so an old wait stops
     private var version: Channel? = null
     private var zapPending: Runnable? = null
     private val hideInfo = Runnable {
@@ -106,7 +110,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         list = if (i >= 0) channels else listOf(c) + channels
         index = if (i >= 0) i else 0
         if (playingSame) return
-        version = null; versionTry = 0; retries = 0; triedBackup = false; guess = 0
+        version = null; versionTry = 0; retries = 0; triedBackup = false; guess = 0; slotWaited = false
         makePlayer()
         startChannel()
         startWatchdog()
@@ -129,6 +133,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     fun release() {
         if (player != null) Account.soon()
         handler.removeCallbacksAndMessages(null)
+        slotGen++
         a.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         player?.release()
         player = null
@@ -242,7 +247,44 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
             message.text = "Trying another version…"
             Ui.test("fallback ${next.name}")
             handler.postDelayed({ startChannel() }, 500)
-        } else message.text = (if (fullScreen) "This channel isn't playing right now.\n" else "Not playing\n") + describe(error)
+        } else if (!slotWaited) { slotWaited = true; waitForFreeConnection(error) }
+        else showFailed(error)
+    }
+
+    private fun showFailed(error: PlaybackException) {
+        message.text = (if (fullScreen) "This channel isn't playing right now.\n" else "Not playing\n") + describe(error)
+    }
+
+    /**
+     * The channel won't start. Providers count a connection as in use until their side notices it's gone, so one that
+     * was cut off (switching VPN, the Wi-Fi dropping) can keep a 1-connection plan "full" for several minutes. If the
+     * provider says every connection is in use, wait for one to be freed (checking every 15 s, for up to 8 minutes)
+     * and then start the channel, instead of giving up.
+     */
+    private fun waitForFreeConnection(error: PlaybackException) {
+        val pl = Store.playlist ?: return showFailed(error)
+        player?.stop() // so our own attempt isn't one of the ones counted
+        buffer?.close(); buffer = null
+        message.text = "Checking your connections…"
+        val gen = ++slotGen
+        Background.scope.launch {
+            val until = System.currentTimeMillis() + 8 * 60_000
+            var first = true
+            while (gen == slotGen && player != null) {
+                val info = try { Account.refresh(pl) } catch (e: Exception) { null }
+                if (gen != slotGen || player == null) return@launch
+                if (info == null || info.maxConnections <= 0) { showFailed(error); return@launch }
+                if (info.activeConnections < info.maxConnections) {
+                    Ui.test("connection free ${info.activeConnections}/${info.maxConnections}")
+                    retries = 0; startChannel(); return@launch
+                }
+                if (first) Ui.test("waiting for a free connection ${info.activeConnections}/${info.maxConnections}")
+                first = false
+                message.text = "Waiting for a free connection  ·  ${info.activeConnections} of ${info.maxConnections} in use\nYour provider is still counting one that has closed (e.g. after switching VPN)"
+                if (System.currentTimeMillis() > until) { showFailed(error); return@launch }
+                delay(15_000)
+            }
+        }
     }
 
     private fun describe(e: PlaybackException) = when (e.errorCode) {
@@ -263,6 +305,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
 
     private fun startChannel() {
         val p = player ?: return
+        slotGen++
         dropped = 0 // the player is reused between channels, so the count starts again for each channel
         val c = version ?: list.getOrNull(index)?.let { if (Store.mergeChannels) Repo.versions(it).first() else it } ?: return
         Ui.test("load ${c.name}")
@@ -360,7 +403,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     /** Changing channel: the info bar updates straight away; the stream switches once you stop pressing. */
     private fun zap(step: Int) {
         if (list.size < 2) return
-        version = null; versionTry = 0
+        version = null; versionTry = 0; slotWaited = false
         pendingJump = -1; handler.removeCallbacks(doJump)
         index = (index + step + list.size) % list.size
         retries = 0
@@ -485,7 +528,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     // ------------------------------------------------------------------ options
 
     /** A different version was chosen for the channel that's playing: switch to it. */
-    fun replayVersion() { version = null; versionTry = 0; retries = 0; startChannel() }
+    fun replayVersion() { version = null; versionTry = 0; slotWaited = false; retries = 0; startChannel() }
 
     private fun options() {
         val c = list.getOrNull(index) ?: return

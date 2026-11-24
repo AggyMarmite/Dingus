@@ -430,6 +430,16 @@ public sealed class DataService
         catch (Exception ex) { Log.Error(ex); return false; }
     }
 
+    /// <summary>Stores fresh subscription details (e.g. from a connection check) and lets the screens showing them know. Call on the UI thread.</summary>
+    public void SetAccount(AccountInfo acc)
+    {
+        if (acc == null) return;
+        acc.ServerTimeZone ??= Catalog.Account?.ServerTimeZone;
+        Catalog.Account = acc;
+        _accountCheckedUtc = DateTime.UtcNow;
+        AccountChanged?.Invoke();
+    }
+
     /// <summary>Rebuilds a playable film/episode from its "Continue watching" entry (null if it's gone from the playlist).</summary>
     /// <summary>The film or show is in a hidden or locked category.</summary>
     public bool IsHiddenEntry(ResumeEntry e)

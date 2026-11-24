@@ -52,6 +52,9 @@ public partial class MainWindow : Window
     // ----- stream health / reconnect
     DateTime _lastProgressUtc, _lastReconnectUtc, _lastSaveUtc;
     int _lastShown, _lastLost, _reconnects;
+    bool _slotWaited;          // already waited for a free connection for this stream
+    bool _waitingForSlot;      // waiting for the provider to free a connection right now
+    DateTime _netChangedUtc;   // when the network last changed (VPN switch etc.)
     bool _triedBackup, _backupBusy; // the playlist's backup server has been tried for this stream / is being tried now
     long _lastTime, _lastVodTime, _lastVodLen;
     readonly Queue<int> _lostWindow = new();
@@ -146,6 +149,8 @@ public partial class MainWindow : Window
         var ds = DataService.Instance;
         ds.BusyChanged += OnBusyChanged;
         ds.Message += ShowToast;
+        NetworkWatch.Changed += () => Dispatcher.InvokeAsync(OnNetworkChanged);
+        NetworkWatch.Start();
         ds.CatalogChanged += () => { if (_nowLive && _nowChannel != null && !ds.Catalog.Channels.Any(c => c.Id == _nowChannel.Id)) StopPlayback(); };
 
         SourceInitialized += (_, _) =>
@@ -1677,6 +1682,7 @@ public partial class MainWindow : Window
 
     void ResetHealth()
     {
+        _slotWaited = false;
         _lastProgressUtc = DateTime.UtcNow;
         _lastShown = 0;
         _lastLost = 0;
@@ -1735,6 +1741,8 @@ public partial class MainWindow : Window
         // Stalled: meant to be playing, but no new frames and the clock isn't moving.
         bool active = h.State is VLCState.Playing or VLCState.Buffering or VLCState.Opening;
         var limit = h.State == VLCState.Opening ? TimeSpan.FromSeconds(20) : TimeSpan.FromSeconds(12);
+        // Just after a network/VPN change the stream has usually been cut off: don't wait the full 12 s to notice.
+        if (h.State != VLCState.Opening && now - _netChangedUtc < TimeSpan.FromSeconds(20)) limit = TimeSpan.FromSeconds(4);
         if (active && !_reconnecting && now - _lastProgressUtc > limit) { Reconnect(); return; }
 
         // Once a stream has settled (15 s of smooth playback), hand unused memory back to Windows.
@@ -1969,10 +1977,52 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Re-opens the current stream after an error or stall, up to three times, with a short back-off.</summary>
+    void OnNetworkChanged()
+    {
+        if (_currentUrl == null) return;
+        _netChangedUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// The channel won't start. If the provider says every connection is in use – usually one that was cut off by a VPN
+    /// or network switch and hasn't timed out at their end yet – wait for it to be freed, then start the channel.
+    /// Returns false when that isn't the problem (or it never frees up), so the caller gives up as usual.
+    /// </summary>
+    async Task<bool> WaitForFreeConnection(string url)
+    {
+        _reconnecting = true;
+        _waitingForSlot = true;
+        try { return await WaitForFreeConnectionCore(url); }
+        finally { _waitingForSlot = false; }
+    }
+
+    async Task<bool> WaitForFreeConnectionCore(string url)
+    {
+        SetBuffering("Checking your connections…");
+        _svc.Stop(); // so our own attempt isn't one of the ones counted
+        var check = await ConnectionSlot.CheckAsync();
+        if (_currentUrl != url) return true;
+        if (check is not { } first) return false;
+        if (first.Active >= first.Max)
+        {
+            ShowToast("Your provider is still counting a connection that has already closed (this can happen after switching VPN). Dingus will start the channel as soon as it's free.");
+            SetBuffering($"Waiting for a free connection · {first.Active} of {first.Max} in use");
+            bool freed = await ConnectionSlot.WaitAsync(() => _currentUrl == url,
+                (a, m) => SetBuffering($"Waiting for a free connection · {a} of {m} in use"));
+            if (_currentUrl != url) return true;
+            if (!freed) return false;
+        }
+        // A connection is free (or has just been freed): start again.
+        _reconnects = 0;
+        _reconnecting = false;
+        Dispatcher.InvokeAsync(Reconnect); // once the wait has finished
+        return true;
+    }
+
     async void Reconnect()
     {
         var url = _currentUrl;
-        if (url == null || _svc == null || _backupBusy) return;
+        if (url == null || _svc == null || _backupBusy || _waitingForSlot) return;
 
         // Merged channel: after one failed retry, move on to the next version instead of hammering this one.
         if (_nowLive && _reconnects >= 1 && _variantIdx + 1 < _variants.Count)
@@ -2006,6 +2056,12 @@ public partial class MainWindow : Window
 
         if (_reconnects >= MaxReconnects)
         {
+            // Every connection in use (often one cut off by a VPN switch that the provider hasn't let go of yet): wait for it.
+            if (_nowLive && !_slotWaited && !url.StartsWith("file:"))
+            {
+                _slotWaited = true;
+                if (await WaitForFreeConnection(url) || _currentUrl != url) return;
+            }
             _reconnecting = false;
             SetBuffering(null);
             ShowToast(_nowLive
