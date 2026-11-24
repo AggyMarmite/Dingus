@@ -31,11 +31,17 @@ object Dialogs {
                 // A list starts on its first item (or the one it's set to), so ▼ always moves to the second.
                 d.listView?.let { l -> if (l.adapter != null && l.count > 0) { l.requestFocus(); if (l.selectedItemPosition < 0) l.setSelection(0) } }
             }
+            // Only an OK pressed while the dialog is up counts: the release of the OK that opened it (pressed on the
+            // screen behind) must not choose the first option straight away.
+            var pressedHere = false
             d.setOnKeyListener { _, code, ev ->
                 if (code != KeyEvent.KEYCODE_DPAD_CENTER && code != KeyEvent.KEYCODE_ENTER && code != KeyEvent.KEYCODE_NUMPAD_ENTER) return@setOnKeyListener false
                 val f = d.currentFocus ?: return@setOnKeyListener false
                 if (f is EditText) return@setOnKeyListener false
+                if (ev.action == KeyEvent.ACTION_DOWN) { if (ev.repeatCount == 0) pressedHere = true; return@setOnKeyListener true }
+                if (ev.action == KeyEvent.ACTION_UP && !pressedHere) return@setOnKeyListener true
                 if (ev.action == KeyEvent.ACTION_UP && ev.repeatCount == 0) {
+                    pressedHere = false
                     Ui.test("dialog-ok ${f.javaClass.simpleName}")
                     if (f is ListView) {
                         val pos = f.selectedItemPosition
