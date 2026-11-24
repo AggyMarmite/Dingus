@@ -1991,7 +1991,7 @@ public partial class MainWindow : Window
         if (_streamClosed || _currentUrl.StartsWith("file:")) return;
         CloseStreamCleanly("network changed");
         var url = _currentUrl;
-        _ = Task.Delay(1500).ContinueWith(_ => Dispatcher.InvokeAsync(() => { if (_currentUrl == url && !WindowState == WindowState.Minimized) ReopenStream(); }));
+        _ = Task.Delay(1500).ContinueWith(_ => Dispatcher.InvokeAsync(() => { if (_currentUrl == url && WindowState != WindowState.Minimized) ReopenStream(); }));
     }
 
     // =====================================================================================
