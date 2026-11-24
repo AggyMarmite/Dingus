@@ -174,6 +174,11 @@ class BrowseActivity : BaseActivity() {
         show(current, force = true)
         if (!focusedOnce) { focusedOnce = true; focusContent() }
         Ui.test("library $kind ${l.items.size}")
+        // TMDB's Trending and Top lists (looked up when due), then the rows again with them.
+        if (Charts.enabled && (Charts.stale(Charts.TRENDING, kind) || Charts.stale(Charts.TOP, kind))) scope.launch {
+            Charts.load(Charts.TRENDING, kind); Charts.load(Charts.TOP, kind)
+            if (lib === l) { setCategories(); if (current == Vod.FEATURED) build() }
+        }
     }
 
     private fun setCategories() {
@@ -230,11 +235,16 @@ class BrowseActivity : BaseActivity() {
         }
         if (cont.isNotEmpty()) out.add(Row("Continue watching", cont.take(20)))
         MyList.row(kind)?.let { out.add(it) }
+        // What's trending today (TMDB), just below what you're watching.
+        val trending = Vod.trending(kind)
+        if (trending.size >= 3) out.add(Row("Trending", trending.take(24).map { Card.Title(kind, it) } +
+            (if (trending.size > 24) listOf(Card.SeeAll(kind, Vod.TRENDING, "Trending")) else emptyList())))
         if (l.newest.isNotEmpty()) out.add(Row("Recently added", l.newest.take(30).map { Card.Title(kind, it) } +
             (if (l.items.size > 30) listOf(Card.SeeAll(kind, Vod.RECENT, "Recently added")) else emptyList())))
-        val top = Vod.topRated(l)
-        if (top.size >= 5) out.add(Row("Top rated", top.take(24).map { Card.Title(kind, it) } +
-            (if (top.size > 24) listOf(Card.SeeAll(kind, Vod.TOP, "Top rated")) else emptyList())))
+        val top = Vod.topRated(l, kind)
+        val topName = Vod.topName(kind)
+        if (top.size >= 5) out.add(Row(topName, top.take(24).map { Card.Title(kind, it) } +
+            (if (top.size > 24) listOf(Card.SeeAll(kind, Vod.TOP, topName)) else emptyList())))
         for (c in Store.ordered(kind, l.categories) { it.id }) {
             if (Store.isHidden("$kind:${c.id}")) continue
             val items = l.byCategory[c.id] ?: continue

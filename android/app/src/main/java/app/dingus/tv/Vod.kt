@@ -48,6 +48,7 @@ object Vod {
     const val RECENT = "\u0001recent"
     const val ALL = "\u0001all"
     const val TOP = "\u0001top"
+    const val TRENDING = "\u0001trending"
     /** Films/TV Shows: the rows view (not a category of its own). */
     const val FEATURED = "\u0001featured"
 
@@ -129,7 +130,8 @@ object Vod {
         out.add(Category(FEATURED, "Featured"))
         continueList(kind, lib).size.let { if (it > 0) out.add(Category(CONTINUE, "Continue watching", it)) }
         out.add(Category(RECENT, "Recently added"))
-        topRated(lib).size.let { if (it > 0) out.add(Category(TOP, "Top rated", it)) }
+        trending(kind).size.let { if (it > 0) out.add(Category(TRENDING, "Trending", it)) }
+        topRated(lib, kind).size.let { if (it > 0) out.add(Category(TOP, topName(kind), it)) }
         out.add(Category(ALL, if (kind == MOVIES) "All films" else "All shows", lib.items.size))
         for (c in Store.ordered(kind, lib.categories.filter { lib.byCategory[it.id]?.isNotEmpty() == true && !Store.isHidden("$kind:${it.id}") }) { it.id })
             out.add(Category(c.id, c.name, lib.byCategory[c.id]?.size ?: 0))
@@ -138,17 +140,23 @@ object Vod {
 
     private var topFor: Library? = null
     private var top: List<VodItem> = emptyList()
-    /** The best rated (by the provider's rating), up to 200. */
-    fun topRated(lib: Library): List<VodItem> {
+    /** TMDB's top rated that are in your playlist (Charts); the provider's own ratings until that's been looked up. */
+    fun topRated(lib: Library, kind: String): List<VodItem> {
+        Charts.cached(Charts.TOP, kind).let { if (it.size >= 5) return it }
         if (topFor !== lib) { top = lib.items.filter { it.rating > 0 }.sortedByDescending { it.rating }.take(200); topFor = lib }
         return top
     }
+    fun topName(kind: String) = if (Charts.cached(Charts.TOP, kind).size >= 5) (if (kind == MOVIES) "Top films" else "Top TV shows") else "Top rated"
+
+    /** What's trending on TMDB today that's in your playlist (Charts). */
+    fun trending(kind: String): List<VodItem> = Charts.cached(Charts.TRENDING, kind)
 
     fun itemsIn(kind: String, lib: Library, categoryId: String): List<VodItem> = when (categoryId) {
         CONTINUE -> continueList(kind, lib)
         RECENT -> lib.newest
         ALL -> lib.items
-        TOP -> topRated(lib)
+        TOP -> topRated(lib, kind)
+        TRENDING -> trending(kind)
         else -> lib.byCategory[categoryId] ?: emptyList()
     }
 

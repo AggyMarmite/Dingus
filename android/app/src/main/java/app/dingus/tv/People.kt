@@ -92,6 +92,18 @@ object People {
     private val notAlnum = Regex("[^a-z0-9]+")
     private fun key(s: String) = SearchIndex.norm(s).replace(notAlnum, "")
 
+    /** What of [works] is in the playlist, in the same order (a chart): matched by name, and year when both are known. */
+    fun matchInOrder(kind: String, works: List<Work>): List<VodItem> {
+        val idx = index(kind)
+        if (idx.isEmpty()) return emptyList()
+        val out = ArrayList<VodItem>(); val seen = HashSet<String>()
+        for (w in works) {
+            val m = idx[key(w.title)]?.firstOrNull { m -> m.year <= 0 || w.year == 0 || kotlin.math.abs(w.year - m.year) <= 1 } ?: continue
+            if (seen.add(m.id)) out.add(m)
+        }
+        return out
+    }
+
     /** What of [works] is in the playlist: films and shows, matched by name (and year, when both are known). */
     suspend fun inPlaylist(works: List<Work>): Pair<List<VodItem>, List<VodItem>> = withContext(Dispatchers.Default) {
         fun match(kind: String, tv: Boolean): List<VodItem> {

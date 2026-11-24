@@ -183,6 +183,21 @@ class HomeActivity : BaseActivity() {
         }
     }
 
+    /** TMDB's trending films and shows today, and the top films, that are in your playlist (Charts). */
+    private fun chartRows(out: ArrayList<Row>) {
+        Vod.trending(Vod.MOVIES).takeIf { it.size >= 3 }?.let { out.add(Row("Trending films", it.take(24).map { m -> Card.Title(Vod.MOVIES, m) })) }
+        Vod.trending(Vod.SERIES).takeIf { it.size >= 3 }?.let { out.add(Row("Trending TV shows", it.take(24).map { m -> Card.Title(Vod.SERIES, m) })) }
+        Charts.cached(Charts.TOP, Vod.MOVIES).takeIf { it.size >= 5 }?.let { out.add(Row("Top films", it.take(24).map { m -> Card.Title(Vod.MOVIES, m) })) }
+    }
+
+    /** Looks up TMDB's charts when they're due, then builds Home again with them. */
+    private fun loadCharts() {
+        if (!Charts.enabled || !Vod.available) return
+        val due = listOf(Charts.TRENDING to Vod.MOVIES, Charts.TRENDING to Vod.SERIES, Charts.TOP to Vod.MOVIES).filter { (l, k) -> Charts.stale(l, k) }
+        if (due.isEmpty()) return
+        scope.launch { due.forEach { (l, k) -> Charts.load(l, k) }; build() }
+    }
+
     /** Channels and guide from the saved copy (refreshed when old), films and shows if the playlist has them. */
     private fun load() {
         if (loading) { build(); return }
@@ -199,6 +214,7 @@ class HomeActivity : BaseActivity() {
                 )
                 reads.forEach { it.await() }
                 build()
+                loadCharts()
                 // The guide's channel logos, ready before Live TV is opened (at the size the guide draws them).
                 Logos.prefetch(Repo.channelsIn(Repo.ALL).take(150).map { it.logo }, GuideGrid.logoHeight(this@HomeActivity))
                 Vpn.startup() // "connect when Dingus starts": before anything goes online
@@ -306,6 +322,7 @@ class HomeActivity : BaseActivity() {
         if (favs.isNotEmpty()) out.add(Row("Favourite channels", favs.take(30).map { Card.Live(it) }))
         val recent = Repo.channelsIn(Repo.RECENT)
         if (recent.isNotEmpty()) out.add(Row("Recently watched", recent.take(20).map { Card.Live(it) }))
+        chartRows(out)
         Vod.cached(Vod.MOVIES)?.let { lib -> if (lib.items.isNotEmpty()) out.add(Row("New films", lib.newest.take(24).map { Card.Title(Vod.MOVIES, it) })) }
         Vod.cached(Vod.SERIES)?.let { lib -> if (lib.items.isNotEmpty()) out.add(Row("New TV shows", lib.newest.take(24).map { Card.Title(Vod.SERIES, it) })) }
         // Nothing personal yet: start people off with some channels.
@@ -452,6 +469,7 @@ class HomeActivity : BaseActivity() {
         if (recent.isNotEmpty()) out.add(Row("Recently watched", recent.take(20).map { c -> Card.Show(c, Repo.nowNext(c).first) }))
         if (favs.isEmpty() && recent.isEmpty() && Repo.channels.isNotEmpty())
             out.add(Row("Channels", Repo.channelsIn(Repo.ALL).take(30).map { c -> Card.Show(c, Repo.nowNext(c).first) }))
+        chartRows(out)
         Vod.cached(Vod.MOVIES)?.let { lib -> if (lib.items.isNotEmpty()) out.add(Row("New films", lib.newest.take(24).map { Card.Title(Vod.MOVIES, it, isNew = true) })) }
         Vod.cached(Vod.SERIES)?.let { lib -> if (lib.items.isNotEmpty()) out.add(Row("New TV shows", lib.newest.take(24).map { Card.Title(Vod.SERIES, it, isNew = true) })) }
 
