@@ -43,7 +43,11 @@ object Players {
             .build()
         // If the first-choice video decoder can't start for a stream (some 4K / Dolby Vision files), try the next one
         // instead of playing the sound over a black picture.
-        val renderers = DefaultRenderersFactory(ctx).setEnableDecoderFallback(true)
+        // Sound the Fire Stick can't decode itself (DTS, TrueHD, and AC-3/E-AC-3 on TVs without it) and pictures its own
+        // decoders turn down are decoded in software by FFmpeg instead; the built-in decoders still come first.
+        val renderers = io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory(ctx)
+            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+            .setEnableDecoderFallback(true)
         val p = ExoPlayer.Builder(ctx, renderers)
             .setMediaSourceFactory(DefaultMediaSourceFactory(http))
             .setLoadControl(load)
@@ -83,11 +87,35 @@ object Players {
 
     fun item(c: Channel): MediaItem = item(liveUrl(c))
 
-    fun item(url: String): MediaItem {
+    /**
+     * What the address is, going by its ending: HLS, DASH or Smooth Streaming (null = a plain file or stream, which
+     * the player works out from the data itself: MP4, MKV, WebM, TS, AVI, FLV, MP3, FLAC, Ogg …).
+     */
+    fun typeOf(url: String): String? {
+        val path = url.substringBefore('?').substringBefore('#').lowercase()
+        return when {
+            path.endsWith(".m3u8") || url.contains("type=m3u8", true) || url.contains("output=m3u8", true) || url.contains("output=hls", true) -> MimeTypes.APPLICATION_M3U8
+            path.endsWith(".mpd") -> MimeTypes.APPLICATION_MPD
+            path.endsWith(".ism") || path.endsWith(".isml") || path.endsWith("/manifest") -> MimeTypes.APPLICATION_SS
+            else -> null
+        }
+    }
+
+    /** [guess] after the player didn't recognise the data: 1 = treat it as HLS, 2 = as DASH. */
+    fun item(url: String, guess: Int = 0): MediaItem {
         val b = MediaItem.Builder().setUri(Uri.parse(url))
-        if (url.contains(".m3u8", ignoreCase = true)) b.setMimeType(MimeTypes.APPLICATION_M3U8)
+        when (guess) {
+            1 -> MimeTypes.APPLICATION_M3U8
+            2 -> MimeTypes.APPLICATION_MPD
+            else -> typeOf(url)
+        }?.let { b.setMimeType(it) }
         return b.build()
     }
+
+    /** The player couldn't tell what the data is (worth trying it as HLS or DASH). */
+    fun unrecognised(e: androidx.media3.common.PlaybackException) =
+        e.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ||
+        e.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED
 
     /** Whether a stream failed because the server can't be reached (a backup server may be worth trying). */
     fun serverDown(e: androidx.media3.common.PlaybackException): Boolean {

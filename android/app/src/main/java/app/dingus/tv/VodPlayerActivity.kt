@@ -70,6 +70,7 @@ class VodPlayerActivity : BaseActivity() {
     private var resumeAt = -1L
     private var upNextDismissed = -1
     private var triedBackup = false
+    private var guess = 0 // the file didn't say what it is: 1 = try it as HLS, 2 = as DASH (Players.item)
     // Sound but no picture (some 4K / HDR files on the TV's video layer): after a few seconds, draw the picture
     // the way the rest of the screen is drawn instead, and say what the file is.
     private var rendered = false
@@ -153,6 +154,7 @@ class VodPlayerActivity : BaseActivity() {
             override fun onPlayerError(error: PlaybackException) {
                 Ui.test("vod-error ${error.errorCodeName}")
                 val pos = player?.currentPosition ?: 0
+                if (Players.unrecognised(error) && guess < 2) { guess++; Ui.test("vod-format-guess $guess"); open(pos); return }
                 if (retries++ < 2) {
                     message.text = "Reconnecting…"
                     handler.postDelayed({ open(pos) }, 1_500L * retries)
@@ -224,7 +226,7 @@ class VodPlayerActivity : BaseActivity() {
         rendered = false
         handler.removeCallbacks(noPicture)
         handler.postDelayed(noPicture, 5_000)
-        p.setMediaItem(MediaItem.fromUri(Uri.parse(Failover.rewrite(urls[index]))), at)
+        p.setMediaItem(Players.item(Failover.rewrite(urls[index]), guess), at)
         p.prepare()
         p.playWhenReady = true
         showTitle()
@@ -266,6 +268,7 @@ class VodPlayerActivity : BaseActivity() {
         savePosition()
         index = i
         resumeAt = -1
+        guess = 0; retries = 0; triedBackup = false
         upNext.visibility = View.GONE
         closeEpisodes()
         Ui.test("vod-episode $i")

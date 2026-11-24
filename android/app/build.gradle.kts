@@ -58,9 +58,14 @@ android {
 }
 
 dependencies {
-    val media3 = "1.4.1"
+    val media3 = "1.7.1"
     implementation("androidx.media3:media3-exoplayer:$media3")
     implementation("androidx.media3:media3-exoplayer-hls:$media3")
+    implementation("androidx.media3:media3-exoplayer-dash:$media3")
+    implementation("androidx.media3:media3-exoplayer-smoothstreaming:$media3")
+    implementation("androidx.media3:media3-exoplayer-rtsp:$media3")
+    // FFmpeg decoders for the sound and picture formats the Fire Stick can't decode itself (matches media3 above).
+    implementation("io.github.anilbeesetti:nextlib-media3ext:$media3-0.9.0")
     implementation("androidx.media3:media3-ui:$media3")
     implementation("androidx.core:core:1.13.1")
     implementation("com.google.zxing:core:3.5.3") // QR codes (adding a playlist from your phone)

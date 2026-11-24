@@ -4,3 +4,6 @@
 
 # WireGuard (native engine calls back into these)
 -keep class com.wireguard.** { *; }
+
+# FFmpeg decoders (native code calls back into these)
+-keep class io.github.anilbeesetti.nextlib.** { *; }

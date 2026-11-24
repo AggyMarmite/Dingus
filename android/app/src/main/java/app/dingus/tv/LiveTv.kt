@@ -50,6 +50,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
 
     private var retries = 0
     private var triedBackup = false // (a backup server has been tried for this stream)
+    private var guess = 0 // the stream didn't say what it is: 1 = try it as HLS, 2 = as DASH (Players.item)
     private var versionTry = 0
     private var version: Channel? = null
     private var zapPending: Runnable? = null
@@ -105,7 +106,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         list = if (i >= 0) channels else listOf(c) + channels
         index = if (i >= 0) i else 0
         if (playingSame) return
-        version = null; versionTry = 0; retries = 0; triedBackup = false
+        version = null; versionTry = 0; retries = 0; triedBackup = false; guess = 0
         makePlayer()
         startChannel()
         startWatchdog()
@@ -213,6 +214,8 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
             override fun onPlayerError(error: PlaybackException) {
                 Ui.test("error ${error.errorCodeName}")
                 if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) { p.seekToDefaultPosition(); p.prepare(); return }
+                // An address that doesn't say what it is (no ".m3u8" but really HLS, say): try the other kinds before retrying.
+                if (Players.unrecognised(error) && guess < 2) { guess++; Ui.test("format-guess $guess"); startChannel(); return }
                 if (retries < 3) { scheduleRetry("Reconnecting…"); return }
                 // The server can't be reached: try the playlist's backup server addresses, if it has any.
                 if (!triedBackup && Failover.hasBackups() && Players.serverDown(error)) {
@@ -269,9 +272,9 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         behindMs = 0; pausedAt = 0
         val url = Players.liveUrl(c)
         // MPEG-TS channels go through the pause/rewind buffer (so full screen can rewind straight away); HLS plays directly.
-        val b = if (Store.timeshift && !url.contains(".m3u8", true)) try { LiveBuffer(url, a.cacheDir, 15 * 60).start() } catch (e: Exception) { null } else null
+        val b = if (Store.timeshift && guess == 0 && Players.typeOf(url) == null) try { LiveBuffer(url, a.cacheDir, 15 * 60).start() } catch (e: Exception) { null } else null
         buffer = b
-        p.setMediaItem(if (b != null) Players.item(b.urlAt(0)) else Players.item(url))
+        p.setMediaItem(if (b != null) Players.item(b.urlAt(0)) else Players.item(url, guess))
         p.prepare()
         p.playWhenReady = true
         if (fullScreen) Store.noteWatched(list[index].id)
