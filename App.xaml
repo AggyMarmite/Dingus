@@ -8,13 +8,13 @@
                 <ResourceDictionary Source="Themes/Theme.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- The Dingus logo (Assets/Dingus-icon.svg): a white "D" with a play button, on purple -->
+            <!-- The Dingus logo (Assets/Dingus-icon.svg): a white "D" with a play button, on a purple-to-blue gradient -->
             <DrawingImage x:Key="DingusLogo">
                 <DrawingImage.Drawing>
                     <DrawingGroup>
-                        <GeometryDrawing Brush="#5B4FE8"><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,100,100" RadiusX="24" RadiusY="24"/></GeometryDrawing.Geometry></GeometryDrawing>
+                        <GeometryDrawing><GeometryDrawing.Brush><LinearGradientBrush MappingMode="Absolute" StartPoint="0,0" EndPoint="100,100"><GradientStop Color="#8B3DFF" Offset="0"/><GradientStop Color="#2E6DFF" Offset="1"/></LinearGradientBrush></GeometryDrawing.Brush><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,100,100" RadiusX="24" RadiusY="24"/></GeometryDrawing.Geometry></GeometryDrawing>
                         <GeometryDrawing Brush="#FFFFFF" Geometry="M28,22 H50 A28,28 0 0 1 50,78 H28 Z"/>
-                        <GeometryDrawing Brush="#5B4FE8" Geometry="M43,37 L63,50 L43,63 Z"/>
+                        <GeometryDrawing Geometry="M43,37 L63,50 L43,63 Z"><GeometryDrawing.Brush><LinearGradientBrush MappingMode="Absolute" StartPoint="0,0" EndPoint="100,100"><GradientStop Color="#8B3DFF" Offset="0"/><GradientStop Color="#2E6DFF" Offset="1"/></LinearGradientBrush></GeometryDrawing.Brush></GeometryDrawing>
                     </DrawingGroup>
                 </DrawingImage.Drawing>
             </DrawingImage>

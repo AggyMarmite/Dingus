@@ -54,8 +54,8 @@ class SettingsActivity : BaseActivity() {
             sectionViews.add(t)
         }
         showSection(0)
-        // (Self-test: open on a section by name.)
-        if (BuildConfig.DEBUG) intent.getStringExtra("dingus_test_section")?.let { n ->
+        // Open on a section by name (after changing the text size; the self-test too).
+        (intent.getStringExtra("section") ?: if (BuildConfig.DEBUG) intent.getStringExtra("dingus_test_section") else null)?.let { n ->
             sections.indexOfFirst { it.first == n }.takeIf { it >= 0 }?.let { i -> sectionViews[i].requestFocus(); showSection(i) }
         }
         sectionViews[0].requestFocus()
@@ -104,16 +104,14 @@ class SettingsActivity : BaseActivity() {
     }
 
     private fun liveSection() {
+        subhead("The guide")
         toggle("Watch in the guide first", "OK plays in the guide window, OK again for full screen", { Store.preview }) { Store.preview = it }
         toggle("Channel numbers", "", { Store.showNumbers }) { Store.showNumbers = it }
         toggle("Colour-coded programmes", "Sport, films, news, kids…", { Store.genreColours }) { Store.genreColours = it }
-        row("Remind me", { "How long before a programme its reminder comes up" }, { reminderLeadName(Store.reminderLead) }) {
-            val opts = listOf(30, 60, 120, 300)
-            choose("Remind me", opts.map { reminderLeadName(it) + " before" }, opts.indexOf(Store.reminderLead)) { n ->
-                Store.reminderLead = opts[n]; Reminders.rescheduleAll(); update()
-            }
-        }
-        toggle("Switch for reminders", "Change to the channel when a reminded programme starts", { Store.reminderSwitch }) { Store.reminderSwitch = it }
+        subhead("Watching")
+        toggle("Pause & rewind live TV", "Keeps the last 15 minutes (MPEG-TS channels)", { Store.timeshift }) { Store.timeshift = it }
+        row("Stream format", { "" }, { if (Store.streamFormat == "hls") "HLS" else "MPEG-TS" }) { streamFormat() }
+        subhead("Channels")
         toggle("Merge duplicate channels", "HD, FHD and backups shown as one", { Store.mergeChannels }) { Store.mergeChannels = it; Repo.reapply() }
         row("Edit channels", { "Rename, renumber or hide" }, { "›" }) { startActivity(Intent(this, ChannelEditorActivity::class.java)) }
         row("Categories", { hiddenSummary() + "  ·  " + (if (listOf("live", "movies", "series").any { Store.categoryOrder(it).isNotEmpty() }) "your own order" else "the playlist's order") }, { "›" }) {
@@ -125,11 +123,28 @@ class SettingsActivity : BaseActivity() {
                 }
             }
         }
+        subhead("Reminders")
+        row("Remind me", { "How long before a programme its reminder comes up" }, { reminderLeadName(Store.reminderLead) }) {
+            val opts = listOf(30, 60, 120, 300)
+            choose("Remind me", opts.map { reminderLeadName(it) + " before" }, opts.indexOf(Store.reminderLead)) { n ->
+                Store.reminderLead = opts[n]; Reminders.rescheduleAll(); update()
+            }
+        }
+        toggle("Switch for reminders", "Change to the channel when a reminded programme starts", { Store.reminderSwitch }) { Store.reminderSwitch = it }
+        row("Series reminders", { Reminders.series().size.let { if (it == 0) "None yet  ·  OK on a programme in the guide → Every episode" else "$it programme${if (it == 1) "" else "s"}  ·  OK to see or cancel them" } }, { "›" }) {
+            val all = Reminders.series()
+            if (all.isEmpty()) return@row
+            val names = all.map { s -> "${Repo.channel(s.channelId)?.let { c -> Reminders.all().firstOrNull { it.channelId == c.id && Reminders.seriesTitle(it.title) == s.title }?.title } ?: s.title.replaceFirstChar { it.uppercase() }}  ·  ${s.channelName}" }
+            val cancel = BooleanArray(all.size)
+            Dialogs.builder(this).setTitle("Series reminders  ·  tick to cancel")
+                .setMultiChoiceItems(names.toTypedArray(), cancel) { _, i, on -> cancel[i] = on }
+                .setPositiveButton("Cancel ticked") { _, _ -> all.forEachIndexed { i, s -> if (cancel[i]) Reminders.cancelSeries(s.channelId, s.title) }; update() }
+                .setNegativeButton("Close", null)
+                .show()
+        }
     }
 
     private fun playbackSection() {
-        toggle("Pause & rewind live TV", "Keeps the last 15 minutes (MPEG-TS channels)", { Store.timeshift }) { Store.timeshift = it }
-        row("Stream format", { "" }, { if (Store.streamFormat == "hls") "HLS" else "MPEG-TS" }) { streamFormat() }
         toggle("Subtitles automatically", "In your language, when there are some", { Store.autoSubtitles }) { Store.autoSubtitles = it }
         row("Subtitle language", { "" }, { java.util.Locale(Store.subtitleLanguage).displayLanguage.ifEmpty { Store.subtitleLanguage } }) { subtitleLanguage() }
         toggle("Play the next episode automatically", "Otherwise “Up next” waits for you near the end", { Store.autoNext }) { Store.autoNext = it }
@@ -146,6 +161,17 @@ class SettingsActivity : BaseActivity() {
         toggle("Lite mode", "Simpler Home, fewer animations", { Store.homeLite }) { Store.homeLite = it }
         toggle("Title logos", "Official film and show logos, from TMDB", { Store.titleLogos }) { Store.titleLogos = it }
         row("Theme", { "" }, { "${Themes.background().name}  ·  ${Themes.accent().name}" }) { theme() }
+        row("Text size", { "Bigger text is easier to read from the sofa" }, { when (Store.textSize) { "large" -> "Large"; "larger" -> "Extra large"; else -> "Normal" } }) {
+            val ids = listOf("normal", "large", "larger")
+            choose("Text size", listOf("Normal", "Large", "Extra large"), ids.indexOf(Store.textSize).coerceAtLeast(0)) { n ->
+                if (ids[n] == Store.textSize) return@choose
+                Store.textSize = ids[n]
+                Themes.version++ // every screen redraws at the new size (this one straight away)
+                Ui.test("text-size ${ids[n]}")
+                intent.putExtra("section", "Look")
+                recreate()
+            }
+        }
         row("VPN indicator", { "Shown under the clock while the VPN is on" }, { if (Store.vpnIndicator == "text") "“VPN”" else "Shield" }) {
             choose("VPN indicator", listOf("Shield", "The word “VPN”"), if (Store.vpnIndicator == "text") 1 else 0) { n ->
                 Store.vpnIndicator = if (n == 1) "text" else "shield"; update()
@@ -215,6 +241,15 @@ class SettingsActivity : BaseActivity() {
     }
 
     // ------------------------------------------------------------------ rows
+
+    /** A small heading inside a section ("THE GUIDE", "REMINDERS"), so a long list is easy to scan. */
+    private fun subhead(text: String) {
+        val v = LayoutInflater.from(this).inflate(R.layout.item_heading, list, false) as TextView
+        v.text = text.uppercase()
+        v.textSize = 12f
+        v.setPadding(v.paddingLeft, (14 * resources.displayMetrics.density).toInt(), v.paddingRight, v.paddingBottom)
+        list.addView(v)
+    }
 
     private fun header(text: String) {
         val v = LayoutInflater.from(this).inflate(R.layout.item_heading, list, false) as TextView

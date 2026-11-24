@@ -42,6 +42,8 @@ object Reminders {
     fun init(ctx: Context) {
         app = ctx.applicationContext
         Thread { all().forEach { schedule(it) } }.start()
+        // Series reminders: each time the guide updates, its new showings get reminders too.
+        Repo.onChanged { Thread { applySeries() }.start() }
     }
     class Reminder(val channelId: String, val start: Long, val title: String, val channelName: String)
 
@@ -75,6 +77,91 @@ object Reminders {
         save(if (on) list + r else list.filterNot { it.channelId == c.id && it.start == p.start })
         if (on) schedule(r) else cancel(r)
         return on
+    }
+
+    // ------------------------------------------------------------------ series reminders
+
+    /** "Every episode": a programme (by its title) on a channel. */
+    class Series(val channelId: String, val title: String, val channelName: String)
+
+    @Volatile private var seriesCache: List<Series>? = null
+
+    fun series(): List<Series> = seriesCache ?: try {
+        val a = JSONArray(Store.seriesJson)
+        (0 until a.length()).map { a.getJSONObject(it) }.map { Series(it.getString("c"), it.getString("t"), it.optString("n")) }
+    } catch (e: Exception) { emptyList() }.also { seriesCache = it }
+
+    private fun saveSeries(list: List<Series>) {
+        val a = JSONArray()
+        list.forEach { a.put(JSONObject().put("c", it.channelId).put("t", it.title).put("n", it.channelName)) }
+        Store.seriesJson = a.toString()
+        seriesCache = list
+    }
+
+    /** The title a series is known by: "New: Emmerdale" and "Emmerdale." are the same programme. */
+    private val newRx = Regex("""^(new|live|premiere)\s*[:\-–]\s*""", RegexOption.IGNORE_CASE)
+    fun seriesTitle(t: String) = t.trim().replace(newRx, "").trimEnd('.', '…', ' ').lowercase()
+
+    fun isSeries(c: Channel, p: Programme) = series().any { it.channelId == c.id && it.title == seriesTitle(p.title) }
+
+    /** Reminders for every showing of [p] on [c] from now on (and for new ones as the guide updates). */
+    fun addSeries(c: Channel, p: Programme) {
+        if (!isSeries(c, p)) saveSeries(series() + Series(c.id, seriesTitle(p.title), c.name))
+        applySeries()
+        Ui.test("series-reminder ${p.title} ${all().count { it.channelId == c.id && seriesTitle(it.title) == seriesTitle(p.title) }}")
+    }
+
+    /** Stops the series, and its reminders still to come. */
+    fun cancelSeries(channelId: String, title: String) {
+        val t = seriesTitle(title)
+        saveSeries(series().filterNot { it.channelId == channelId && it.title == t })
+        val now = System.currentTimeMillis()
+        val (gone, keep) = all().partition { it.channelId == channelId && seriesTitle(it.title) == t && it.start > now }
+        save(keep)
+        gone.forEach { cancel(it) }
+    }
+
+    /** Adds reminders for the series' showings in the guide that don't have one yet. */
+    @Synchronized private fun applySeries() {
+        val rules = series()
+        if (rules.isEmpty()) return
+        val now = System.currentTimeMillis()
+        val have = all().map { it.channelId to it.start }.toHashSet()
+        val added = ArrayList<Reminder>()
+        for (r in rules) {
+            val c = Repo.channel(r.channelId) ?: continue
+            for (p in Repo.programmes(c)) {
+                if (p.start <= now || seriesTitle(p.title) != r.title || (c.id to p.start) in have) continue
+                added.add(Reminder(c.id, p.start, p.title, c.name))
+            }
+        }
+        if (added.isEmpty()) return
+        // Old reminders that have passed go at the same time, so the list doesn't grow for ever.
+        save(all().filter { it.start > now - 6 * 3_600_000L } + added)
+        added.forEach { schedule(it) }
+    }
+
+    /**
+     * OK on a programme still to come: remind me (this one, or every episode), cancel, or watch the channel now.
+     * [done] gets a line for the screen to show ("Reminder set for …").
+     */
+    fun ask(a: Activity, c: Channel, p: Programme, watch: () -> Unit, done: (String) -> Unit) {
+        val items = ArrayList<Pair<String, () -> Unit>>()
+        val set = has(c, p)
+        val isSeries = isSeries(c, p)
+        if (!set) {
+            items.add("Remind me  ·  this episode" to { toggle(c, p); Ui.test("reminder-set true ${p.title}"); done("Reminder set for ${p.title}") })
+            items.add("⟳  Remind me  ·  every episode" to { addSeries(c, p); done("Series reminder set: every ${p.title} on ${c.name}") })
+        } else {
+            items.add("Cancel this reminder" to { toggle(c, p); Ui.test("reminder-set false ${p.title}"); done("Reminder cancelled") })
+            if (!isSeries) items.add("⟳  Remind me  ·  every episode" to { addSeries(c, p); done("Series reminder set: every ${p.title} on ${c.name}") })
+        }
+        if (isSeries) items.add("Cancel series reminders" to { cancelSeries(c.id, p.title); Ui.test("series-cancelled ${p.title}"); done("Series reminders cancelled") })
+        items.add("Watch ${c.name} now" to watch)
+        Dialogs.builder(a).setTitle("${p.title}  ·  ${Ui.day(p.start)}${Ui.span(p)}")
+            .setItems(items.map { it.first }.toTypedArray()) { _, i -> items[i].second() }
+            .show()
+        Ui.test("reminder-menu ${p.title}")
     }
 
     /** Called by every screen as it opens and closes, so the pop-up shows on whatever's in front. */

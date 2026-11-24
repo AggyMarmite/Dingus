@@ -319,7 +319,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             airing -> "${Ui.span(p)}   ·   ${(p.stop - now + 59_999) / 60_000} min left"
             p.stop <= now && c != null && Repo.canCatchUp(c, p) -> "${Ui.day(p.start)}${Ui.span(p)}   ·   ↺ Catch up: press OK to watch"
             p.stop <= now -> "${Ui.day(p.start)}${Ui.span(p)}   ·   Ended"
-            else -> "${Ui.day(p.start)}${Ui.span(p)}   ·   $mins min   ·   " + if (c != null && Reminders.has(c, p)) "● Reminder set" else "OK to set a reminder"
+            else -> "${Ui.day(p.start)}${Ui.span(p)}   ·   $mins min   ·   " + if (c != null && Reminders.has(c, p)) (if (Reminders.isSeries(c, p)) "⟳ Series reminder set" else "● Reminder set") else "OK to set a reminder"
         }
         prog.visibility = if (airing) View.VISIBLE else View.GONE
         live.visibility = if (airing) View.VISIBLE else View.GONE
@@ -470,17 +470,11 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         Ui.test("ok ${c.name} programme=${p?.title} playing=${live.current?.name} full=${live.fullScreen}")
         // A programme still to come: set a reminder (or watch the channel now).
         if (p != null && p.start > System.currentTimeMillis()) {
-            val set = Reminders.has(c, p)
-            Dialogs.builder(this).setTitle(p.title).setMessage("${c.name}  ·  ${Ui.day(p.start)}${Ui.span(p)}")
-                .setPositiveButton(if (set) "Cancel reminder" else "Remind me") { _, _ ->
-                    val on = Reminders.toggle(c, p)
-                    Ui.test("reminder-set $on ${p.title}")
-                    grid.invalidate()
-                    setStatus(if (on) "Reminder set for ${p.title}" else "Reminder cancelled")
-                    handler.postDelayed({ if (!loading) setStatus("") }, 2_500)
-                }
-                .setNegativeButton("Watch ${c.name} now") { _, _ -> onPlay(c, null) }
-                .show().getButton(android.app.AlertDialog.BUTTON_POSITIVE)?.requestFocus()
+            Reminders.ask(this, c, p, watch = { onPlay(c, null) }) { msg ->
+                grid.invalidate()
+                setStatus(msg)
+                handler.postDelayed({ if (!loading) setStatus("") }, 2_500)
+            }
             return
         }
         // A programme that's finished, on a channel with catch-up: watch it from the start, with pause and skip.

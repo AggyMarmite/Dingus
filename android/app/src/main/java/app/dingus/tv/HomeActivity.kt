@@ -341,12 +341,7 @@ class HomeActivity : BaseActivity() {
                 val p = card.programme
                 if (p != null && p.start > System.currentTimeMillis()) {
                     // Still to come: set a reminder, or watch the channel now.
-                    Dialogs.builder(this).setTitle(p.title).setMessage("${card.channel.name}  ·  ${Ui.day(p.start)}${Ui.span(p)}")
-                        .setPositiveButton(if (Reminders.has(card.channel, p)) "Cancel reminder" else "Remind me") { _, _ ->
-                            Reminders.toggle(card.channel, p); build()
-                        }
-                        .setNegativeButton("Watch ${card.channel.name} now") { _, _ -> watch(card.channel) }
-                        .show()
+                    Reminders.ask(this, card.channel, p, watch = { watch(card.channel) }) { msg -> build(); Notice.done(msg, 2_500) }
                 } else watch(card.channel)
             }
             is Card.SeeAll -> startActivity(Intent(this, BrowseActivity::class.java).putExtra(BrowseActivity.KIND, card.kind).putExtra(BrowseActivity.CATEGORY, card.categoryId))

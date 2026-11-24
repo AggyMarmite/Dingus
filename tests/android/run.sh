@@ -34,6 +34,11 @@ key KEYCODE_DPAD_CENTER 2; shot 02b-reminder-dialog
 key KEYCODE_DPAD_CENTER 2
 check "reminder-set true" 5 "OK on a later programme sets a reminder"
 shot 02c-reminder-set
+# Series reminder: OK again → "Remind me · every episode" (second in the list now).
+key KEYCODE_DPAD_CENTER 2
+check "reminder-menu" 5 "OK on a programme with a reminder offers the reminder choices"
+key KEYCODE_DPAD_DOWN 1; key KEYCODE_DPAD_CENTER 2
+check "series-reminder" 5 "Series reminder: every episode of a programme gets a reminder"
 fresh
 # LEFT until the categories open (how many it takes depends on where the guide's focus starts, so not a fixed three).
 for _ in 1 2 3 4; do
@@ -110,7 +115,7 @@ check "settings-section Live TV" 5 "Settings: moving down the sections shows eac
 shot 07b-settings-live
 fresh
 key KEYCODE_DPAD_DOWN 1; key KEYCODE_DPAD_RIGHT 1                                 # from Playback (3rd section)
-check "settings-into Playback: Pause & rewind live TV" 3 "RIGHT from a section lands on its first option"
+check "settings-into Playback: Subtitles automatically" 3 "RIGHT from a section lands on its first option"
 key KEYCODE_BACK 1; key KEYCODE_DPAD_UP 1
 key KEYCODE_DPAD_RIGHT 1; key KEYCODE_DPAD_DOWN 1; shot 07c-settings-live-rows
 key KEYCODE_BACK 1; key KEYCODE_BACK 2

@@ -166,6 +166,11 @@ object Store {
         get() = prefs.getBoolean("timeshift", true)
         set(v) = prefs.edit().putBoolean("timeshift", v).apply()
 
+    /** Series reminders: every new showing of a programme on a channel (Reminders). */
+    var seriesJson: String
+        get() = prefs.getString("seriesReminders", "[]")!!
+        set(v) = prefs.edit().putString("seriesReminders", v).apply()
+
     var remindersJson: String
         get() = prefs.getString("reminders", "[]")!!
         set(v) = prefs.edit().putString("reminders", v).apply()
@@ -275,6 +280,12 @@ object Store {
         set(v) = prefs.edit().putString(k("account"), v).apply()
 
     /** Show official title logos for films and shows (when TMDB has one). */
+    /** Settings → Look → Text size: "normal", "large" or "larger". */
+    var textSize: String
+        get() = prefs.getString("textSize", "normal")!!
+        set(v) = prefs.edit().putString("textSize", v).apply()
+    val textScale: Float get() = try { when (textSize) { "large" -> 1.15f; "larger" -> 1.3f; else -> 1f } } catch (_: Exception) { 1f }
+
     /** How the VPN shows next to the clock: "shield" or "text" (the word VPN). */
     var vpnIndicator: String
         get() = prefs.getString("vpnIndicator", "shield")!!

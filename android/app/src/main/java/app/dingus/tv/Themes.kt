@@ -53,7 +53,7 @@ abstract class BaseActivity : Activity() {
     /** Sized for a TV across the room: the usual Android TV size, with text a little smaller (less "phone"). */
     override fun attachBaseContext(base: android.content.Context) {
         val c = android.content.res.Configuration(base.resources.configuration)
-        c.fontScale = base.resources.configuration.fontScale * 0.85f
+        c.fontScale = base.resources.configuration.fontScale * 0.85f * Store.textScale // (Settings → Look → Text size)
         super.attachBaseContext(base.createConfigurationContext(c))
     }
 
