@@ -91,7 +91,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
                     stuckFor = 0
                     Ui.test("stall-restart ${current?.name}")
                     retries = 0
-                    startChannel()
+                    if (!switchVersion("stopped")) startChannel() // a merged channel: its next version instead
                 }
             }
             handler.postDelayed(this, 3_000)
@@ -115,7 +115,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         list = if (i >= 0) channels else listOf(c) + channels
         index = if (i >= 0) i else 0
         if (playingSame) return
-        version = null; versionTry = 0; retries = 0; triedBackup = false; guess = 0; slotWaited = false
+        version = null; versionTry = 0; retries = 0; triedBackup = false; guess = 0; slotWaited = false; playedOnce = false; rebuffers.clear()
         makePlayer()
         startChannel()
         startWatchdog()
@@ -203,7 +203,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         MiniGuide(a, overlay as android.widget.FrameLayout) { c ->
             val i = list.indexOfFirst { it.id == c.id }
             if (i >= 0 && i != index) {
-                version = null; versionTry = 0; slotWaited = false; retries = 0
+                version = null; versionTry = 0; slotWaited = false; retries = 0; rebuffers.clear()
                 pendingJump = -1; handler.removeCallbacks(doJump)
                 index = i
                 onChannel?.invoke(list[index])
@@ -235,7 +235,9 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         p.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 when (state) {
+                    Player.STATE_BUFFERING -> onBuffering()
                     Player.STATE_READY -> {
+                        handler.removeCallbacks(bufferCheck); playedOnce = true
                         retries = 0; triedBackup = false
                         message.text = ""
                         val name = list.getOrNull(index)?.name
@@ -276,6 +278,50 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         video.player = p
         player = p
     }
+
+    // ------------------------------------------------------------------ merged channels: buffering → next version
+
+    /**
+     * A merged channel that keeps buffering moves to its next version by itself (and says so): buffering for
+     * 8 seconds while playing, not starting within 15, or buffering 3 times in a minute. Each version is tried once.
+     */
+    private var playedOnce = false
+    private val rebuffers = ArrayList<Long>()
+    private val bufferCheck = Runnable {
+        if (player?.playbackState == Player.STATE_BUFFERING && player?.playWhenReady == true && behindMs == 0L)
+            switchVersion(if (playedOnce) "kept buffering" else "wouldn't start")
+    }
+
+    private fun onBuffering() {
+        val p = player ?: return
+        if (!p.playWhenReady || !hasOtherVersion()) return
+        handler.removeCallbacks(bufferCheck)
+        handler.postDelayed(bufferCheck, if (playedOnce) 8_000 else 15_000)
+        if (!playedOnce) return
+        val now = System.currentTimeMillis()
+        rebuffers.add(now); rebuffers.removeAll { now - it > 60_000 }
+        if (rebuffers.size >= 3) { rebuffers.clear(); switchVersion("kept buffering") }
+    }
+
+    private fun hasOtherVersion(): Boolean =
+        Store.mergeChannels && list.getOrNull(index)?.let { Repo.versions(it).size > versionTry + 1 } == true
+
+    /** Moves to the merged channel's next version; false when there's no other one left to try. */
+    private fun switchVersion(why: String): Boolean {
+        val vs = list.getOrNull(index)?.let { Repo.versions(it) } ?: return false
+        if (!Store.mergeChannels || vs.size <= versionTry + 1) return false
+        val next = vs[++versionTry]
+        version = next; retries = 0
+        handler.removeCallbacks(bufferCheck); rebuffers.clear(); playedOnce = false
+        Ui.test("version-switch $why ${next.name}")
+        message.text = "That version $why – switched to ${versionLabel(next)}"
+        val shown = message.text
+        handler.postDelayed({ if (message.text == shown) message.text = "" }, 4_000)
+        startChannel()
+        return true
+    }
+
+    private fun versionLabel(v: Channel) = v.name + "  (" + (if (Merge.isBackup(v)) "backup" else when (Merge.rank(v)) { 4 -> "4K"; 3 -> "FHD"; 1 -> "SD"; else -> "HD" }) + ")"
 
     /** Merged duplicates: try the channel's next version before giving up. */
     private fun giveUp(error: PlaybackException) {
@@ -340,6 +386,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     private fun startChannel() {
         val p = player ?: return
         slotGen++
+        playedOnce = false; handler.removeCallbacks(bufferCheck)
         dropped = 0 // the player is reused between channels, so the count starts again for each channel
         val c = version ?: list.getOrNull(index)?.let { if (Store.mergeChannels) Repo.versions(it).first() else it } ?: return
         Ui.test("load ${c.name}")
@@ -445,7 +492,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     /** Changing channel: the info bar updates straight away; the stream switches once you stop pressing. */
     private fun zap(step: Int) {
         if (list.size < 2) return
-        version = null; versionTry = 0; slotWaited = false
+        version = null; versionTry = 0; slotWaited = false; rebuffers.clear()
         pendingJump = -1; handler.removeCallbacks(doJump)
         index = (index + step + list.size) % list.size
         retries = 0

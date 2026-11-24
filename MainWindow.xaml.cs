@@ -1746,7 +1746,9 @@ public partial class MainWindow : Window
 
         // Stalled: meant to be playing, but no new frames and the clock isn't moving.
         bool active = h.State is VLCState.Playing or VLCState.Buffering or VLCState.Opening;
-        var limit = h.State == VLCState.Opening ? TimeSpan.FromSeconds(20) : TimeSpan.FromSeconds(12);
+        // A merged channel with another version to go to waits less: buffering for 8 seconds moves on to the next one.
+        bool canSwitch = _nowLive && _variantIdx + 1 < _variants.Count;
+        var limit = h.State == VLCState.Opening ? TimeSpan.FromSeconds(canSwitch ? 15 : 20) : TimeSpan.FromSeconds(canSwitch ? 8 : 12);
         // Just after a network/VPN change the stream has usually been cut off: don't wait the full 12 s to notice.
         if (h.State != VLCState.Opening && now - _netChangedUtc < TimeSpan.FromSeconds(20)) limit = TimeSpan.FromSeconds(4);
         if (active && !_reconnecting && now - _lastProgressUtc > limit) { Reconnect(); return; }
@@ -2066,13 +2068,13 @@ public partial class MainWindow : Window
         var url = _currentUrl;
         if (url == null || _svc == null || _backupBusy || _waitingForSlot) return;
 
-        // Merged channel: after one failed retry, move on to the next version instead of hammering this one.
-        if (_nowLive && _reconnects >= 1 && _variantIdx + 1 < _variants.Count)
+        // Merged channel: move on to the next version straight away instead of hammering this one.
+        if (_nowLive && _variantIdx + 1 < _variants.Count) // (straight to the next version: no retrying one that's stuck)
         {
             var name = GuideRow.CleanName(_nowChannel?.Name) ?? "This channel";
             var next = _variants[_variantIdx + 1];
             _reconnecting = false;
-            SwitchVariant(_variantIdx + 1, $"{name}: that version stopped working – switched to {ChannelMerger.Label(next)}.");
+            SwitchVariant(_variantIdx + 1, $"{name}: that version kept buffering or stopped – switched to {ChannelMerger.Label(next)}.");
             return;
         }
 
