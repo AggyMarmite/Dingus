@@ -24,8 +24,6 @@ import android.widget.TextView
  * YouTube offers to open there instead.
  */
 class TrailerActivity : BaseActivity() {
-    override fun soundsHere() = false
-
     companion object {
         const val KEY = "key"
         const val TITLE = "title"

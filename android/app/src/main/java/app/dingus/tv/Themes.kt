@@ -54,13 +54,9 @@ abstract class BaseActivity : Activity() {
     private var lastKey: android.view.KeyEvent? = null
     private var lastKeyResult = false
 
-    /** Soft sounds on this screen (not while a film or channel is playing full screen). */
-    protected open fun soundsHere(): Boolean = true
-
     protected fun backHold(event: android.view.KeyEvent): Boolean {
         if (event === lastKey) return lastKeyResult
         lastKey = event
-        if (soundsHere()) Sounds.key(this, event)
         lastKeyResult = run {
             if (event.keyCode != android.view.KeyEvent.KEYCODE_BACK) return@run false
             val downAct = event.action == android.view.KeyEvent.ACTION_DOWN

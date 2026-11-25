@@ -21,7 +21,6 @@ class DingusApp : Application() {
         Charts.init(this)
         Ratings.init(this)
         Upcoming.init(this)
-        try { Sounds.prepare(this) } catch (_: Exception) {}
         HomeSnapshot.init(this)
         Reminders.init(this)
         // Pause/rewind files left over from last time (e.g. if the app was closed while watching).

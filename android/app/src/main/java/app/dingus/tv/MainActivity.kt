@@ -29,8 +29,6 @@ import kotlinx.coroutines.launch
  * so a channel never loads twice. Everything works with the remote.
  */
 class MainActivity : BaseActivity(), GuideGrid.Listener {
-    override fun soundsHere() = !live.fullScreen
-
     companion object {
         /** Open straight into full screen on this channel (from Home, Search, reminders). */
         const val PLAY = "play"

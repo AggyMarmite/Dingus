@@ -31,8 +31,6 @@ import java.util.Locale
  */
 @OptIn(UnstableApi::class)
 class VodPlayerActivity : BaseActivity() {
-    override fun soundsHere() = false
-
     class Entry(val id: String, val title: String, val url: String, val image: String? = null)
 
     companion object {

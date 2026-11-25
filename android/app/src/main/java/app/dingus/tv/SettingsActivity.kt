@@ -283,9 +283,6 @@ class SettingsActivity : BaseActivity() {
         toggle("Lite mode", "Simpler Home, fewer animations", { Store.homeLite }) { Store.homeLite = it }
         toggle("Title logos", "Official film and show logos, from TMDB", { Store.titleLogos }) { Store.titleLogos = it }
         row("Theme", { "" }, { "${Themes.background().name}  ·  ${Themes.accent().name}" }) { theme() }
-        row("Sounds", { "Soft taps as you move and choose" }, { Sounds.names[Store.sounds.coerceIn(0, 3)] }) {
-            choose("Sounds", Sounds.names, Store.sounds.coerceIn(0, 3)) { n -> Store.sounds = n; update(); if (n > 0) Sounds.sample(this); Ui.test("sounds $n") }
-        }
         row("Text size", { "Bigger text is easier to read from the sofa" }, { when (Store.textSize) { "large" -> "Large"; "larger" -> "Extra large"; else -> "Normal" } }) {
             val ids = listOf("normal", "large", "larger")
             choose("Text size", listOf("Normal", "Large", "Extra large"), ids.indexOf(Store.textSize).coerceAtLeast(0)) { n ->
