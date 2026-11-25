@@ -26,6 +26,8 @@ class VpnControls(
         /** The address the internet sees, and where ("185.159.157.12 · London, GB"), and when it was looked up. */
         @Volatile var ip: String? = null; private set
         @Volatile private var ipFor: Vpn.Status? = null
+        /** The server it was looked up through (so switching server looks it up again). */
+        @Volatile private var ipServer: String? = null
         @Volatile private var looking = false
         /** Ping (ms) by location id, measured when a list of places is opened. */
         val pings = java.util.concurrent.ConcurrentHashMap<String, Int>()
@@ -40,13 +42,14 @@ class VpnControls(
                 val where = listOf(o.optString("city"), o.optString("country")).filter { it.isNotBlank() }.joinToString(", ")
                 ip = o.optString("ip").ifBlank { null }?.let { if (where.isEmpty()) it else "$it · $where" }
                 ipFor = status
+                ipServer = Vpn.connectedTo?.id
                 Ui.test("vpn-ip ${ip ?: "none"}")
                 ip
             } catch (e: Exception) { ip = null; ipFor = null; null } finally { looking = false }
         }
 
-        /** Whether the address shown was looked up with the VPN as it is now (otherwise it's out of date). */
-        val ipCurrent: Boolean get() = ip != null && ipFor == Vpn.status
+        /** Whether the address shown was looked up with the VPN as it is now, through the same server (otherwise it's out of date). */
+        val ipCurrent: Boolean get() = ip != null && ipFor == Vpn.status && ipServer == Vpn.connectedTo?.id
     }
 
     var locations: List<Vpn.Location> = emptyList()
