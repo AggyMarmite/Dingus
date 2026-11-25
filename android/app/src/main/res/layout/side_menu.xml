@@ -26,7 +26,7 @@
             <TextView android:id="@+id/sideVpn" android:layout_width="60dp" android:layout_height="wrap_content"
                 android:gravity="center" android:textSize="13sp" android:visibility="gone" />
             <TextView android:id="@+id/sideVpnPlace" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                android:textSize="13sp" android:textColor="?attr/dMuted" android:singleLine="true" android:ellipsize="end"
+                android:textSize="13sp" android:textColor="#CBD5E1" android:singleLine="true" android:ellipsize="end"
                 android:paddingEnd="8dp" android:visibility="gone" />
         </LinearLayout>
         <!-- The playlist in use (OK to switch, when there's more than one) and the subscription. -->
@@ -36,7 +36,7 @@
                 android:paddingTop="3dp" android:paddingBottom="3dp" android:textSize="14sp" android:textColor="?attr/dMuted"
                 android:singleLine="true" android:ellipsize="end" />
             <TextView android:id="@+id/navAccount" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:paddingStart="19dp" android:paddingEnd="8dp" android:textSize="12sp" android:textColor="?attr/dMuted"
+                android:paddingStart="19dp" android:paddingEnd="8dp" android:textSize="12sp" android:textColor="#B6C0CF"
                 android:maxLines="2" android:ellipsize="end" android:lineSpacingExtra="1dp" />
         </LinearLayout>
 

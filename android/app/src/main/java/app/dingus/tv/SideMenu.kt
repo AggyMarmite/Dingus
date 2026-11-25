@@ -85,7 +85,7 @@ class SideMenu(
     /** Darkens the left of the screen behind the open menu (fading out across it); the rest stays bright and live. */
     private val scrim = View(a).apply {
         background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
-            intArrayOf(0xED000000.toInt(), 0xEB000000.toInt(), 0xE8000000.toInt(), 0xCC000000.toInt(), 0x73000000, 0x14000000, 0))
+            intArrayOf(0xF806080C.toInt(), 0xF606080C.toInt(), 0xF206080C.toInt(), 0xB306080C.toInt(), 0x4006080C, 0x0D06080C, 0))
         alpha = 0f; visibility = View.GONE
     }
     val panel: View = LayoutInflater.from(a).inflate(R.layout.side_menu, root, false)
@@ -106,6 +106,9 @@ class SideMenu(
     private var fraction = 0f
     private var anim: ValueAnimator? = null
     private var returnTo: View? = null
+    private val content = content
+    /** The page behind sinks back a little as the menu opens (not Live TV's: a video picture can't be scaled smoothly). */
+    private val sink = here != Page.LIVE
 
     var isOpen = false; private set
     /** Called once the menu has closed by itself (RIGHT / BACK), for screens that put the focus somewhere special. */
@@ -130,8 +133,14 @@ class SideMenu(
             // (A background can bring its own padding; keep the row's own.)
             val pad = intArrayOf(t.paddingStart, t.paddingTop, t.paddingEnd, t.paddingBottom)
             t.background = Pill(t)
+            // (Names a touch bolder, so they read clearly over the page.)
+            if (android.os.Build.VERSION.SDK_INT >= 28) t.typeface = android.graphics.Typeface.create(t.typeface, 500, false)
             t.setPaddingRelative(pad[0], pad[1], pad[2], pad[3])
-            t.setOnFocusChangeListener { _, _ -> tintRows(((fraction - 0.25f) / 0.75f).coerceIn(0f, 1f)) }
+            t.setOnFocusChangeListener { v, has ->
+                tintRows()
+                // The highlighted pill lifts with the same soft bounce as the cards and buttons.
+                if (isOpen || !has) Motion.lift(v, has && isOpen, 1.05f, shine = false)
+            }
         }
 
         panel.findViewById<View>(R.id.navHome).setOnClickListener { go(Page.HOME) }
@@ -169,16 +178,18 @@ class SideMenu(
             val b = bounds
             val inset = 2 * d * (1 - p)
             val w = 40 * d + (b.width() - 40 * d) * p
-            r.set(b.left + inset, b.top + inset, b.left + inset + w - 2 * inset * 0, b.bottom - inset)
+            r.set(b.left + inset, b.top + inset, b.left + inset + w, b.bottom - inset)
             val rad = r.height() / 2
             val focused = v.isFocused && isOpen
+            // Closed: soft round frosted buttons. Open: the list goes calm – no boxes, just icons and names – with a
+            // soft white pill for the screen you're on and a white one on the highlight.
             paint.color = when {
-                focused -> 0xFFFFFFFF.toInt()
-                v.isActivated -> 0x38FFFFFF                                   // the screen you're on: soft white
-                else -> ((0.6f + 0.25f * p) * 255).toInt() shl 24 or 0x1E2636   // a dark see-through button / pill
+                focused -> ((0.35f + 0.65f * p) * 255).toInt() shl 24 or 0xFFFFFF
+                v.isActivated -> ((0.20f - 0.06f * p) * 255).toInt() shl 24 or 0xFFFFFF
+                else -> ((0.55f * (1 - p)) * 255).toInt() shl 24 or 0x1E2636
             }
-            c.drawRoundRect(r, rad, rad, paint)
-            if (!focused && !v.isActivated) c.drawRoundRect(r, rad, rad, edgePaint)
+            if (paint.alpha > 0) c.drawRoundRect(r, rad, rad, paint)
+            if (!focused && !v.isActivated && p < 1f) { edgePaint.alpha = (0x14 * (1 - p)).toInt(); c.drawRoundRect(r, rad, rad, edgePaint) }
         }
         override fun isStateful() = true
         override fun onStateChange(state: IntArray): Boolean { invalidateSelf(); return true }
@@ -188,11 +199,15 @@ class SideMenu(
         override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
     }
 
-    /** The names and icons: dark on the white highlight, light otherwise; the names fade in as it opens. */
-    private fun tintRows(labels: Float) {
+    /** How far each name has come in: one after another as the menu opens. */
+    private fun labelIn(i: Int) = ((fraction - 0.2f - i * 0.05f) / 0.5f).coerceIn(0f, 1f)
+
+    /** The names and icons: dark on the white highlight, light otherwise; the names slide in one after another. */
+    private fun tintRows() {
         val light = Themes.color(a, R.attr.dText)
-        for (t in rows) {
+        for ((i, t) in rows.withIndex()) {
             val dark = t.isFocused && isOpen
+            val labels = labelIn(i)
             val c = if (dark) 0xFF0B0E14.toInt() else light
             t.setTextColor((c and 0x00FFFFFF) or ((labels * 255).toInt() shl 24))
             t.compoundDrawablesRelative[0]?.setTint(if (dark) 0xFF0B0E14.toInt() else 0xFFFFFFFF.toInt())
@@ -206,17 +221,24 @@ class SideMenu(
         val h = panel.height.takeIf { it > 0 } ?: a.resources.displayMetrics.heightPixels
         panel.clipBounds = Rect(0, 0, w, h)
         edge.translationX = (w - 1).toFloat()
-        val labels = ((fraction - 0.25f) / 0.75f).coerceIn(0f, 1f)
-        for (v in fading) v.alpha = labels
-        tintRows(labels)
+        val labels = ((fraction - 0.2f) / 0.6f).coerceIn(0f, 1f)
+        // The name, the playlist and the VPN's place glide in at the top.
+        for (v in fading) { v.alpha = labels; v.translationX = (1 - labels) * -10 * d }
+        tintRows()
         edge.alpha = 0f
         scrim.alpha = fraction
         scrim.visibility = if (fraction > 0f) View.VISIBLE else View.GONE
+        if (sink && !Ui.lite) {
+            val s = 1f - 0.03f * fraction
+            if (content.width > 0) { content.pivotX = content.width * 0.75f; content.pivotY = content.height / 2f }
+            content.scaleX = s; content.scaleY = s
+        }
     }
 
     private fun animateTo(target: Float, ms: Long, end: (() -> Unit)? = null) {
         anim?.cancel()
         if (Ui.lite) { fraction = target; apply(); end?.invoke(); return } // lite mode: open and shut at once
+        if (sink) content.setLayerType(View.LAYER_TYPE_HARDWARE, null)
         anim = ValueAnimator.ofFloat(fraction, target).apply {
             duration = ms
             interpolator = Motion.glide
@@ -224,7 +246,10 @@ class SideMenu(
             addListener(object : android.animation.AnimatorListenerAdapter() {
                 var cancelled = false
                 override fun onAnimationCancel(animation: android.animation.Animator) { cancelled = true }
-                override fun onAnimationEnd(animation: android.animation.Animator) { if (!cancelled) end?.invoke() }
+                override fun onAnimationEnd(animation: android.animation.Animator) {
+                    if (sink && fraction == 0f) content.setLayerType(View.LAYER_TYPE_NONE, null)
+                    if (!cancelled) end?.invoke()
+                }
             })
             start()
         }
@@ -283,7 +308,7 @@ class SideMenu(
         for (t in rows) t.isFocusable = t.visibility == View.VISIBLE
         playlistRow.isFocusable = playlistRow.tag == true
         rowFor(here).requestFocus()
-        animateTo(1f, 200)
+        animateTo(1f, 420)
         Ui.test("menu-open")
     }
 
@@ -297,7 +322,7 @@ class SideMenu(
         for (t in rows) t.isFocusable = false
         playlistRow.isFocusable = false
         returnTo = null
-        animateTo(0f, 170)
+        animateTo(0f, 300)
         Ui.test("menu-closed")
         if (restore && back == null) onClosed?.invoke()
     }

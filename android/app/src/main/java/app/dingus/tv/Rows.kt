@@ -375,6 +375,11 @@ object Scrolling {
 /** Horizontal rows: the same steady scrolling as the rows themselves, the highlighted title kept in from the edge. */
 class RowLayoutManager(ctx: Context) : LinearLayoutManager(ctx, HORIZONTAL, false) {
     init { initialPrefetchItemCount = 6 }
+    // The next few titles off the edge are kept ready, so moving onto one glides there. (Without them, ▶ off the
+    // edge had nothing to move to yet and the row jumped – while ◀, onto titles already made, glided.)
+    override fun calculateExtraLayoutSpace(state: RecyclerView.State, extraLayoutSpace: IntArray) {
+        val e = width / 2; extraLayoutSpace[0] = e; extraLayoutSpace[1] = e
+    }
     override fun requestChildRectangleOnScreen(parent: RecyclerView, child: View, rect: android.graphics.Rect, immediate: Boolean, focusedChildVisible: Boolean): Boolean {
         val pad = parent.paddingLeft
         val right = parent.width - parent.paddingRight
