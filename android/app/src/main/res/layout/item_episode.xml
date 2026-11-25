@@ -4,7 +4,7 @@
      about and the time left. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="248dp" android:layout_height="wrap_content" android:layout_marginEnd="18dp"
-    android:focusable="true" android:clickable="true" android:orientation="vertical">
+    android:id="@+id/episodeCard" android:focusable="true" android:clickable="true" android:orientation="vertical">
     <FrameLayout android:id="@+id/frame" android:layout_width="248dp" android:layout_height="140dp"
         android:background="@drawable/episode_frame" android:duplicateParentState="true" android:padding="3dp">
         <FrameLayout android:id="@+id/imageBox" android:layout_width="match_parent" android:layout_height="match_parent"
