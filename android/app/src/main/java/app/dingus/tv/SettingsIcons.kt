@@ -18,6 +18,7 @@ object SettingsIcons {
     private fun face(ctx: Context): Typeface? = face ?: try { androidx.core.content.res.ResourcesCompat.getFont(ctx, R.font.icons)?.also { face = it } } catch (e: Exception) { null }
 
     private val map = mapOf(
+        "Check everything" to 0xF0CC8,
         "Playlists" to 0xF0411,
         "Backup servers" to 0xF048D,
         "Update now" to 0xF0450,

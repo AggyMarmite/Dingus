@@ -385,6 +385,9 @@ class SettingsActivity : BaseActivity() {
     override fun onPause() { Vpn.removeListener(vpnListener); super.onPause() }
 
     private fun aboutSection() {
+        row("Check everything", { "Tests the internet, your playlist, servers, TV guide, VPN and speed, with fixes" }, { "›" }) {
+            startActivity(Intent(this, CheckActivity::class.java))
+        }
         row("Clear cache", { "Pictures, logos and posters saved to load faster. They come back as you browse." }, { cacheSize?.let { mb(it) } ?: "…" }) { clearCache() }
         if (cacheSize == null) scope.launch { cacheSize = withContext(Dispatchers.IO) { cacheBytes() }; update() }
         updateRow = row("Check for updates", { Updater.available?.takeIf { Updater.newer(it.version, BuildConfig.VERSION_NAME) }?.let { "Dingus ${it.version} is ready  ·  OK to update" } ?: "" }, { "Version ${BuildConfig.VERSION_NAME}" }) {
