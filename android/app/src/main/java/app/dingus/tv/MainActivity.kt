@@ -339,6 +339,8 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             time.text = if (c != null) "No guide information" else ""
             prog.visibility = View.GONE; live.visibility = View.GONE
             desc.text = ""
+            // No programme, no picture: the last one's background doesn't stay behind a channel with no listings.
+            handler.removeCallbacks(artLookup); artFor = null; setArt(null)
             return
         }
         title.text = p.title
