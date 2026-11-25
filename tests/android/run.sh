@@ -128,8 +128,7 @@ fresh
 key KEYCODE_BACK 1; key KEYCODE_DPAD_LEFT 2
 check "menu-open" 5 "LEFT from the categories opens the main menu"
 shot 06b-menu
-for _ in 1 2 3 4 5 6 7; do key KEYCODE_DPAD_DOWN 0.5; done
-key KEYCODE_DPAD_UP 0.5                                                               # (Refresh playlist is at the bottom)
+press_until KEYCODE_DPAD_DOWN "focus settings\s*$" 9 0.5                              # down the menu to Settings
 key KEYCODE_DPAD_CENTER 2
 check "settings-shown" 10 "Settings opens from the menu"
 shot 07-settings
@@ -224,7 +223,7 @@ check "browse-panel shown" 5 "BACK from the films brings in their categories"
 key KEYCODE_BACK 2
 fresh
 key KEYCODE_BACK 1; key KEYCODE_DPAD_LEFT 2
-for _ in 1 2; do key KEYCODE_DPAD_DOWN 0.5; done; key KEYCODE_DPAD_CENTER 3    # menu → TV Shows
+press_until KEYCODE_DPAD_DOWN "focus navShows" 6 0.5; key KEYCODE_DPAD_CENTER 3    # down the menu to TV Shows
 check "library series 2" 40 "TV shows load"
 sleep 2
 fresh
