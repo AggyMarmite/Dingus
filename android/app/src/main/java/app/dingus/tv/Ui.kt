@@ -44,7 +44,7 @@ object Ui {
     /** A card growing when the remote's on it – straight away in lite mode. */
     fun grow(v: android.view.View, has: Boolean, ms: Long = 110) {
         val s = if (has) 1.06f else 1f
-        if (lite) { v.animate().cancel(); v.scaleX = s; v.scaleY = s } else v.animate().scaleX(s).scaleY(s).setDuration(ms).start()
+        if (lite) { v.animate().cancel(); v.scaleX = s; v.scaleY = s } else Motion.lift(v, has)
     }
 
     private val hm = SimpleDateFormat("HH:mm", Locale.UK)

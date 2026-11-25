@@ -67,6 +67,7 @@ abstract class BaseActivity : Activity() {
     protected fun backHold(event: android.view.KeyEvent): Boolean {
         if (event === lastKey) return lastKeyResult
         lastKey = event
+        Motion.key(event)
         lastKeyResult = run {
             if (event.keyCode != android.view.KeyEvent.KEYCODE_BACK) return@run false
             val downAct = event.action == android.view.KeyEvent.ACTION_DOWN

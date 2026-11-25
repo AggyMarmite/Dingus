@@ -514,7 +514,7 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
 
     private fun open(card: Card) {
         when (card) {
-            is Card.Title -> startActivity(Intent(this, DetailActivity::class.java).putExtra(DetailActivity.KIND, card.kind).putExtra(DetailActivity.ID, card.item.id))
+            is Card.Title -> startActivity(Intent(this, DetailActivity::class.java).putExtra(DetailActivity.KIND, card.kind).putExtra(DetailActivity.ID, card.item.id), Motion.from(currentFocus))
             is Card.Live -> {
                 val cat = if (Store.isFavourite(card.channel.id)) Repo.FAV else Repo.ALL
                 startActivity(Intent(this, MainActivity::class.java).putExtra(MainActivity.PLAY, card.channel.id).putExtra(MainActivity.PLAY_CATEGORY, cat))
@@ -536,7 +536,7 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
     }
 
     private fun openTitle(kind: String, m: VodItem) =
-        startActivity(Intent(this, DetailActivity::class.java).putExtra(DetailActivity.KIND, kind).putExtra(DetailActivity.ID, m.id))
+        startActivity(Intent(this, DetailActivity::class.java).putExtra(DetailActivity.KIND, kind).putExtra(DetailActivity.ID, m.id), Motion.from(currentFocus))
 
     private fun guide() = startActivity(Intent(this, MainActivity::class.java))
 

@@ -98,6 +98,7 @@ object Dialogs {
                     setColor(0xFF121722.toInt()); cornerRadius = 20 * dp; setStroke((1 * dp).toInt(), 0x14FFFFFF)
                 }, (16 * dp).toInt()))
                 d.window?.setDimAmount(0.6f)
+                if (!Ui.lite) d.window?.setWindowAnimations(R.style.PopAnim)
             }
             val title = d.findViewById<android.widget.TextView>(a.resources.getIdentifier("alertTitle", "id", "android"))
             title?.apply { textSize = 20f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(0xFFFFFFFF.toInt()) }

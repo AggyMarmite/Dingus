@@ -38,9 +38,12 @@ class DetailActivity : BaseActivity() {
     private lateinit var status: TextView
     private lateinit var episodeList: RecyclerView
 
+    override fun finish() { super.finish(); Motion.closing(this) }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_detail)
+        if (savedInstanceState == null) Motion.rise(findViewById(R.id.title), findViewById(R.id.meta), findViewById(R.id.plot), findViewById(R.id.buttons))
         kind = intent.getStringExtra(KIND) ?: Vod.MOVIES
         play = findViewById(R.id.play)
         restart = findViewById(R.id.restart)

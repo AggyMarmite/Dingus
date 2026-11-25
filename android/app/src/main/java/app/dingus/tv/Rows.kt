@@ -363,10 +363,10 @@ object RowNav {
  * glide still going when the next step comes) it goes straight there, so the list keeps up instead of stuttering.
  */
 object Scrolling {
-    private val ease = android.view.animation.DecelerateInterpolator(1.6f)
+    private val ease = Motion.glide
     fun by(rv: RecyclerView, dx: Int, dy: Int, immediate: Boolean = false) {
         if (immediate || Ui.lite || rv.scrollState == RecyclerView.SCROLL_STATE_SETTLING) { rv.stopScroll(); rv.scrollBy(dx, dy) }
-        else rv.smoothScrollBy(dx, dy, ease, 190)
+        else rv.smoothScrollBy(dx, dy, ease, 300)
     }
 }
 

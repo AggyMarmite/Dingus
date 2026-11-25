@@ -35,7 +35,7 @@ class PersonActivity : BaseActivity() {
         status.text = "Looking for what they're in…"
         val rows = findViewById<RecyclerView>(R.id.rows)
         val adapter = RowsAdapter(this, onFocus = {}, onClick = { c ->
-            if (c is Card.Title) startActivity(Intent(this, DetailActivity::class.java).putExtra(DetailActivity.KIND, c.kind).putExtra(DetailActivity.ID, c.item.id))
+            if (c is Card.Title) startActivity(Intent(this, DetailActivity::class.java).putExtra(DetailActivity.KIND, c.kind).putExtra(DetailActivity.ID, c.item.id), Motion.from(currentFocus))
         })
         rows.layoutManager = LinearLayoutManager(this)
         rows.adapter = adapter

@@ -470,7 +470,7 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
 
     private fun open(card: Card) {
         when (card) {
-            is Card.Title -> startActivity(Intent(this, DetailActivity::class.java).putExtra(DetailActivity.KIND, card.kind).putExtra(DetailActivity.ID, card.item.id))
+            is Card.Title -> startActivity(Intent(this, DetailActivity::class.java).putExtra(DetailActivity.KIND, card.kind).putExtra(DetailActivity.ID, card.item.id), Motion.from(currentFocus))
             is Card.SeeAll -> { show(card.categoryId); focusContent() }
             is Card.Live, is Card.Show -> {}
         }
@@ -496,7 +496,7 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
             v.setOnClickListener {
                 val p = holder.bindingAdapterPosition
                 if (p >= 0) startActivity(Intent(this@BrowseActivity, DetailActivity::class.java)
-                    .putExtra(DetailActivity.KIND, kind).putExtra(DetailActivity.ID, items[p].id))
+                    .putExtra(DetailActivity.KIND, kind).putExtra(DetailActivity.ID, items[p].id), Motion.from(currentFocus))
             }
             v.setOnFocusChangeListener { view, has ->
                 Ui.grow(view, has, 120)

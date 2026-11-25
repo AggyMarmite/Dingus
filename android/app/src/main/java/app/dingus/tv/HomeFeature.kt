@@ -141,7 +141,7 @@ class HomeFeature(
         moving = true
         val shift = 28 * a.resources.displayMetrics.density
         val parts = listOf<View>(h.kicker, h.logo, h.title, h.meta, h.progress, h.text, h.dots)
-        val ease = android.view.animation.DecelerateInterpolator(1.6f)
+        val ease = Motion.glide
         art.animate().alpha(0f).setDuration(240).start()
         parts.forEach { it.animate().alpha(0f).translationX(-shift).setDuration(200).setInterpolator(android.view.animation.AccelerateInterpolator()).start() }
         h.itemView.postDelayed({

@@ -219,7 +219,7 @@ class SideMenu(
         if (Ui.lite) { fraction = target; apply(); end?.invoke(); return } // lite mode: open and shut at once
         anim = ValueAnimator.ofFloat(fraction, target).apply {
             duration = ms
-            interpolator = DecelerateInterpolator()
+            interpolator = Motion.glide
             addUpdateListener { fraction = it.animatedValue as Float; apply() }
             addListener(object : android.animation.AnimatorListenerAdapter() {
                 var cancelled = false
