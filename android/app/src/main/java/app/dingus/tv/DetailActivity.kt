@@ -141,8 +141,9 @@ class DetailActivity : BaseActivity() {
         d.backdrop?.let { Posters.load(findViewById<ImageView>(R.id.backdrop), it, resources.displayMetrics.heightPixels, wide = true) } // (full screen: full size)
         // The official title logo (from TMDB), in place of the plain title.
         TitleLogos.cached(kind, m)?.let { TitleLogos.show(findViewById(R.id.titleLogo), findViewById(R.id.title), it) }
-        // The cast on films only: on a show, its row took the room the seasons and episodes need.
-        if (kind == Vod.MOVIES) showCast(m, d.tmdbId)
+        // The cast: under the buttons on a film; under the episodes on a show (the page scrolls down to it).
+        if (kind == Vod.SERIES) castUnderEpisodes()
+        showCast(m, d.tmdbId)
         // A trailer (TMDB → the YouTube app), when there's one and something to play it.
         if (TitleLogos.enabled && Tmdb.canPlayTrailers(this)) scope.launch {
             val key = Tmdb.trailer(kind, m, d.tmdbId) ?: return@launch
@@ -350,6 +351,16 @@ class DetailActivity : BaseActivity() {
     private var castShown = false
 
     /** A row of who's in it (photos from TMDB); OK on someone opens their page. */
+    private fun castUnderEpisodes() {
+        val box = findViewById<LinearLayout>(R.id.detailContent)
+        val head = findViewById<View>(R.id.castHead); val scroll = findViewById<View>(R.id.castScroll)
+        if (box.indexOfChild(scroll) > box.indexOfChild(episodeList)) return
+        box.removeView(head); box.removeView(scroll)
+        val at = box.indexOfChild(episodeList) + 1
+        box.addView(head, at); box.addView(scroll, at + 1)
+        (head.layoutParams as LinearLayout.LayoutParams).topMargin = Ui.dp(this, 18)
+    }
+
     private fun showCast(m: VodItem, tmdbId: String?) {
         if (castShown) return
         castShown = true
