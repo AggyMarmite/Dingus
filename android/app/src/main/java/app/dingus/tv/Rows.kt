@@ -226,7 +226,7 @@ class RowsAdapter(
                     c.meta?.text = listOfNotNull(ch.name, card.label).joinToString("  ·  ")
                     c.fallback?.text = Ui.initials(ch.name)
                     // The programme's own picture when there is one (the logo small in the corner), else the logo.
-                    val t = now?.let { TitleLogos.forProgramme(it) }
+                    val t = p?.let { TitleLogos.forProgramme(it) }
                     val pic = t?.let { TitleLogos.cachedBackdrop(it.first, it.second) }
                     if (pic != null && c.art != null && !Ui.lite) {
                         c.art.visibility = View.VISIBLE; c.poster?.visibility = View.INVISIBLE; c.fallback?.visibility = View.GONE
@@ -237,8 +237,8 @@ class RowsAdapter(
                         c.poster?.let { Logos.load(it, ch.logo, (76 * d).toInt(), c.fallback) }
                         if (t != null && !TitleLogos.knowsBackdrop(t.first, t.second)) lookUp(t.first, t.second) { if (position < cards.size && cards[position] === card) notifyItemChanged(position) }
                     }
-                    c.liveTag?.visibility = if (now != null) View.VISIBLE else View.GONE
                     val now = System.currentTimeMillis()
+                    c.liveTag?.visibility = if (p != null && p.start <= now && now < p.stop) View.VISIBLE else View.GONE
                     c.progress?.apply {
                         val on = p != null && p.start <= now && now < p.stop
                         visibility = if (on) View.VISIBLE else View.GONE
