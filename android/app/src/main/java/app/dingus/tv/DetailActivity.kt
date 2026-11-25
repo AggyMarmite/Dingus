@@ -310,6 +310,9 @@ class DetailActivity : BaseActivity() {
             val title: TextView = v.findViewById(R.id.title)
             val plot: TextView = v.findViewById(R.id.plot)
             val progress: ProgressBar = v.findViewById(R.id.progress)
+            val bigNum: TextView = v.findViewById(R.id.bigNum)
+            val len: TextView = v.findViewById(R.id.len)
+            val watchedTag: View = v.findViewById(R.id.watchedTag)
         }
 
         override fun getItemCount() = items.size
@@ -318,6 +321,11 @@ class DetailActivity : BaseActivity() {
             v.findViewById<View>(R.id.imageBox).clipToOutline = true
             val holder = H(v)
             v.setOnClickListener { val p = holder.bindingAdapterPosition; if (p >= 0) playEpisode(items[p], false) }
+            // Highlighted: the card grows a little and shows what the episode's about.
+            v.setOnFocusChangeListener { view, has ->
+                Ui.grow(view, has)
+                holder.plot.visibility = if (has && holder.plot.text.isNotEmpty()) View.VISIBLE else View.GONE
+            }
             // MENU on an episode marks it watched or not.
             v.setOnKeyListener { _, code, ev ->
                 if (code != android.view.KeyEvent.KEYCODE_MENU) return@setOnKeyListener false
@@ -336,16 +344,17 @@ class DetailActivity : BaseActivity() {
 
         override fun onBindViewHolder(holder: H, position: Int) {
             val e = items[position]
-            holder.num.text = "E${e.number}"
+            holder.num.text = "" // (the big number's on the card either way)
+            holder.bigNum.text = e.number.toString()
             val t = e.title.substringAfterLast(" - ").trim()
-            holder.title.text = if (t.isEmpty() || t.equals("Episode", true)) "Episode ${e.number}" else "${e.number}  ·  $t"
+            holder.title.text = if (t.isEmpty() || t.equals("Episode", true)) "Episode ${e.number}" else t
             val pos = Vod.position(e.id)
             val len = e.duration?.let { niceDuration(it) }
-            holder.plot.text = listOfNotNull(len, when {
-                pos != null && pos.second > 0 -> "${minutes((pos.second - pos.first) / 60_000)} left"
-                Vod.watched(e.id) -> "Watched"
-                else -> null
-            }).joinToString("  ·  ")
+            holder.len.text = len ?: ""; holder.len.visibility = if (len != null) View.VISIBLE else View.GONE
+            holder.watchedTag.visibility = if (Vod.watched(e.id) && pos == null) View.VISIBLE else View.GONE
+            val left = if (pos != null && pos.second > 0) "${minutes((pos.second - pos.first) / 60_000)} left" else null
+            holder.plot.text = listOfNotNull(e.plot?.trim()?.takeIf { it.isNotEmpty() }, left).joinToString("  ·  ")
+            holder.plot.visibility = if (holder.itemView.hasFocus() || holder.itemView.isFocused) (if (holder.plot.text.isNotEmpty()) View.VISIBLE else View.GONE) else View.GONE
             Posters.load(holder.image, e.image, h, holder.num, wide = true)
             if (pos != null && pos.second > 0) {
                 holder.progress.visibility = View.VISIBLE

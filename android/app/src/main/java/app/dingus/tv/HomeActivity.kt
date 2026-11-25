@@ -39,6 +39,7 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
         setTheme(R.style.Theme_Dingus) // (from the launch theme: the logo shown while Dingus starts)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
+        if (savedInstanceState == null) Intro.play(this)
         rows = findViewById(R.id.rows)
         empty = findViewById(R.id.empty)
         hero = Hero(this, scope)

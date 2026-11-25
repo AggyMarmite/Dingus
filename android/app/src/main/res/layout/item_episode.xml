@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- An episode on a show's page: a wide picture (white edge when highlighted, progress bar along the bottom), then
-     "3 · The Keeper" and its length / Watched / time left. -->
+<!-- An episode on a show's page: a wide picture with the episode's number big in the corner, its length and a Watched
+     tag on it, and a progress bar along the bottom; then its name. Highlighted, the card grows and shows what it's
+     about and the time left. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="232dp" android:layout_height="wrap_content" android:layout_marginEnd="16dp"
+    android:layout_width="248dp" android:layout_height="wrap_content" android:layout_marginEnd="18dp"
     android:focusable="true" android:clickable="true" android:orientation="vertical">
-    <FrameLayout android:id="@+id/frame" android:layout_width="232dp" android:layout_height="131dp"
+    <FrameLayout android:id="@+id/frame" android:layout_width="248dp" android:layout_height="140dp"
         android:background="@drawable/episode_frame" android:duplicateParentState="true" android:padding="3dp">
         <FrameLayout android:id="@+id/imageBox" android:layout_width="match_parent" android:layout_height="match_parent"
             android:background="@drawable/logo_bg">
@@ -12,16 +13,32 @@
                 android:gravity="center" android:textSize="20sp" android:textStyle="bold" android:textColor="?attr/dMuted" />
             <ImageView android:id="@+id/image" android:layout_width="match_parent" android:layout_height="match_parent"
                 android:scaleType="centerCrop" android:contentDescription="@null" />
+            <!-- A soft shade at the bottom so the number reads on any picture. -->
+            <View android:layout_width="match_parent" android:layout_height="64dp" android:layout_gravity="bottom"
+                android:background="@drawable/episode_shade" />
+            <TextView android:id="@+id/bigNum" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_gravity="bottom|start" android:layout_marginStart="12dp" android:layout_marginBottom="10dp"
+                android:textSize="34sp" android:textStyle="bold" android:textColor="#FFFFFFFF" android:includeFontPadding="false"
+                android:shadowColor="#CC000000" android:shadowRadius="8" />
+            <TextView android:id="@+id/len" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_gravity="top|end" android:layout_margin="8dp" android:background="@drawable/pill_dark"
+                android:paddingStart="8dp" android:paddingEnd="8dp" android:paddingTop="2dp" android:paddingBottom="2dp"
+                android:textSize="11sp" android:textStyle="bold" android:textColor="#FFFFFFFF" android:visibility="gone" />
+            <TextView android:id="@+id/watchedTag" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_gravity="bottom|end" android:layout_marginEnd="8dp" android:layout_marginBottom="12dp"
+                android:background="@drawable/pill_green" android:text="✓ Watched"
+                android:paddingStart="8dp" android:paddingEnd="8dp" android:paddingTop="2dp" android:paddingBottom="2dp"
+                android:textSize="11sp" android:textStyle="bold" android:textColor="#FF000000" android:visibility="gone" />
             <ProgressBar android:id="@+id/progress" style="@android:style/Widget.ProgressBar.Horizontal"
                 android:layout_width="match_parent" android:layout_height="4dp" android:layout_gravity="bottom"
-                android:layout_marginStart="10dp" android:layout_marginEnd="10dp" android:layout_marginBottom="8dp"
                 android:max="1000" android:progressDrawable="@drawable/progress_white" android:visibility="gone" />
         </FrameLayout>
     </FrameLayout>
     <TextView android:id="@+id/title" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="6dp" android:maxLines="1" android:ellipsize="end" android:textSize="14sp"
+        android:layout_marginTop="8dp" android:maxLines="1" android:ellipsize="end" android:textSize="15sp"
         android:textStyle="bold" android:textColor="?attr/dText" />
+    <!-- Only while highlighted: what it's about, and the time left. -->
     <TextView android:id="@+id/plot" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="1dp" android:maxLines="1" android:ellipsize="end" android:textSize="12sp"
-        android:textColor="?attr/dMuted" />
+        android:layout_marginTop="2dp" android:maxLines="3" android:ellipsize="end" android:textSize="12sp"
+        android:lineSpacingExtra="1dp" android:textColor="?attr/dMuted" android:visibility="gone" />
 </LinearLayout>

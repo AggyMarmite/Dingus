@@ -24,13 +24,15 @@ import java.util.concurrent.TimeUnit
 /** Channel logos (kept sharp, with transparency). */
 val Logos = ImageCache("logos", 16, Bitmap.Config.ARGB_8888, threads = 6, exact = true)
 /** Film and show artwork: bigger, so stored at half the memory per pixel. */
-val Posters = ImageCache("posters", 16, Bitmap.Config.RGB_565, threads = 4)
+val Posters = ImageCache("posters", 16, Bitmap.Config.RGB_565, threads = 4).apply { shimmer = true }
 
 /**
  * Pictures from the internet: downloaded once (kept on the device), shrunk to the size they're shown at, and held
  * in a small memory cache – Fire Sticks don't have memory to spare.
  */
 class ImageCache(private val name: String, megabytes: Int, private val config: Bitmap.Config, threads: Int = 3, private val exact: Boolean = false) {
+    /** While a picture loads, a soft shimmer in its place (then the picture fades in). */
+    var shimmer = false
     /** Newest requests first: what's on screen now loads before what you've already scrolled past. */
     private class Newest : LinkedBlockingDeque<Runnable>() {
         override fun offer(e: Runnable): Boolean = if (e is Later) offerLast(e) else offerFirst(e)
@@ -129,12 +131,46 @@ class ImageCache(private val name: String, megabytes: Int, private val config: B
         fallback?.visibility = View.VISIBLE
         if (url.isNullOrBlank() || hasFailed(url)) return
         cache.get(key(url, heightPx))?.let { view.setImageBitmap(it); fallback?.visibility = View.GONE; return }
+        val placeholder = if (shimmer && !Ui.lite) Shimmer() else null
+        if (placeholder != null) { view.setImageDrawable(placeholder); fallback?.visibility = View.GONE }
         val ref = WeakReference(view)
         val fb = WeakReference(fallback)
         request(url, heightPx, { ref.get()?.tag == url }, wide = wide) { bmp ->
             val v = ref.get()
-            if (v != null && v.tag == url && bmp != null) { v.setImageBitmap(bmp); fb.get()?.visibility = View.GONE }
+            if (v == null || v.tag != url) return@request
+            if (bmp != null) {
+                if (placeholder != null && v.drawable === placeholder) {
+                    placeholder.stop()
+                    val t = android.graphics.drawable.TransitionDrawable(arrayOf(placeholder, android.graphics.drawable.BitmapDrawable(v.resources, bmp))).apply { isCrossFadeEnabled = true }
+                    v.setImageDrawable(t); t.startTransition(200)
+                } else v.setImageBitmap(bmp)
+                fb.get()?.visibility = View.GONE
+            } else if (placeholder != null) { placeholder.stop(); v.setImageDrawable(null); fb.get()?.visibility = View.VISIBLE }
         }
+    }
+
+    /** A soft band of light sweeping across a dark tile, about 25 times a second (cheap to draw). */
+    class Shimmer : Drawable() {
+        private val base = Paint().apply { color = 0xFF1A2130.toInt() }
+        private val band = Paint(Paint.ANTI_ALIAS_FLAG)
+        private val started = android.os.SystemClock.uptimeMillis()
+        private var running = true
+        private val next = Runnable { invalidateSelf() }
+        fun stop() { running = false; unscheduleSelf(next) }
+        override fun draw(c: Canvas) {
+            val b = bounds
+            c.drawRect(b, base)
+            val w = b.width().toFloat()
+            val t = ((android.os.SystemClock.uptimeMillis() - started) % 1400L) / 1400f
+            val x = b.left - w + t * 3 * w
+            band.shader = android.graphics.LinearGradient(x, 0f, x + w, 0f, intArrayOf(0x001A2130, 0x55344158, 0x001A2130), null, android.graphics.Shader.TileMode.CLAMP)
+            c.drawRect(b, band)
+            if (running) scheduleSelf(next, android.os.SystemClock.uptimeMillis() + 40)
+        }
+        override fun setAlpha(alpha: Int) { base.alpha = alpha; band.alpha = alpha }
+        override fun setColorFilter(filter: ColorFilter?) {}
+        @Suppress("OVERRIDE_DEPRECATION")
+        override fun getOpacity(): Int = PixelFormat.OPAQUE
     }
 
     /**
