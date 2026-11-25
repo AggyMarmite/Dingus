@@ -73,15 +73,21 @@ class DetailActivity : BaseActivity() {
         ))
 
         val id = intent.getStringExtra(ID)
+        // Straight away when the films are already loaded (they almost always are): the title, picture and – if
+        // they've been looked up before – the details, all before the first frame, so the page is never blank.
+        Vod.cached(kind)?.byId?.get(id)?.let { m ->
+            item = m
+            showBasics(m)
+            Vod.cachedDetails(kind, m.id)?.let { details = it; showDetails() }
+        }
         scope.launch {
             val lib = try { Vod.library(kind) } catch (e: Exception) { status.text = "Couldn't load this: ${Net.friendly(e)}\nPress BACK to go back."; return@launch }
             val it = lib.byId[id] ?: run {
                 Notice.done(if (kind == Vod.MOVIES) "That film isn't in your playlist any more" else "That show isn't in your playlist any more", 4_000)
                 finish(); return@launch
             }
-            item = it
-            showBasics(it)
-            status.text = "Loading details…"
+            if (item?.id != it.id) { item = it; showBasics(it) }
+            if (details == null) status.text = "Loading details…"
             try {
                 details = Vod.details(kind, it)
                 status.text = ""
@@ -100,8 +106,9 @@ class DetailActivity : BaseActivity() {
         findViewById<TextView>(R.id.title).text = m.name
         findViewById<TextView>(R.id.fallback).text = m.name
         findViewById<TextView>(R.id.meta).text = meta(m.year, null, m.rating.takeIf { it > 0 }?.let { "%.1f".format(it) }, null)
-        // Until the proper wide picture arrives, the poster behind (better than nothing).
-        Posters.load(findViewById<ImageView>(R.id.backdrop), m.poster, resources.displayMetrics.heightPixels / 2)
+        // The wide picture if it's already known; until then the poster behind (better than nothing).
+        val wide = TitleLogos.cachedBackdrop(kind, m) ?: Vod.cachedDetails(kind, m.id)?.backdrop
+        Posters.load(findViewById<ImageView>(R.id.backdrop), wide ?: m.poster, resources.displayMetrics.heightPixels / 2, wide = wide != null)
     }
 
     private fun meta(year: Int, duration: String?, rating: String?, genre: String?) = listOfNotNull(

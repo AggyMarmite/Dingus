@@ -105,7 +105,10 @@ object Vod {
      * Everything Films / TV Shows works out from a library – grouping, sorting, and finding TMDB's Trending and Top
      * titles in it – done here in the background, so opening the screen after an update doesn't freeze while it's done.
      */
+    private val warmed = java.util.Collections.newSetFromMap(java.util.WeakHashMap<Library, Boolean>())
     private fun warm(kind: String, lib: Library) {
+        // Once per library (it was being done again every time a screen asked for the films – e.g. opening a film).
+        if (!synchronized(warmed) { warmed.add(lib) }) return
         lib.byCategory; lib.byId; lib.newest
         try { Upcoming.check(kind, lib) } catch (e: Exception) { Log.w("Dingus", "coming soon check", e) }
         if (libs[kind] === lib) { Charts.cached(Charts.TRENDING, kind); Charts.cached(Charts.TOP, kind); topRated(lib, kind) }
