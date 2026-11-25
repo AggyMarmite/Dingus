@@ -92,6 +92,7 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
         super.onResume()
         if (Store.homeLite != lite) { recreate(); return } // switched in Settings
         Ui.test("home-shown")
+        Repo.keepGuideFresh()
         Updater.removeListener(showUpdate); Updater.onAvailable(showUpdate); showUpdate()
         bindEpisodePill()
         // (Self-test: hold the loading screen up for a screenshot.)

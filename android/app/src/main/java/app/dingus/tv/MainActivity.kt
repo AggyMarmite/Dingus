@@ -630,6 +630,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     private val tick = object : Runnable {
         override fun run() {
             grid.refresh()
+            if (!loading) Repo.keepGuideFresh()
             // Left open for a long time: update when it's due (your choice in Settings).
             val p = Store.playlist
             if (p != null && !loading && Repo.channels.isNotEmpty() && Store.refreshDue && System.currentTimeMillis() - lastAutoRefresh > 15 * 60_000L) {
@@ -660,7 +661,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             }
             if (!live.fullScreen && !side.isOpen && catPanel.visibility != View.VISIBLE) grid.requestFocus()
         }
-        if (Repo.channels.isNotEmpty() && Store.guideLoadedAt == 0L) refreshGuideOnly()
+        if (Repo.channels.isNotEmpty() && Store.guideLoadedAt == 0L) refreshGuideOnly() else Repo.keepGuideFresh()
         tick.run()
         if (!updateChecked && Store.playlist != null) {
             updateChecked = true

@@ -3,6 +3,7 @@ package app.dingus.tv
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
@@ -310,6 +311,7 @@ object Repo {
             val v = settingsVersion
             refreshChannelsNow(p, already)
             channelsDone = System.currentTimeMillis() to p.id; channelsVersion = v
+            Store.channelsLoadedAt = System.currentTimeMillis()
         }
     }
 
@@ -329,6 +331,23 @@ object Repo {
     }
 
     /** Reads the TV guide (in the background; can take a while for big guides). */
+    /**
+     * The TV guide keeps itself topped up: the saved listings only reach so far ahead, so once they're over
+     * [GUIDE_FRESH_HOURS] old it updates by itself in the background (no need to update the guide by hand).
+     */
+    const val GUIDE_FRESH_HOURS = 6
+    @Volatile private var keeping = false
+
+    fun keepGuideFresh() {
+        if (keeping || channels.isEmpty() || Store.playlist == null) return
+        if (System.currentTimeMillis() - Store.guideLoadedAt < GUIDE_FRESH_HOURS * 3600_000L) return
+        keeping = true
+        Background.scope.launch {
+            try { refreshGuide(); Ui.test("guide-kept-fresh $guideChannels") } catch (e: Exception) { Log.w("Dingus", "guide top-up", e) }
+            finally { keeping = false }
+        }
+    }
+
     suspend fun refreshGuide() = withContext(Dispatchers.IO) {
         val asked = System.currentTimeMillis()
         val id = Store.activeId

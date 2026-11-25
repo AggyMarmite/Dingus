@@ -124,6 +124,11 @@ object Store {
         get() = prefs.getLong(k("guideLoadedAt"), 0)
         set(v) = prefs.edit().putLong(k("guideLoadedAt"), v).apply()
 
+    /** When the channels were last updated (the TV guide now also updates on its own, more often). */
+    var channelsLoadedAt: Long
+        get() = prefs.getLong(k("channelsLoadedAt"), 0).takeIf { it > 0 } ?: guideLoadedAt
+        set(v) = prefs.edit().putLong(k("channelsLoadedAt"), v).apply()
+
     /** The provider's time zone (Xtream catch-up addresses use it). */
     var serverTimeZone: String?
         get() = prefs.getString(k("serverTz"), null)
@@ -254,7 +259,7 @@ object Store {
     var refreshHours: Int
         get() = prefs.getInt("refreshHours", 24)
         set(v) = prefs.edit().putInt("refreshHours", v).apply()
-    val refreshDue: Boolean get() = System.currentTimeMillis() - guideLoadedAt > refreshHours * 3600_000L
+    val refreshDue: Boolean get() = System.currentTimeMillis() - minOf(guideLoadedAt, channelsLoadedAt) > refreshHours * 3600_000L
 
     /** The simpler Home page (for devices that struggle with the full one). */
     var homeLite: Boolean
