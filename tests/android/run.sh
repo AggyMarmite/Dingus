@@ -22,6 +22,9 @@ diag() {
   } >> "$OUT/diag.txt" 2>&1
 }
 fresh() { adb logcat -c; }
+# Quick mode: ONLY="xtream,home" runs just those sections (after the first playlist loads). Sections: backup, xtream,
+# home, numbers, reminder, phone, vpn. Home and the films/shows checks need xtream (the login) before them.
+section() { [ -z "${ONLY:-}" ] || [[ ",${ONLY// /}," == *",$1,"* ]]; }
 
 adb install -r "$APK" || exit 1
 fresh
@@ -150,12 +153,15 @@ sleep 2; shot 08-update
 key KEYCODE_BACK 2
 
 # ---- Backup servers: the main server is down, so the playlist loads from the backup.
+if section backup; then
 fresh
 adb shell am start -n $PKG/.MainActivity --es dingus_test_xtream_backup http://10.0.2.2:8000
 check "server-in-use 1" 90 "Backup server: used when the main server is down"
 check "channels 3 categories 2" 60 "Backup server: the playlist loads from it"
+fi
 
 # ---- An Xtream Codes login: films and TV shows.
+if section xtream; then
 fresh
 adb shell am start -n $PKG/.MainActivity --es dingus_test_xtream http://10.0.2.2:8000
 check "channels 3 categories 2" 60 "Xtream login: live channels loaded"
@@ -221,8 +227,9 @@ fresh
 key KEYCODE_DPAD_CENTER 3
 check "vod-playing" 40 "an episode plays"
 key KEYCODE_DPAD_DOWN 1; key KEYCODE_DPAD_RIGHT 0.5; key KEYCODE_DPAD_RIGHT 0.5; shot 14a-player-buttons
-# The screenshot takes long enough for the controls to hide (then OK would pause instead): wake them, back on Episodes.
-key KEYCODE_DPAD_LEFT 0.3; key KEYCODE_DPAD_RIGHT 0.3
+# The screenshot can take long enough for the controls to hide: ▲ (brings them back onto the bar either way), ▼ to the
+# first button, then across to Episodes – the same keys whether or not they'd hidden.
+key KEYCODE_DPAD_UP 0.5; key KEYCODE_DPAD_DOWN 0.5; key KEYCODE_DPAD_RIGHT 0.5; key KEYCODE_DPAD_RIGHT 0.5
 key KEYCODE_DPAD_CENTER 2
 check "vod-episodes 4" 5 "Episodes in the player lists the show's episodes"
 shot 14b-player-episodes
@@ -240,8 +247,10 @@ shot 15a-search-keyboard
 key KEYCODE_BACK 1.5
 check "search-typing-done" 10 "BACK closes the voice search keyboard"
 shot 15b-search-keyboard-closed
+fi
 
 # ---- Home
+if section home; then
 fresh
 adb shell am start -n $PKG/.HomeActivity
 check "home rows [1-9]" 30 "Home shows its rows"
@@ -318,21 +327,27 @@ key KEYCODE_DPAD_LEFT 1.5; key KEYCODE_DPAD_DOWN 0.5; key KEYCODE_DPAD_CENTER 3 
 check "guide-filled [1-9]" 15 "Live TV from Home shows the channels"
 check "categories-open" 10 "…with the categories open first"
 shot 19aa-live-from-home
+fi
 
 # ---- Channel numbers off
+if section numbers; then
 fresh
 adb shell am start -n $PKG/.MainActivity --ez dingus_test_numbers_off true
 check "numbers false" 10 "channel numbers can be turned off"
 sleep 3; shot 19b-guide-no-numbers
+fi
 
 # ---- A reminder coming up: the small card in the corner, BACK dismisses it
+if section reminder; then
 fresh
 adb shell am start -n $PKG/.MainActivity --ez dingus_test_reminder true
 check "reminder Reminder test" 15 "a reminder shows its card a minute before"
 sleep 1; shot 19c-reminder-card
 key KEYCODE_BACK 1.5
+fi
 
 # ---- Adding a playlist from a phone
+if section phone; then
 fresh
 adb shell am start -n $PKG/.MainActivity --ez dingus_test_add_playlist true
 check "phone-setup code" 15 "Add playlist: the phone page starts"
@@ -345,8 +360,10 @@ curl -s -m 20 -X POST http://127.0.0.1:18766/save --data-urlencode "code=$PCODE"
   --data-urlencode "name=Phone" --data-urlencode "m3u=http://10.0.2.2:8000/playlist.m3u" > "$OUT/phone-playlist-reply.html"
 check "playlist-added Phone" 40 "Add playlist: one typed on a phone is checked and added"
 sleep 2
+fi
 
 # ---- Built-in VPN (a real WireGuard server runs on the test machine)
+if section vpn; then
 if [ -n "${WG_CONF:-}" ] && [ -f "$WG_CONF" ]; then
   adb shell appops set $PKG ACTIVATE_VPN allow
   fresh
@@ -376,6 +393,7 @@ if [ -n "${WG_CONF:-}" ] && [ -f "$WG_CONF" ]; then
   fresh
   adb shell am start -n $PKG/.MainActivity --ez dingus_test_vpn_off true
   check "vpn off" 15 "VPN: disconnects again"
+fi
 fi
 
 adb shell dumpsys gfxinfo $PKG | grep -E "Total frames rendered|Janky frames|90th percentile" | sed 's/^ */frames: /' | tee -a "$OUT/result.txt"

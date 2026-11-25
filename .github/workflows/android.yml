@@ -11,6 +11,10 @@ on:
         description: 'Also put the APK (as Dingus.apk) on this existing release, e.g. v0.14.0'
         required: false
         default: ''
+      only:
+        description: 'Quick test: just these sections, e.g. xtream or xtream,home (backup, xtream, home, numbers, reminder, phone, vpn). Empty = everything'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -109,6 +113,7 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         env:
           OUT: ${{ runner.temp }}/selftest-android
+          ONLY: ${{ inputs.only }}
         with:
           api-level: 28
           target: android-tv
