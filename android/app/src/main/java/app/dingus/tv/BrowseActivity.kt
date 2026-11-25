@@ -70,6 +70,7 @@ class BrowseActivity : BaseActivity() {
         grid = findViewById(R.id.grid)
         empty = findViewById(R.id.empty)
         crumb = findViewById(R.id.crumb)
+        crumb.visibility = View.GONE
         heroView = findViewById(R.id.hero)
         gridHead = findViewById(R.id.gridHead)
         gridTitle = findViewById(R.id.gridTitle)
@@ -419,17 +420,9 @@ class BrowseActivity : BaseActivity() {
         }
     }
 
-    /** The time, top right (like Home). */
-    private val tick = object : Runnable {
-        override fun run() {
-            crumb.text = Ui.time(System.currentTimeMillis())
-            crumb.postDelayed(this, 60_000L - System.currentTimeMillis() % 60_000L + 50)
-        }
-    }
+    // (No clock here: it's in the side menu, under the logo.)
 
-    override fun onStart() { super.onStart(); crumb.removeCallbacks(tick); tick.run() }
-
-    override fun onStop() { super.onStop(); crumb.removeCallbacks(tick); Posters.trim() }
+    override fun onStop() { super.onStop(); Posters.trim() }
     override fun onDestroy() { scope.cancel(); super.onDestroy() }
 
     private fun open(card: Card) {
