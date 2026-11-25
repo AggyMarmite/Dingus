@@ -377,11 +377,31 @@ object Repo {
         }
     }
 
+    /**
+     * A guide's stream. The provider's own guide is on the playlist's server, so it follows a switch to a backup
+     * server, and if the server it's on doesn't answer (or says "not found") the others are tried in turn.
+     */
+    private fun openGuide(url: String, provider: Boolean, p: Playlist?): java.io.InputStream {
+        if (!provider || p == null || p.type != "xtream" || p.backupUrls.isEmpty()) return Net.open(url, 30_000)
+        val now = Failover.rewrite(url, p)
+        val base = Failover.base(p)
+        val tries = listOf(now) + Failover.addresses(p).map { Sources.xtreamBase(it) }.filter { it != base && now.startsWith("$base/", true) }
+            .map { it + now.substring(base.length) }
+        var first: Exception? = null
+        for (u in tries.distinct()) {
+            try { return Net.open(u, 30_000).also { if (u != now) Ui.test("guide-from-backup") } }
+            catch (e: Exception) { if (!Failover.isDown(e)) throw e; if (first == null) first = e; Log.w("Dingus", "guide on ${try { java.net.URI(u).host } catch (_: Exception) { "?" }}", e) }
+        }
+        throw first ?: IOException("No TV guide")
+    }
+
     private fun refreshGuideNow() {
         val p = Store.playlist
         // The guides in your order (Settings → TV guide → Source priority; yours first, then the provider's, unless
         // you've moved it): each fills in channels the earlier ones missed.
-        val sources = (p?.guideOrder ?: listOf(Playlist.PROVIDER_GUIDE)).mapNotNull { if (it == Playlist.PROVIDER_GUIDE) guideUrl else it }
+        val order = p?.guideOrder ?: listOf(Playlist.PROVIDER_GUIDE)
+        val sources = order.mapNotNull { if (it == Playlist.PROVIDER_GUIDE) guideUrl else it }
+        val providerAt = order.indexOf(Playlist.PROVIDER_GUIDE).takeIf { guideUrl != null } ?: -1
         if (sources.isEmpty()) return
         val chans = channels
         val keys = HashMap<String, String>()
@@ -396,7 +416,7 @@ object Repo {
             if (todo.isEmpty()) break
             try {
                 val t0 = System.currentTimeMillis()
-                val parsed = Net.open(url, 30_000).use { Guide.parse(it, todo, hoursAhead = Store.guideHours, hoursBack = backHours) }
+                val parsed = openGuide(url, n == providerAt, p).use { Guide.parse(it, todo, hoursAhead = Store.guideHours, hoursBack = backHours) }
                 Log.i("Dingus", "Update: guide $n read and matched in ${System.currentTimeMillis() - t0} ms (${parsed.keysByChannelId.size} channels)")
                 anyWorked = true
                 // Keys from different guides could clash, so each guide's are kept apart.
