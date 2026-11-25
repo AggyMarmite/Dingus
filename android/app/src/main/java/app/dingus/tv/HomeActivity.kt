@@ -423,6 +423,8 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
         val v = findViewById<View>(R.id.loadingScreen) ?: return
         if (v.visibility != View.VISIBLE) return
         Ui.test("home-loading-done")
+        // The Settings button had the focus: hand it to Home, or the remote would do nothing.
+        v.findViewWithTag<View>("wayOut")?.let { b -> val had = b.hasFocus(); b.isFocusable = false; (b.parent as? android.view.ViewGroup)?.removeView(b); if (had) focusFirstCard() }
         if (Ui.lite) { v.visibility = View.GONE; return }
         v.animate().alpha(0f).setDuration(250).withEndAction { v.visibility = View.GONE; v.alpha = 1f }.start()
     }
