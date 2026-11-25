@@ -93,6 +93,7 @@ class HomeActivity : BaseActivity() {
         if (Store.homeLite != lite) { recreate(); return } // switched in Settings
         Ui.test("home-shown")
         Updater.removeListener(showUpdate); Updater.onAvailable(showUpdate); showUpdate()
+        bindEpisodePill()
         // (Self-test: hold the loading screen up for a screenshot.)
         if (BuildConfig.DEBUG && intent.getBooleanExtra("dingus_test_loading", false)) {
             intent.removeExtra("dingus_test_loading")
@@ -132,7 +133,7 @@ class HomeActivity : BaseActivity() {
             val p = focusedItem()
             if (p == 0) {
                 // The update pill sits above the first row: ▲ reaches it.
-                findViewById<View>(R.id.updatePill)?.takeIf { it.visibility == View.VISIBLE && !it.hasFocus() }?.let { it.requestFocus(); return true }
+                listOf(R.id.episodePill, R.id.updatePill).firstNotNullOfOrNull { id -> findViewById<View>(id)?.takeIf { it.visibility == View.VISIBLE && !it.hasFocus() } }?.let { it.requestFocus(); return true }
                 return true
             }
             if (p > 0) { focusItem(p - 1); return true }
@@ -206,6 +207,53 @@ class HomeActivity : BaseActivity() {
         }
     }
 
+    private val newEps: Map<String, String> get() = Vod.newEpisodes()
+
+    /** "Because you watched …": TMDB's similar titles in your playlist, for the last two watched past halfway. */
+    @Volatile private var because: List<Triple<String, String, List<VodItem>>> = emptyList() // (title, kind, similar)
+
+    private fun becauseRows(out: ArrayList<Row>) {
+        for ((name, kind, items) in because) if (items.size >= 3) out.add(Row("Because you watched $name", items.map { Card.Title(kind, it) }))
+    }
+
+    private fun loadBecause() {
+        if (!Vod.available || !TitleLogos.enabled) return
+        scope.launch {
+            val out = ArrayList<Triple<String, String, List<VodItem>>>()
+            for ((kind, id) in Vod.recentlySeen()) {
+                if (out.size >= 2) break
+                val lib = try { Vod.library(kind) } catch (_: Exception) { continue }
+                val m = lib.byId[id] ?: continue
+                val list = Tmdb.similar(kind, m, Vod.cachedDetails(kind, id)?.tmdbId)
+                if (list.size >= 3) out.add(Triple(Vod.cachedDetails(kind, id)?.title ?: m.name, kind, list))
+            }
+            if (out.map { it.first to it.third.size } != because.map { it.first to it.third.size }) { because = out; build() }
+            Ui.test("because ${out.size}")
+        }
+    }
+
+    /** New episodes of shows in My list or being watched: a small pill at the top, and the shows tagged. */
+    private fun checkEpisodes() {
+        scope.launch { if (Vod.checkNewEpisodes()) build(); bindEpisodePill() }
+    }
+
+    private fun bindEpisodePill() {
+        val v = findViewById<TextView>(R.id.episodePill) ?: return
+        val lib = Vod.cached(Vod.SERIES)
+        val (id, ep) = newEps.entries.firstOrNull { lib?.byId?.containsKey(it.key) == true }?.toPair() ?: run { v.visibility = View.GONE; return }
+        val show = lib!!.byId[id]!!
+        val d = resources.displayMetrics.density
+        v.text = "●  New episode of ${show.name}  ·  $ep  ·  OK to watch"
+        v.background = android.graphics.drawable.StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_focused), android.graphics.drawable.GradientDrawable().apply { setColor(0xFFFFFFFF.toInt()); cornerRadius = 99 * d })
+            addState(intArrayOf(), android.graphics.drawable.GradientDrawable().apply { setColor(0x33FFFFFF); cornerRadius = 99 * d })
+        }
+        v.setTextColor(android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()), intArrayOf(0xFF0B0E14.toInt(), 0xFFE6EDF3.toInt())))
+        v.setOnClickListener { openTitle(Vod.SERIES, show) }
+        if (v.visibility != View.VISIBLE) Ui.test("episode-pill ${show.name}")
+        v.visibility = View.VISIBLE
+    }
+
     /** TMDB's trending films and shows today, and the top films, that are in your playlist (Charts). */
     private fun chartRows(out: ArrayList<Row>) {
         Charts.cached(Charts.TOP, Vod.MOVIES).takeIf { it.size >= 5 }?.let { out.add(Row("Top films", it.take(24).map { m -> Card.Title(Vod.MOVIES, m) })) }
@@ -261,6 +309,8 @@ class HomeActivity : BaseActivity() {
                 build()
                 loadCharts()
                 slideDetails()
+                loadBecause()
+                checkEpisodes()
                 // The guide's channel logos, ready before Live TV is opened (at the size the guide draws them).
                 Logos.prefetch(Repo.channelsIn(Repo.ALL).take(150).map { it.logo }, GuideGrid.logoHeight(this@HomeActivity))
                 Vpn.startup() // "connect when Dingus starts": before anything goes online
@@ -362,10 +412,11 @@ class HomeActivity : BaseActivity() {
                 cont.add(Card.Title(Vod.MOVIES, m, if (pos.second > 0) pos.first.toFloat() / pos.second else -1f))
             }
         }
-        Vod.cached(Vod.SERIES)?.let { lib -> Vod.continueList(Vod.SERIES, lib).forEach { cont.add(Card.Title(Vod.SERIES, it, label = "Continue")) } }
+        Vod.cached(Vod.SERIES)?.let { lib -> Vod.continueList(Vod.SERIES, lib).forEach { cont.add(Card.Title(Vod.SERIES, it, label = if (it.id in newEps) "New episode" else "Continue", isNew = it.id in newEps)) } }
         trendingRows(out)
+        becauseRows(out)
         if (cont.isNotEmpty()) out.add(Row("Continue watching", cont.take(20)))
-        MyList.row()?.let { out.add(it) }
+        MyList.row()?.let { r -> out.add(Row(r.title, r.cards.map { c -> if (c is Card.Title && c.kind == Vod.SERIES && c.item.id in newEps) Card.Title(c.kind, c.item, label = "New episode", isNew = true) else c })) }
         val favs = Repo.channelsIn(Repo.FAV)
         if (favs.isNotEmpty()) out.add(Row("Favourite channels", favs.take(30).map { Card.Live(it) }))
         val recent = Repo.channelsIn(Repo.RECENT)
@@ -452,7 +503,7 @@ class HomeActivity : BaseActivity() {
                 cont.add(Card.Title(Vod.MOVIES, m, if (pos.second > 0) pos.first.toFloat() / pos.second else -1f))
             }
         }
-        Vod.cached(Vod.SERIES)?.let { lib -> Vod.continueList(Vod.SERIES, lib).forEach { cont.add(Card.Title(Vod.SERIES, it, label = "Continue")) } }
+        Vod.cached(Vod.SERIES)?.let { lib -> Vod.continueList(Vod.SERIES, lib).forEach { cont.add(Card.Title(Vod.SERIES, it, label = if (it.id in newEps) "New episode" else "Continue", isNew = it.id in newEps)) } }
         (cont.firstOrNull() as? Card.Title)?.let { t ->
             slides.add(Slide("Continue watching", t.item.name, listOfNotNull(if (t.kind == Vod.MOVIES) "Film" else "TV show", t.item.year.takeIf { it > 0 }?.toString()).joinToString("  ·  "),
                 null, t.progress, Vod.cachedDetails(t.kind, t.item.id)?.backdrop ?: t.item.poster, watch = { openTitle(t.kind, t.item) }, ref = "vod:${t.kind}:${t.item.id}", title_ = t.kind to t.item))
@@ -522,8 +573,9 @@ class HomeActivity : BaseActivity() {
         }
 
         trendingRows(out)
+        becauseRows(out)
         if (cont.isNotEmpty()) out.add(Row("Continue watching", cont.take(20)))
-        MyList.row()?.let { out.add(it) }
+        MyList.row()?.let { r -> out.add(Row(r.title, r.cards.map { c -> if (c is Card.Title && c.kind == Vod.SERIES && c.item.id in newEps) Card.Title(c.kind, c.item, label = "New episode", isNew = true) else c })) }
         if (favs.isNotEmpty()) out.add(Row("Favourite channels", favs.take(30).map { c -> Card.Show(c, Repo.nowNext(c).first) }))
         val next = mine.mapNotNull { c -> Repo.nowNext(c).second?.let { Card.Show(c, it, until(it, now)) } }
         if (next.isNotEmpty()) out.add(Row("Coming up next", next.take(20)))

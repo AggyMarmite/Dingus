@@ -143,10 +143,20 @@ class DetailActivity : BaseActivity() {
         TitleLogos.cached(kind, m)?.let { TitleLogos.show(findViewById(R.id.titleLogo), findViewById(R.id.title), it) }
         // The cast on films only: on a show, its row took the room the seasons and episodes need.
         if (kind == Vod.MOVIES) showCast(m, d.tmdbId)
+        // A trailer (TMDB → the YouTube app), when there's one and something to play it.
+        if (TitleLogos.enabled && Tmdb.canPlayTrailers(this)) scope.launch {
+            val key = Tmdb.trailer(kind, m, d.tmdbId) ?: return@launch
+            if (isDestroyed) return@launch
+            findViewById<TextView>(R.id.trailer).apply {
+                visibility = View.VISIBLE
+                setOnClickListener { Ui.test("trailer-play"); if (!Tmdb.playTrailer(this@DetailActivity, key)) Notice.done("No app to play the trailer", 3_000) }
+            }
+        }
         if (TitleLogos.enabled) scope.launch {
             TitleLogos.find(kind, m, d.tmdbId)?.let { TitleLogos.show(findViewById(R.id.titleLogo), findViewById(R.id.title), it) }
         }
 
+        if (kind == Vod.SERIES && d.episodes.isNotEmpty()) Vod.clearNewEpisode(m.id, d.episodes.size)
         if (kind == Vod.SERIES) {
             plot.maxLines = 2
             people.visibility = View.GONE

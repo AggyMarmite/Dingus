@@ -27,11 +27,17 @@ object People {
             val id = TitleLogos.tmdbIdFor(kind, item, tmdbId) ?: return@withContext emptyList()
             val o = if (kind == Vod.MOVIES) TitleLogos.get("/movie/$id/credits") else TitleLogos.get("/tv/$id/aggregate_credits")
             val a = o.optJSONArray("cast") ?: return@withContext emptyList()
-            (0 until minOf(a.length(), 15)).map { i ->
+            val cast = (0 until minOf(a.length(), 15)).map { i ->
                 val c = a.getJSONObject(i)
                 val role = c.optString("character").ifEmpty { c.optJSONArray("roles")?.optJSONObject(0)?.optString("character") ?: "" }
                 Actor(c.optString("id"), c.optString("name"), role, c.optString("profile_path").takeIf { it.startsWith("/") }?.let { IMG + it })
             }
+            // The director (or a show's creator) first, then the cast.
+            val crew = o.optJSONArray("crew")
+            val director = crew?.let { cr -> (0 until cr.length()).map { cr.getJSONObject(it) }.firstOrNull { c ->
+                c.optString("job") == "Director" || c.optJSONArray("jobs")?.let { j -> (0 until j.length()).any { j.getJSONObject(it).optString("job") == "Director" } } == true
+            } }
+            listOfNotNull(director?.let { c -> Actor(c.optString("id"), c.optString("name"), "Director", c.optString("profile_path").takeIf { it.startsWith("/") }?.let { IMG + it }) }) + cast
         } catch (e: Exception) { return@withContext emptyList() }
         synchronized(castCache) { castCache[key] = list }
         Ui.test("cast ${item.name} ${list.size}")

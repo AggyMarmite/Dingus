@@ -24,6 +24,11 @@
         android:visibility="gone" />
     <!-- (The clock and the VPN are under the logo in the side menu.) -->
     <!-- A newer version is ready: a small pill at the top (▲ to reach it, OK to update), instead of a pop-up. -->
+    <!-- A new episode of a show in My list or being watched: OK opens the show. -->
+    <TextView android:id="@+id/episodePill" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_gravity="top|start" android:layout_marginTop="20dp" android:layout_marginStart="108dp"
+        android:paddingStart="16dp" android:paddingEnd="18dp" android:paddingTop="7dp" android:paddingBottom="7dp"
+        android:focusable="true" android:textSize="14sp" android:textStyle="bold" android:visibility="gone" />
     <TextView android:id="@+id/updatePill" android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:layout_gravity="top|end" android:layout_marginTop="20dp" android:layout_marginEnd="48dp"
         android:paddingStart="16dp" android:paddingEnd="18dp" android:paddingTop="7dp" android:paddingBottom="7dp"
