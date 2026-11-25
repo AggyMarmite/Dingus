@@ -122,22 +122,25 @@ class CheckActivity : BaseActivity() {
                 // Server (and backups)
                 val all = Failover.addresses(p)
                 val at = Failover.index(p)
+                // Each address: how quickly it answered, or why it didn't (shown for the main server).
+                val why = arrayOfNulls<String>(all.size)
                 val times = withContext(Dispatchers.IO) {
-                    all.map { a -> if (a.isBlank()) null else try {
+                    all.mapIndexed { i, a -> if (a.isBlank()) null else try {
                         val t0 = System.currentTimeMillis()
                         val url = if (p.type == "xtream") "${Sources.xtreamBase(a)}/player_api.php?username=${Sources.enc(p.user)}&password=${Sources.enc(p.pass)}" else a.trim()
-                        Net.open(url, 8_000).close(); System.currentTimeMillis() - t0
-                    } catch (e: Exception) { null } }
+                        Net.open(url, Failover.PATIENCE_MS).close(); System.currentTimeMillis() - t0
+                    } catch (e: Exception) { why[i] = Failover.reason(e); null } }
                 }
+                val mainWhy = why[0]?.let { "  ·  main server: $it" } ?: ""
                 val backups = if (all.size > 1) "  ·  backups: " + (1 until all.size).joinToString(", ") { i -> if (times[i] != null) "$i ✓" else "$i ✕" } else ""
                 when {
-                    times[at] == null && times.any { it != null } -> set(2, State.BAD, "The server in use isn't answering$backups", "OK to switch to one that is") {
+                    times[at] == null && times.any { it != null } -> set(2, State.BAD, "The server in use isn't answering$mainWhy$backups", "OK to switch to one that is") {
                         scope.launch { val ok = withContext(Dispatchers.IO) { Failover.recover() }; Notice.done(if (ok) "Switched server" else "No other server answered", 3_000); runAll() }
                     }
-                    times[at] == null -> set(2, State.BAD, "No server is answering$backups", "The provider may be down: try again later")
+                    times[at] == null -> set(2, State.BAD, "No server is answering$mainWhy$backups", "The provider may be down: try again later")
                     at > 0 -> {
                         val back: (() -> Unit)? = if (times[0] != null) ({ scope.launch { withContext(Dispatchers.IO) { Failover.recover() }; runAll() }; Unit }) else null
-                        set(2, State.WARN, "Using backup server $at (${times[at]} ms)$backups", if (back != null) "OK to go back to the main server (it's answering again)" else "Fine for now: Dingus goes back to the main server when it answers", back)
+                        set(2, State.WARN, "Using backup server $at (${times[at]} ms)$mainWhy$backups", if (back != null) "OK to go back to the main server (it's answering again)" else "Fine for now: Dingus goes back to the main server when it answers", back)
                     }
                     else -> set(2, State.OK, "Main server  ·  ${times[at]} ms$backups")
                 }

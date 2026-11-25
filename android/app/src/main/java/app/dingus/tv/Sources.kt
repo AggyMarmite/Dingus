@@ -22,9 +22,14 @@ object Sources {
     // ------------------------------------------------------------------ Xtream Codes
 
     fun xtreamBase(server: String): String {
-        var s = server.trim().trimEnd('/')
+        var s = server.trim()
         if (!s.startsWith("http://", true) && !s.startsWith("https://", true)) s = "http://$s"
-        return s
+        // Tidied the way other apps do: an address pasted with a page or a login on the end ("…/get.php?username=…",
+        // "…/player_api.php", "…/c/") still means the server itself.
+        s = s.substringBefore('?').substringBefore('#').trimEnd('/')
+        s = s.replace(Regex("""/(get|player_api|panel_api|xmltv)\.php$""", RegexOption.IGNORE_CASE), "")
+        s = s.replace(Regex("""/c$""", RegexOption.IGNORE_CASE), "")
+        return s.trimEnd('/')
     }
 
     internal fun enc(s: String) = URLEncoder.encode(s, "UTF-8")

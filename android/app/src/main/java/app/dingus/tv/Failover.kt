@@ -55,10 +55,26 @@ object Failover {
 
     private fun wrongLogin(e: Throwable) = e.message?.contains("wasn't accepted") == true
 
+    /** How long a server gets to answer before Dingus tries the next one (some are slow to pick up). */
+    const val PATIENCE_MS = 15_000
+
+    /** Why an address didn't work, in a few words (Check everything shows it for the main server). */
+    fun reason(e: Throwable): String {
+        val m = e.message ?: ""
+        Regex("""answered (\d{3})""").find(m)?.let { val c = it.groupValues[1]; return "answered $c" + when (c) { "404" -> " (not found)"; "502", "503", "504" -> " (busy or down)"; else -> "" } }
+        return when (e) {
+            is java.net.SocketTimeoutException -> "didn't answer within ${PATIENCE_MS / 1000} seconds"
+            is java.net.UnknownHostException -> "address not found"
+            is java.net.ConnectException -> "refused the connection"
+            is javax.net.ssl.SSLException -> "secure connection failed"
+            else -> if (m.contains("refused the login")) m.substringAfter("The server ").ifEmpty { m } else Net.friendly(e).replaceFirstChar { it.lowercase() }
+        }
+    }
+
     /** A quick "is anyone there?": any answer counts, even a refused login (that's the login's problem, not the server's). */
     private fun reachable(p: Playlist, address: String): Boolean = try {
         val url = if (p.type == "xtream") "${Sources.xtreamBase(address)}/player_api.php?username=${Sources.enc(p.user)}&password=${Sources.enc(p.pass)}" else address.trim()
-        Net.open(url, 6_000).close()
+        Net.open(url, PATIENCE_MS).close()
         true
     } catch (e: Exception) { !isDown(e) }
 
