@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Inter on every screen, dialogs included. (Older Fire TVs keep the system font.) -->
+    <style name="DingusFont" parent="android:Theme.Material.NoActionBar">
+        <item name="android:fontFamily">@font/inter</item>
+    </style>
+</resources>

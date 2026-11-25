@@ -129,12 +129,15 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
     private val cPast = col(R.attr.dPast)
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val titleP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 14 * d; typeface = Typeface.DEFAULT_BOLD; color = cText }
-    private val subP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 11.5f * d; color = cMuted }
-    private val numP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 12 * d; color = cMuted; textAlign = Paint.Align.RIGHT }
-    private val nameP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 13 * d; color = cText }
-    private val headP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 14 * d; color = cMuted }
-    private val headBoldP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 15 * d; color = cText; typeface = Typeface.DEFAULT_BOLD }
+    // Inter, like the rest of the app (drawn by hand here, so set on each paint).
+    private val inter: Typeface = (try { androidx.core.content.res.ResourcesCompat.getFont(context, R.font.inter) } catch (e: Exception) { null }) ?: Typeface.DEFAULT
+    private val interBold: Typeface = Typeface.create(inter, Typeface.BOLD)
+    private val titleP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 14 * d; typeface = interBold; color = cText }
+    private val subP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 11.5f * d; color = cMuted; typeface = inter }
+    private val numP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 12 * d; color = cMuted; textAlign = Paint.Align.RIGHT; typeface = inter }
+    private val nameP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 13 * d; color = cText; typeface = inter }
+    private val headP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 14 * d; color = cMuted; typeface = inter }
+    private val headBoldP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 15 * d; color = cText; typeface = interBold }
     private val starP = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 12 * d; color = 0xFFFBBF24.toInt() }
     private val r = RectF()
     private val tri = Path()
@@ -384,7 +387,7 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         val fav = Store.isFavourite(c.id)
         val nameX = logoX + logoW + 10 * d
         val nameW = chanW - nameX - pad - (if (fav) 16 * d else 0f)
-        nameP.typeface = if (selected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+        nameP.typeface = if (selected) interBold else inter
         // Names get two lines, so long ones aren't cut short.
         val (l1, l2) = twoLines(c.name, nameW, selected)
         if (l2 == null) canvas.drawText(l1, nameX, mid + 4 * d, nameP)

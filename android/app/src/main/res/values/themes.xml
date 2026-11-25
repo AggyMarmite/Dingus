@@ -1,5 +1,5 @@
 <resources>
-    <style name="Theme.Dingus" parent="android:Theme.Material.NoActionBar">
+    <style name="Theme.Dingus" parent="DingusFont">
         <item name="android:windowBackground">?attr/dBg</item>
         <item name="android:colorAccent">?attr/dAccent</item>
         <item name="android:colorPrimary">?attr/dSurface</item>

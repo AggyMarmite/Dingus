@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The base theme. On Android 8 and later (Fire OS 7 and 8) it sets Inter for every screen: see values-v26. -->
+    <style name="DingusFont" parent="android:Theme.Material.NoActionBar" />
+</resources>
