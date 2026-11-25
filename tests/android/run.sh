@@ -235,7 +235,10 @@ check "details .* episodes 4" 30 "a show's seasons and episodes load"
 sleep 3; shot 14-show-details
 # The first episode highlighted: nothing cut off on the left (then back up to Play).
 press_until KEYCODE_DPAD_DOWN "focus episodeCard" 3 0.8; sleep 1; shot 14c-first-episode
-press_until KEYCODE_DPAD_UP "focus play" 3 0.8; sleep 0.5
+press_until KEYCODE_DPAD_UP "focus (play|restart|trailer|myList|watched)$" 3 0.8
+# (UP can land on a button further along: then LEFT along to Play – never LEFT from Play itself, which opens the menu.)
+adb logcat -d -s DINGUS-TEST:I | grep "focus " | tail -1 | grep -qE "focus play$" || press_until KEYCODE_DPAD_LEFT "focus play$" 4 0.6
+sleep 0.5
 fresh
 key KEYCODE_DPAD_CENTER 3
 check "vod-playing" 40 "an episode plays"
