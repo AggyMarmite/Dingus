@@ -1,3 +1,11 @@
+## What's new in Dingus 0.15.27
+
+* Fire TV: smoother, more fluid motion throughout.
+* Fire TV: the TV guide stays loaded after reopening the app.
+* Fire TV: easier to reach Settings if your playlist can't load.
+* Fire TV: design touches and readability fixes.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.26
 
 * Fire TV: Check everything, a one-page health check with fixes.

@@ -22,7 +22,7 @@ class SettingsActivity : BaseActivity() {
     private lateinit var list: LinearLayout
     private var refreshing = false
     /** Each row's subtitle is worked out again whenever something changes. */
-    private val subtitles = ArrayList<Pair<View, () -> String>>()
+    private val subtitles = ArrayList<Pair<View, () -> CharSequence>>()
     private var refreshRow: View? = null
     private var updateRow: View? = null
     private var accountRow: View? = null
@@ -444,7 +444,7 @@ class SettingsActivity : BaseActivity() {
     private val values = HashMap<View, () -> String>()
     private val switches = HashMap<View, () -> Boolean>()
 
-    private fun row(title: String, subtitle: () -> String, value: (() -> String)? = null, click: () -> Unit): View {
+    private fun row(title: String, subtitle: () -> CharSequence, value: (() -> String)? = null, click: () -> Unit): View {
         val v = LayoutInflater.from(this).inflate(R.layout.item_setting_row, list, false)
         v.findViewById<TextView>(R.id.title).text = title
         v.findViewById<TextView>(R.id.rowIcon)?.let { SettingsIcons.row(it, title) }
@@ -463,7 +463,7 @@ class SettingsActivity : BaseActivity() {
         return v
     }
 
-    private fun sub(v: View, s: String) {
+    private fun sub(v: View, s: CharSequence) {
         val t = v.findViewById<TextView>(R.id.subtitle)
         t.text = s
         t.visibility = if (s.isEmpty()) View.GONE else View.VISIBLE
@@ -481,13 +481,25 @@ class SettingsActivity : BaseActivity() {
 
     private fun typeName(p: Playlist) = if (p.type == "xtream") "Xtream Codes login" else "M3U link"
 
-    private fun playlistsSummary(): String {
+    /** "Home ● Online · Xtream Codes login": the status in green (red when offline) beside the name, as in the side
+     *  menu – a darker shade when the row's highlighted, so it reads on white. */
+    private fun playlistsSummary(): CharSequence {
         val all = Store.playlists
         val p = Store.playlist ?: return "Add your playlist"
-        return "${p.name}  ·  ${typeName(p)}" + (if (all.size > 1) "  ·  ${all.size} playlists" else "") +
+        val sb = android.text.SpannableStringBuilder(p.name)
+        when (Account.online(p)) {
+            true -> Triple("  ● Online", 0xFF4ADE80.toInt(), 0xFF15803D.toInt())
+            false -> Triple("  ● Offline", 0xFFF87171.toInt(), 0xFFB91C1C.toInt())
+            null -> null
+        }?.let { (t, light, dark) ->
+            val at = sb.length; sb.append(t)
+            val c = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()), intArrayOf(dark, light))
+            sb.setSpan(android.text.style.TextAppearanceSpan(null, android.graphics.Typeface.BOLD, 0, c, null), at, sb.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        sb.append("  ·  ${typeName(p)}" + (if (all.size > 1) "  ·  ${all.size} playlists" else "") +
             (Failover.status(p)?.let { "\n$it" } ?: "") +
-            (Account.saved()?.let { "\n" + it.summary() } ?: "") +
-            when (Account.online(p)) { true -> "\nStatus: online"; false -> "\nStatus: offline"; null -> "" }
+            (Account.saved()?.let { "\n" + it.summary() } ?: ""))
+        return sb
     }
 
     private fun playlists() {
