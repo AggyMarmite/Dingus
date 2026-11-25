@@ -112,12 +112,13 @@ class HomeFeature(
         h.watch.setOnClickListener { slides.getOrNull(index)?.watch?.invoke() }
         h.second.setOnClickListener { slides.getOrNull(index)?.second?.second?.invoke() }
         h.next.visibility = View.GONE
-        // ◀ on the first button goes back a slide, ▶ on the last goes on to the next.
+        // ◀ on the first button goes back a slide, ▶ on the last goes on to the next (round to the first after the last).
         val keys = View.OnKeyListener { v, code, ev ->
             if (ev.action != android.view.KeyEvent.ACTION_DOWN || slides.size < 2) return@OnKeyListener false
             val last = if (h.second.visibility == View.VISIBLE) h.second else h.watch
             when {
-                code == android.view.KeyEvent.KEYCODE_DPAD_LEFT && v === h.watch -> { moveTo(h, (index - 1 + slides.size) % slides.size); noteKey(); true }
+                // (On the first slide ◀ is left alone, so it still opens the menu.)
+                code == android.view.KeyEvent.KEYCODE_DPAD_LEFT && v === h.watch && index > 0 -> { moveTo(h, index - 1); noteKey(); true }
                 code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT && v === last -> { moveTo(h, (index + 1) % slides.size); noteKey(); true }
                 else -> false
             }

@@ -260,7 +260,7 @@ class HomeActivity : BaseActivity() {
         Charts.cached(Charts.TOP, Vod.MOVIES).takeIf { it.size >= 5 }?.let { out.add(Row("Top films", it.take(24).map { m -> Card.Title(Vod.MOVIES, m) })) }
     }
 
-    /** Trending films and TV shows, straight under the showcase: up to 10 each, then "View all". */
+    /** Trending films and TV shows, under Continue watching and My list: up to 10 each, then "View all". */
     private fun trendingRows(out: ArrayList<Row>) {
         for ((kind, name) in listOf(Vod.MOVIES to "Trending films", Vod.SERIES to "Trending TV shows")) {
             val items = Vod.trending(kind).takeIf { it.size >= 3 } ?: continue
@@ -414,17 +414,18 @@ class HomeActivity : BaseActivity() {
             }
         }
         Vod.cached(Vod.SERIES)?.let { lib -> Vod.continueList(Vod.SERIES, lib).forEach { cont.add(Card.Title(Vod.SERIES, it, label = if (it.id in newEps) "New episode" else "Continue", isNew = it.id in newEps)) } }
-        trendingRows(out)
-        becauseRows(out)
+        // Your own rows first (Continue watching, My list), then what's trending.
         if (cont.isNotEmpty()) out.add(Row("Continue watching", cont.take(20)))
         MyList.row()?.let { r -> out.add(Row(r.title, r.cards.map { c -> if (c is Card.Title && c.kind == Vod.SERIES && c.item.id in newEps) Card.Title(c.kind, c.item, label = "New episode", isNew = true) else c })) }
+        trendingRows(out)
+        becauseRows(out)
         val favs = Repo.channelsIn(Repo.FAV)
         if (favs.isNotEmpty()) out.add(Row("Favourite channels", favs.take(30).map { Card.Live(it) }))
         val recent = Repo.channelsIn(Repo.RECENT)
         if (recent.isNotEmpty()) out.add(Row("Recently watched", recent.take(20).map { Card.Live(it) }))
         chartRows(out)
-        Vod.cached(Vod.MOVIES)?.let { lib -> if (lib.items.isNotEmpty()) out.add(Row("New films", lib.newest.take(24).map { Card.Title(Vod.MOVIES, it) })) }
-        Vod.cached(Vod.SERIES)?.let { lib -> if (lib.items.isNotEmpty()) out.add(Row("New TV shows", lib.newest.take(24).map { Card.Title(Vod.SERIES, it) })) }
+        Vod.cached(Vod.MOVIES)?.let { lib -> if (lib.items.isNotEmpty()) out.add(Row("Recently added films", lib.newest.take(24).map { Card.Title(Vod.MOVIES, it) })) }
+        Vod.cached(Vod.SERIES)?.let { lib -> if (lib.items.isNotEmpty()) out.add(Row("Recently added TV shows", lib.newest.take(24).map { Card.Title(Vod.SERIES, it) })) }
         // Nothing personal yet: start people off with some channels.
         if (favs.isEmpty() && recent.isEmpty() && Repo.channels.isNotEmpty())
             out.add(1.coerceAtMost(out.size), Row("Channels", Repo.channelsIn(Repo.ALL).take(30).map { Card.Live(it) }))
@@ -581,10 +582,11 @@ class HomeActivity : BaseActivity() {
             slides.add(Slide("Live now", p.title, "${c.name}  ·  ${Ui.span(p)}", p.desc, Ui.progress(p) / 1000f, watch = { watch(c) }, ref = "ch:${c.id}", second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(p), until = p.stop, primary = "▶   Watch live"))
         }
 
-        trendingRows(out)
-        becauseRows(out)
+        // Your own rows first (Continue watching, My list), then what's trending.
         if (cont.isNotEmpty()) out.add(Row("Continue watching", cont.take(20)))
         MyList.row()?.let { r -> out.add(Row(r.title, r.cards.map { c -> if (c is Card.Title && c.kind == Vod.SERIES && c.item.id in newEps) Card.Title(c.kind, c.item, label = "New episode", isNew = true) else c })) }
+        trendingRows(out)
+        becauseRows(out)
         if (favs.isNotEmpty()) out.add(Row("Favourite channels", favs.take(30).map { c -> Card.Show(c, Repo.nowNext(c).first) }))
         val next = mine.mapNotNull { c -> Repo.nowNext(c).second?.let { Card.Show(c, it, until(it, now)) } }
         if (next.isNotEmpty()) out.add(Row("Coming up next", next.take(20)))
@@ -596,8 +598,8 @@ class HomeActivity : BaseActivity() {
         if (favs.isEmpty() && recent.isEmpty() && Repo.channels.isNotEmpty())
             out.add(Row("Channels", Repo.channelsIn(Repo.ALL).take(30).map { c -> Card.Show(c, Repo.nowNext(c).first) }))
         chartRows(out)
-        Vod.cached(Vod.MOVIES)?.let { lib -> if (lib.items.isNotEmpty()) out.add(Row("New films", lib.newest.take(24).map { Card.Title(Vod.MOVIES, it, isNew = true) })) }
-        Vod.cached(Vod.SERIES)?.let { lib -> if (lib.items.isNotEmpty()) out.add(Row("New TV shows", lib.newest.take(24).map { Card.Title(Vod.SERIES, it, isNew = true) })) }
+        Vod.cached(Vod.MOVIES)?.let { lib -> if (lib.items.isNotEmpty()) out.add(Row("Recently added films", lib.newest.take(24).map { Card.Title(Vod.MOVIES, it) })) }
+        Vod.cached(Vod.SERIES)?.let { lib -> if (lib.items.isNotEmpty()) out.add(Row("Recently added TV shows", lib.newest.take(24).map { Card.Title(Vod.SERIES, it) })) }
 
         return slides.take(8) to HomeRows.arrange(out)
     }
