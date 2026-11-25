@@ -46,6 +46,8 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     var list: List<Channel> = emptyList(); private set
     var index = 0; private set
     val current: Channel? get() = if (player != null) list.getOrNull(index) else null
+    /** The stream actually playing for [current] (a version or another source), when it isn't the channel itself. */
+    val playing: Channel? get() = if (player != null) version ?: current else null
     var fullScreen = false
         private set(v) {
             field = v
@@ -313,18 +315,25 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         if (rebuffers.size >= 3) { rebuffers.clear(); switchVersion("kept buffering") }
     }
 
+    /** What to try for a channel, in order: its versions (merged channels), then the same channel elsewhere with the same guide. */
+    private fun tries(c: Channel): List<Channel> =
+        ((if (Store.mergeChannels) Repo.versions(c) else listOf(c)) + Repo.sameAs(c)).distinctBy { it.id }
+
     private fun hasOtherVersion(): Boolean =
-        Store.mergeChannels && list.getOrNull(index)?.let { Repo.versions(it).size > versionTry + 1 } == true
+        list.getOrNull(index)?.let { tries(it).size > versionTry + 1 } == true
 
     /** Moves to the merged channel's next version; false when there's no other one left to try. */
     private fun switchVersion(why: String): Boolean {
-        val vs = list.getOrNull(index)?.let { Repo.versions(it) } ?: return false
-        if (!Store.mergeChannels || vs.size <= versionTry + 1) return false
+        val c = list.getOrNull(index) ?: return false
+        val vs = tries(c)
+        if (vs.size <= versionTry + 1) return false
         val next = vs[++versionTry]
         version = next; retries = 0
         handler.removeCallbacks(bufferCheck); rebuffers.clear(); playedOnce = false
         Ui.test("version-switch $why ${next.name}")
-        message.text = "That version $why – switched to ${versionLabel(next)}"
+        message.text = if (next.categoryId != c.categoryId && Repo.sourceKey(next.name) == Repo.sourceKey(c.name) && Merge.key(next) != Merge.key(c))
+            "This channel $why – switched to ${next.name}  (${Repo.categoryName(next.categoryId)})"
+        else "That version $why – switched to ${versionLabel(next)}"
         val shown = message.text
         handler.postDelayed({ if (message.text == shown) message.text = "" }, 4_000)
         startChannel()
@@ -335,7 +344,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
 
     /** Merged duplicates: try the channel's next version before giving up. */
     private fun giveUp(error: PlaybackException) {
-        val next = list.getOrNull(index)?.let { Repo.versions(it).getOrNull(++versionTry) }
+        val next = list.getOrNull(index)?.let { tries(it).getOrNull(++versionTry) }
         if (next != null) {
             version = next; retries = 0
             message.text = "Trying another version…"
@@ -635,6 +644,9 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     /** A different version was chosen for the channel that's playing: switch to it. */
     fun replayVersion() { version = null; versionTry = 0; slotWaited = false; retries = 0; startChannel() }
 
+    /** ≡ → Sources…: plays the same channel from another category (in place of this one). */
+    fun playSource(s: Channel) { version = s; versionTry = 0; slotWaited = false; retries = 0; startChannel() }
+
     private fun options() {
         val c = list.getOrNull(index) ?: return
         val p = player ?: return
@@ -650,6 +662,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         })
         items.add("Stream information" to { streamInfo() })
         if (Store.mergeChannels && Repo.versions(c).size > 1) items.add(1, "Choose version…" to { Repo.chooseVersion(a, c) { replayVersion() } })
+        Repo.sources(c).size.takeIf { it > 1 }?.let { n -> items.add(minOf(2, items.size), "Sources…  ·  ${n - 1} more" to { Repo.chooseSource(a, c, version ?: c) { playSource(it) } }) }
         Dialogs.builder(a).setTitle(c.name).setItems(items.map { it.first }.toTypedArray()) { _, i -> items[i].second() }.show()
     }
 

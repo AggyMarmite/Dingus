@@ -513,6 +513,12 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         if (Store.mergeChannels && Repo.versions(c).size > 1) items.add("Choose version…" to {
             Repo.chooseVersion(this, c) { if (live.current?.id == c.id) live.replayVersion() }
         })
+        Repo.sources(c).size.takeIf { it > 1 }?.let { n -> items.add("Sources…  ·  ${n - 1} more" to {
+            Repo.chooseSource(this, c, if (live.current?.id == c.id) live.playing else null) { src ->
+                if (live.current?.id != c.id) { if (Store.preview) preview(c) else goFullScreen(c) }
+                live.playSource(src)
+            }
+        }) }
         items.add("Rename channel" to {
             Dialogs.input(this, "New name", c.name, "Channel name") { n ->
                 val e = ChannelEdits.all()[c.id]

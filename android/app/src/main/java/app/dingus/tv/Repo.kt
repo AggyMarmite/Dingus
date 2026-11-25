@@ -98,6 +98,50 @@ object Repo {
         return listOf(pick) + all.filter { it !== pick }
     }
 
+    // ------------------------------------------------------------------ sources: the same channel in other categories
+
+    private val sourcePrefixRx = Regex("""^\s*[^|:\s]{1,6}\s*[|:]\s*""")
+    private val sourceQualityRx = Regex("""\b(uhd|fhd|hd|sd|4k|hevc|h265|1080p|720p|50fps|backup|raw)\b""")
+    private val sourceSmallRx = Regex("[\u1D00-\u1DBF\u02B0-\u02FF\u2070-\u209F]+")
+    private val sourceKeys = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /** "UK| Really", "D+| Really HD" → "really": the name without its label in front or quality tags. */
+    fun sourceKey(name: String): String = sourceKeys.getOrPut(name) {
+        var x = name.lowercase().replace(sourcePrefixRx, "")
+        x = x.replace(sourceQualityRx, " ").replace(sourceSmallRx, "")
+        x.filter { it.isLetterOrDigit() || it == '+' }
+    }
+
+    /** Every channel with the same name in any category (this one included, first). */
+    fun sources(c: Channel): List<Channel> {
+        val k = sourceKey(c.name)
+        if (k.length < 2) return listOf(c)
+        return listOf(c) + channels.filter { it.id != c.id && it.id !in hiddenIds && sourceKey(it.name) == k }
+    }
+
+    /** Sources showing exactly the same thing (the same guide listing): safe to switch to by themselves. */
+    fun sameAs(c: Channel): List<Channel> {
+        val epg = c.epgId?.takeIf { it.isNotBlank() }
+        val gk = c.guideKey
+        if (epg == null && gk == null) return emptyList()
+        return sources(c).drop(1).filter { (epg != null && it.epgId == epg) || (gk != null && it.guideKey == gk) }
+    }
+
+    fun categoryName(id: String) = categories.firstOrNull { it.id == id }?.name ?: ""
+
+    /** ≡ → Sources…: the same channel from your other categories, with what's on; OK plays it. */
+    fun chooseSource(a: android.app.Activity, c: Channel, playing: Channel?, pick: (Channel) -> Unit) {
+        val all = sources(c)
+        if (all.size < 2) return
+        val names = all.map { s ->
+            val on = nowNext(s).first?.title
+            s.name + (if (s.id == playing?.id) "   ● Playing" else "") + "\n" + listOfNotNull(categoryName(s.categoryId).ifEmpty { null }, on).joinToString("  ·  ")
+        }
+        Dialogs.builder(a).setTitle("Sources  ·  " + c.name.replace(sourcePrefixRx, ""))
+            .setItems(names.toTypedArray()) { _, i -> Ui.test("source-chosen ${all[i].name}"); pick(all[i]) }.show()
+        Ui.test("source-list ${all.size}")
+    }
+
     /** Merged channels: "Choose version…" – every version, with the one that plays (✓); picking one keeps it. */
     fun chooseVersion(a: android.app.Activity, c: Channel, done: () -> Unit) {
         val vs = versions(c)
