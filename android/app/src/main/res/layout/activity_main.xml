@@ -36,10 +36,7 @@
                     <TextView android:id="@+id/infoChannel" android:layout_width="0dp" android:layout_height="wrap_content"
                         android:layout_weight="1" android:maxLines="1" android:ellipsize="end" android:textSize="14sp"
                         android:textColor="?attr/dMuted" />
-                    <TextView android:id="@+id/vpnBadge" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginEnd="14dp" android:textSize="13sp" android:textColor="#4ADE80" android:visibility="gone" />
-                    <TextView android:id="@+id/clock" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:textSize="14sp" android:textColor="?attr/dMuted" />
+                    <!-- (The clock and the VPN are in the side menu, under the logo.) -->
                 </LinearLayout>
                 <TextView android:id="@+id/infoTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:layout_marginTop="2dp" android:maxLines="1" android:ellipsize="end" android:textSize="28sp"

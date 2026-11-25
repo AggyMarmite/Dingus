@@ -46,7 +46,6 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     private lateinit var empty: TextView
     private lateinit var status: TextView
     private lateinit var hint: TextView
-    private lateinit var clock: TextView
     private lateinit var previewText: TextView
     private lateinit var previewBox: View
     private lateinit var stage: FrameLayout
@@ -83,7 +82,6 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         empty = findViewById(R.id.empty)
         status = findViewById(R.id.status)
         hint = findViewById(R.id.hint)
-        clock = findViewById(R.id.clock)
         previewText = findViewById(R.id.previewText)
         previewText.text = if (Store.preview) "Press OK on a channel\nto watch it here" else ""
         previewBox = findViewById(R.id.previewBox)
@@ -631,7 +629,6 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
 
     private val tick = object : Runnable {
         override fun run() {
-            clock.text = Ui.time(System.currentTimeMillis())
             grid.refresh()
             // Left open for a long time: update when it's due (your choice in Settings).
             val p = Store.playlist
