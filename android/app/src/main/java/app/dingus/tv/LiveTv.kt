@@ -260,7 +260,11 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
                 updateSurface()
             }
 
-            override fun onVideoSizeChanged(size: androidx.media3.common.VideoSize) = updateSurface()
+            override fun onVideoSizeChanged(size: androidx.media3.common.VideoSize) {
+                updateSurface()
+                // Note what this version really plays at, so the best one is tried first next time.
+                playing?.let { c -> Merge.record(c, size.height, p.videoFormat?.frameRate?.takeIf { it > 1 }?.let { Math.round(it) } ?: 0) }
+            }
 
             override fun onPlayerError(error: PlaybackException) {
                 Ui.test("error ${error.errorCodeName}")
@@ -317,7 +321,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
 
     /** What to try for a channel, in order: its versions (merged channels), then the same channel elsewhere with the same guide. */
     private fun tries(c: Channel): List<Channel> =
-        ((if (Store.mergeChannels) Repo.versions(c) else listOf(c)) + Repo.sameAs(c)).distinctBy { it.id }
+        ((if (Store.mergeChannels) Repo.versions(c) else listOf(c)) + Merge.order(Repo.sameAs(c))).distinctBy { it.id }
 
     private fun hasOtherVersion(): Boolean =
         list.getOrNull(index)?.let { tries(it).size > versionTry + 1 } == true

@@ -102,17 +102,17 @@ class SettingsActivity : BaseActivity() {
         row("Backup servers", { backupSummary() }) { backupServers() }
         refreshRow = row("Update now", { refreshSummary() }) { refresh() }
         row("Update every", { "" }, { hoursName(Store.refreshHours) }) { refreshInterval() }
-        row("Channel logo priority", { "Which logo to use when the playlist and the TV guide both have one" }, { if (Store.guideLogosFirst) "TV guide first" else "Playlist first" }) {
-            choose("Channel logo priority", listOf("Playlist first", "TV guide first"), if (Store.guideLogosFirst) 1 else 0) { n ->
-                Store.guideLogosFirst = n == 1; Repo.reapply(); update(); Ui.test("logo-priority ${if (n == 1) "guide" else "playlist"}")
-            }
-        }
         row("Full refresh", { "Clears the saved channels, films, shows and TV guide, then downloads everything again" }, { "›" }) { fullRefresh() }
     }
 
     private fun guideSection() {
         guideRow = row("Update TV guide now", { guideNowSummary() }) { refreshGuideOnly(force = true) }
         row("Source priority", { priorityLine() }, { "›" }) { sourcePriority() }
+        row("Channel logo priority", { "Which logo to use when the playlist and the TV guide both have one" }, { if (Store.guideLogosFirst) "TV guide first" else "Playlist first" }) {
+            choose("Channel logo priority", listOf("Playlist first", "TV guide first"), if (Store.guideLogosFirst) 1 else 0) { n ->
+                Store.guideLogosFirst = n == 1; Repo.reapply(); update(); Ui.test("logo-priority ${if (n == 1) "guide" else "playlist"}")
+            }
+        }
         row("TV guide sources", { guideSummary() }, { "›" }) { guideSources() }
         row("Keep TV guide for", { "Less is lighter on memory" }, { "${hoursName(Store.guideHours)} ahead" }) { guideLength() }
         row("Clear TV guide", { "Deletes the saved listings (they come back with the next update)" }, { "›" }) {

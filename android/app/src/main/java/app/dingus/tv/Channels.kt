@@ -39,9 +39,45 @@ object Merge {
 
     fun isBackup(c: Channel) = backupRx.containsMatchIn(c.name)
 
-    /** Versions in the order to try: main before backup, best quality first, otherwise playlist order. */
+    // ------------------------------------------------------------------ picture quality, as measured
+    private val fpsRx = Regex("""\b(50|60)\s*fps\b""", RegexOption.IGNORE_CASE)
+    @Volatile private var measured: MutableMap<String, Pair<Int, Int>>? = null
+
+    private fun measuredMap(): MutableMap<String, Pair<Int, Int>> = measured ?: synchronized(this) {
+        measured ?: java.util.concurrent.ConcurrentHashMap<String, Pair<Int, Int>>().also { m ->
+            try {
+                val o = JSONObject(Store.prefsString("chanQuality", "{}"))
+                o.keys().forEach { k -> val a = o.getString(k).split(','); m[k] = a[0].toInt() to a[1].toInt() }
+            } catch (_: Exception) {}
+            measured = m
+        }
+    }
+
+    /** What a channel actually played at (lines and frames a second), noted while watching. */
+    fun record(c: Channel, height: Int, fps: Int) {
+        if (height <= 0) return
+        val m = measuredMap()
+        val f = if (fps > 1) fps else (m[c.id]?.second ?: 0)
+        if (m[c.id] == height to f) return
+        m[c.id] = height to f
+        try { Store.putString("chanQuality", JSONObject(m.mapValues { "${it.value.first},${it.value.second}" }).toString()) } catch (_: Exception) {}
+    }
+
+    /**
+     * How good a version's picture is: its measured resolution and frame rate once it's been played, otherwise
+     * what its name says (4K, FHD, HD, SD; 50/60 fps).
+     */
+    fun quality(c: Channel): Int {
+        measuredMap()[c.id]?.let { (h, f) -> return h * 100 + (if (f > 1) minOf(f, 60) else nameFps(c)) }
+        val h = when (rank(c)) { 4 -> 2160; 3 -> 1080; 1 -> 576; else -> 720 }
+        return h * 100 + nameFps(c)
+    }
+
+    private fun nameFps(c: Channel) = fpsRx.find(c.name)?.groupValues?.get(1)?.toInt() ?: 25
+
+    /** Versions in the order to try: main before backup, best picture (resolution, then frame rate) first, otherwise playlist order. */
     fun order(versions: List<Channel>): List<Channel> =
-        versions.withIndex().sortedWith(compareBy({ if (isBackup(it.value)) 1 else 0 }, { -rank(it.value) }, { it.index })).map { it.value }
+        versions.withIndex().sortedWith(compareBy({ if (isBackup(it.value)) 1 else 0 }, { -quality(it.value) }, { it.index })).map { it.value }
 
     /** A list with each channel's versions folded into one entry (the best version), in the list's order. */
     fun fold(list: List<Channel>): List<Channel> {
