@@ -162,7 +162,7 @@ class RowsAdapter(
                         progress = (card.progress * 1000).toInt()
                     }
                     c.badge?.visibility = if (card.kind == Vod.MOVIES && Vod.watched(m.id)) View.VISIBLE else View.GONE
-                    c.newBadge?.visibility = if (card.isNew) View.VISIBLE else View.GONE
+                    c.newBadge?.visibility = if (card.isNew || Upcoming.isArrived(m.id)) View.VISIBLE else View.GONE
                 }
                 is Card.Live -> {
                     val ch = card.channel

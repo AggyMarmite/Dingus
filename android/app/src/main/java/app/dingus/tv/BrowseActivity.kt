@@ -198,16 +198,16 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
         cats.select(id)
         setCompact(false)
         val name = cats.items.firstOrNull { it.id == id }?.name ?: ""
-        if (id == Vod.FEATURED) {
+        if (id == Vod.FEATURED || id == Vod.COMING) {
             grid.visibility = View.GONE
             rows.visibility = View.VISIBLE
             heroView.visibility = View.VISIBLE
             gridHead.visibility = View.GONE
             browseArt.visibility = View.VISIBLE
             findViewById<View>(R.id.screenName).visibility = View.VISIBLE
-            build()
+            if (id == Vod.COMING) buildComing() else build()
             if (changed) rows.scrollToPosition(0)
-            Ui.test("browse-cat Featured ${adapter.itemCount}")
+            Ui.test("browse-cat ${if (id == Vod.COMING) "Coming soon" else "Featured"} ${adapter.itemCount}")
         } else {
             val items = Vod.itemsIn(kind, l, id)
             rows.visibility = View.GONE
@@ -225,6 +225,34 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
             empty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
             Ui.test("browse-cat $name ${items.size}")
         }
+    }
+
+    /** Coming soon: TMDB's upcoming titles in rows by month (a bell on the ones you've asked about). */
+    private fun buildComing(fetch: Boolean = true) {
+        val list = Upcoming.cached(kind)
+        val out = list.groupBy { Upcoming.month(it) }.map { (month, items) ->
+            Row(month, items.map { u -> Card.Title(kind, u.vodItem, label = (if (Upcoming.hasAlert(u.tmdbId)) "🔔  " else "") + Upcoming.shortDate(u)) })
+        }
+        adapter.set(out)
+        empty.text = if (TitleLogos.enabled) "Looking for what's coming…" else "Coming soon needs TMDB (Settings)."
+        empty.visibility = if (out.isEmpty()) View.VISIBLE else View.GONE
+        if (fetch) scope.launch { Upcoming.refresh(kind); if (current == Vod.COMING) buildComing(fetch = false) }
+    }
+
+    /** OK on a coming-soon title: what it is, and the alert. */
+    private fun openComing(id: String) {
+        val u = Upcoming.find(id) ?: return
+        val on = Upcoming.hasAlert(u.tmdbId)
+        Dialogs.builder(this).setTitle("${u.title}  ·  ${Upcoming.shortDate(u)}")
+            .setMessage(listOfNotNull(u.genre, u.plot).joinToString("\n\n").ifEmpty { "Coming ${Upcoming.shortDate(u)}." } +
+                "\n\n" + if (on) "🔔 You'll be told when it's in your ${if (kind == Vod.MOVIES) "Films" else "TV Shows"}." else "Dingus can tell you when it turns up in your ${if (kind == Vod.MOVIES) "Films" else "TV Shows"}.")
+            .setPositiveButton(if (on) "Cancel the alert" else "🔔  Tell me when it's here") { _, _ ->
+                Upcoming.setAlert(u, !on)
+                Notice.done(if (on) "Alert cancelled" else "🔔  We'll tell you when ${u.title} is here")
+                buildComing(fetch = false)
+            }
+            .setNegativeButton("Close", null)
+            .show()
     }
 
     private fun build() {
@@ -272,7 +300,7 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
 
     private fun focusContent(tries: Int = 0, ask: Int = ++focusAsk) {
         if (ask != focusAsk) return // asked again since, or moved elsewhere
-        val target: View? = if (current == Vod.FEATURED) {
+        val target: View? = if (current == Vod.FEATURED || current == Vod.COMING) {
             val lm = rows.layoutManager as LinearLayoutManager
             val p = lm.findFirstCompletelyVisibleItemPosition().takeIf { it >= 0 } ?: lm.findFirstVisibleItemPosition()
             val list = (rows.findViewHolderForAdapterPosition(maxOf(0, p)) as? RowsAdapter.H)?.list
@@ -370,7 +398,7 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
         if (down && !side.isOpen && f != null && inside(f, grid) &&
             (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN || event.keyCode == KeyEvent.KEYCODE_DPAD_UP)) { gridStep(f, event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN); return true }
         if (side.onKey(event)) return true
-        if (down && event.keyCode == KeyEvent.KEYCODE_DPAD_UP && current == Vod.FEATURED && RowNav.up(rows, currentFocus)) return true
+        if (down && event.keyCode == KeyEvent.KEYCODE_DPAD_UP && (current == Vod.FEATURED || current == Vod.COMING) && RowNav.up(rows, currentFocus)) return true
         return super.dispatchKeyEvent(event)
     }
 
@@ -414,6 +442,7 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
             setCategories()
             when (current) {
                 Vod.FEATURED -> build()
+                Vod.COMING -> buildComing(fetch = false)
                 Vod.CONTINUE -> show(current, force = true)
                 else -> posters.notifyItemRangeChanged(0, posters.itemCount)
             }
@@ -435,7 +464,8 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
 
     private fun open(card: Card) {
         when (card) {
-            is Card.Title -> startActivity(Intent(this, DetailActivity::class.java).putExtra(DetailActivity.KIND, card.kind).putExtra(DetailActivity.ID, card.item.id))
+            is Card.Title -> if (card.item.id.startsWith("tmdb:")) openComing(card.item.id)
+                else startActivity(Intent(this, DetailActivity::class.java).putExtra(DetailActivity.KIND, card.kind).putExtra(DetailActivity.ID, card.item.id))
             is Card.SeeAll -> { show(card.categoryId); focusContent() }
             is Card.Live, is Card.Show -> {}
         }

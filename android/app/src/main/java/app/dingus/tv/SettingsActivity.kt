@@ -103,6 +103,40 @@ class SettingsActivity : BaseActivity() {
         refreshRow = row("Update now", { refreshSummary() }) { refresh() }
         row("Update every", { "" }, { hoursName(Store.refreshHours) }) { refreshInterval() }
         row("Full refresh", { "Clears the saved channels, films, shows and TV guide, then downloads everything again" }, { "›" }) { fullRefresh() }
+        if (Vod.available) {
+            row("Coming soon alerts", { Upcoming.alerts().size.let { if (it == 0) "None yet  ·  Films or TV Shows → Coming soon → OK on a title" else "$it waiting  ·  OK to see or cancel them" } }, { "›" }) {
+                val all = Upcoming.alerts()
+                if (all.isEmpty()) return@row
+                val cancel = BooleanArray(all.size)
+                Dialogs.builder(this).setTitle("Coming soon alerts  ·  tick to cancel")
+                    .setMultiChoiceItems(all.map { "${it.title}  ·  ${if (it.kind == Vod.MOVIES) "Film" else "TV show"}" }.toTypedArray(), cancel) { _, i, on -> cancel[i] = on }
+                    .setPositiveButton("Cancel ticked") { _, _ -> all.forEachIndexed { i, a -> if (cancel[i]) Upcoming.setAlert(a, false) }; update() }
+                    .setNegativeButton("Close", null)
+                    .show()
+            }
+            row("Coming soon: don't count these categories", { "A title only in these (e.g. CAM, pre-release) doesn't count as arrived" }, { "›" }) { comingIgnore() }
+        }
+    }
+
+    /** Which film and show categories don't count for Coming soon alerts (CAM, pre-release… ticked to start with). */
+    private fun comingIgnore() {
+        scope.launch {
+            val cats = ArrayList<Triple<String, String, String>>() // kind, id, name
+            for (k in listOf(Vod.MOVIES, Vod.SERIES)) {
+                val lib = Vod.cached(k) ?: Vod.loadSaved(k) ?: continue
+                lib.categories.forEach { c -> cats.add(Triple(k, c.id, (if (k == Vod.MOVIES) "Films · " else "TV · ") + c.name)) }
+            }
+            if (cats.isEmpty()) { Notice.done("Films and TV Shows haven't loaded yet", 3_000); return@launch }
+            val ticked = BooleanArray(cats.size) { i -> cats[i].second in Upcoming.ignored(cats[i].first, Vod.cached(cats[i].first)) }
+            Dialogs.builder(this@SettingsActivity).setTitle("Don't count these for Coming soon")
+                .setMultiChoiceItems(cats.map { it.third }.toTypedArray(), ticked) { _, i, on -> ticked[i] = on }
+                .setPositiveButton("Save") { _, _ ->
+                    for (k in listOf(Vod.MOVIES, Vod.SERIES)) Upcoming.setIgnored(k, cats.indices.filter { cats[it].first == k && ticked[it] }.map { cats[it].second }.toSet())
+                    Ui.test("coming-ignore ${ticked.count { it }}")
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
     }
 
     private fun guideSection() {

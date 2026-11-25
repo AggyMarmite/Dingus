@@ -52,6 +52,8 @@ object Vod {
     const val TRENDING = "\u0001trending"
     /** Films/TV Shows: the rows view (not a category of its own). */
     const val FEATURED = "\u0001featured"
+    /** Coming soon (TMDB's upcoming titles, with alerts): a category of its own. */
+    const val COMING = "\u0001coming"
 
     class Library(val categories: List<Category>, val items: List<VodItem>, val loadedAt: Long) {
         val byCategory: Map<String, List<VodItem>> by lazy { items.groupBy { it.categoryId } }
@@ -105,6 +107,7 @@ object Vod {
      */
     private fun warm(kind: String, lib: Library) {
         lib.byCategory; lib.byId; lib.newest
+        try { Upcoming.check(kind, lib) } catch (e: Exception) { Log.w("Dingus", "coming soon check", e) }
         if (libs[kind] === lib) { Charts.cached(Charts.TRENDING, kind); Charts.cached(Charts.TOP, kind); topRated(lib, kind) }
     }
 
@@ -148,6 +151,7 @@ object Vod {
     fun categoriesFor(kind: String, lib: Library): List<Category> {
         val out = ArrayList<Category>()
         out.add(Category(FEATURED, "Featured"))
+        if (TitleLogos.enabled) out.add(Category(COMING, "Coming soon"))
         continueList(kind, lib).size.let { if (it > 0) out.add(Category(CONTINUE, "Continue watching", it)) }
         out.add(Category(RECENT, "Recently added"))
         trending(kind).size.let { if (it > 0) out.add(Category(TRENDING, "Trending", it)) }
@@ -373,6 +377,7 @@ object Vod {
 
     /** Details already fetched (for the banner on Home and in Films / TV Shows). */
     fun cachedDetails(kind: String, id: String): Details? = detailsCache.get("$kind:$id")
+        ?: if (id.startsWith("tmdb:")) Upcoming.find(id)?.let { Upcoming.details(it) } else null
 
     /** Plot, cast and (for shows) the episodes. */
     suspend fun details(kind: String, item: VodItem): Details = withContext(Dispatchers.IO) {
