@@ -328,9 +328,9 @@ check "home-loading-done" 30 "the loading screen gives way to Home"
 fresh
 adb shell am start -n $PKG/.HomeActivity --ez dingus_test_loading true
 sleep 2; shot 16a-loading-screen
-check "home-loading-done" 15 "…and goes once Home's ready"
-sleep 3
-key KEYCODE_DPAD_LEFT 1.5; press_until KEYCODE_DPAD_DOWN "focus navGuide" 4 0.5; key KEYCODE_DPAD_CENTER 3     # menu → Live TV
+check "home-loading-gone" 15 "…and goes once Home's ready"
+sleep 1
+press_until KEYCODE_DPAD_LEFT "focus nav" 8 1.5; press_until KEYCODE_DPAD_DOWN "focus navGuide" 4 0.5; key KEYCODE_DPAD_CENTER 3     # menu → Live TV (LEFT does nothing until the loading screen has gone)
 check "guide-filled [1-9]" 15 "Live TV from Home shows the channels"
 check "categories-open" 10 "…with the categories open first"
 shot 19aa-live-from-home

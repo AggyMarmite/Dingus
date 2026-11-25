@@ -382,6 +382,8 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
             background = getDrawable(R.drawable.pill_btn_bg)
             setPadding((26 * d).toInt(), (12 * d).toInt(), (26 * d).toInt(), (12 * d).toInt())
             isFocusable = true; isClickable = true
+            // Only OK does anything here: the arrows mustn't wander onto Home hidden behind the loading screen.
+            setOnKeyListener { _, code, _ -> code == android.view.KeyEvent.KEYCODE_DPAD_LEFT || code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT || code == android.view.KeyEvent.KEYCODE_DPAD_UP || code == android.view.KeyEvent.KEYCODE_DPAD_DOWN }
             setOnClickListener { Ui.test("loading-settings"); startActivity(Intent(this@HomeActivity, SettingsActivity::class.java)) }
         }
         box.addView(b, android.widget.FrameLayout.LayoutParams(-2, -2, android.view.Gravity.BOTTOM or android.view.Gravity.CENTER_HORIZONTAL).apply { bottomMargin = (56 * d).toInt() })
@@ -424,9 +426,11 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
         if (v.visibility != View.VISIBLE) return
         Ui.test("home-loading-done")
         // The Settings button had the focus: hand it to Home, or the remote would do nothing.
-        v.findViewWithTag<View>("wayOut")?.let { b -> val had = b.hasFocus(); b.isFocusable = false; (b.parent as? android.view.ViewGroup)?.removeView(b); if (had) focusFirstCard() }
-        if (Ui.lite) { v.visibility = View.GONE; return }
-        v.animate().alpha(0f).setDuration(250).withEndAction { v.visibility = View.GONE; v.alpha = 1f }.start()
+        val had = v.findFocus() != null
+        v.findViewWithTag<View>("wayOut")?.let { b -> b.isFocusable = false; (b.parent as? android.view.ViewGroup)?.removeView(b) }
+        if (had) focusFirstCard()
+        if (Ui.lite) { v.visibility = View.GONE; Ui.test("home-loading-gone"); return }
+        v.animate().alpha(0f).setDuration(250).withEndAction { v.visibility = View.GONE; v.alpha = 1f; Ui.test("home-loading-gone") }.start()
     }
 
     /** A slide with a title logo and a proper background picture. */
