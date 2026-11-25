@@ -490,7 +490,8 @@ class VodPlayerActivity : BaseActivity() {
         } else {
             val d = if (kind == Vod.MOVIES) Vod.cachedDetails(kind, id) else null
             val item = if (kind == Vod.MOVIES) Vod.cached(kind)?.byId?.get(id) else null
-            screen.show(listOfNotNull(sub ?: if (kind == CATCHUP) "CATCH UP" else "FILM", d?.year?.takeIf { it > 0 }?.toString(), d?.genre?.split(',')?.firstOrNull()?.trim()?.uppercase()).joinToString("  ·  "),
+            // (The player's own line when it has one – "FILM · 2023 · ★ 6.1" – so the details aren't said twice.)
+            screen.show(sub ?: listOfNotNull(if (kind == CATCHUP) "CATCH UP" else "FILM", d?.year?.takeIf { it > 0 }?.toString(), d?.genre?.split(',')?.firstOrNull()?.trim()?.uppercase()).joinToString("  ·  "),
                 t, item?.let { TitleLogos.cached(kind, it) }, d?.plot)
         }
     }

@@ -1,3 +1,11 @@
+## What's new in Dingus 0.15.29
+
+* Fire TV: a redesigned live TV info bar.
+* Fire TV: clearer notices.
+* Fire TV: a richer pause screen for films and shows.
+* Fire TV: the app icon now updates properly on the home screen.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.28
 
 * Fire TV: smoother, more fluid motion everywhere, including the side menu, lists, Settings and the guide.
