@@ -1,3 +1,11 @@
+## What's new in Dingus 0.15.24
+
+* Fire TV: a richer Home showcase, with Continue watching and My list first.
+* Fire TV: Sources, to find a channel in other categories, with automatic switching if it buffers.
+* Fire TV: simpler VPN settings and a tidier side menu.
+* Fire TV: smarter merging of matching categories.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.23
 
 * Backup server addresses for playlists.
