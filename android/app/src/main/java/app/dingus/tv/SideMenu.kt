@@ -235,9 +235,7 @@ class SideMenu(
         val vod = if (Vod.available) View.VISIBLE else View.GONE
         rowFor(Page.FILMS).visibility = vod
         rowFor(Page.SHOWS).visibility = vod
-        val several = Store.playlists.size > 1
-        playlistRow.text = (Store.playlist?.name ?: "") + if (several) "  ▾" else ""
-        playlistRow.tag = several
+        playlistRow.tag = Store.playlists.size > 1
         val p = Store.playlist
         showAccount()
         // Asked again whenever the menu opens (at most every 20 seconds): connections in use change while you watch.
@@ -250,16 +248,23 @@ class SideMenu(
         }
     }
 
-    /** Expiry, "Active connections 1/2" and "Status ● Online", one per line (the status in green or red). */
+    /** The playlist's name with "● Online" in green beside it (red "● Offline"), then expiry and "Active connections 1/2". */
     private fun showAccount() {
         val p = Store.playlist
+        val name = android.text.SpannableStringBuilder((p?.name ?: "") + if (Store.playlists.size > 1) "  ▾" else "")
+        when (Account.online(p)) {
+            true -> "  ● Online" to 0xFF4ADE80.toInt()
+            false -> "  ● Offline" to 0xFFF87171.toInt()
+            null -> null
+        }?.let { (t, c) -> val at = name.length; name.append(t); name.setSpan(android.text.style.ForegroundColorSpan(c), at, name.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
+        playlistRow.text = name
         if (p == null) { accountRow.text = ""; return }
         val sb = android.text.SpannableStringBuilder()
-        for ((line, colour) in Account.lines(Account.saved(), p)) {
+        for ((line, colour) in Account.lines(Account.saved(), p).filter { !it.first.startsWith("Status") }) {
             if (sb.isNotEmpty()) sb.append('\n')
             val start = sb.length
             sb.append(line)
-            if (colour != 0) sb.setSpan(android.text.style.ForegroundColorSpan(colour), start + line.indexOf('●'), sb.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            if (colour != 0) sb.setSpan(android.text.style.ForegroundColorSpan(colour), start + maxOf(0, line.indexOf('●')), sb.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         accountRow.text = sb
     }
