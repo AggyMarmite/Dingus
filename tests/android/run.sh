@@ -182,7 +182,7 @@ key KEYCODE_DPAD_LEFT 2
 check "categories-open" 5 "LEFT from what's on now opens the categories (even on a catch-up channel)"
 key KEYCODE_DPAD_RIGHT 2
 fresh
-key KEYCODE_MENU 2; key KEYCODE_DPAD_CENTER 2                                         # ≡ → Catch up…
+key KEYCODE_MENU 2; shot 08a-guide-menu; key KEYCODE_DPAD_CENTER 2                     # ≡ → Catch up…
 check "catchup-list Test 1 HD [1-9]" 10 "≡ on a catch-up channel lists its past programmes"
 shot 08b-catchup-guide
 key KEYCODE_DPAD_CENTER 3
