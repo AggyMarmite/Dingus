@@ -17,8 +17,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 /**
- * Home, like the Windows app: a big feature at the top (carry on watching, what's on, live sport, new films), then
- * favourite channels, coming up next, live sport now, tonight's picks, new films and shows. Settings → Lite home page swaps it
+ * Home, like the Windows app: a big feature at the top (carry on watching, what's on, new films), then
+ * favourite channels, coming up next, tonight's picks, new films and shows. Settings → Lite home page swaps it
  * for a simpler page (a banner and rows) for devices that struggle.
  */
 class HomeActivity : BaseActivity(), SideMenu.ToTop {
@@ -597,9 +597,8 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
                 Ui.progress(p) / 1000f, watch = { watch(c) }, ref = "ch:${c.id}", second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(p), until = p.stop, primary = "▶   Watch live"))
         }
 
-        // Live sport now and tonight's picks: from your channels first, then the rest (only so many, to stay quick).
+        // Tonight's picks: from your channels first, then the rest (only so many, to stay quick).
         val scan = (mine + Repo.channelsIn(Repo.ALL).take(3000)).distinctBy { it.id }
-        val sport = ArrayList<Card.Show>()
         val tonight = ArrayList<Pair<Channel, Programme>>()
         val cal = java.util.Calendar.getInstance().apply { set(java.util.Calendar.HOUR_OF_DAY, 18); set(java.util.Calendar.MINUTE, 0) }
         val eveningFrom = maxOf(now, cal.timeInMillis)
@@ -607,7 +606,6 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
         val eveningTo = cal.timeInMillis
         for (c in scan) {
             val (p, _) = Repo.nowNext(c)
-            if (p != null && p.genre == Genres.SPORT && sport.size < 20) sport.add(Card.Show(c, p, left(p, now)))
             if (tonight.size < 40) {
                 // Straight to this evening's programmes (they're in time order) rather than reading the whole day.
                 val ps = Repo.programmes(c)
@@ -620,12 +618,7 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
                     i++
                 }
             }
-            if (sport.size >= 20 && tonight.size >= 40) break
-        }
-        sport.firstOrNull()?.let { s ->
-            val p = s.programme!!
-            if (slides.none { it.title == p.title }) slides.add(Slide("Live sport", p.title, "${s.channel.name}  ·  ${Ui.span(p)}  ·  ${left(p, now)}", p.desc,
-                Ui.progress(p) / 1000f, watch = { watch(s.channel) }, ref = "ch:${s.channel.id}", second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(p), until = p.stop, primary = "▶   Watch live"))
+            if (tonight.size >= 40) break
         }
         // Tonight: the first film or sport this evening on your channels (or any).
         tonight.filter { it.second.start > now }.minByOrNull { it.second.start }?.let { (c, q) ->
@@ -663,7 +656,6 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
         if (favs.isNotEmpty()) out.add(Row("Favourite channels", favs.take(30).map { c -> Card.Show(c, Repo.nowNext(c).first) }))
         val next = mine.mapNotNull { c -> Repo.nowNext(c).second?.let { Card.Show(c, it, until(it, now)) } }
         if (next.isNotEmpty()) out.add(Row("Coming up next", next.take(20)))
-        if (sport.isNotEmpty()) out.add(Row("Live sport now", sport))
         if (tonight.isNotEmpty()) out.add(Row("Tonight's picks", tonight.sortedBy { it.second.start }.take(20).map { (c, q) ->
             Card.Show(c, q, Ui.time(q.start) + "  ·  " + (Genres.names.firstOrNull { it.first == q.genre }?.second ?: ""))
         }))
