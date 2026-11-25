@@ -144,13 +144,13 @@ class DetailActivity : BaseActivity() {
         // The cast: under the buttons on a film; under the episodes on a show (the page scrolls down to it).
         if (kind == Vod.SERIES) castUnderEpisodes()
         showCast(m, d.tmdbId)
-        // A trailer (TMDB → the YouTube app), when there's one and something to play it.
-        if (TitleLogos.enabled && Tmdb.canPlayTrailers(this)) scope.launch {
+        // A trailer (TMDB's, from YouTube), played inside Dingus, when there's one.
+        if (TitleLogos.enabled) scope.launch {
             val key = Tmdb.trailer(kind, m, d.tmdbId) ?: return@launch
             if (isDestroyed) return@launch
             findViewById<TextView>(R.id.trailer).apply {
                 visibility = View.VISIBLE
-                setOnClickListener { Ui.test("trailer-play"); if (!Tmdb.playTrailer(this@DetailActivity, key)) Notice.done("No app to play the trailer", 3_000) }
+                setOnClickListener { Ui.test("trailer-play"); TrailerActivity.open(this@DetailActivity, key, m.name) }
             }
         }
         if (TitleLogos.enabled) scope.launch {

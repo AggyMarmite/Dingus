@@ -80,6 +80,9 @@
 
         <activity android:name=".ChannelEditorActivity" android:exported="false" android:screenOrientation="landscape" />
         <activity android:name=".DetailActivity" android:exported="false" android:screenOrientation="landscape" />
+        <activity android:name=".TrailerActivity" android:exported="false" android:screenOrientation="landscape"
+            android:hardwareAccelerated="true" android:theme="@style/Theme.Dingus.Player"
+            android:configChanges="keyboard|keyboardHidden|navigation|screenSize|smallestScreenSize|screenLayout|orientation" />
         <activity android:name=".PersonActivity" android:exported="false" android:screenOrientation="landscape" />
         <activity android:name=".SearchActivity" android:exported="false" android:screenOrientation="landscape"
             android:windowSoftInputMode="adjustResize|stateVisible" />
