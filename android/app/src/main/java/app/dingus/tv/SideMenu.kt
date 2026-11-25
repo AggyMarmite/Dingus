@@ -238,8 +238,8 @@ class SideMenu(
         playlistRow.tag = Store.playlists.size > 1
         val p = Store.playlist
         showAccount()
-        // Asked again whenever the menu opens (at most every 10 seconds): connections in use change while you watch.
-        if (p != null && System.currentTimeMillis() - Account.lastCheck > 10_000L && !checking) {
+        // Asked again whenever the menu opens (at most every 5 seconds): connections in use change while you watch.
+        if (p != null && System.currentTimeMillis() - Account.lastCheck > 5_000L && !checking) {
             checking = true
             Background.scope.launch {
                 try { Account.check(p) } finally { checking = false }
@@ -269,9 +269,9 @@ class SideMenu(
         accountRow.text = sb
     }
 
-    /** While the menu's open, the connections and status keep up (asked again every 10 seconds). */
+    /** While the menu's open, the connections and status keep up (asked again every 5 seconds). */
     private val poll = object : Runnable {
-        override fun run() { if (isOpen) { showDetails(); panel.postDelayed(this, 10_000L) } }
+        override fun run() { if (isOpen) { showDetails(); panel.postDelayed(this, 5_000L) } }
     }
 
     fun open() {
