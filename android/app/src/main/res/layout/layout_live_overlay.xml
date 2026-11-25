@@ -18,49 +18,68 @@
         android:background="@drawable/pill_bg" android:paddingStart="14dp" android:paddingEnd="14dp" android:paddingTop="7dp"
         android:paddingBottom="7dp" android:textSize="15sp" android:textColor="#FFFFFFFF" android:visibility="gone" />
 
-    <!-- The info bar: shown when you change channel or press OK. -->
+    <!-- The info bar: a floating frosted panel (logo, the programme's picture, now with its progress, next), shown when
+         you change channel or press OK; the stream details under it, the keys along the bottom. -->
     <LinearLayout android:id="@+id/info" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_gravity="bottom" android:orientation="vertical" android:background="@drawable/overlay_bg" android:visibility="gone"
-        android:paddingStart="56dp" android:paddingEnd="56dp" android:paddingTop="60dp" android:paddingBottom="36dp">
+        android:layout_gravity="bottom" android:orientation="vertical" android:background="@drawable/info_shade" android:visibility="gone"
+        android:paddingStart="40dp" android:paddingEnd="40dp" android:paddingTop="80dp" android:paddingBottom="22dp"
+        android:clipChildren="false" android:clipToPadding="false">
 
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="horizontal" android:gravity="center_vertical">
-            <FrameLayout android:layout_width="112dp" android:layout_height="64dp" android:background="@drawable/logo_bg">
+        <LinearLayout android:id="@+id/infoPanel" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/info_panel"
+            android:paddingStart="22dp" android:paddingEnd="24dp" android:paddingTop="18dp" android:paddingBottom="18dp" android:elevation="16dp">
+            <FrameLayout android:layout_width="104dp" android:layout_height="58dp" android:background="@drawable/logo_glass">
                 <TextView android:id="@+id/initials" android:layout_width="match_parent" android:layout_height="match_parent"
-                    android:gravity="center" android:textSize="22sp" android:textStyle="bold" android:textColor="?attr/dMuted" />
+                    android:gravity="center" android:textSize="20sp" android:textStyle="bold" android:textColor="#FFE2E8F0" />
                 <ImageView android:id="@+id/logo" android:layout_width="match_parent" android:layout_height="match_parent"
                     android:padding="6dp" android:scaleType="fitCenter" android:contentDescription="@null" />
             </FrameLayout>
-            <TextView android:id="@+id/number" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginStart="20dp" android:textSize="26sp" android:textColor="?attr/dMuted" />
-            <TextView android:id="@+id/name" android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:layout_marginStart="14dp" android:maxLines="1" android:ellipsize="end"
-                android:textSize="30sp" android:textStyle="bold" android:textColor="?attr/dText" />
-            <TextView android:id="@+id/fav" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="★" android:textSize="26sp" android:textColor="#FBBF24" android:visibility="gone" />
+            <ImageView android:id="@+id/infoArt" android:layout_width="150dp" android:layout_height="84dp" android:layout_marginStart="16dp"
+                android:scaleType="centerCrop" android:background="@drawable/info_art_bg" android:contentDescription="@null" android:visibility="gone" />
+
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                android:layout_marginStart="20dp" android:orientation="vertical">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <TextView android:id="@+id/liveChip" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="LIVE" android:textSize="11sp" android:textStyle="bold" android:textColor="#FFFFFFFF"
+                        android:background="@drawable/live_pill" android:paddingStart="6dp" android:paddingEnd="6dp" android:paddingTop="1dp"
+                        android:paddingBottom="1dp" android:layout_marginEnd="10dp" />
+                    <TextView android:id="@+id/number" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp" android:textSize="15sp" android:textColor="#FF94A3B8" />
+                    <TextView android:id="@+id/name" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:maxLines="1" android:ellipsize="end" android:textSize="15sp" android:textColor="#FFCBD5E1" />
+                    <TextView android:id="@+id/fav" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="★" android:textSize="18sp" android:textColor="#FBBF24" android:visibility="gone" />
+                </LinearLayout>
+                <TextView android:id="@+id/now" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp" android:maxLines="1" android:ellipsize="end" android:textSize="26sp" android:textStyle="bold"
+                    android:textColor="#FFF8FAFC" />
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:orientation="horizontal" android:gravity="center_vertical">
+                    <TextView android:id="@+id/times" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:textSize="14sp" android:textColor="#FFCBD5E1" />
+                    <ProgressBar android:id="@+id/progress" style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp" android:layout_height="4dp" android:layout_weight="1" android:layout_marginStart="14dp"
+                        android:max="1000" android:progressDrawable="@drawable/progress_white" />
+                </LinearLayout>
+                <TextView android:id="@+id/desc" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:maxLines="2" android:ellipsize="end" android:textSize="14sp"
+                    android:textColor="#FFB6C0CF" />
+                <TextView android:id="@+id/stats" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp" android:textSize="13sp" android:textColor="#FF94A3B8" />
+            </LinearLayout>
+
+            <!-- What's on next, beside a thin line. -->
+            <View android:id="@+id/nextLine" android:layout_width="1dp" android:layout_height="64dp" android:layout_marginStart="20dp"
+                android:background="#1AFFFFFF" />
+            <TextView android:id="@+id/next" android:layout_width="220dp" android:layout_height="wrap_content" android:layout_marginStart="18dp"
+                android:maxLines="3" android:ellipsize="end" android:textSize="15sp" android:textColor="#FFCBD5E1" android:lineSpacingExtra="2dp" />
         </LinearLayout>
 
-        <TextView android:id="@+id/now" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="12dp" android:maxLines="1" android:ellipsize="end" android:textSize="24sp"
-            android:textColor="?attr/dText" />
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="10dp" android:orientation="horizontal" android:gravity="center_vertical">
-            <TextView android:id="@+id/times" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:textSize="16sp" android:textColor="?attr/dMuted" />
-            <ProgressBar android:id="@+id/progress" style="@android:style/Widget.ProgressBar.Horizontal"
-                android:layout_width="0dp" android:layout_height="5dp" android:layout_weight="1" android:layout_marginStart="16dp"
-                android:max="1000" android:progressDrawable="@drawable/progress_track" />
-        </LinearLayout>
-        <TextView android:id="@+id/desc" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="10dp" android:maxLines="2" android:ellipsize="end" android:textSize="16sp"
-            android:textColor="?attr/dMuted" />
-        <TextView android:id="@+id/stats" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginTop="10dp" android:textSize="15sp" android:textColor="?attr/dMuted" />
-        <TextView android:id="@+id/next" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="10dp" android:maxLines="1" android:ellipsize="end" android:textSize="17sp"
-            android:textColor="?attr/dText" />
-        <TextView android:id="@+id/keys" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp"
+        <TextView android:id="@+id/keys" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp"
+            android:paddingStart="8dp"
             android:text="▲ ▼  channel     ◀ ▶  rewind / forward     ⏯  pause     ≡  options     BACK  guide"
-            android:textSize="14sp" android:textColor="?attr/dMuted" />
+            android:textSize="13sp" android:textColor="#FFB6C0CF" android:shadowColor="#99000000" android:shadowRadius="4" />
     </LinearLayout>
 </FrameLayout>

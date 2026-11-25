@@ -70,6 +70,12 @@ object Ui {
     }
 
     fun span(p: Programme) = "${time(p.start)} – ${time(p.stop)}"
+    /** "11 min left" (or "1 h 5 min left") for what's on now; "starts at 20:00" for one still to come. */
+    fun minutesLeft(p: Programme, now: Long = System.currentTimeMillis()): String {
+        if (p.start > now) return "starts at ${time(p.start)}"
+        val m = ((p.stop - now) / 60_000L).coerceAtLeast(0)
+        return if (m >= 60) "${m / 60} h ${m % 60} min left" else "$m min left"
+    }
 
     fun progress(p: Programme, now: Long = System.currentTimeMillis()): Int {
         val len = (p.stop - p.start).coerceAtLeast(1)

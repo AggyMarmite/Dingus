@@ -70,8 +70,9 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     private var version: Channel? = null
     private var zapPending: Runnable? = null
     private val hideInfo = Runnable {
-        info.animate().alpha(0f).setStartDelay(0).setInterpolator(android.view.animation.AccelerateDecelerateInterpolator())
-            .setDuration(if (Ui.lite) 0 else 250).withEndAction { info.visibility = View.GONE; info.translationY = 0f }
+        // Sinks away.
+        info.animate().alpha(0f).translationY(Ui.dp(a, 16).toFloat()).setStartDelay(0).setInterpolator(Motion.glide)
+            .setDuration(if (Ui.lite) 0 else 300).withEndAction { info.visibility = View.GONE; info.translationY = 0f }
     }
 
     /** Whether the info bar is on screen (and not already on its way out). */
@@ -546,29 +547,48 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         overlay.findViewById<TextView>(R.id.initials).text = Ui.initials(c.name)
         Logos.load(overlay.findViewById<ImageView>(R.id.logo), c.logo, Ui.dp(a, 56), overlay.findViewById(R.id.initials))
         val (now, next) = Repo.nowNext(c)
+        overlay.findViewById<View>(R.id.liveChip)?.visibility = if (now != null) View.VISIBLE else View.GONE
+        // The programme's own picture, when one's already known (nothing's looked up while you watch).
+        overlay.findViewById<ImageView>(R.id.infoArt)?.let { art ->
+            val pic = now?.let { TitleLogos.forProgramme(it) }?.let { TitleLogos.cachedBackdrop(it.first, it.second) }
+            if (pic != null && !Ui.lite) {
+                art.visibility = View.VISIBLE
+                art.clipToOutline = true
+                Posters.load(art, pic, Ui.dp(a, 84), null, wide = true)
+            } else art.visibility = View.GONE
+        }
         val nowV = overlay.findViewById<TextView>(R.id.now)
         val times = overlay.findViewById<TextView>(R.id.times)
         val prog = overlay.findViewById<ProgressBar>(R.id.progress)
         val desc = overlay.findViewById<TextView>(R.id.desc)
         val nextV = overlay.findViewById<TextView>(R.id.next)
         nowV.text = now?.title ?: "No guide information"
-        times.text = now?.let { Ui.span(it) + if (Repo.canStartOver(c, it)) "   ·   ≡ Start over" else "" } ?: ""
+        times.text = now?.let { Ui.span(it) + "  ·  " + Ui.minutesLeft(it) + if (Repo.canStartOver(c, it)) "   ·   ≡ Start over" else "" } ?: ""
         now?.let { prog.progress = Ui.progress(it) }
         (times.parent as View).visibility = if (now != null) View.VISIBLE else View.GONE // (the times and progress bar always show)
         desc.text = now?.desc ?: ""
         desc.visibility = if (desc.text.isNotEmpty()) View.VISIBLE else View.GONE
-        nextV.text = next?.let { "Next  ${Ui.time(it.start)}  ${it.title}" } ?: ""
-        nextV.visibility = if (full && nextV.text.isNotEmpty()) View.VISIBLE else View.GONE
+        // NEXT (small), its title, its times.
+        nextV.text = next?.let { n ->
+            val sb = android.text.SpannableStringBuilder("NEXT\n")
+            sb.setSpan(android.text.style.RelativeSizeSpan(0.72f), 0, 4, 0); sb.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, 4, 0)
+            sb.setSpan(android.text.style.ForegroundColorSpan(0xFF7D889A.toInt()), 0, 4, 0)
+            val b = sb.length; sb.append(n.title); sb.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), b, sb.length, 0)
+            sb.setSpan(android.text.style.ForegroundColorSpan(0xFFF1F5F9.toInt()), b, sb.length, 0)
+            sb.append("\n").append(Ui.span(n)); sb
+        } ?: ""
+        nextV.visibility = if (nextV.text.isNotEmpty()) View.VISIBLE else View.GONE
+        overlay.findViewById<View>(R.id.nextLine)?.visibility = nextV.visibility
         overlay.findViewById<View>(R.id.keys).visibility = if (full) View.VISIBLE else View.GONE
         updateStats()
         info.animate().cancel()
         if (!Ui.lite && (info.visibility != View.VISIBLE || info.alpha < 0.5f)) {
             // Fades in with a small rise (when it's already showing it just stays, with the new details).
+            // Rises in with the same soft bounce as everything else.
             info.alpha = 0f
-            info.translationY = Ui.dp(a, 12).toFloat()
+            info.translationY = Ui.dp(a, 22).toFloat()
             info.visibility = View.VISIBLE
-            info.animate().alpha(1f).translationY(0f).setStartDelay(delay)
-                .setInterpolator(android.view.animation.DecelerateInterpolator()).setDuration(220).start()
+            info.animate().alpha(1f).translationY(0f).setStartDelay(delay).setInterpolator(Motion.spring).setDuration(520).start()
         } else {
             info.alpha = 1f
             info.translationY = 0f

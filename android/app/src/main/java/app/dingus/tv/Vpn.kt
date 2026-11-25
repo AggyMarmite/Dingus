@@ -87,12 +87,13 @@ object Vpn {
             when (s) {
                 Status.CONNECTING -> Notice.working("⛨  VPN connecting${if (msg.isNotBlank()) " to $msg" else ""}…")
                 Status.ON -> {
+                    Notice.endWorking("⛨")
                     val here = connectedTo?.label ?: ""
                     if (here != lastOnLabel || was != Status.ON)
-                        Notice.done(if (lastOnLabel != null && was != Status.OFF && here != lastOnLabel) "⛨  VPN switched to $here" else "⛨  VPN connected  ·  $here")
+                        Notice.aside(if (lastOnLabel != null && was != Status.OFF && here != lastOnLabel) "⛨  VPN switched  ·  $here" else "⛨  VPN connected  ·  $here")
                     lastOnLabel = here
                 }
-                Status.OFF -> { if (was == Status.ON || was == Status.CONNECTING) Notice.done("⛨  VPN off"); lastOnLabel = null }
+                Status.OFF -> { Notice.endWorking("⛨"); if (was == Status.ON || was == Status.CONNECTING) Notice.aside("⛨  VPN off"); lastOnLabel = null }
                 Status.ERROR -> Notice.clear() // (the screen that asked says why)
             }
         }

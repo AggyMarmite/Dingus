@@ -394,7 +394,10 @@ class VodPlayerActivity : BaseActivity() {
         findViewById<TextView>(R.id.vodClock).text = Ui.time(System.currentTimeMillis())
         // Paused with the controls hidden: the small pill and thin line.
         val paused = !p.playWhenReady && controls.visibility != View.VISIBLE && epPanel.visibility != View.VISIBLE
-        pausedPill.visibility = if (paused) View.VISIBLE else View.GONE
+        if (!p.playWhenReady && epPanel.visibility != View.VISIBLE) { if (pausedSince == 0L) pausedSince = System.currentTimeMillis() } else pausedSince = 0L
+        val rich = paused && pausedSince > 0 && System.currentTimeMillis() - pausedSince > 5_000 && upNext.visibility != View.VISIBLE
+        if (rich) { if (pauseScreen?.showing != true) pauseDetails(); pauseScreen?.time(pos, len) } else pauseScreen?.hide()
+        pausedPill.visibility = if (paused && !rich) View.VISIBLE else View.GONE
         pausedLine.visibility = pausedPill.visibility
         if (paused) {
             pausedPill.text = android.text.SpannableStringBuilder("❚❚  Paused").apply {
@@ -468,6 +471,30 @@ class VodPlayerActivity : BaseActivity() {
         Ui.test("vod-skip ${by / 1000}")
     }
 
+    // The rich pause screen: after a few seconds paused with the controls away.
+    private var pauseScreen: PauseScreen? = null
+    private var pausedSince = 0L
+
+    private fun pauseDetails() {
+        val screen = pauseScreen ?: PauseScreen(this).also { pauseScreen = it }
+        val t = titles.getOrNull(index) ?: return
+        val ep = Regex("""^(.*?)\s+·\s+S(\d+) E(\d+)\s*(.*)$""").find(t)
+        val id = ids.getOrNull(index) ?: return
+        if (kind == Vod.SERIES && ep != null) {
+            val (show, season, num, name) = ep.destructured
+            val d = showId?.let { Vod.cachedDetails(Vod.SERIES, it) }
+            val plot = d?.episodes?.firstOrNull { it.id == id }?.plot?.takeIf { it.isNotBlank() } ?: d?.plot
+            val item = showId?.let { sid -> Vod.cached(Vod.SERIES)?.byId?.get(sid) }
+            screen.show(listOfNotNull("SEASON $season", "EPISODE $num", name.takeIf { it.isNotBlank() }?.uppercase()).joinToString("  ·  "),
+                show, item?.let { TitleLogos.cached(Vod.SERIES, it) }, plot)
+        } else {
+            val d = if (kind == Vod.MOVIES) Vod.cachedDetails(kind, id) else null
+            val item = if (kind == Vod.MOVIES) Vod.cached(kind)?.byId?.get(id) else null
+            screen.show(listOfNotNull(sub ?: if (kind == CATCHUP) "CATCH UP" else "FILM", d?.year?.takeIf { it > 0 }?.toString(), d?.genre?.split(',')?.firstOrNull()?.trim()?.uppercase()).joinToString("  ·  "),
+                t, item?.let { TitleLogos.cached(kind, it) }, d?.plot)
+        }
+    }
+
     private fun togglePause() {
         val p = player ?: return
         p.playWhenReady = !p.playWhenReady
@@ -484,6 +511,17 @@ class VodPlayerActivity : BaseActivity() {
         if (epPanel.visibility == View.VISIBLE) {
             if (code == KeyEvent.KEYCODE_BACK) { if (!down) closeEpisodes(); return true }
             return super.dispatchKeyEvent(event)
+        }
+        // The pause screen: ▶ or OK carries on; anything else brings back the controls.
+        if (pauseScreen?.showing == true) {
+            if (down && event.repeatCount == 0) {
+                pauseScreen?.hide(); pausedSince = 0L
+                when (code) {
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_MEDIA_PLAY, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> togglePause()
+                    else -> showControls(focusBar = true)
+                }
+            }
+            return true
         }
         // Skip intro showing and the controls hidden: OK skips.
         if ((code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER) && controls.visibility != View.VISIBLE &&

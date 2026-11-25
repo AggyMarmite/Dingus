@@ -214,7 +214,7 @@ sleep 0.5; shot 12-film-playing
 fresh
 key KEYCODE_DPAD_CENTER 1
 check "vod-pause" 5 "OK on the progress bar pauses"
-sleep 6; shot 12b-film-paused
+sleep 6; check "pause-screen" 4 "a film paused for a few seconds shows the pause screen"; shot 12b-film-paused
 key KEYCODE_DPAD_CENTER 1
 check "vod-play" 5 "OK again plays"
 fresh
