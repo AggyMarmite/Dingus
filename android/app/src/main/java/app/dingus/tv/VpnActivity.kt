@@ -35,14 +35,24 @@ class VpnActivity : BaseActivity() {
         list = findViewById(R.id.list)
         list.findViewById<TextView>(R.id.settingsTitle)?.text = "More VPN settings"
 
-        header("More VPN settings")
+        header("Set up")
         val first = row("Provider", { controls.providerName() }) { chooseProvider() }
         row("Set up from your phone", { setupLine() }) { phoneSetup() }
         row("Type them in with the remote", { "Private key and tunnel address, or a link to a config file" }) { typeIn() }
-        row("Connect when Dingus starts", { (if (Vpn.auto) "On" else "Off") + "  ·  your playlist and streams go through the VPN from the start" }) {
+        row("Remove config files", { val n = Vpn.configs.size; if (n == 0) "None added" else "$n added  ·  choose ones to remove" }) { removeConfigs() }
+        header("When it's on")
+        row("Connect when Dingus starts", { onOff(Vpn.auto) + "your playlist and streams go through the VPN from the start" }) {
             Vpn.auto = !Vpn.auto; update()
         }
-        row("Remove config files", { val n = Vpn.configs.size; if (n == 0) "None added" else "$n added  ·  choose ones to remove" }) { removeConfigs() }
+        row("Reconnect by itself", { onOff(Store.vpnReconnect) + "if the VPN drops, connect again: the same place, or the least busy one nearby" }) {
+            Store.vpnReconnect = !Store.vpnReconnect; update()
+        }
+        row("Kill switch", { onOff(Store.vpnKillSwitch) + "if the VPN drops, stop playing until it's back" }) {
+            Store.vpnKillSwitch = !Store.vpnKillSwitch; update()
+        }
+        row("Switch server if slow", { onOff(Store.vpnSwitchSlow) + "offer a quicker server when streams keep buffering" }) {
+            Store.vpnSwitchSlow = !Store.vpnSwitchSlow; update()
+        }
         header("About")
         row("Only Dingus uses this VPN", { "Other apps on your Fire TV aren't affected." }) {}
         first.requestFocus()
@@ -73,6 +83,8 @@ class VpnActivity : BaseActivity() {
         subtitles.add(v to subtitle)
         return v
     }
+
+    private fun onOff(on: Boolean) = if (on) "On  ·  " else "Off  ·  "
 
     private fun update() {
         for ((v, f) in subtitles) v.findViewById<TextView>(R.id.subtitle).text = f()

@@ -336,11 +336,7 @@ class SettingsActivity : BaseActivity() {
         row("Location", { vpn.locationLine() }, { "›" }) { vpn.chooseLocation() }
         row("IP address", { vpn.ipLine() }, { vpn.ipValue() }) { vpn.checkIp() }
         row("Speed test", { "How fast streams come through the VPN right now" }, { Store.vpnLastSpeed.ifEmpty { "" }.let { if (it.isEmpty()) "" else "Last: $it" } }) { vpn.speedTest { update() } }
-        toggle("Reconnect by itself", "If the VPN drops, connect again: the same place, or the least busy one nearby", { Store.vpnReconnect }) { Store.vpnReconnect = it }
-        toggle("Kill switch", "If the VPN drops, stop playing until it's back (nothing goes out without it)", { Store.vpnKillSwitch }) { Store.vpnKillSwitch = it }
-        toggle("Switch server if slow", "Offer a quicker server when streams keep buffering", { Store.vpnSwitchSlow }) { Store.vpnSwitchSlow = it }
-        row("More VPN settings", { "Provider, set up from your phone, keys, config files, connect when Dingus starts" }, { "›" }) { vpn.openSetup() }
-        row("Only Dingus uses this VPN", { "Other apps on your Fire TV aren't affected." }) {}
+        row("More VPN settings", { "Provider, keys, connect at start, what happens if it drops" }, { "›" }) { vpn.openSetup() }
         if (vpn.locations.isEmpty()) scope.launch { vpn.loadLocations() }
         if (!VpnControls.ipCurrent) scope.launch { VpnControls.lookUpIp(); update() }
         Ui.test("vpn-section")
