@@ -810,6 +810,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             v.setOnFocusChangeListener { _, has ->
                 CatPill.focus(v)
                 val p = h.bindingAdapterPosition
+                if (has && p >= 0) Ui.test("category-focus ${items[p].name}")
                 if (has && p >= 0) {
                     pendingId = items[p].id
                     handler.removeCallbacks(pending)

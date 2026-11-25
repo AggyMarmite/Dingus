@@ -22,6 +22,14 @@ diag() {
   } >> "$OUT/diag.txt" 2>&1
 }
 fresh() { adb logcat -c; }
+# Moves with KEY until the log shows PATTERN (e.g. the highlight reaching "focus navFilms"), up to MAX presses, rather
+# than counting presses – so a new row, category or button somewhere doesn't throw the rest of the test off.
+# press_until KEY PATTERN MAX [DELAY]. (Clears the log first, so only what happens now counts.)
+press_until() {
+  adb logcat -c
+  for _ in $(seq 1 "$3"); do key "$1" "${4:-0.6}"; adb logcat -d -s DINGUS-TEST:I | grep -qE "$2" && return 0; done
+  wait_log "$2" 2
+}
 # Quick mode: ONLY="xtream,home" runs just those sections (after the first playlist loads). Sections: backup, xtream,
 # home, numbers, reminder, phone, vpn. Home and the films/shows checks need xtream (the login) before them.
 section() { [ -z "${ONLY:-}" ] || [[ ",${ONLY// /}," == *",$1,"* ]]; }
@@ -58,12 +66,12 @@ check "categories-open" 5 "LEFT from what's on now shows the categories"
 shot 03-categories
 # Scrolling slowly through the categories (each one shows behind) mustn't jump back to "All channels".
 fresh
-key KEYCODE_DPAD_DOWN 1.5; key KEYCODE_DPAD_DOWN 1.5; key KEYCODE_DPAD_CENTER 3   # Sport
+press_until KEYCODE_DPAD_DOWN "category-focus .*Sport" 8 1.5; key KEYCODE_DPAD_CENTER 3   # to Sport
 check "key KEYCODE_DPAD_CENTER on TextView/Sport" 5 "scrolling through categories keeps the highlight where you are"
 key KEYCODE_DPAD_CENTER 3; shot 03b-sport
 check "preview Test 3 Sport" 30 "picking a category shows its channels"
 fresh
-key KEYCODE_DPAD_LEFT 2; key KEYCODE_DPAD_UP 1.5; key KEYCODE_DPAD_CENTER 4        # back to UK: Entertainment
+key KEYCODE_DPAD_LEFT 2; press_until KEYCODE_DPAD_UP "category-focus UK: Entertainment" 8 1.5; key KEYCODE_DPAD_CENTER 4   # back to UK: Entertainment
 check "key KEYCODE_DPAD_CENTER on TextView/UK: Entertainment" 5 "moving up a category works too"
 key KEYCODE_DPAD_CENTER 1
 check "preview Test 1 HD" 30 "the guide shows that category's channels"
@@ -132,7 +140,7 @@ key KEYCODE_DPAD_DOWN 1
 check "settings-section Live TV" 5 "Settings: Live TV comes after TV guide"
 shot 07b-settings-live
 fresh
-key KEYCODE_DPAD_DOWN 1; key KEYCODE_DPAD_RIGHT 1                                 # from Playback (4th section)
+press_until KEYCODE_DPAD_DOWN "settings-section Playback" 6 1; key KEYCODE_DPAD_RIGHT 1   # into Playback
 check "settings-into Playback: Subtitles automatically" 3 "RIGHT from a section lands on its first option"
 key KEYCODE_BACK 1; key KEYCODE_DPAD_UP 1
 key KEYCODE_DPAD_RIGHT 1; key KEYCODE_DPAD_DOWN 1; shot 07c-settings-live-rows
@@ -226,10 +234,10 @@ sleep 3; shot 14-show-details
 fresh
 key KEYCODE_DPAD_CENTER 3
 check "vod-playing" 40 "an episode plays"
-key KEYCODE_DPAD_DOWN 1; key KEYCODE_DPAD_RIGHT 0.5; key KEYCODE_DPAD_RIGHT 0.5; shot 14a-player-buttons
+key KEYCODE_DPAD_DOWN 1; press_until KEYCODE_DPAD_RIGHT "focus btnEpisodes" 5 0.5; shot 14a-player-buttons
 # The screenshot can take long enough for the controls to hide: ▲ (brings them back onto the bar either way), ▼ to the
 # first button, then across to Episodes – the same keys whether or not they'd hidden.
-key KEYCODE_DPAD_UP 0.5; key KEYCODE_DPAD_DOWN 0.5; key KEYCODE_DPAD_RIGHT 0.5; key KEYCODE_DPAD_RIGHT 0.5
+key KEYCODE_DPAD_UP 0.5; key KEYCODE_DPAD_DOWN 0.5; press_until KEYCODE_DPAD_RIGHT "focus btnEpisodes" 5 0.5
 key KEYCODE_DPAD_CENTER 2
 check "vod-episodes 4" 5 "Episodes in the player lists the show's episodes"
 shot 14b-player-episodes
@@ -262,7 +270,7 @@ check "home-focus row 0 heroWatch" 5 "UP from the rows goes back up to the top"
 key KEYCODE_DPAD_LEFT 1.5
 check "menu-open" 5 "LEFT at the left edge of Home opens the side menu"
 shot 17b-home-menu
-key KEYCODE_DPAD_DOWN 0.5; key KEYCODE_DPAD_DOWN 0.5; key KEYCODE_DPAD_CENTER 3     # Home → Live TV → Films
+press_until KEYCODE_DPAD_DOWN "focus navFilms" 6 0.5; key KEYCODE_DPAD_CENTER 3     # down the menu to Films
 check "library movies 23" 30 "Films opens from the side menu"
 sleep 3; shot 18-films-rows
 key KEYCODE_DPAD_DOWN 3; shot 19-films-rows-2
@@ -270,8 +278,8 @@ fresh
 key KEYCODE_DPAD_LEFT 1.5
 check "browse-panel shown" 5 "LEFT from the first film brings in the categories panel"
 shot 19-films-panel
-key KEYCODE_DPAD_DOWN 0.6; key KEYCODE_DPAD_DOWN 0.6; key KEYCODE_DPAD_DOWN 1.5   # (past Coming soon and Continue watching)
-check "browse-cat (Recently added|Trending|Top rated|Top films|All films) [0-9]" 5 "moving through the categories shows each one"
+press_until KEYCODE_DPAD_DOWN "browse-cat (Recently added|All films) [0-9]" 8 0.9   # down to a big category
+check "browse-cat (Recently added|All films) [0-9]" 5 "moving through the categories shows each one"
 key KEYCODE_DPAD_RIGHT 1.5
 check "browse-panel hidden" 5 "RIGHT goes into the films, the categories step aside"
 shot 19-films-grid
@@ -298,7 +306,7 @@ fresh
 key KEYCODE_BACK 2
 check "home-shown" 10 "BACK from Films returns to Home"
 key KEYCODE_DPAD_UP 0.5; key KEYCODE_DPAD_UP 0.5; key KEYCODE_DPAD_LEFT 1.5
-for _ in 1 2 3 4 5; do key KEYCODE_DPAD_DOWN 0.4; done                                 # … → Settings
+press_until KEYCODE_DPAD_DOWN "focus navSettings" 8 0.4                               # down the menu to Settings
 key KEYCODE_DPAD_CENTER 2
 check "settings-shown" 10 "Settings opens from the side menu on Home"
 # Settings → side menu → Live TV: the guide should be there straight away (not empty for a while).
@@ -323,7 +331,7 @@ adb shell am start -n $PKG/.HomeActivity --ez dingus_test_loading true
 sleep 2; shot 16a-loading-screen
 check "home-loading-done" 15 "…and goes once Home's ready"
 sleep 3
-key KEYCODE_DPAD_LEFT 1.5; key KEYCODE_DPAD_DOWN 0.5; key KEYCODE_DPAD_CENTER 3     # menu → Live TV
+key KEYCODE_DPAD_LEFT 1.5; press_until KEYCODE_DPAD_DOWN "focus navGuide" 4 0.5; key KEYCODE_DPAD_CENTER 3     # menu → Live TV
 check "guide-filled [1-9]" 15 "Live TV from Home shows the channels"
 check "categories-open" 10 "…with the categories open first"
 shot 19aa-live-from-home

@@ -54,6 +54,16 @@ abstract class BaseActivity : Activity() {
     private var lastKey: android.view.KeyEvent? = null
     private var lastKeyResult = false
 
+    /** Self-test builds: every move of the highlight is logged ("focus navFilms"), so the test can go straight to a
+     *  button or row by name instead of counting presses. */
+    override fun onPostCreate(savedInstanceState: android.os.Bundle?) {
+        super.onPostCreate(savedInstanceState)
+        if (BuildConfig.DEBUG) window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, n ->
+            val id = n?.takeIf { it.id != android.view.View.NO_ID }?.let { try { resources.getResourceEntryName(it.id) } catch (_: Exception) { null } }
+            if (id != null) Ui.test("focus $id")
+        }
+    }
+
     protected fun backHold(event: android.view.KeyEvent): Boolean {
         if (event === lastKey) return lastKeyResult
         lastKey = event
