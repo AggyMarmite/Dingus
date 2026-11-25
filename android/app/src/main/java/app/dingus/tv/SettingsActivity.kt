@@ -47,7 +47,7 @@ class SettingsActivity : BaseActivity() {
         val holder = findViewById<LinearLayout>(R.id.sections)
         for ((i, s) in sections.withIndex()) {
             val t = LayoutInflater.from(this).inflate(R.layout.item_settings_section, holder, false) as TextView
-            t.text = s.first
+            t.text = SettingsIcons.section(this, s.first)
             t.id = View.generateViewId()
             // Moving onto a section shows its options; OK (or RIGHT) goes into them.
             t.setOnFocusChangeListener { _, has -> if (has) showSection(i); CatPill.style(t) }
@@ -444,6 +444,7 @@ class SettingsActivity : BaseActivity() {
     private fun row(title: String, subtitle: () -> String, value: (() -> String)? = null, click: () -> Unit): View {
         val v = LayoutInflater.from(this).inflate(R.layout.item_setting_row, list, false)
         v.findViewById<TextView>(R.id.title).text = title
+        v.findViewById<TextView>(R.id.rowIcon)?.let { SettingsIcons.row(it, title) }
         v.setOnClickListener { click() }
         list.addView(v)
         if (section >= 0) v.nextFocusLeftId = sectionViews[section].id // LEFT: back to this section, not a neighbour

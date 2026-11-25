@@ -1,5 +1,6 @@
 package app.dingus.tv
 
+import kotlinx.coroutines.launch
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
@@ -104,11 +105,26 @@ class RowsAdapter(
         if (h.key.isNotEmpty()) (h.list.layoutManager as LinearLayoutManager).findFirstVisibleItemPosition().let { if (it >= 0) scroll[h.key] = it }
         h.key = row.title
         h.title.text = row.title
+        h.cards?.wide = wideRow(row.title)
         h.cards?.set(row.cards)
         h.list.scrollToPosition(scroll[row.title] ?: 0)
     }
 
+    /** Trending and Because you watched: wide cards with the title's art (the other rows keep posters). */
+    private fun wideRow(title: String) = !Ui.lite && (title.startsWith("Trending") || title.startsWith("Because you watched"))
+
+    /** Pictures and logos not known yet: looked up once each in the background, then the card's drawn again. */
+    private val asked = HashSet<String>()
+    private fun lookUp(kind: String, item: VodItem, redraw: () -> Unit) {
+        if (!TitleLogos.enabled || !asked.add("$kind:${item.id}:${item.name}")) return
+        Background.scope.launch {
+            try { TitleLogos.find(kind, item, Vod.cachedDetails(kind, item.id)?.tmdbId) } catch (_: Exception) {}
+            android.os.Handler(android.os.Looper.getMainLooper()).post(redraw)
+        }
+    }
+
     inner class CardsAdapter : RecyclerView.Adapter<CardsAdapter.C>() {
+        var wide = false
         var cards: List<Card> = emptyList()
         fun set(list: List<Card>) { cards = list; notifyDataSetChanged() }
 
@@ -120,13 +136,18 @@ class RowsAdapter(
             val progress: ProgressBar? = v.findViewById(R.id.progress)
             val badge: TextView? = v.findViewById(R.id.badge)
             val newBadge: TextView? = v.findViewById(R.id.newBadge)
+            val art: ImageView? = v.findViewById(R.id.art)
+            val cornerLogo: ImageView? = v.findViewById(R.id.cornerLogo)
+            val liveTag: View? = v.findViewById(R.id.liveTag)
+            val titleArt: ImageView? = v.findViewById(R.id.titleArt)
+            val titleText: TextView? = v.findViewById(R.id.titleText)
         }
 
         override fun getItemCount() = cards.size
-        override fun getItemViewType(position: Int) = when (cards[position]) { is Card.Title -> 0; is Card.Live, is Card.Show -> 1; is Card.SeeAll -> if ((cards[position] as Card.SeeAll).chip) 3 else 2 }
+        override fun getItemViewType(position: Int) = when (cards[position]) { is Card.Title -> if (wide) 4 else 0; is Card.Live, is Card.Show -> 1; is Card.SeeAll -> if ((cards[position] as Card.SeeAll).chip) 3 else 2 }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): C {
-            val layout = when (viewType) { 0 -> R.layout.item_poster_row; 1 -> R.layout.item_channel_card; 3 -> R.layout.item_category_chip; else -> R.layout.item_see_all }
+            val layout = when (viewType) { 0 -> R.layout.item_poster_row; 4 -> R.layout.item_wide_card; 1 -> R.layout.item_channel_card; 3 -> R.layout.item_category_chip; else -> R.layout.item_see_all }
             val v = LayoutInflater.from(ctx).inflate(layout, parent, false)
             val c = C(v)
             // Card views are shared between rows, so always look the card up in the row it's in now
@@ -156,7 +177,17 @@ class RowsAdapter(
                     c.title?.text = m.name
                     c.fallback?.text = m.name
                     c.meta?.text = card.label ?: listOfNotNull(m.year.takeIf { it > 0 }?.toString(), m.rating.takeIf { it > 0 }?.let { "★ %.1f".format(it) }).joinToString("   ")
-                    c.poster?.let { Posters.load(it, m.poster, (164 * d).toInt(), c.fallback) }
+                    if (c.titleArt != null) {
+                        // Wide: the background picture, and the title's logo on it (or its name in bold).
+                        val bg = TitleLogos.cachedBackdrop(card.kind, m) ?: Vod.cachedDetails(card.kind, m.id)?.backdrop
+                        c.poster?.let { Posters.load(it, bg ?: m.poster, (164 * d).toInt(), c.fallback, wide = bg != null) }
+                        val logo = TitleLogos.cached(card.kind, m)
+                        c.titleText?.text = m.name
+                        c.titleText?.visibility = if (logo == null) View.VISIBLE else View.GONE
+                        c.titleArt?.visibility = if (logo == null) View.GONE else View.VISIBLE
+                        if (logo != null) Logos.load(c.titleArt!!, logo, (52 * d).toInt(), null, wide = true)
+                        if (!TitleLogos.knowsBackdrop(card.kind, m)) lookUp(card.kind, m) { if (position < cards.size && cards[position] === card) notifyItemChanged(position) }
+                    } else c.poster?.let { Posters.load(it, m.poster, (164 * d).toInt(), c.fallback) }
                     c.progress?.apply {
                         visibility = if (card.progress >= 0) View.VISIBLE else View.GONE
                         progress = (card.progress * 1000).toInt()
@@ -170,7 +201,19 @@ class RowsAdapter(
                     c.title?.text = (if (Store.showNumbers && ch.number > 0) "${ch.number}  " else "") + ch.name
                     c.meta?.text = now?.title ?: ""
                     c.fallback?.text = Ui.initials(ch.name)
-                    c.poster?.let { Logos.load(it, ch.logo, (76 * d).toInt(), c.fallback) }
+                    // The programme's own picture when there is one (the logo small in the corner), else the logo.
+                    val t = now?.let { TitleLogos.forProgramme(it) }
+                    val pic = t?.let { TitleLogos.cachedBackdrop(it.first, it.second) }
+                    if (pic != null && c.art != null && !Ui.lite) {
+                        c.art.visibility = View.VISIBLE; c.poster?.visibility = View.INVISIBLE; c.fallback?.visibility = View.GONE
+                        Posters.load(c.art, pic, (117 * d).toInt(), null, wide = true)
+                        c.cornerLogo?.let { cl -> cl.visibility = if (ch.logo.isNullOrBlank()) View.GONE else View.VISIBLE; Logos.load(cl, ch.logo, (20 * d).toInt()) }
+                    } else {
+                        c.art?.visibility = View.GONE; c.cornerLogo?.visibility = View.GONE; c.poster?.visibility = View.VISIBLE
+                        c.poster?.let { Logos.load(it, ch.logo, (76 * d).toInt(), c.fallback) }
+                        if (t != null && !TitleLogos.knowsBackdrop(t.first, t.second)) lookUp(t.first, t.second) { if (position < cards.size && cards[position] === card) notifyItemChanged(position) }
+                    }
+                    c.liveTag?.visibility = if (now != null) View.VISIBLE else View.GONE
                     c.progress?.apply {
                         visibility = if (now != null) View.VISIBLE else View.GONE
                         if (now != null) progress = Ui.progress(now)
@@ -182,7 +225,19 @@ class RowsAdapter(
                     c.title?.text = p?.title ?: ch.name
                     c.meta?.text = listOfNotNull(ch.name, card.label).joinToString("  ·  ")
                     c.fallback?.text = Ui.initials(ch.name)
-                    c.poster?.let { Logos.load(it, ch.logo, (76 * d).toInt(), c.fallback) }
+                    // The programme's own picture when there is one (the logo small in the corner), else the logo.
+                    val t = now?.let { TitleLogos.forProgramme(it) }
+                    val pic = t?.let { TitleLogos.cachedBackdrop(it.first, it.second) }
+                    if (pic != null && c.art != null && !Ui.lite) {
+                        c.art.visibility = View.VISIBLE; c.poster?.visibility = View.INVISIBLE; c.fallback?.visibility = View.GONE
+                        Posters.load(c.art, pic, (117 * d).toInt(), null, wide = true)
+                        c.cornerLogo?.let { cl -> cl.visibility = if (ch.logo.isNullOrBlank()) View.GONE else View.VISIBLE; Logos.load(cl, ch.logo, (20 * d).toInt()) }
+                    } else {
+                        c.art?.visibility = View.GONE; c.cornerLogo?.visibility = View.GONE; c.poster?.visibility = View.VISIBLE
+                        c.poster?.let { Logos.load(it, ch.logo, (76 * d).toInt(), c.fallback) }
+                        if (t != null && !TitleLogos.knowsBackdrop(t.first, t.second)) lookUp(t.first, t.second) { if (position < cards.size && cards[position] === card) notifyItemChanged(position) }
+                    }
+                    c.liveTag?.visibility = if (now != null) View.VISIBLE else View.GONE
                     val now = System.currentTimeMillis()
                     c.progress?.apply {
                         val on = p != null && p.start <= now && now < p.stop

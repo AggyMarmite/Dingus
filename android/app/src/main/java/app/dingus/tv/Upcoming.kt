@@ -126,7 +126,7 @@ object Upcoming {
     private val notCountingRx = Regex("""\b(cam|camrip|ts|telesync|hdts|screener|scr|pre[- ]?release|pre[- ]?releases)\b""", RegexOption.IGNORE_CASE)
 
     /** The categories (ids, "movies:12") that don't count as having it – CAM, pre-release and the like at first. */
-    fun ignored(kind: String, lib: Library?): Set<String> {
+    fun ignored(kind: String, lib: Vod.Library?): Set<String> {
         val saved = Store.prefsString("comingIgnore_$kind", "\u0000")
         if (saved != "\u0000") return saved.split('\n').filter { it.isNotEmpty() }.toSet()
         return lib?.categories?.filter { notCountingRx.containsMatchIn(it.name) }?.map { it.id }?.toSet() ?: emptySet()
@@ -144,7 +144,7 @@ object Upcoming {
     private fun norm(s: String) = s.lowercase().replace(Regex("""\(\d{4}\)|\[.*?]|^[a-z]{2,4}\s*[|:-]\s*"""), "").filter { it.isLetterOrDigit() }
 
     /** Any alert now in the library (outside the categories that don't count)? Note it, tag it, clear the alert. */
-    fun check(kind: String, lib: Library) {
+    fun check(kind: String, lib: Vod.Library) {
         val mine = alerts().filter { it.kind == kind }
         if (mine.isEmpty()) return
         val skip = ignored(kind, lib)

@@ -221,7 +221,10 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
             findViewById<View>(R.id.screenName).visibility = View.GONE
             gridTitle.text = name
             gridCount.text = "·  ${Ui.count(items.size)} ${if (kind == Vod.MOVIES) (if (items.size == 1) "film" else "films") else (if (items.size == 1) "show" else "shows")}  ·  ◀ categories"
-            empty.text = "Nothing here."
+            empty.text = when (id) {
+                Vod.CONTINUE -> Empty.text(this, Empty.CONTINUE, "Nothing to carry on with yet", "Start a film or an episode and it'll be here to pick up where you left off.")
+                else -> Empty.text(this, Empty.FOLDER, "Nothing here", "This category's empty at the moment.")
+            }
             empty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
             Ui.test("browse-cat $name ${items.size}")
         }
@@ -234,7 +237,8 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
             Row(month, items.map { u -> Card.Title(kind, u.vodItem, label = (if (Upcoming.hasAlert(u.tmdbId)) "🔔  " else "") + Upcoming.shortDate(u)) })
         }
         adapter.set(out)
-        empty.text = if (TitleLogos.enabled) "Looking for what's coming…" else "Coming soon needs TMDB (Settings)."
+        empty.text = if (TitleLogos.enabled) Empty.text(this, Empty.COMING, "Looking for what's coming…", "Upcoming films and shows, a few months ahead.")
+            else Empty.text(this, Empty.COMING, "Coming soon needs TMDB", "Turn on Title logos in Settings → Look.")
         empty.visibility = if (out.isEmpty()) View.VISIBLE else View.GONE
         if (fetch) scope.launch { Upcoming.refresh(kind); if (current == Vod.COMING) buildComing(fetch = false) }
     }
@@ -286,7 +290,7 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
         adapter.set(out)
         if (current == Vod.FEATURED) {
             empty.visibility = if (out.isEmpty()) View.VISIBLE else View.GONE
-            if (out.isEmpty()) empty.text = "Nothing here yet."
+            if (out.isEmpty()) empty.text = Empty.text(this, Empty.FOLDER, "Nothing here yet", "Your films and shows appear here once the playlist has loaded.")
         }
     }
 

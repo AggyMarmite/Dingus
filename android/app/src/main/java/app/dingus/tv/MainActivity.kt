@@ -183,7 +183,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         val p = Store.playlist
         if (p == null) {
             grid.setChannels(emptyList(), null)
-            showEmpty("Welcome to Dingus.\nPress OK to add your playlist.")
+            showEmpty(Empty.text(this, Empty.TV, "Welcome to Dingus", "Press OK to add your playlist."))
             setInfo(null, null)
             if (!askedForPlaylist) { askedForPlaylist = true; startActivity(Intent(this, AddPlaylistActivity::class.java)) }
             return
@@ -228,7 +228,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
                     handler.postDelayed({ if (!isFinishing) scope.launch { refresh(p, true) } }, 3_000L * loadAttempts)
                     return
                 }
-                if (Repo.channels.isEmpty()) showEmpty("Couldn't load your playlist.\n${Net.friendly(e)}\n\nPress ◀ for settings.")
+                if (Repo.channels.isEmpty()) showEmpty(Empty.text(this@MainActivity, Empty.OFFLINE, "Couldn't load your playlist", "${Net.friendly(e)}\n\nPress ◀ for settings."))
                 setStatus(Net.friendly(e))
                 Notice.updateDone("Couldn't update the playlist: ${Net.friendly(e)}", 6_000)
                 return
@@ -257,7 +257,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         hint.visibility = if (s.isEmpty()) View.GONE else View.VISIBLE
     }
 
-    private fun showEmpty(s: String?) {
+    private fun showEmpty(s: CharSequence?) {
         empty.text = s ?: ""
         empty.visibility = if (s == null) View.GONE else View.VISIBLE
     }
@@ -287,7 +287,11 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         Ui.test("guide-filled ${list.size}")
         when {
             list.isNotEmpty() -> showEmpty(null)
-            Repo.channels.isNotEmpty() -> { showEmpty("Nothing here yet."); setInfo(null, null) }
+            Repo.channels.isNotEmpty() -> {
+                showEmpty(if (id == Repo.FAV) Empty.text(this, Empty.STAR, "No favourites yet", "In the guide, press ≡ on a channel (or hold OK) and choose Add to Favourites.")
+                    else Empty.text(this, Empty.FOLDER, "Nothing in this category", "Its channels may be hidden: Settings → Live TV → Edit channels."))
+                setInfo(null, null)
+            }
         }
     }
 

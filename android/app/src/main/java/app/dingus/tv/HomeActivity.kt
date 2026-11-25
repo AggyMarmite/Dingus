@@ -108,7 +108,7 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
         tick.run()
         if (Store.playlist == null) {
             hideLoading()
-            empty.text = "Welcome to Dingus.\nAdd your playlist to get started."
+            empty.text = Empty.text(this, Empty.TV, "Welcome to Dingus", "Add your playlist to get started.")
             empty.visibility = View.VISIBLE
             adapter.set(emptyList())
             side.open()

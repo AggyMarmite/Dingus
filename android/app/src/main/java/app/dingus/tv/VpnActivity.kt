@@ -77,7 +77,7 @@ class VpnActivity : BaseActivity() {
 
     private fun row(title: String, subtitle: () -> String, click: () -> Unit): View {
         val v = LayoutInflater.from(this).inflate(R.layout.item_setting, list, false)
-        v.findViewById<TextView>(R.id.title).text = title
+        v.findViewById<TextView>(R.id.title).text = SettingsIcons.inline(this, title)
         v.setOnClickListener { click() }
         list.addView(v)
         subtitles.add(v to subtitle)
