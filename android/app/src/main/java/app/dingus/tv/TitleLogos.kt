@@ -37,6 +37,9 @@ object TitleLogos {
 
     private fun keyFor(kind: String, item: VodItem) = "$kind:${item.id}"
 
+    /** Whether the logo's been looked up (found or not). */
+    fun knowsLogo(kind: String, item: VodItem): Boolean = synchronized(known) { load(); known.containsKey(keyFor(kind, item)) }
+
     /** The logo if it's already known (no network). */
     fun cached(kind: String, item: VodItem): String? = synchronized(known) { load(); known[keyFor(kind, item)]?.ifEmpty { null } }
 

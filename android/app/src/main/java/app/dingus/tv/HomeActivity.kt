@@ -398,11 +398,32 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
         v.animate().alpha(0f).setDuration(250).withEndAction { v.visibility = View.GONE; v.alpha = 1f }.start()
     }
 
+    /** A slide with a title logo and a proper background picture. */
+    private fun isRich(s: Slide): Boolean {
+        val (k, m) = s.title_ ?: return false
+        if (TitleLogos.cached(k, m) == null) return false
+        return TitleLogos.cachedBackdrop(k, m) != null || Vod.cachedDetails(k, m.id)?.backdrop != null
+    }
+
+    /** Slides whose logo or background hasn't been looked up yet. */
+    @Volatile private var unknownSlides: List<Pair<String, VodItem>> = emptyList()
+    private val triedSlides = HashSet<String>()
+
+    private fun lookUpSlides() {
+        if (!TitleLogos.enabled) return
+        val todo = unknownSlides.filter { (k, m) -> triedSlides.add("$k:${m.id}:${m.name}") }
+        if (todo.isEmpty()) return
+        scope.launch {
+            for ((k, m) in todo) try { TitleLogos.find(k, m, Vod.cachedDetails(k, m.id)?.tmdbId) } catch (_: Exception) {}
+            build()
+        }
+    }
+
     private fun show(slides: List<Slide>, out: List<Row>, saved: Boolean = false) {
         // Keep a copy for next time (once everything's loaded).
         if (!saved && !loading && (slides.isNotEmpty() || out.isNotEmpty()))
             Background.scope.launch(Dispatchers.IO) { HomeSnapshot.save(slides, out) }
-        if (!lite) feature?.set(slides)
+        if (!lite) { feature?.set(slides); if (!saved) lookUpSlides() }
         adapter.set(out)
         val nothing = out.isEmpty() && slides.isEmpty()
         if (!nothing || !loading) hideLoading()
@@ -577,8 +598,9 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
                 second = (if (kind == Vod.MOVIES) "Films" else "TV Shows") to { startActivity(Intent(this, BrowseActivity::class.java).putExtra(BrowseActivity.KIND, kind)) }, title_ = kind to m,
                 primary = "ⓘ   More info"))
         }
-        Vod.trending(Vod.MOVIES).take(2).forEach { vodSlide("Trending", Vod.MOVIES, it) }
-        Vod.trending(Vod.SERIES).firstOrNull()?.let { vodSlide("Trending", Vod.SERIES, it) }
+        // (A few more than will show: only the rich ones make it into the showcase.)
+        Vod.trending(Vod.MOVIES).take(5).forEach { vodSlide("Trending", Vod.MOVIES, it) }
+        Vod.trending(Vod.SERIES).take(3).forEach { vodSlide("Trending", Vod.SERIES, it) }
         if (Vod.trending(Vod.MOVIES).isEmpty()) Vod.cached(Vod.MOVIES)?.newest?.firstOrNull()?.let { m ->
             slides.add(Slide("New film", m.name, listOfNotNull(m.year.takeIf { it > 0 }?.toString(), m.rating.takeIf { it > 0 }?.let { "★ %.1f".format(it) }).joinToString("  ·  "),
                 Vod.cachedDetails(Vod.MOVIES, m.id)?.plot, art = m.poster, watch = { openTitle(Vod.MOVIES, m) }, ref = "vod:${Vod.MOVIES}:${m.id}",
@@ -608,6 +630,10 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
         Vod.cached(Vod.MOVIES)?.let { lib -> if (lib.items.isNotEmpty()) out.add(Row("Recently added films", lib.newest.take(24).map { Card.Title(Vod.MOVIES, it) })) }
         Vod.cached(Vod.SERIES)?.let { lib -> if (lib.items.isNotEmpty()) out.add(Row("Recently added TV shows", lib.newest.take(24).map { Card.Title(Vod.SERIES, it) })) }
 
-        return slides.take(8) to HomeRows.arrange(out)
+        // Only rich slides in the showcase: a title logo and a proper background picture. Ones not looked up yet are
+        // looked up in the background (then Home's built again); until any are ready, the best there is.
+        unknownSlides = slides.mapNotNull { it.title_ }.filter { (k, m) -> !TitleLogos.knowsBackdrop(k, m) || TitleLogos.cached(k, m) == null && !TitleLogos.knowsLogo(k, m) }
+        val rich = slides.filter { isRich(it) }
+        return (if (rich.isNotEmpty()) rich else slides).take(8) to HomeRows.arrange(out)
     }
 }
