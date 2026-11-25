@@ -111,11 +111,10 @@ class DetailActivity : BaseActivity() {
         }
     }
 
-    /** Coming soon: its picture, logo, details and trailer, and the alert – no Play, My list or cast. */
+    /** Coming soon: its picture, logo, details, cast and trailer, and the alert – no Play or My list. */
     private fun showComing(id: String) {
         val u = Upcoming.find(id) ?: run { finish(); return }
         coming = u
-        castShown = true // (no cast here)
         item = u.vodItem
         showBasics(u.vodItem)
         details = Upcoming.details(u)
