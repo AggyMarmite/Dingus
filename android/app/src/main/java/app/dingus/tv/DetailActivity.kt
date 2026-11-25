@@ -127,7 +127,12 @@ class DetailActivity : BaseActivity() {
         val d = details ?: return
         val m = item ?: return
         d.title?.let { findViewById<TextView>(R.id.title).text = it }
-        findViewById<TextView>(R.id.meta).text = meta(d.year, d.duration, d.rating ?: m.rating.toString(), d.genre)
+        val metaView = findViewById<TextView>(R.id.meta)
+        val base = meta(d.year, d.duration, d.rating ?: m.rating.toString(), d.genre)
+        // TMDB's UK age rating and score (kept once looked up).
+        fun withRatings(r: Ratings.Info?) = listOf(base, r?.line() ?: "").filter { it.isNotEmpty() }.joinToString("  ·  ")
+        metaView.text = withRatings(Ratings.cached(kind, m))
+        if (Ratings.cached(kind, m) == null) scope.launch { Ratings.find(kind, m, d.tmdbId)?.let { if (!isDestroyed) metaView.text = withRatings(it) } }
         val plot = findViewById<TextView>(R.id.plot)
         plot.text = d.plot ?: ""
         val people = findViewById<TextView>(R.id.people)

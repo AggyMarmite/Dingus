@@ -238,7 +238,7 @@ class HomeActivity : BaseActivity() {
                 want.filter { (k, m) -> Vod.cachedDetails(k, m.id) == null }
             }
             if (missing.isEmpty()) return@launch
-            for ((k, m) in missing) try { Vod.details(k, m) } catch (_: Exception) {}
+            for ((k, m) in missing) try { Ratings.find(k, m, Vod.details(k, m).tmdbId) } catch (_: Exception) {}
             build()
         }
     }
@@ -505,7 +505,7 @@ class HomeActivity : BaseActivity() {
         fun vodSlide(kicker: String, kind: String, m: VodItem) {
             val d = Vod.cachedDetails(kind, m.id)
             slides.add(Slide(kicker, d?.title ?: m.name,
-                listOfNotNull((d?.year?.takeIf { it > 0 } ?: m.year).takeIf { it > 0 }?.toString(), (d?.rating?.toFloatOrNull() ?: m.rating).takeIf { it > 0 }?.let { "★ %.1f".format(it) }, d?.genre, d?.duration).joinToString("  ·  "),
+                listOfNotNull((d?.year?.takeIf { it > 0 } ?: m.year).takeIf { it > 0 }?.toString(), Ratings.cached(kind, m)?.age, (d?.rating?.toFloatOrNull() ?: m.rating).takeIf { it > 0 }?.let { "★ %.1f".format(it) }, d?.genre, d?.duration).joinToString("  ·  "),
                 d?.plot, art = d?.backdrop ?: m.poster, watch = { openTitle(kind, m) }, ref = "vod:$kind:${m.id}",
                 second = (if (kind == Vod.MOVIES) "Films" else "TV Shows") to { startActivity(Intent(this, BrowseActivity::class.java).putExtra(BrowseActivity.KIND, kind)) }, title_ = kind to m))
         }

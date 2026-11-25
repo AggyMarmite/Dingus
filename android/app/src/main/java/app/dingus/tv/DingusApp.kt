@@ -19,6 +19,7 @@ class DingusApp : Application() {
         Streams.watchNetwork(this)
         TitleLogos.init(this)
         Charts.init(this)
+        Ratings.init(this)
         HomeSnapshot.init(this)
         Reminders.init(this)
         // Pause/rewind files left over from last time (e.g. if the app was closed while watching).

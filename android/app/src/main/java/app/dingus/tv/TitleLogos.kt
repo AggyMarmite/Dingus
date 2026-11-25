@@ -115,7 +115,7 @@ object TitleLogos {
     fun tmdbIdFor(kind: String, item: VodItem, known: String?): String? =
         known?.takeIf { it.isNotBlank() && it != "0" } ?: search(if (kind == Vod.MOVIES) "movie" else "tv", item)
 
-    private fun search(type: String, item: VodItem): String? {
+    internal fun search(type: String, item: VodItem): String? {
         val q = URLEncoder.encode(item.name, "UTF-8")
         val year = if (item.year > 0) (if (type == "movie") "&year=${item.year}" else "&first_air_date_year=${item.year}") else ""
         val results = get("/search/$type?query=$q$year&include_adult=false").optJSONArray("results") ?: return null
