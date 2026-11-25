@@ -340,7 +340,7 @@ class VodPlayerActivity : BaseActivity() {
 
     private val hideControls = Runnable { hideControlsNow() }
     /** The "Next episode" card comes up this long before the end. */
-    private val UP_NEXT_MS = 45_000L
+    private val UP_NEXT_MS = 25_000L
 
     private fun showControls(focusBar: Boolean = false) {
         if (epPanel.visibility == View.VISIBLE) return
