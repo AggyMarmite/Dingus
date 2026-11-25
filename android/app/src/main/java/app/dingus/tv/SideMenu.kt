@@ -354,12 +354,19 @@ class SideMenu(
         return r2.centerX() >= r1.left
     }
 
+    /** A screen that can go back to its top (picked again in the menu, or Home from another screen). */
+    interface ToTop {
+        fun toTop()
+        companion object { const val EXTRA = "dingus_to_top" }
+    }
+
     private fun go(p: Page) {
-        if (p == here) { close(); onNavigate?.invoke(p); return }
+        // The screen you're on: back to its top. (Home also comes back at its top from elsewhere, below.)
+        if (p == here) { close(restore = a !is ToTop); onNavigate?.invoke(p); (a as? ToTop)?.toTop(); return }
         close() // (the focus goes back where it was, for when you come back to this screen)
         onNavigate?.invoke(p)
         val i = when (p) {
-            Page.HOME -> Intent(a, HomeActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            Page.HOME -> Intent(a, HomeActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP).putExtra(ToTop.EXTRA, true)
             Page.LIVE -> Intent(a, MainActivity::class.java).putExtra(MainActivity.CATEGORIES, true)
             Page.FILMS -> Intent(a, BrowseActivity::class.java).putExtra(BrowseActivity.KIND, Vod.MOVIES)
             Page.SHOWS -> Intent(a, BrowseActivity::class.java).putExtra(BrowseActivity.KIND, Vod.SERIES)

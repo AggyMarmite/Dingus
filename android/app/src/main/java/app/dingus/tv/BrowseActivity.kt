@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
  * added, Top rated and a row per category) or a poster grid (one category). LEFT at the left edge brings in the
  * categories panel, like Live TV; moving through it changes what's showing, RIGHT or OK goes back into the titles.
  */
-class BrowseActivity : BaseActivity() {
+class BrowseActivity : BaseActivity(), SideMenu.ToTop {
     private lateinit var side: SideMenu
     companion object {
         const val KIND = "kind"
@@ -418,6 +418,14 @@ class BrowseActivity : BaseActivity() {
                 else -> posters.notifyItemRangeChanged(0, posters.itemCount)
             }
         }
+    }
+
+    /** Films / TV Shows picked again in the menu: back to Featured, at the top. */
+    override fun toTop() {
+        if (current != Vod.FEATURED) show(Vod.FEATURED) else rows.scrollToPosition(0)
+        rows.scrollToPosition(0)
+        focusContent()
+        Ui.test("browse-to-top")
     }
 
     // (No clock here: it's in the side menu, under the logo.)

@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
  * favourite channels, coming up next, live sport now, tonight's picks, new films and shows. Settings → Lite home page swaps it
  * for a simpler page (a banner and rows) for devices that struggle.
  */
-class HomeActivity : BaseActivity() {
+class HomeActivity : BaseActivity(), SideMenu.ToTop {
     private val lite = Store.homeLite
     private var feature: HomeFeature? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -380,7 +380,13 @@ class HomeActivity : BaseActivity() {
 
     private var holdLoadingUntil = 0L
 
-    override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent) }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent); setIntent(intent)
+        // Home from the side menu: back to the top (the showcase), not wherever it was left.
+        if (intent.getBooleanExtra(SideMenu.ToTop.EXTRA, false)) { intent.removeExtra(SideMenu.ToTop.EXTRA); toTop() }
+    }
+
+    override fun toTop() { focusFirstCard(); Ui.test("home-to-top") }
 
     private fun hideLoading() {
         if (System.currentTimeMillis() < holdLoadingUntil) return
