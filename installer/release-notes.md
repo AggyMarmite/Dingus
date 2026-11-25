@@ -1,3 +1,13 @@
+## What's new in Dingus 0.15.26
+
+* Fire TV: Check everything, a one-page health check with fixes.
+* Fire TV: Coming soon titles get their own page, with the trailer and cast.
+* Fire TV: trailers open in the YouTube app.
+* Fire TV: film pages open instantly, and Home and Films feel smoother.
+* Fire TV: the TV guide fills its gaps from all your sources and follows backup servers.
+* Fire TV: design touches throughout.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.25
 
 * Fire TV: a fresh new look, with a new font, richer cards, artwork-tinted pages and an animated start-up.
