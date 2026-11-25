@@ -299,6 +299,13 @@ class VodPlayerActivity : BaseActivity() {
         showControls()
     }
 
+    /** "S02 E01" for the episode playing (null for a film). */
+    private fun episodeLabel(): String? {
+        if (kind != Vod.SERIES) return null
+        val ep = Regex("""\sS(\d+) E(\d+)""").find(titles.getOrNull(index) ?: return null) ?: return null
+        return "S%02d E%02d".format(ep.groupValues[1].toInt(), ep.groupValues[2].toInt())
+    }
+
     /** "FILM · 2024 · ★ 7.4" / "THE HOLLOW · SEASON 1" over the title ("Episode 3 · The Ferry"). */
     private fun showTitle() {
         val t = titles[index]
@@ -320,12 +327,12 @@ class VodPlayerActivity : BaseActivity() {
         val p = player ?: return
         val len = p.duration
         if (len == C.TIME_UNSET || len <= 0) return
-        Vod.savePosition(ids[index], p.currentPosition, len, kind, showId)
+        Vod.savePosition(ids[index], p.currentPosition, len, kind, showId, episodeLabel())
     }
 
     /** End of a film or episode: the next episode if that's set to happen, otherwise back to the details. */
     private fun finishedOne() {
-        if (kind != CATCHUP) player?.let { if (it.duration > 0) Vod.savePosition(ids[index], it.duration, it.duration, kind, showId) }
+        if (kind != CATCHUP) player?.let { if (it.duration > 0) Vod.savePosition(ids[index], it.duration, it.duration, kind, showId, episodeLabel()) }
         if (kind == Vod.SERIES && index + 1 < ids.size && Store.autoNext) playIndex(index + 1) else finish()
     }
 
@@ -381,7 +388,7 @@ class VodPlayerActivity : BaseActivity() {
         val pos = if (skipTo >= 0) skipTo else p.currentPosition // (while skipping: where you're going)
         bar.duration = len; bar.position = pos; bar.buffered = p.bufferedPosition; bar.playing = p.playWhenReady
         bar.invalidate()
-        findViewById<TextView>(R.id.vodPos).text = PlayBar.clock(pos)
+        showPos(pos)
         findViewById<TextView>(R.id.vodLeft).text = if (len > 0)
             "−${PlayBar.clock(len - pos)}  ·  ends ${Ui.time(System.currentTimeMillis() + (len - pos))}" else ""
         findViewById<TextView>(R.id.vodClock).text = Ui.time(System.currentTimeMillis())
@@ -428,7 +435,19 @@ class VodPlayerActivity : BaseActivity() {
     }
 
     private var skipFrom = -1L
-    private val endSkip = Runnable { skipFrom = -1L; bar.skipped = null; bar.invalidate() }
+    private val endSkip = Runnable { skipFrom = -1L; bar.skipped = null; bar.invalidate(); showPos(bar.position) }
+
+    /** The time, bottom left – with how far you're jumping ("+0:30", in yellow) while skipping. */
+    private fun showPos(pos: Long) {
+        val sk = bar.skipped
+        val t = android.text.SpannableStringBuilder(PlayBar.clock(pos))
+        if (sk != null && sk != 0L) {
+            val at = t.length
+            t.append("   ").append(if (sk < 0) "−" else "+").append(PlayBar.clock(kotlin.math.abs(sk)))
+            t.setSpan(android.text.style.ForegroundColorSpan(0xFFFBBF24.toInt()), at, t.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        findViewById<TextView>(R.id.vodPos).text = t
+    }
 
     /** Where the skip presses add up to: the player only jumps once they stop (held ◀/▶ repeats many times a second). */
     private var skipTo = -1L
@@ -444,7 +463,7 @@ class VodPlayerActivity : BaseActivity() {
         skipTo = t
         handler.removeCallbacks(doSkip); handler.postDelayed(doSkip, 450)
         showControls(focusBar = true)
-        bar.position = t; bar.skipped = t - skipFrom; bar.invalidate()
+        bar.position = t; bar.skipped = t - skipFrom; bar.invalidate(); showPos(t)
         handler.removeCallbacks(endSkip); handler.postDelayed(endSkip, 1_500)
         Ui.test("vod-skip ${by / 1000}")
     }

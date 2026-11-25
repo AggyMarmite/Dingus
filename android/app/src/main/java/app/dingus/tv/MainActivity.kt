@@ -298,6 +298,28 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         // Moving around the guide doesn't start anything: OK plays a channel in the window, OK again goes full screen.
     }
 
+    /** Choose source… for a channel in the guide: a version (remembered) or the same channel elsewhere; it plays. */
+    private fun chooseSourceFor(c: Channel) {
+        val here = live.current?.id == c.id
+        Repo.chooseSource(this, c, if (here) live.playing else null,
+            pickVersion = { if (here) live.replayVersion() else if (Store.preview) preview(c) else goFullScreen(c) },
+            pickOther = { src -> if (!here) { if (Store.preview) preview(c) else goFullScreen(c) }; live.playSource(src) })
+    }
+
+    private var infoLogoFor: String? = null
+
+    /** The channel's logo, top right of the info area (its initials if it has none). */
+    private fun showInfoLogo(c: Channel?) {
+        if (c?.id == infoLogoFor) return
+        infoLogoFor = c?.id
+        val v = findViewById<android.widget.ImageView>(R.id.infoLogo) ?: return
+        val ini = findViewById<TextView>(R.id.infoLogoInitials)
+        (v.parent as View).visibility = if (c == null) View.INVISIBLE else View.VISIBLE
+        if (c == null) return
+        ini.text = Ui.initials(c.name)
+        Logos.load(v, c.logo, Ui.dp(this, 58), ini)
+    }
+
     private fun setInfo(c: Channel?, p: Programme?) {
         val ch = findViewById<TextView>(R.id.infoChannel)
         val title = findViewById<TextView>(R.id.infoTitle)
@@ -306,6 +328,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         val live = findViewById<View>(R.id.infoLive)
         val desc = findViewById<TextView>(R.id.infoDesc)
         ch.text = c?.let { (if (Store.showNumbers && it.number > 0) "${it.number}   " else "") + it.name } ?: ""
+        showInfoLogo(c)
         val now = System.currentTimeMillis()
         if (p == null) {
             title.text = c?.name ?: ""
@@ -510,15 +533,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         if (Store.preview && live.current?.id != c.id) items.add("Watch here" to { preview(c) })
         items.add("Watch full screen" to { goFullScreen(c) })
         items.add((if (Store.isFavourite(c.id)) "Remove from Favourites" else "Add to Favourites") to { onFavourite(c) })
-        if (Store.mergeChannels && Repo.versions(c).size > 1) items.add("Choose version…" to {
-            Repo.chooseVersion(this, c) { if (live.current?.id == c.id) live.replayVersion() }
-        })
-        Repo.sources(c).size.takeIf { it > 1 }?.let { n -> items.add("Sources…  ·  ${n - 1} more" to {
-            Repo.chooseSource(this, c, if (live.current?.id == c.id) live.playing else null) { src ->
-                if (live.current?.id != c.id) { if (Store.preview) preview(c) else goFullScreen(c) }
-                live.playSource(src)
-            }
-        }) }
+        Repo.sourceCount(c).takeIf { it > 1 }?.let { n -> items.add("Choose source…  ·  $n" to { chooseSourceFor(c) }) }
         items.add("Rename channel" to {
             Dialogs.input(this, "New name", c.name, "Channel name") { n ->
                 val e = ChannelEdits.all()[c.id]
@@ -526,25 +541,53 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
                 Repo.reapply()
             }
         })
-        items.add("Hide channel" to {
-            Dialogs.builder(this)
-                .setTitle("Hide “${c.name}”?")
-                .setMessage("It won't show in the guide any more. You can bring it back in Settings → Edit channels.")
-                .setPositiveButton("Hide") { _, _ ->
-                    val e = ChannelEdits.all()[c.id]
-                    ChannelEdits.set(c.id, ChannelEdits.Edit(e?.name, e?.number, true))
-                    Repo.reapply()
-                    setStatus("${c.name} hidden  ·  Settings → Edit channels to show it again")
-                    handler.postDelayed({ if (!loading) setStatus("") }, 3_500)
-                }
-                .setNegativeButton("Cancel", null)
-                .show()
-                .getButton(android.app.AlertDialog.BUTTON_POSITIVE)?.requestFocus()
-        })
+        items.add("Hide channel" to { hideChannel(c) })
         Dialogs.builder(this).setTitle(c.name)
             .setItems(items.map { it.first }.toTypedArray()) { _, i -> items[i].second() }
             .show()
         Ui.test("channel-menu ${c.name}")
+    }
+
+    private fun hideChannel(c: Channel) {
+        Dialogs.builder(this)
+            .setTitle("Hide “${c.name}”?")
+            .setMessage("It won't show in the guide any more. You can bring it back in Settings → Edit channels.")
+            .setPositiveButton("Hide") { _, _ ->
+                val e = ChannelEdits.all()[c.id]
+                ChannelEdits.set(c.id, ChannelEdits.Edit(e?.name, e?.number, true))
+                Repo.reapply()
+                setStatus("${c.name} hidden  ·  Settings → Edit channels to show it again")
+                handler.postDelayed({ if (!loading) setStatus("") }, 3_500)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+            .getButton(android.app.AlertDialog.BUTTON_POSITIVE)?.requestFocus()
+    }
+
+    /** Hold OK on a programme: a short menu of the things you'd want for it. */
+    override fun onHold(c: Channel, p: Programme?) {
+        val now = System.currentTimeMillis()
+        val items = ArrayList<Pair<String, () -> Unit>>()
+        val future = p != null && p.start > now
+        val ended = p != null && p.stop <= now
+        when {
+            future -> {
+                items.add((if (Reminders.has(c, p!!)) "🔔  Reminder options…" else "🔔  Remind me…") to { onPlay(c, p) })
+            }
+            ended && Repo.canCatchUp(c, p!!) -> items.add("↺  Watch from the start (catch-up)" to { onPlay(c, p) })
+            else -> {
+                items.add("▶  Watch full screen" to { goFullScreen(c) })
+                if (p != null && Repo.canStartOver(c, p, now)) items.add("↺  Start over  ·  from ${Ui.time(p.start)}" to { stopPreview(); LiveTv.startOver(this, c, p) })
+            }
+        }
+        Repo.sourceCount(c).takeIf { it > 1 }?.let { n -> items.add("⇄  Choose source…  ·  $n" to { chooseSourceFor(c) }) }
+        items.add((if (Store.isFavourite(c.id)) "★  Remove from Favourites" else "★  Add to Favourites") to { onFavourite(c) })
+        items.add("⊘  Hide channel" to { hideChannel(c) })
+        val title = p?.let { "${it.title}  ·  ${c.name}  ·  ${Ui.span(it)}" } ?: c.name
+        Dialogs.builder(this).setTitle(title)
+            .setItems(items.map { it.first }.toTypedArray()) { _, i -> items[i].second() }
+            .show()
+        Ui.test("hold-menu ${c.name}")
     }
 
     private fun onFavourite(c: Channel) {

@@ -130,33 +130,51 @@ object Repo {
 
     fun categoryName(id: String) = categories.firstOrNull { it.id == id }?.name ?: ""
 
-    /** ≡ → Sources…: the same channel from your other categories, with what's on; OK plays it. */
-    fun chooseSource(a: android.app.Activity, c: Channel, playing: Channel?, pick: (Channel) -> Unit) {
-        val all = sources(c)
-        if (all.size < 2) return
-        val names = all.map { s ->
-            val on = nowNext(s).first?.title
-            s.name + (if (s.id == playing?.id) "   ● Playing" else "") + "\n" + listOfNotNull(categoryName(s.categoryId).ifEmpty { null }, on).joinToString("  ·  ")
+    /** How many sources "Choose source…" would list for a channel (its versions and copies elsewhere). */
+    fun sourceCount(c: Channel): Int = (versions(c) + sources(c)).distinctBy { it.id }.size
+
+    /**
+     * ≡ / hold OK → Choose source…: the channel's versions (FHD, HEVC… best first, with what they've played at) and the
+     * same channel in other categories (with what's on). A version is remembered as the one to use; OK plays it.
+     */
+    fun chooseSource(a: android.app.Activity, c: Channel, playing: Channel?, pickVersion: (Channel) -> Unit, pickOther: (Channel) -> Unit) {
+        val vs = versions(c)
+        val others = sources(c).filter { s -> vs.none { it.id == s.id } }
+        if (vs.size + others.size < 2) return
+        class Item(val ch: Channel?, val text: CharSequence, val version: Boolean)
+        val items = ArrayList<Item>()
+        fun mark(ch: Channel) = if (ch.id == playing?.id) "   ● Playing" else ""
+        if (others.isNotEmpty()) items.add(Item(null, "VERSIONS", true))
+        vs.forEach { v -> items.add(Item(v, v.name + "   ·   " + Merge.qualityText(v) + mark(v), true)) }
+        if (others.isNotEmpty()) {
+            items.add(Item(null, "OTHER CATEGORIES", false))
+            others.forEach { o ->
+                val on = nowNext(o).first?.title
+                items.add(Item(o, o.name + mark(o) + "\n" + listOfNotNull(categoryName(o.categoryId).ifEmpty { null }, on).joinToString("  ·  "), false))
+            }
         }
-        Dialogs.builder(a).setTitle("Sources  ·  " + c.name.replace(sourcePrefixRx, ""))
-            .setItems(names.toTypedArray()) { _, i -> Ui.test("source-chosen ${all[i].name}"); pick(all[i]) }.show()
-        Ui.test("source-list ${all.size}")
+        val d = a.resources.displayMetrics.density
+        val adapter = object : android.widget.ArrayAdapter<Item>(a, android.R.layout.simple_list_item_1, items) {
+            override fun isEnabled(position: Int) = items[position].ch != null
+            override fun areAllItemsEnabled() = false
+            override fun getView(position: Int, convertView: android.view.View?, parent: android.view.ViewGroup): android.view.View {
+                val v = super.getView(position, convertView, parent) as android.widget.TextView
+                val it = items[position]
+                v.text = it.text
+                if (it.ch == null) { v.textSize = 11f; v.alpha = 0.6f; v.letterSpacing = 0.1f; v.setPadding((24 * d).toInt(), (10 * d).toInt(), 0, 0); v.minHeight = 0 }
+                else { v.textSize = 16f; v.alpha = 1f; v.letterSpacing = 0f; v.setPadding((24 * d).toInt(), (8 * d).toInt(), (24 * d).toInt(), (8 * d).toInt()) }
+                return v
+            }
+        }
+        Dialogs.builder(a).setTitle("Choose source  ·  " + c.name.replace(sourcePrefixRx, ""))
+            .setAdapter(adapter) { _, i ->
+                val it = items[i]; val ch = it.ch ?: return@setAdapter
+                Ui.test("source-chosen ${ch.name}")
+                if (it.version) { Store.setPreferredVersion(Merge.key(c), ch.id); pickVersion(ch) } else pickOther(ch)
+            }.show()
+        Ui.test("source-list ${vs.size + others.size}")
     }
 
-    /** Merged channels: "Choose version…" – every version, with the one that plays (✓); picking one keeps it. */
-    fun chooseVersion(a: android.app.Activity, c: Channel, done: () -> Unit) {
-        val vs = versions(c)
-        if (vs.size < 2) return
-        fun label(v: Channel) = v.name + "  ·  " + (if (Merge.isBackup(v)) "Backup" else when (Merge.rank(v)) { 4 -> "4K"; 3 -> "FHD"; 1 -> "SD"; else -> "HD" })
-        Dialogs.builder(a).setTitle("Choose version")
-            .setSingleChoiceItems(vs.map { label(it) }.toTypedArray(), 0) { d, i ->
-                d.dismiss()
-                Store.setPreferredVersion(Merge.key(c), vs[i].id)
-                Ui.test("version-chosen ${vs[i].name}")
-                done()
-            }.show()
-        Ui.test("version-list ${vs.size}")
-    }
 
     /** Every channel including hidden ones, for the channel editor. */
     fun allForEditing(): List<Channel> = channels

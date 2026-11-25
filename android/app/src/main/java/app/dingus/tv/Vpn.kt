@@ -74,8 +74,26 @@ object Vpn {
 
     fun onChanged(l: () -> Unit) { synchronized(listeners) { listeners.add(l) } }
     fun removeListener(l: () -> Unit) { synchronized(listeners) { listeners.remove(l) } }
+    /** Where it was last connected (for "switched to …"). */
+    private var lastOnLabel: String? = null
+
     private fun set(s: Status, msg: String) {
+        val was = status
         status = s; message = msg
+        // A small note on whatever screen you're on: connecting, connected (or switched), off.
+        if (s != was || s == Status.ON) main.post {
+            when (s) {
+                Status.CONNECTING -> Notice.working("⛨  VPN connecting${if (msg.isNotBlank()) " to $msg" else ""}…")
+                Status.ON -> {
+                    val here = connectedTo?.label ?: ""
+                    if (here != lastOnLabel || was != Status.ON)
+                        Notice.done(if (lastOnLabel != null && was != Status.OFF && here != lastOnLabel) "⛨  VPN switched to $here" else "⛨  VPN connected  ·  $here")
+                    lastOnLabel = here
+                }
+                Status.OFF -> { if (was == Status.ON || was == Status.CONNECTING) Notice.done("⛨  VPN off"); lastOnLabel = null }
+                Status.ERROR -> Notice.clear() // (the screen that asked says why)
+            }
+        }
         Ui.test("vpn ${s.name.lowercase()} $msg")
         val ls = synchronized(listeners) { listeners.toList() }
         main.post { ls.forEach { it() } }

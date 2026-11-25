@@ -67,7 +67,7 @@ jobs:
       # A TV emulator on Android 9 (what Fire OS 7 is built on).
       - name: Test video
         run: |
-          sudo apt-get install -y -q ffmpeg >/dev/null 2>&1 || true
+          sudo apt-get install -y -q ffmpeg >/dev/null 2>&1 || { sudo apt-get update -q >/dev/null; sudo apt-get install -y -q ffmpeg >/dev/null; }
           mkdir -p $RUNNER_TEMP/www/hls
           ffmpeg -loglevel error -f lavfi -i testsrc2=size=1280x720:rate=25 -f lavfi -i sine=frequency=440 -t 120 \
             -c:v libx264 -preset veryfast -pix_fmt yuv420p -g 50 -c:a aac -f mpegts $RUNNER_TEMP/www/test.ts

@@ -438,10 +438,11 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
         Vod.cached(Vod.MOVIES)?.let { lib ->
             for (m in Vod.continueList(Vod.MOVIES, lib)) {
                 val pos = Vod.position(m.id) ?: continue
-                cont.add(Card.Title(Vod.MOVIES, m, if (pos.second > 0) pos.first.toFloat() / pos.second else -1f))
+                cont.add(Card.Title(Vod.MOVIES, m, if (pos.second > 0) pos.first.toFloat() / pos.second else -1f,
+                    ((pos.second - pos.first) / 60_000).takeIf { it > 0 }?.let { "$it min left" }))
             }
         }
-        Vod.cached(Vod.SERIES)?.let { lib -> Vod.continueList(Vod.SERIES, lib).forEach { cont.add(Card.Title(Vod.SERIES, it, label = if (it.id in newEps) "New episode" else "Continue", isNew = it.id in newEps)) } }
+        Vod.cached(Vod.SERIES)?.let { lib -> Vod.continueList(Vod.SERIES, lib).forEach { cont.add(Card.Title(Vod.SERIES, it, label = if (it.id in newEps) "New episode" else Vod.continueLine(it.id) ?: "Continue", isNew = it.id in newEps)) } }
         // Your own rows first (Continue watching, My list), then what's trending.
         if (cont.isNotEmpty()) out.add(Row("Continue watching", cont.take(20)))
         MyList.row()?.let { r -> out.add(Row(r.title, r.cards.map { c -> if (c is Card.Title && c.kind == Vod.SERIES && c.item.id in newEps) Card.Title(c.kind, c.item, label = "New episode", isNew = true) else c })) }
@@ -507,8 +508,10 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
     /** A film or show's details line: genres · year · age rating · ★ score. */
     private fun vodMeta(kind: String, m: VodItem): String {
         val d = Vod.cachedDetails(kind, m.id)
-        return listOfNotNull(d?.genre?.takeIf { it.isNotBlank() }, (d?.year?.takeIf { it > 0 } ?: m.year).takeIf { it > 0 }?.toString(), Ratings.cached(kind, m)?.age,
-            (d?.rating?.toFloatOrNull() ?: m.rating).takeIf { it > 0 }?.let { "★ %.1f".format(it) }).joinToString("  ·  ")
+        val r = Ratings.cached(kind, m)
+        val score = if (r != null && r.score > 0 && r.votes > 0) "TMDB %d%%".format(Math.round(r.score * 10))
+            else (d?.rating?.toFloatOrNull() ?: m.rating).takeIf { it > 0 }?.let { "★ %.1f".format(it) }
+        return listOfNotNull(d?.genre?.takeIf { it.isNotBlank() }, (d?.year?.takeIf { it > 0 } ?: m.year).takeIf { it > 0 }?.toString(), r?.age, score).joinToString("  ·  ")
     }
 
     private fun left(p: Programme, now: Long) = "${(p.stop - now + 59_999) / 60_000} min left"
@@ -537,10 +540,11 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
         Vod.cached(Vod.MOVIES)?.let { lib ->
             for (m in Vod.continueList(Vod.MOVIES, lib)) {
                 val pos = Vod.position(m.id) ?: continue
-                cont.add(Card.Title(Vod.MOVIES, m, if (pos.second > 0) pos.first.toFloat() / pos.second else -1f))
+                cont.add(Card.Title(Vod.MOVIES, m, if (pos.second > 0) pos.first.toFloat() / pos.second else -1f,
+                    ((pos.second - pos.first) / 60_000).takeIf { it > 0 }?.let { "$it min left" }))
             }
         }
-        Vod.cached(Vod.SERIES)?.let { lib -> Vod.continueList(Vod.SERIES, lib).forEach { cont.add(Card.Title(Vod.SERIES, it, label = if (it.id in newEps) "New episode" else "Continue", isNew = it.id in newEps)) } }
+        Vod.cached(Vod.SERIES)?.let { lib -> Vod.continueList(Vod.SERIES, lib).forEach { cont.add(Card.Title(Vod.SERIES, it, label = if (it.id in newEps) "New episode" else Vod.continueLine(it.id) ?: "Continue", isNew = it.id in newEps)) } }
         (cont.firstOrNull() as? Card.Title)?.let { t ->
             slides.add(Slide("Continue watching", t.item.name, vodMeta(t.kind, t.item),
                 null, t.progress, Vod.cachedDetails(t.kind, t.item.id)?.backdrop ?: t.item.poster, watch = { openTitle(t.kind, t.item) }, ref = "vod:${t.kind}:${t.item.id}", title_ = t.kind to t.item, primary = "▶   Continue"))

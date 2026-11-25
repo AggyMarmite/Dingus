@@ -73,6 +73,13 @@ object Merge {
         return h * 100 + nameFps(c)
     }
 
+    /** "1080p 50fps" once played, otherwise what its name says ("FHD"), or "Backup". */
+    fun qualityText(c: Channel): String {
+        measuredMap()[c.id]?.let { (h, f) -> return "${h}p" + (if (f > 1) " ${f}fps" else "") }
+        if (isBackup(c)) return "Backup"
+        return when (rank(c)) { 4 -> "4K"; 3 -> "FHD"; 1 -> "SD"; else -> "HD" }
+    }
+
     private fun nameFps(c: Channel) = fpsRx.find(c.name)?.groupValues?.get(1)?.toInt() ?: 25
 
     /** Versions in the order to try: main before backup, best picture (resolution, then frame rate) first, otherwise playlist order. */

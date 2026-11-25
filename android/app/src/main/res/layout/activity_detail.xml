@@ -41,13 +41,13 @@
             android:shadowColor="#99000000" android:shadowRadius="8" android:textColor="#FFFFFFFF" />
         <TextView android:id="@+id/meta" android:layout_width="580dp" android:layout_height="wrap_content"
             android:layout_marginTop="8dp" android:maxLines="1" android:ellipsize="end" android:textSize="15sp"
-            android:textStyle="bold" android:textColor="#FFE8ECF3" />
+            android:textStyle="bold" android:textColor="#FFE8ECF3" android:shadowColor="#CC000000" android:shadowRadius="6" android:shadowDy="1" />
         <TextView android:id="@+id/plot" android:layout_width="560dp" android:layout_height="wrap_content"
             android:layout_marginTop="10dp" android:maxLines="3" android:ellipsize="end" android:textSize="15sp"
-            android:lineSpacingExtra="3dp" android:textColor="#E6E8ECF3" />
+            android:lineSpacingExtra="3dp" android:textColor="#FFF1F5F9" android:shadowColor="#CC000000" android:shadowRadius="6" android:shadowDy="1" />
         <TextView android:id="@+id/people" android:layout_width="560dp" android:layout_height="wrap_content"
             android:layout_marginTop="6dp" android:maxLines="1" android:ellipsize="end" android:textSize="13sp"
-            android:textColor="?attr/dMuted" />
+            android:textColor="#FFCFD6E4" android:shadowColor="#CC000000" android:shadowRadius="6" android:shadowDy="1" />
 
         <!-- Part-watched: how far, and how long is left. -->
         <LinearLayout android:id="@+id/resumeBox" android:layout_width="wrap_content" android:layout_height="wrap_content"

@@ -665,8 +665,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
             Store.statsPinned = !Store.statsPinned; updateStats(); Ui.test("stats-pinned ${Store.statsPinned}")
         })
         items.add("Stream information" to { streamInfo() })
-        if (Store.mergeChannels && Repo.versions(c).size > 1) items.add(1, "Choose version…" to { Repo.chooseVersion(a, c) { replayVersion() } })
-        Repo.sources(c).size.takeIf { it > 1 }?.let { n -> items.add(minOf(2, items.size), "Sources…  ·  ${n - 1} more" to { Repo.chooseSource(a, c, version ?: c) { playSource(it) } }) }
+        Repo.sourceCount(c).takeIf { it > 1 }?.let { n -> items.add(1, "Choose source…  ·  $n" to { Repo.chooseSource(a, c, version ?: c, pickVersion = { replayVersion() }, pickOther = { playSource(it) }) }) }
         Dialogs.builder(a).setTitle(c.name).setItems(items.map { it.first }.toTypedArray()) { _, i -> items[i].second() }.show()
     }
 

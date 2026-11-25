@@ -196,7 +196,7 @@ object Vod {
     }
 
     /** Remember the position; near the end counts as watched. [showId] links an episode to its show. */
-    fun savePosition(id: String, pos: Long, length: Long, kind: String, showId: String? = null) {
+    fun savePosition(id: String, pos: Long, length: Long, kind: String, showId: String? = null, label: String? = null) {
         val e = progress.edit()
         val finished = length > 0 && (pos >= length * 0.95 || length >= 20 * 60_000L && length - pos < 120_000)
         if (finished || pos < 30_000) e.remove("p:$id") else e.putString("p:$id", "$pos|$length")
@@ -205,7 +205,7 @@ object Vod {
         val list = (progress.getString("c:$kind", "") ?: "").split('\n').filter { it.isNotEmpty() && it != owner }
         val keep = kind == SERIES || !finished && pos >= 30_000
         e.putString("c:$kind", ((if (keep) listOf(owner) else emptyList()) + list).take(40).joinToString("\n"))
-        if (showId != null) e.putString("last:$showId", id)
+        if (showId != null) { e.putString("last:$showId", id); if (label != null) e.putString("lastLabel:$showId", label) }
         // Watched past halfway: Home's "Because you watched …" (the last two titles).
         if (length > 0 && pos >= length / 2) {
             val k = "$kind:$owner"
@@ -268,6 +268,16 @@ object Vod {
         e.apply()
     }
     fun lastEpisode(showId: String): String? = progress.getString("last:$showId", null)
+
+    /** The episode you're on in a show, e.g. "S02 E01" (for Continue watching). */
+    fun lastEpisodeLabel(showId: String): String? = progress.getString("lastLabel:$showId", null)
+
+    /** Continue watching's line under a show: "S02 E01 · 18 min left" (or just the episode). */
+    fun continueLine(showId: String): String? {
+        val l = lastEpisodeLabel(showId) ?: return null
+        val left = lastEpisode(showId)?.let { position(it) }?.let { (p, len) -> ((len - p) / 60_000).takeIf { it > 0 } }
+        return if (left != null) "$l  ·  $left min left" else l
+    }
 
     // ------------------------------------------------------------------ My list
 

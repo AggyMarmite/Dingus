@@ -99,15 +99,16 @@ class Hero(
     }
 
     private var posterFallback = false
+    private val rated = HashSet<String>()
 
     private fun bindTitle(card: Card.Title, d: Details?) {
         val m = card.item
-        meta.text = listOfNotNull(
-            (d?.year ?: m.year).takeIf { it > 0 }?.toString(),
-            (d?.rating?.toFloatOrNull() ?: m.rating).takeIf { it > 0 }?.let { "★ %.1f".format(it) },
-            d?.genre,
-            card.label,
-        ).joinToString("   ·   ")
+        // Year, UK age badge and TMDB's score (once looked up; the provider's ★ until then), genre.
+        val r = Ratings.cached(card.kind, m)
+        meta.text = Badges.line(meta.context, d?.year ?: m.year, r, d?.rating?.toFloatOrNull() ?: m.rating, listOfNotNull(d?.genre, card.label), meta.textSize)
+        if (r == null && d != null && TitleLogos.enabled && rated.add("${card.kind}:${m.id}")) scope.launch {
+            Ratings.find(card.kind, m, d.tmdbId)?.let { if (showing === card) bindTitle(card, d) }
+        }
         text.text = d?.plot ?: ""
         // Details not known yet: no picture until they are (they have the right one) – showing the poster first and then
         // swapping to the proper background looked like it fixed itself. (If they can't be had, the poster after all.)

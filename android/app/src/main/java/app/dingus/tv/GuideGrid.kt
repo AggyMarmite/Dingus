@@ -30,6 +30,8 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         fun onPlay(c: Channel, p: Programme?)
         fun onLeftEdge()
         fun onMenu(c: Channel, p: Programme?)
+        /** OK held down: a short menu for the programme. */
+        fun onHold(c: Channel, p: Programme?) {}
     }
 
     var listener: Listener? = null
@@ -291,7 +293,9 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
             }
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
                 if (c == null) return false // no channels: the screen decides ("Press OK to add your playlist")
-                listener?.onPlay(c, sel); return true
+                // A press plays (on letting go); held for over half a second, the short menu instead.
+                if (event.repeatCount == 0) { held = false; okDown = true; removeCallbacks(hold); postDelayed(hold, 550) }
+                return true
             }
             KeyEvent.KEYCODE_MENU -> { if (event.repeatCount == 0) c?.let { listener?.onMenu(it, sel) }; return true }
         }
@@ -299,6 +303,26 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
     }
 
     // ------------------------------------------------------------------ drawing
+
+    private var okDown = false
+    private var held = false
+    private val hold = Runnable {
+        if (!okDown) return@Runnable
+        held = true
+        channels.getOrNull(row)?.let { listener?.onHold(it, sel) }
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) {
+            if (!okDown) return super.onKeyUp(keyCode, event)
+            okDown = false
+            removeCallbacks(hold)
+            if (!held) channels.getOrNull(row)?.let { listener?.onPlay(it, sel) }
+            held = false
+            return true
+        }
+        return super.onKeyUp(keyCode, event)
+    }
 
     override fun onDraw(canvas: Canvas) {
         val w = width.toFloat()

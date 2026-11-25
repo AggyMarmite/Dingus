@@ -232,7 +232,7 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
         val out = ArrayList<Row>()
         val cont = Vod.continueList(kind, l).map { m ->
             val pos = if (kind == Vod.MOVIES) Vod.position(m.id) else null
-            Card.Title(kind, m, if (pos != null && pos.second > 0) pos.first.toFloat() / pos.second else -1f, if (kind == Vod.SERIES) "Continue" else null)
+            Card.Title(kind, m, if (pos != null && pos.second > 0) pos.first.toFloat() / pos.second else -1f, if (kind == Vod.SERIES) Vod.continueLine(m.id) ?: "Continue" else pos?.let { p -> ((p.second - p.first) / 60_000).takeIf { it > 0 }?.let { "$it min left" } })
         }
         if (cont.isNotEmpty()) out.add(Row("Continue watching", cont.take(20)))
         MyList.row(kind)?.let { out.add(it) }

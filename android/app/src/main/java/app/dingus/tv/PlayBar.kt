@@ -39,8 +39,9 @@ class PlayBar @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = nul
 
     override fun onDraw(c: Canvas) {
         val w = width.toFloat()
-        // (The bar is taller than the track: the knob, its ring and the skip bubble need the room above and below.)
-        val y = height - 30 * d
+        // (The bar is a little taller than the track: the knob and its ring need the room. The skip shows by the time,
+        // bottom left, so no room's kept above for a bubble.)
+        val y = height / 2f
         val th = 6 * d
         val left = 0f; val right = w
         fun xOf(t: Long) = if (duration > 0) left + (right - left) * (t.coerceIn(0, duration).toFloat() / duration) else left
@@ -64,14 +65,6 @@ class PlayBar @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = nul
             val path = android.graphics.Path().apply { moveTo(kx - s * 0.6f, y - s); lineTo(kx + s, y); lineTo(kx - s * 0.6f, y + s); close() }
             c.drawPath(path, glyph)
         }
-        // The bubble while skipping.
-        val sk = skipped ?: return
-        val bw = 84 * d; val bh = 26 * d
-        val bx = kx.coerceIn(bw / 2, w - bw / 2)
-        val top = y - kr - 26 * d - bh
-        p.color = 0xFFFFFFFF.toInt(); r.set(bx - bw / 2, top, bx + bw / 2, top + bh); c.drawRoundRect(r, 12 * d, 12 * d, p)
-        c.drawText(clock(position), bx, top + bh / 2 - (bubbleText.descent() + bubbleText.ascent()) / 2, bubbleText)
-        c.drawText((if (sk < 0) "−" else "+") + clock(kotlin.math.abs(sk)), bx, top + bh + 15 * d, deltaText)
     }
 
     companion object {

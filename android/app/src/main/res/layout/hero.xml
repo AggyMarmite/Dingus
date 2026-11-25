@@ -14,12 +14,12 @@
             android:contentDescription="@null" android:visibility="gone" />
         <TextView android:id="@+id/heroTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="4dp" android:maxLines="1" android:ellipsize="end" android:textSize="32sp"
-            android:textStyle="bold" android:textColor="?attr/dText" />
+            android:textStyle="bold" android:textColor="?attr/dText" android:shadowColor="#CC000000" android:shadowRadius="6" android:shadowDy="1" />
         <TextView android:id="@+id/heroMeta" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="4dp" android:maxLines="1" android:ellipsize="end" android:textSize="15sp"
-            android:textColor="?attr/dMuted" />
+            android:textColor="#FFDDE3EC" android:shadowColor="#CC000000" android:shadowRadius="6" android:shadowDy="1" />
         <TextView android:id="@+id/heroText" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="6dp" android:maxLines="4" android:ellipsize="end" android:textSize="15sp"
-            android:lineSpacingExtra="2dp" android:textColor="?attr/dText" />
+            android:lineSpacingExtra="2dp" android:textColor="?attr/dText" android:shadowColor="#CC000000" android:shadowRadius="6" android:shadowDy="1" />
     </LinearLayout>
 </FrameLayout>

@@ -128,9 +128,10 @@ class DetailActivity : BaseActivity() {
         val m = item ?: return
         d.title?.let { findViewById<TextView>(R.id.title).text = it }
         val metaView = findViewById<TextView>(R.id.meta)
-        val base = meta(d.year, d.duration, d.rating ?: m.rating.toString(), d.genre)
-        // TMDB's UK age rating and score (kept once looked up).
-        fun withRatings(r: Ratings.Info?) = listOf(base, r?.line() ?: "").filter { it.isNotEmpty() }.joinToString("  ·  ")
+        // The year, TMDB's UK age rating (a badge) and score (TMDB's mark), then the length and genre.
+        val provScore = (d.rating?.toFloatOrNull() ?: m.rating)
+        fun withRatings(r: Ratings.Info?): CharSequence =
+            Badges.line(this, d.year, r, provScore, listOfNotNull(d.duration?.let { niceDuration(it) }, d.genre), metaView.textSize)
         metaView.text = withRatings(Ratings.cached(kind, m))
         if (Ratings.cached(kind, m) == null) scope.launch { Ratings.find(kind, m, d.tmdbId)?.let { if (!isDestroyed) metaView.text = withRatings(it) } }
         val plot = findViewById<TextView>(R.id.plot)
