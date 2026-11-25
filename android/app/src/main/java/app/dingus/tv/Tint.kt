@@ -19,13 +19,28 @@ object Tint {
     private val anims = java.util.WeakHashMap<Activity, ValueAnimator>()
     private val current = java.util.WeakHashMap<Activity, Int>()
 
+    private val main = android.os.Handler(android.os.Looper.getMainLooper())
+    private var pending: Runnable? = null
+
+    /** Runs [then] once the highlight has stayed on [v] for a moment (a newer call cancels the last). */
+    fun settle(v: View, then: () -> Unit) {
+        pending?.let { main.removeCallbacks(it) }
+        if (Ui.lite) return
+        val r = Runnable { if (v.hasFocus() || v.isFocused) then() }
+        pending = r
+        main.postDelayed(r, 260)
+    }
+
+    private val colours = java.util.WeakHashMap<Bitmap, Int>()
+
     /** The poster's colour, made into a deep, rich glow (or null while there's no picture yet). */
     fun colourOf(poster: ImageView?): Int? {
         val bmp = bitmapOf(poster?.drawable) ?: return null
+        colours[bmp]?.let { return it }
         val px = try { Bitmap.createScaledBitmap(bmp, 1, 1, true).getPixel(0, 0) } catch (e: Exception) { return null }
         val hsv = FloatArray(3); Color.colorToHSV(px, hsv)
         hsv[1] = (hsv[1] * 1.4f).coerceIn(0.35f, 0.9f); hsv[2] = 0.5f
-        return Color.HSVToColor(hsv)
+        return Color.HSVToColor(hsv).also { colours[bmp] = it }
     }
 
     private fun bitmapOf(d: Drawable?): Bitmap? = when (d) {
@@ -49,7 +64,7 @@ object Tint {
         // On the screen's own background (behind the pictures and rows).
         (a.findViewById<android.view.ViewGroup>(android.R.id.content)?.getChildAt(0) ?: return).background = g
         anims[a] = ValueAnimator.ofArgb(from, colour).apply {
-            duration = 500
+            duration = 350
             addUpdateListener { v -> val c = v.animatedValue as Int; current[a] = c; g.colors = intArrayOf(c, blend(c, bg, 0.6f), bg) }
             start()
         }
@@ -60,7 +75,7 @@ object Tint {
         if (android.os.Build.VERSION.SDK_INT < 28 || Ui.lite) return
         if (on && colour != null) {
             card.outlineSpotShadowColor = colour; card.outlineAmbientShadowColor = colour
-            card.translationZ = 18 * card.resources.displayMetrics.density
+            card.translationZ = 10 * card.resources.displayMetrics.density
         } else card.translationZ = 0f
     }
 

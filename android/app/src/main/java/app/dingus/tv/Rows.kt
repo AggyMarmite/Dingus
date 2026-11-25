@@ -162,10 +162,15 @@ class RowsAdapter(
             }
             v.setOnFocusChangeListener { view, has ->
                 Ui.grow(view, has)
-                // Artwork-tinted page: the poster's colour behind the rows and round the highlight.
-                val tint = if (card() is Card.Title) Tint.colourOf(c.poster) else null
-                Tint.glow(view, tint, has)
-                if (has && tint != null) (ctx as? android.app.Activity)?.let { Tint.to(it, tint) }
+                // Artwork-tinted page: the poster's colour behind the rows and round the highlight – only once the
+                // highlight has stopped on a card (working it out and redrawing the whole page on every step of a
+                // held-down button is what made Home lag).
+                Tint.glow(view, null, false)
+                if (has && card() is Card.Title) Tint.settle(view) {
+                    val tint = Tint.colourOf(c.poster) ?: return@settle
+                    Tint.glow(view, tint, true)
+                    (ctx as? android.app.Activity)?.let { Tint.to(it, tint) }
+                }
                 if (has) {
                     card()?.let(onFocus)
                     // Film and show logos for the next few titles, so they're ready as you move along.

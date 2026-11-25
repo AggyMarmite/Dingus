@@ -29,6 +29,8 @@ class DetailActivity : BaseActivity() {
     private lateinit var kind: String
     private var item: VodItem? = null
     private var details: Details? = null
+    /** A Coming soon title (not in the playlist yet): just its trailer and "Let me know when it's here". */
+    private var coming: Upcoming.Item? = null
     private var season = -1
     private val episodes = EpisodeAdapter()
     private lateinit var play: TextView
@@ -51,6 +53,12 @@ class DetailActivity : BaseActivity() {
         play.setOnClickListener { playMain(fromStart = false) }
         restart.setOnClickListener { playMain(fromStart = true) }
         findViewById<TextView>(R.id.myList).setOnClickListener {
+            coming?.let { u ->
+                val on = !Upcoming.hasAlert(u.tmdbId)
+                Upcoming.setAlert(u, on)
+                Notice.done(if (on) "🔔  We'll let you know when ${u.title} is here" else "Alert cancelled", 3_000)
+                refreshButtons(); return@setOnClickListener
+            }
             val m = item ?: return@setOnClickListener
             Vod.setInMyList(kind, m.id, !Vod.inMyList(kind, m.id))
             Ui.test("my-list ${m.name} ${Vod.inMyList(kind, m.id)}")
@@ -73,6 +81,7 @@ class DetailActivity : BaseActivity() {
         ))
 
         val id = intent.getStringExtra(ID)
+        if (id != null && id.startsWith("tmdb:")) { showComing(id); return }
         // Straight away when the films are already loaded (they almost always are): the title, picture and – if
         // they've been looked up before – the details, all before the first frame, so the page is never blank.
         Vod.cached(kind)?.byId?.get(id)?.let { m ->
@@ -100,6 +109,23 @@ class DetailActivity : BaseActivity() {
             refreshButtons()
             if (play.visibility != View.VISIBLE) findViewById<View>(R.id.myList).requestFocus() // (focus was on Play)
         }
+    }
+
+    /** Coming soon: its picture, logo, details and trailer, and the alert – no Play, My list or cast. */
+    private fun showComing(id: String) {
+        val u = Upcoming.find(id) ?: run { finish(); return }
+        coming = u
+        castShown = true // (no cast here)
+        item = u.vodItem
+        showBasics(u.vodItem)
+        details = Upcoming.details(u)
+        showDetails()
+        status.text = "Coming ${Upcoming.shortDate(u)}"
+        play.visibility = View.GONE; restart.visibility = View.GONE
+        findViewById<View>(R.id.watched).visibility = View.GONE
+        refreshButtons()
+        findViewById<View>(R.id.myList).requestFocus()
+        Ui.test("coming-page ${u.title}")
     }
 
     private fun showBasics(m: VodItem) {
@@ -223,6 +249,16 @@ class DetailActivity : BaseActivity() {
     }
 
     private fun refreshButtons() {
+        coming?.let { u ->
+            // The My list button becomes the alert.
+            findViewById<TextView>(R.id.myList).apply {
+                visibility = View.VISIBLE
+                val on = Upcoming.hasAlert(u.tmdbId)
+                text = if (on) "🔔  We'll let you know  ✓" else "🔔  Let me know when it's here"
+                isActivated = on
+            }
+            return
+        }
         val m = item ?: return
         findViewById<TextView>(R.id.myList).apply {
             visibility = View.VISIBLE

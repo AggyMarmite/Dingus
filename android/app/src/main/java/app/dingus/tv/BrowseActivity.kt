@@ -243,22 +243,6 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
         if (fetch) scope.launch { Upcoming.refresh(kind); if (current == Vod.COMING) buildComing(fetch = false) }
     }
 
-    /** OK on a coming-soon title: what it is, and the alert. */
-    private fun openComing(id: String) {
-        val u = Upcoming.find(id) ?: return
-        val on = Upcoming.hasAlert(u.tmdbId)
-        Dialogs.builder(this).setTitle("${u.title}  ·  ${Upcoming.shortDate(u)}")
-            .setMessage(listOfNotNull(u.genre, u.plot).joinToString("\n\n").ifEmpty { "Coming ${Upcoming.shortDate(u)}." } +
-                "\n\n" + if (on) "🔔 You'll be told when it's in your ${if (kind == Vod.MOVIES) "Films" else "TV Shows"}." else "Dingus can tell you when it turns up in your ${if (kind == Vod.MOVIES) "Films" else "TV Shows"}.")
-            .setPositiveButton(if (on) "Cancel the alert" else "🔔  Tell me when it's here") { _, _ ->
-                Upcoming.setAlert(u, !on)
-                Notice.done(if (on) "Alert cancelled" else "🔔  We'll tell you when ${u.title} is here")
-                buildComing(fetch = false)
-            }
-            .setNegativeButton("Close", null)
-            .show()
-    }
-
     /**
      * Featured's rows: worked out in the background (Trending and Top are matched against the whole library, which on
      * a big library – just after a full refresh, say – took long enough to freeze the screen), then shown.
@@ -486,8 +470,7 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
 
     private fun open(card: Card) {
         when (card) {
-            is Card.Title -> if (card.item.id.startsWith("tmdb:")) openComing(card.item.id)
-                else startActivity(Intent(this, DetailActivity::class.java).putExtra(DetailActivity.KIND, card.kind).putExtra(DetailActivity.ID, card.item.id))
+            is Card.Title -> startActivity(Intent(this, DetailActivity::class.java).putExtra(DetailActivity.KIND, card.kind).putExtra(DetailActivity.ID, card.item.id))
             is Card.SeeAll -> { show(card.categoryId); focusContent() }
             is Card.Live, is Card.Show -> {}
         }

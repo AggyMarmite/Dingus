@@ -149,7 +149,7 @@ class ImageCache(private val name: String, megabytes: Int, private val config: B
         }
     }
 
-    /** A soft band of light sweeping across a dark tile, about 25 times a second (cheap to draw). */
+    /** A soft band of light sweeping across a dark tile (cheap to draw, and only while it's on screen). */
     class Shimmer : Drawable() {
         private val base = Paint().apply { color = 0xFF1A2130.toInt() }
         private val band = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -165,7 +165,8 @@ class ImageCache(private val name: String, megabytes: Int, private val config: B
             val x = b.left - w + t * 3 * w
             band.shader = android.graphics.LinearGradient(x, 0f, x + w, 0f, intArrayOf(0x001A2130, 0x55344158, 0x001A2130), null, android.graphics.Shader.TileMode.CLAMP)
             c.drawRect(b, band)
-            if (running) scheduleSelf(next, android.os.SystemClock.uptimeMillis() + 40)
+            // (About 12 times a second: plenty for a soft shimmer, and light on the Fire Stick with many on screen.)
+            if (running && callback != null) scheduleSelf(next, android.os.SystemClock.uptimeMillis() + 80)
         }
         override fun setAlpha(alpha: Int) { base.alpha = alpha; band.alpha = alpha }
         override fun setColorFilter(filter: ColorFilter?) {}
