@@ -203,6 +203,8 @@ class VodPlayerActivity : BaseActivity() {
         savePosition()
         resumeAt = if (skipTo >= 0) skipTo else player?.currentPosition ?: -1L
         skipTo = -1L
+        // Let go of the stream completely (its connection closes with it), then look at the connections again.
+        if (player != null) Account.soon()
         player?.release()
         player = null
         video.player = null
@@ -297,7 +299,7 @@ class VodPlayerActivity : BaseActivity() {
         showControls()
     }
 
-    /** "FILM · 2024 · ★ 7.4" / "THE HOLLOW · SERIES 1" over the title ("Episode 3 · The Ferry"). */
+    /** "FILM · 2024 · ★ 7.4" / "THE HOLLOW · SEASON 1" over the title ("Episode 3 · The Ferry"). */
     private fun showTitle() {
         val t = titles[index]
         val ep = Regex("""^(.*?)\s+·\s+S(\d+) E(\d+)\s*(.*)$""").find(t)
@@ -305,7 +307,7 @@ class VodPlayerActivity : BaseActivity() {
         val titleV = findViewById<TextView>(R.id.vodTitle)
         if (kind == Vod.SERIES && ep != null) {
             val (show, season, num, name) = ep.destructured
-            subV.text = "${show.uppercase()}  ·  SERIES $season"
+            subV.text = "${show.uppercase()}  ·  SEASON $season"
             titleV.text = if (name.isBlank()) "Episode $num" else "Episode $num  ·  $name"
         } else {
             subV.text = sub ?: when (kind) { CATCHUP -> "CATCH UP"; Vod.SERIES -> "TV SHOW"; else -> "FILM" }
@@ -562,7 +564,7 @@ class VodPlayerActivity : BaseActivity() {
         row.removeAllViews()
         if (seasons.size > 1) for (s in seasons) {
             val b = TextView(android.view.ContextThemeWrapper(this, R.style.Choice), null, 0, R.style.Choice)
-            b.text = if (s > 0) "Series $s" else "Episodes"; b.textSize = 13f; b.tag = s
+            b.text = if (s > 0) "Season $s" else "Episodes"; b.textSize = 13f; b.tag = s
             b.setPadding(Ui.dp(this, 16), Ui.dp(this, 7), Ui.dp(this, 16), Ui.dp(this, 7))
             b.layoutParams = android.widget.LinearLayout.LayoutParams(-2, -2).apply { marginEnd = Ui.dp(this@VodPlayerActivity, 8) }
             b.setOnFocusChangeListener { _, has -> if (has) showEpSeason(s) }

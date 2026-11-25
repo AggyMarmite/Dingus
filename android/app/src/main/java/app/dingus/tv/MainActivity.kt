@@ -116,7 +116,8 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         if (i.getBooleanExtra(CATEGORIES, false)) {
             i.removeExtra(CATEGORIES)
             // Already showing the guide: straight to the categories. Otherwise once it's filled in (start()).
-            if (started && Repo.channels.isNotEmpty() && !live.fullScreen) handler.post { openCategories() } else showCategoriesFirst = true
+            // Live TV from the side menu starts at the top of the category (not the channel you last watched).
+            if (started && Repo.channels.isNotEmpty() && !live.fullScreen) handler.post { showCategory(current, null); openCategories() } else showCategoriesFirst = true
         }
         val id = i.getStringExtra(PLAY) ?: return
         pendingPlay = id to (i.getStringExtra(PLAY_CATEGORY) ?: Repo.ALL)
@@ -194,7 +195,8 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             // The category may belong to another playlist (after switching).
             val cats = Repo.sideCategories()
             if (cats.none { it.id == current }) current = Store.lastCategory?.takeIf { id -> cats.any { it.id == id } } ?: Repo.ALL
-            showCategory(current, Store.lastChannel)
+            // From the side menu: the top of the category. (Otherwise back on the channel you last watched.)
+            showCategory(current, if (showCategoriesFirst) null else Store.lastChannel)
             grid.requestFocus()
             if (showCategoriesFirst && pendingPlay == null && Repo.channels.isNotEmpty()) { showCategoriesFirst = false; openCategories() }
             runPendingPlay()
@@ -769,7 +771,9 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             }
             v.setOnClickListener {
                 val p = h.bindingAdapterPosition
-                if (p >= 0) { pendingId = items[p].id; closeCategories() }
+                // Choosing a category starts at its first channel, even the one you came from. (▶ or BACK without
+                // choosing goes back to where you were.)
+                if (p >= 0) { val id = items[p].id; pendingId = id; closeCategories(); if (id == current) showCategory(id, null) }
             }
             // MENU on a category offers to hide it.
             v.setOnKeyListener { _, code, ev ->

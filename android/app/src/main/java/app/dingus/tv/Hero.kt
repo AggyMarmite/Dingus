@@ -8,6 +8,7 @@ import android.view.View
 import android.widget.TextView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 /** The banner above the rows: shows what's highlighted, fetching a film's or show's plot after a short pause. */
@@ -57,13 +58,16 @@ class Hero(
                 if (d != null && TitleLogos.enabled && TitleLogos.cached(card.kind, m) == null && !TitleLogos.knowsBackdrop(card.kind, m)) handler.postDelayed({
                     job = scope.launch { TitleLogos.find(card.kind, m, d.tmdbId)?.let { if (showing === card) TitleLogos.show(logo, title, it) } }
                 }, 200)
+                // Not known yet: the details and the logo looked up together, as soon as you've paused on it.
                 if (d == null) handler.postDelayed({
                     job = scope.launch {
+                        val logoJob = if (TitleLogos.enabled) async { try { TitleLogos.find(card.kind, m, null) } catch (e: Exception) { null } } else null
                         val got = try { Vod.details(card.kind, m) } catch (e: Exception) { null }
                         if (showing === card) { posterFallback = got == null; bindTitle(card, got); posterFallback = false }
-                        if (showing === card && TitleLogos.enabled) TitleLogos.find(card.kind, m, got?.tmdbId)?.let { if (showing === card) TitleLogos.show(logo, title, it) }
+                        val found = logoJob?.await() ?: if (TitleLogos.enabled && got?.tmdbId != null) TitleLogos.find(card.kind, m, got.tmdbId) else null
+                        if (showing === card) found?.let { TitleLogos.show(logo, title, it) }
                     }
-                }, 650)
+                }, 250)
             }
             is Card.Live -> {
                 val c = card.channel
@@ -107,7 +111,8 @@ class Hero(
         text.text = d?.plot ?: ""
         // Details not known yet: no picture until they are (they have the right one) – showing the poster first and then
         // swapping to the proper background looked like it fixed itself. (If they can't be had, the poster after all.)
-        if (d == null && !posterFallback) { art.removeCallbacks(loadArt); return }
+        // (The last title's picture goes meanwhile, so it's never shown under this one's name.)
+        if (d == null && !posterFallback) { art.removeCallbacks(loadArt); art.setImageDrawable(null); art.tag = null; return }
         val pic = d?.backdrop ?: d?.poster ?: m.poster
         // The big picture behind only once you've stopped on something (decoding and drawing a full-screen picture
         // on every step is what made scrolling stutter).

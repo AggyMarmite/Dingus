@@ -67,9 +67,12 @@ object Account {
     /** Something started or stopped playing: ask again in a few seconds, so "Active connections" keeps up. */
     fun soon() {
         val p = Store.playlist ?: return
+        // Twice: providers can take a few seconds to notice a stream has closed.
         Background.scope.launch {
-            kotlinx.coroutines.delay(5_000)
-            if (System.currentTimeMillis() - lastCheck > 4_000) check(p)
+            kotlinx.coroutines.delay(4_000)
+            if (System.currentTimeMillis() - lastCheck > 3_000) check(p)
+            kotlinx.coroutines.delay(10_000)
+            if (System.currentTimeMillis() - lastCheck > 3_000) check(p)
         }
     }
 
