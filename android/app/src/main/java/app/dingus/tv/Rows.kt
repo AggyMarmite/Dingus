@@ -111,7 +111,7 @@ class RowsAdapter(
     }
 
     /** Trending and Because you watched: wide cards with the title's art (the other rows keep posters). */
-    private fun wideRow(title: String) = !Ui.lite && (title.startsWith("Trending") || title.startsWith("Because you watched"))
+    private fun wideRow(title: String) = !Ui.lite && title.startsWith("Because you watched")
 
     /** Pictures and logos not known yet: looked up once each in the background, then the card's drawn again. */
     private val asked = HashSet<String>()
@@ -365,8 +365,10 @@ object RowNav {
 object Scrolling {
     private val ease = Motion.glide
     fun by(rv: RecyclerView, dx: Int, dy: Int, immediate: Boolean = false) {
-        if (immediate || Ui.lite || rv.scrollState == RecyclerView.SCROLL_STATE_SETTLING) { rv.stopScroll(); rv.scrollBy(dx, dy) }
-        else rv.smoothScrollBy(dx, dy, ease, 300)
+        if (immediate || Ui.lite) { rv.stopScroll(); rv.scrollBy(dx, dy) }
+        // Already gliding (the button pressed again, or held): carry on from where it is, a little quicker, rather
+        // than jumping – the jump is what made quick presses look jerky.
+        else rv.smoothScrollBy(dx, dy, ease, if (rv.scrollState == RecyclerView.SCROLL_STATE_SETTLING) 170 else 300)
     }
 }
 
