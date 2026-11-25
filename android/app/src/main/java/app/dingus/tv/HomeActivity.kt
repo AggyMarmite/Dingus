@@ -325,7 +325,12 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
                     while (true) {
                         try { Repo.refreshChannels(p); break } catch (e: Exception) {
                             // The network may not be up yet (just after waking): try again a few times by itself.
-                            if (++tries > 4) { hideLoading(); empty.text = "Couldn't load your playlist.\n${Net.friendly(e)}"; empty.visibility = View.VISIBLE; Notice.clear(); return@launch }
+                            if (++tries > 4) {
+                                // Given up: never left behind the logo – the message, and the menu and Settings to hand.
+                                hideLoading(force = true)
+                                empty.text = Empty.text(this@HomeActivity, Empty.OFFLINE, "Couldn't load your playlist", "${Net.friendly(e)}\n\nPress ◀ for the menu: Settings → About → Check everything can help.")
+                                empty.visibility = View.VISIBLE; Notice.clear(); return@launch
+                            }
                             loadingText("Waiting for the network…")
                             kotlinx.coroutines.delay(3_000L * tries)
                         }
@@ -361,8 +366,31 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
     }
 
     /** The Dingus loading screen (logo, spinner, what's happening) while the playlist's read or loaded. */
+    /**
+     * The loading screen always has a way out: a Settings button (focused, so OK goes there; BACK too). Without it, a
+     * playlist whose server is down left you stuck behind the logo until Dingus was forced to close.
+     */
+    private fun loadingWayOut(v: View) {
+        val box = v as? android.view.ViewGroup ?: return
+        if (box.findViewWithTag<View>("wayOut") != null) return
+        val d = resources.displayMetrics.density
+        val b = TextView(this).apply {
+            tag = "wayOut"
+            text = "⚙   Settings"
+            textSize = 16f; setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(resources.getColorStateList(R.color.pill_text, theme))
+            background = getDrawable(R.drawable.pill_btn_bg)
+            setPadding((26 * d).toInt(), (12 * d).toInt(), (26 * d).toInt(), (12 * d).toInt())
+            isFocusable = true; isClickable = true
+            setOnClickListener { Ui.test("loading-settings"); startActivity(Intent(this@HomeActivity, SettingsActivity::class.java)) }
+        }
+        box.addView(b, android.widget.FrameLayout.LayoutParams(-2, -2, android.view.Gravity.BOTTOM or android.view.Gravity.CENTER_HORIZONTAL).apply { bottomMargin = (56 * d).toInt() })
+        b.post { b.requestFocus() }
+    }
+
     private fun loadingText(t: String) {
         val v = findViewById<View>(R.id.loadingScreen) ?: return
+        loadingWayOut(v)
         // Over everything, the menu included (nothing to pick while it loads).
         val root = findViewById<android.view.ViewGroup>(android.R.id.content)
         if (v.parent !== root) {
@@ -390,8 +418,8 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
 
     override fun toTop() { focusFirstCard(); Ui.test("home-to-top") }
 
-    private fun hideLoading() {
-        if (System.currentTimeMillis() < holdLoadingUntil) return
+    private fun hideLoading(force: Boolean = false) {
+        if (!force && System.currentTimeMillis() < holdLoadingUntil) return
         val v = findViewById<View>(R.id.loadingScreen) ?: return
         if (v.visibility != View.VISIBLE) return
         Ui.test("home-loading-done")

@@ -18,12 +18,16 @@ object Badges {
         override fun getSize(p: Paint, t: CharSequence, s: Int, e: Int, fm: Paint.FontMetricsInt?): Int =
             (p.measureText(t, s, e) + 16 * d).toInt()
         override fun draw(c: Canvas, t: CharSequence, s: Int, e: Int, x: Float, top: Int, y: Int, bottom: Int, p: Paint) {
+            // Sized and placed from the text itself (not the line, which can have extra spacing), so the tag sits
+            // evenly round the certificate, level with the words either side.
             val w = getSize(p, t, s, e, null).toFloat()
-            val h = p.fontSpacing * 1.2f
-            val cy = (top + bottom) / 2f
+            val fm = p.fontMetrics
+            val pad = 3 * d
+            val boxTop = y + fm.ascent + 2 * d - pad
+            val boxBottom = y + fm.descent - 1 * d + pad
             val old = p.color; val bold = p.isFakeBoldText
             p.color = bg
-            c.drawRoundRect(RectF(x, cy - h / 2, x + w, cy + h / 2), 5 * d, 5 * d, p)
+            c.drawRoundRect(RectF(x, boxTop, x + w, boxBottom), 5 * d, 5 * d, p)
             p.color = 0xFFFFFFFF.toInt(); p.isFakeBoldText = true
             c.drawText(t, s, e, x + 8 * d, y.toFloat(), p)
             p.color = old; p.isFakeBoldText = bold
@@ -37,13 +41,23 @@ object Badges {
         sb.setSpan(Round(0x40FFFFFF, d), at, sb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
     }
 
+    /** A picture centred on the text's height (an ImageSpan on the baseline sat too high). */
+    private class Centred(dr: android.graphics.drawable.Drawable) : ImageSpan(dr) {
+        override fun draw(c: Canvas, t: CharSequence, s: Int, e: Int, x: Float, top: Int, y: Int, bottom: Int, p: Paint) {
+            val b = drawable
+            val fm = p.fontMetrics
+            val mid = y + (fm.ascent + fm.descent) / 2
+            c.save(); c.translate(x, mid - b.bounds.height() / 2f); b.draw(c); c.restore()
+        }
+    }
+
     /** TMDB's mark, then the score as a percentage ("73%"). */
     fun tmdb(sb: SpannableStringBuilder, score: Float, ctx: Context, sizePx: Int) {
         val dr = ctx.getDrawable(R.drawable.tmdb) ?: return
-        dr.setBounds(0, 0, (sizePx * 1.6f).toInt(), (sizePx * 1.6f).toInt())
+        dr.setBounds(0, 0, (sizePx * 1.3f).toInt(), (sizePx * 1.3f).toInt())
         val at = sb.length
         sb.append(" ")
-        sb.setSpan(ImageSpan(dr, ImageSpan.ALIGN_BASELINE), at, sb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        sb.setSpan(Centred(dr), at, sb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         sb.append(" %d%%".format(Math.round(score * 10)))
     }
 
