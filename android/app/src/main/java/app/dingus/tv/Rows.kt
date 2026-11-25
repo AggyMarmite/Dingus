@@ -373,7 +373,7 @@ object Scrolling {
 }
 
 /**
- * Horizontal rows, Apple TV style: the highlighted title always sits in the first place in the row, and the titles
+ * Horizontal rows: the highlighted title always sits in the first place in the row, and the titles
  * glide left and right underneath it. (Room at the end lets even the last title reach that place.)
  */
 class RowLayoutManager(ctx: Context) : LinearLayoutManager(ctx, HORIZONTAL, false) {

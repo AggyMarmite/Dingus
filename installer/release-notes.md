@@ -1,6 +1,6 @@
 ## What's new in Dingus 0.15.28
 
-* Fire TV: smoother, Apple TV–style motion everywhere, including the side menu, lists, Settings and the guide.
+* Fire TV: smoother, more fluid motion everywhere, including the side menu, lists, Settings and the guide.
 * Fire TV: a new mini menu in the guide, with Choose source inside it.
 * Fire TV: rows keep your place as you scroll.
 * Fire TV: hidden categories are left out of All channels and updates.

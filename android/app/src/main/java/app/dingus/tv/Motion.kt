@@ -18,7 +18,7 @@ import android.view.animation.OvershootInterpolator
 import android.view.animation.PathInterpolator
 
 /**
- * One way of moving for the whole app, in the style of Apple TV: things glide to a stop, and the highlighted card
+ * One way of moving for the whole app: things glide to a stop, and the highlighted card
  * lifts with a soft bounce, leans the way you pressed and catches the light. Lite mode keeps it all instant.
  */
 object Motion {
