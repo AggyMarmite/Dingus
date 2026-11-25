@@ -335,6 +335,7 @@ check "home-loading-gone" 15 "…and goes once Home's ready"
 sleep 1
 press_until KEYCODE_DPAD_LEFT "focus nav" 8 1.5; press_until KEYCODE_DPAD_DOWN "focus navGuide" 4 0.5; key KEYCODE_DPAD_CENTER 3     # menu → Live TV (LEFT does nothing until the loading screen has gone)
 check "guide-filled [1-9]" 15 "Live TV from Home shows the channels"
+check "guide-listings [1-9]" 15 "…with their listings, after Dingus was closed and opened again"
 check "categories-open" 10 "…with the categories open first"
 shot 19aa-live-from-home
 fi

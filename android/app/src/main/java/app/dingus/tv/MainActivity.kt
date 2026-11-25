@@ -285,6 +285,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         showCatHead(cats.firstOrNull { it.id == id }?.name ?: "All channels", list.size)
         grid.setChannels(list, focusId)
         Ui.test("guide-filled ${list.size}")
+        if (BuildConfig.DEBUG) Ui.test("guide-listings ${list.count { Repo.programmes(it).isNotEmpty() }}")
         when {
             list.isNotEmpty() -> showEmpty(null)
             Repo.channels.isNotEmpty() -> {

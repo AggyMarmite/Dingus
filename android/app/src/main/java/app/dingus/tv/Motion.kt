@@ -58,7 +58,7 @@ object Motion {
         if (Build.VERSION.SDK_INT < 23 || v.width == 0) return
         val old = v.foreground
         if (old is Sheen) return
-        val s = Sheen(12 * v.resources.displayMetrics.density)
+        val s = Sheen(18 * v.resources.displayMetrics.density)
         v.foreground = s
         ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 850; interpolator = glide

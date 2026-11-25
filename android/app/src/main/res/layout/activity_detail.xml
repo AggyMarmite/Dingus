@@ -25,7 +25,8 @@
         <TextView android:id="@+id/vpnBadge" android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginEnd="12dp" android:textSize="14sp" android:visibility="gone" />
         <TextView android:id="@+id/clock" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:textSize="16sp" android:textColor="?attr/dMuted" />
+            android:textSize="16sp" android:textColor="#F2FFFFFF" android:textStyle="bold"
+            android:shadowColor="#99000000" android:shadowRadius="6" android:shadowDy="1" />
     </LinearLayout>
 
     <!-- Scrolls only when a show's cast, under its episodes, doesn't fit (the page fills the screen otherwise). -->

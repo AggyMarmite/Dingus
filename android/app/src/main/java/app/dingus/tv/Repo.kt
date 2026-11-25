@@ -446,6 +446,9 @@ object Repo {
         Store.guideLoadedAt = System.currentTimeMillis()
         val t2 = System.currentTimeMillis()
         try { Progress.saving { writeGuide() } } catch (e: Exception) { Log.w("Dingus", "save guide", e) }
+        // Which listing each channel uses is kept with the channels: save them again too, or after a restart the
+        // channels come back without their listings ("No information") until the guide's next update.
+        try { writeChannels() } catch (e: Exception) { Log.w("Dingus", "save channels", e) }
         Log.i("Dingus", "Update: guide saved in ${System.currentTimeMillis() - t2} ms")
         changed()
     }
@@ -489,7 +492,10 @@ object Repo {
     private fun DataOutputStream.str(s: String?) = writeUTF(s ?: "\u0000")
     private fun DataInputStream.str(): String? = readUTF().let { if (it == "\u0000") null else it }
 
-    private fun writeChannels() {
+    // (The channel and guide updates can both save the channels: one at a time, so the file never gets mixed up.)
+    private val channelsFileLock = Any()
+    private fun writeChannels() = synchronized(channelsFileLock) { writeChannelsNow() }
+    private fun writeChannelsNow() {
         out("channels.bin").use { o ->
             o.writeInt(3)
             o.str(guideUrl)
