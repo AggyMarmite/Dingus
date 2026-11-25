@@ -82,6 +82,9 @@ class VpnActivity : BaseActivity() {
         Vpn.provider == Vpn.SURFSHARK && Vpn.privateKey.isNotEmpty() -> "Key and address saved (${Vpn.address})  ·  send new ones from your phone"
         Vpn.provider == Vpn.PROTON && Vpn.protonKey.isNotEmpty() -> "Key and address saved (${Vpn.protonAddress})  ·  send new ones from your phone"
         Vpn.provider == Vpn.CONFIGS && Vpn.configs.isNotEmpty() -> "${Vpn.configs.size} config files  ·  add more from your phone"
+        Vpn.provider in listOf(Vpn.MULLVAD, Vpn.IVPN, Vpn.NORD) && Vpn.keyFor().isNotEmpty() -> "Key saved${Vpn.addressFor().let { if (it.isEmpty()) "" else " ($it)" }}  ·  send new ones from your phone"
+        Vpn.provider == Vpn.NORD -> "Paste a NordLynx config, or type in your NordVPN access token (Nord account → Manual setup)"
+        Vpn.provider == Vpn.MULLVAD || Vpn.provider == Vpn.IVPN -> "Paste one WireGuard config file from ${Vpn.providerName(Vpn.provider)}: its key and address are all that's needed"
         else -> "Easiest: paste your key and address (or config files) on your phone"
     }
 
@@ -94,8 +97,8 @@ class VpnActivity : BaseActivity() {
     }
 
     private fun chooseProvider() {
-        val ids = listOf(Vpn.SURFSHARK, Vpn.PROTON, Vpn.CONFIGS)
-        val opts = listOf("Surfshark", "Proton VPN", "WireGuard config files")
+        val ids = Vpn.listed + Vpn.CONFIGS
+        val opts = ids.map { Vpn.providerName(it) }
         Dialogs.builder(this).setTitle("Provider")
             .setSingleChoiceItems(opts.toTypedArray(), ids.indexOf(Vpn.provider).coerceAtLeast(0)) { d, i ->
                 d.dismiss()
@@ -123,26 +126,34 @@ class VpnActivity : BaseActivity() {
         }
         phone = p
         phoneDialog = Dialogs.builder(this).setTitle("Set up from your phone")
-            .setMessage("On a phone or computer on the same Wi-Fi, open:\n\n$url\n\nand enter the code  ${p.code}\n\nThen paste your VPN private key and tunnel address (Proton VPN or Surfshark), or your WireGuard config files.")
+            .setMessage("On a phone or computer on the same Wi-Fi, open:\n\n$url\n\nand enter the code  ${p.code}\n\nThen paste your VPN private key and tunnel address, or WireGuard config files (for Mullvad, IVPN or NordVPN, one config file is enough).")
             .setPositiveButton("Done") { _, _ -> }
             .setOnDismissListener { p.stop(); if (phone === p) phone = null }
             .show()
     }
 
     private fun typeIn() {
-        val proton = Vpn.provider == Vpn.PROTON
-        val name = if (proton) "Proton" else "Surfshark"
-        val opts = listOf("$name private key", "$name tunnel address", "WireGuard config file from a link")
+        val pv = if (Vpn.provider == Vpn.CONFIGS) Vpn.SURFSHARK else Vpn.provider
+        val name = Vpn.providerName(pv)
+        val opts = listOf("$name private key", "$name tunnel address", "WireGuard config file from a link") +
+            (if (pv == Vpn.NORD) listOf("NordVPN access token (gets your key)") else emptyList())
         Dialogs.builder(this).setTitle("Type them in")
             .setItems(opts.toTypedArray()) { _, i ->
                 when (i) {
-                    0 -> Dialogs.input(this, "WireGuard private key", if (proton) Vpn.protonKey else Vpn.privateKey, "e.g. aBcD…=") {
-                        if (proton) Vpn.protonKey = it else Vpn.privateKey = it
-                        Vpn.provider = if (proton) Vpn.PROTON else Vpn.SURFSHARK; locations = emptyList(); scope.launch { loadLocations() }; update()
+                    0 -> Dialogs.input(this, "WireGuard private key", Vpn.keyFor(pv), "e.g. aBcD…=") {
+                        Vpn.setKey(pv, it); Vpn.provider = pv; locations = emptyList(); scope.launch { loadLocations() }; update()
                     }
-                    1 -> Dialogs.input(this, "Tunnel address", if (proton) Vpn.protonAddress else Vpn.address, if (proton) "e.g. 10.2.0.2/32" else "e.g. 10.14.0.2/16") {
-                        if (proton) Vpn.protonAddress = it else Vpn.address = it
-                        Vpn.provider = if (proton) Vpn.PROTON else Vpn.SURFSHARK; update()
+                    1 -> Dialogs.input(this, "Tunnel address", Vpn.addressFor(pv), when (pv) { Vpn.PROTON -> "e.g. 10.2.0.2/32"; Vpn.NORD -> "10.5.0.2/32"; else -> "e.g. 10.14.0.2/16" }) {
+                        Vpn.setAddress(pv, it); Vpn.provider = pv; update()
+                    }
+                    3 -> Dialogs.input(this, "NordVPN access token", "", "From your Nord account → Manual setup") { t ->
+                        if (t.isEmpty()) return@input
+                        scope.launch {
+                            val msg = try { Vpn.setKey(Vpn.NORD, Vpn.nordKeyFromToken(t)); Vpn.provider = Vpn.NORD; locations = emptyList(); loadLocations(); "Your NordLynx key is saved ✓" }
+                            catch (e: Exception) { "Couldn't get your key: ${Net.friendly(e)}" }
+                            Dialogs.builder(this@VpnActivity).setTitle("NordVPN").setMessage(msg).setPositiveButton("OK", null).show()
+                            update()
+                        }
                     }
                     2 -> Dialogs.input(this, "Link to a .conf file", "", "http://…/uk.conf") { url ->
                         if (url.isEmpty()) return@input

@@ -5,7 +5,8 @@
 * Fire TV: Trending and top films and shows, "Because you watched", and a richer Home page.
 * Fire TV: age ratings and TMDB scores, trailers, Skip intro, and new-episode alerts.
 * Fire TV: plays more kinds of files and streams.
-* Fire TV: easier VPN settings, a VPN indicator and the clock by the logo.
+* Fire TV: easier VPN settings, Mullvad, IVPN and NordVPN, a kill switch, auto-reconnect and a speed test.
+* Fire TV: a VPN indicator, the clock by the logo, and hold Back to jump to live TV.
 * Fire TV: tidier settings, with text size, picture size, Clear cache and more.
 * Steadier playback: smarter channel fallback and cleaner reconnects.
 * The new Dingus logo everywhere.

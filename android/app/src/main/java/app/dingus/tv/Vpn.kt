@@ -33,13 +33,19 @@ object Vpn {
     const val SURFSHARK = "surfshark"
     const val PROTON = "proton"
     const val CONFIGS = "configs"
+    const val MULLVAD = "mullvad"
+    const val IVPN = "ivpn"
+    const val NORD = "nord"
+    /** The providers with a built-in list of places (the rest use config files). */
+    val listed = listOf(SURFSHARK, PROTON, MULLVAD, IVPN, NORD)
+    fun providerName(p: String) = when (p) { SURFSHARK -> "Surfshark"; PROTON -> "Proton VPN"; MULLVAD -> "Mullvad"; IVPN -> "IVPN"; NORD -> "NordVPN"; else -> "WireGuard config files" }
 
     enum class Status { OFF, CONNECTING, ON, ERROR }
 
     /** A place to connect to. For Surfshark: host + public key; for config files: the file itself. */
     class Location(
         val id: String, val country: String, val city: String, val countryCode: String,
-        val host: String = "", val publicKey: String = "", val load: Int = -1, val conf: String? = null,
+        val host: String = "", val publicKey: String = "", val load: Int = -1, val conf: String? = null, val port: Int = 51820,
     ) {
         val label: String get() = if (city.isNotEmpty() && city != country) "$country – $city" else country
     }
@@ -100,6 +106,16 @@ object Vpn {
     var protonAddress: String
         get() = Store.prefsString("vpnProtonAddress", "").ifEmpty { "10.2.0.2/32" }
         set(v) = Store.putString("vpnProtonAddress", v.trim())
+    /** Each provider's own WireGuard key and tunnel address (Surfshark's and Proton's have their own names, above). */
+    fun keyFor(p: String = provider): String = when (p) { SURFSHARK -> privateKey; PROTON -> protonKey; else -> Store.prefsString("vpnKey_$p", "") }
+    fun setKey(p: String, v: String) = when (p) { SURFSHARK -> privateKey = v; PROTON -> protonKey = v; else -> Store.putString("vpnKey_$p", v.trim()) }
+    fun addressFor(p: String = provider): String = when (p) {
+        SURFSHARK -> address; PROTON -> protonAddress
+        NORD -> Store.prefsString("vpnAddress_$p", "").ifEmpty { "10.5.0.2/32" } // (the same for every NordLynx account)
+        else -> Store.prefsString("vpnAddress_$p", "")
+    }
+    fun setAddress(p: String, v: String) = when (p) { SURFSHARK -> address = v; PROTON -> protonAddress = v; else -> Store.putString("vpnAddress_$p", v.trim()) }
+
     var locationId: String
         get() = Store.prefsString("vpnLocation", "")
         set(v) = Store.putString("vpnLocation", v)
@@ -130,6 +146,8 @@ object Vpn {
     val ready: Boolean get() = when (provider) {
         SURFSHARK -> privateKey.isNotEmpty() && address.isNotEmpty()
         PROTON -> protonKey.isNotEmpty()
+        MULLVAD, IVPN -> keyFor().isNotEmpty() && addressFor().isNotEmpty()
+        NORD -> keyFor().isNotEmpty()
         else -> configs.isNotEmpty()
     }
 
@@ -137,11 +155,15 @@ object Vpn {
 
     @Volatile private var surfshark: List<Location>? = null
     @Volatile private var proton: List<Location>? = null
+    @Volatile private var others = HashMap<String, List<Location>>()
 
     /** The locations for the chosen provider (the server lists are fetched once, then kept for a day). */
     suspend fun locations(): List<Location> = withContext(Dispatchers.IO) {
         when (provider) {
             SURFSHARK -> surfsharkList()
+            MULLVAD -> others[MULLVAD] ?: mullvadList().also { others[MULLVAD] = it }
+            IVPN -> others[IVPN] ?: ivpnList().also { others[IVPN] = it }
+            NORD -> others[NORD] ?: nordList().also { others[NORD] = it }
             PROTON -> protonList()
             else -> configs.map { (n, c) -> Location("cfg:$n", n, "", "", conf = c) }
         }
@@ -172,6 +194,101 @@ object Vpn {
         list.sortWith(compareBy({ it.country }, { it.city }, { it.load }))
         surfshark = list
         return list
+    }
+
+    /** Mullvad's public list: one place per city (the first server that's up there). */
+    private fun mullvadList(): List<Location> {
+        val a = JSONArray(cached("mullvad.json", "https://api.mullvad.net/www/relays/wireguard/"))
+        val best = LinkedHashMap<String, Location>()
+        for (i in 0 until a.length()) {
+            val o = a.getJSONObject(i)
+            if (!o.optBoolean("active", true)) continue
+            val key = o.optString("pubkey"); val ip = o.optString("ipv4_addr_in")
+            if (key.isEmpty() || ip.isEmpty()) continue
+            val cc = o.optString("country_code").uppercase(); val city = o.optString("city_name")
+            best.putIfAbsent("$cc|$city", Location(o.optString("hostname"), o.optString("country_name"), city, cc, ip, key))
+        }
+        if (best.isEmpty()) throw IOException("No Mullvad servers in the list")
+        return best.values.sortedWith(compareBy({ it.country }, { it.city }))
+    }
+
+    /** IVPN's public list: one place per city (its least busy server); IVPN's WireGuard answers on port 2049. */
+    private fun ivpnList(): List<Location> {
+        val a = JSONObject(cached("ivpn.json", "https://api.ivpn.net/v5/servers.json")).getJSONArray("wireguard")
+        val out = ArrayList<Location>()
+        for (i in 0 until a.length()) {
+            val o = a.getJSONObject(i)
+            val hosts = o.optJSONArray("hosts") ?: continue
+            val h = (0 until hosts.length()).map { hosts.getJSONObject(it) }.filter { it.optString("public_key").isNotEmpty() }
+                .minByOrNull { it.optDouble("load", 50.0) } ?: continue
+            out.add(Location(o.optString("gateway"), o.optString("country"), o.optString("city"), o.optString("country_code").uppercase(),
+                h.optString("host"), h.optString("public_key"), h.optDouble("load", -1.0).toInt(), port = 2049))
+        }
+        if (out.isEmpty()) throw IOException("No IVPN servers in the list")
+        return out.sortedWith(compareBy({ it.country }, { it.city }))
+    }
+
+    /** NordVPN's public list (big: read as it arrives): one place per city, its least busy NordLynx server. */
+    private fun nordList(): List<Location> {
+        val file = File(app.filesDir, "nord.json")
+        if (!file.exists() || System.currentTimeMillis() - file.lastModified() > 86_400_000L) try {
+            Net.open("https://api.nordvpn.com/v1/servers?limit=16384&filters%5Bservers_technologies%5D%5Bidentifier%5D=wireguard_udp", 60_000)
+                .use { s -> file.outputStream().use { s.copyTo(it) } }
+        } catch (e: Exception) { if (!file.exists()) throw e }
+        val best = HashMap<String, Location>()
+        android.util.JsonReader(file.bufferedReader()).use { r ->
+            r.beginArray()
+            while (r.hasNext()) {
+                var host = ""; var ip = ""; var load = -1; var key = ""; var country = ""; var cc = ""; var city = ""
+                r.beginObject()
+                while (r.hasNext()) when (r.nextName()) {
+                    "hostname" -> host = r.nextString()
+                    "station" -> ip = r.nextString()
+                    "load" -> load = r.nextInt()
+                    "locations" -> { r.beginArray(); while (r.hasNext()) { r.beginObject(); while (r.hasNext()) if (r.nextName() == "country") {
+                        r.beginObject(); while (r.hasNext()) when (r.nextName()) {
+                            "name" -> country = r.nextString(); "code" -> cc = r.nextString()
+                            "city" -> { r.beginObject(); while (r.hasNext()) if (r.nextName() == "name") city = r.nextString() else r.skipValue(); r.endObject() }
+                            else -> r.skipValue() }; r.endObject() } else r.skipValue(); r.endObject() }; r.endArray() }
+                    "technologies" -> { r.beginArray(); while (r.hasNext()) { var id = ""; var pk = ""; r.beginObject(); while (r.hasNext()) when (r.nextName()) {
+                        "identifier" -> id = r.nextString()
+                        "metadata" -> { r.beginArray(); while (r.hasNext()) { var n = ""; var v = ""; r.beginObject(); while (r.hasNext()) when (r.nextName()) { "name" -> n = r.nextString(); "value" -> v = if (r.peek() == android.util.JsonToken.STRING) r.nextString() else { r.skipValue(); "" }; else -> r.skipValue() }; r.endObject(); if (n == "public_key") pk = v }; r.endArray() }
+                        else -> r.skipValue() }; r.endObject(); if (id == "wireguard_udp" && pk.isNotEmpty()) key = pk }; r.endArray() }
+                    else -> r.skipValue()
+                }
+                r.endObject()
+                if (key.isEmpty() || ip.isEmpty()) continue
+                val k = "$cc|$city"
+                val old = best[k]
+                if (old == null || load in 0 until old.load) best[k] = Location(host, country, city, cc.uppercase(), ip, key, load)
+            }
+            r.endArray()
+        }
+        if (best.isEmpty()) throw IOException("No NordVPN servers in the list")
+        return best.values.sortedWith(compareBy({ it.country }, { it.city }))
+    }
+
+    /** NordVPN: your NordLynx private key, from an access token (Nord account → Manual setup → access token). */
+    suspend fun nordKeyFromToken(token: String): String = withContext(Dispatchers.IO) {
+        val c = java.net.URL("https://api.nordvpn.com/v1/users/services/credentials").openConnection() as java.net.HttpURLConnection
+        c.setRequestProperty("Authorization", "Basic " + android.util.Base64.encodeToString("token:${token.trim()}".toByteArray(), android.util.Base64.NO_WRAP))
+        c.connectTimeout = 15_000; c.readTimeout = 15_000
+        try {
+            if (c.responseCode == 401) throw IOException("NordVPN didn't accept that access token")
+            JSONObject(c.inputStream.bufferedReader().readText()).optString("nordlynx_private_key").ifEmpty { throw IOException("NordVPN sent no key") }
+        } finally { c.disconnect() }
+    }
+
+    /**
+     * A pasted config for a provider with a built-in list (Mullvad, IVPN, NordVPN…): its private key and address are
+     * all that's needed – the places come from the list. True if they were taken from [text].
+     */
+    fun takeKeyFrom(text: String): Boolean {
+        if (provider !in listOf(MULLVAD, IVPN, NORD)) return false
+        val key = Regex("""(?im)^\s*PrivateKey\s*=\s*(\S+)""").find(text)?.groupValues?.get(1) ?: return false
+        val addr = Regex("""(?im)^\s*Address\s*=\s*([^,\s]+)""").find(text)?.groupValues?.get(1)
+        setKey(provider, key); addr?.let { setAddress(provider, it) }
+        return true
     }
 
     /** Proton's server list is public only as a daily copy kept by a community project. */
@@ -250,16 +367,16 @@ object Vpn {
     // ------------------------------------------------------------------ connecting
 
     private fun configFor(loc: Location): Config {
-        val isProton = provider == PROTON
+        val dns = when (provider) { PROTON -> "10.2.0.1"; MULLVAD -> "10.64.0.1"; IVPN -> "172.16.0.1"; NORD -> "103.86.96.100"; else -> "162.252.172.57, 149.154.159.92" }
         val text = loc.conf ?: """
             [Interface]
-            PrivateKey = ${if (isProton) protonKey else privateKey}
-            Address = ${if (isProton) protonAddress else address}
-            DNS = ${if (isProton) "10.2.0.1" else "162.252.172.57, 149.154.159.92"}
+            PrivateKey = ${keyFor()}
+            Address = ${addressFor()}
+            DNS = $dns
 
             [Peer]
             PublicKey = ${loc.publicKey}
-            Endpoint = ${loc.host}:51820
+            Endpoint = ${loc.host}:${loc.port}
             AllowedIPs = 0.0.0.0/0
             PersistentKeepalive = 25
         """.trimIndent()

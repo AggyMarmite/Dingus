@@ -81,9 +81,14 @@ class PhoneSetup(private val onPlaylist: ((Map<String, String>) -> Unit)? = null
             f["pkey"]?.trim()?.takeIf { it.isNotEmpty() }?.let { Vpn.protonKey = it; Vpn.provider = Vpn.PROTON; done.add("Proton VPN private key") }
             // (The address box comes pre-filled, so it only counts together with a key.)
             if (!f["pkey"].isNullOrBlank()) f["paddress"]?.trim()?.takeIf { it.isNotEmpty() }?.let { Vpn.protonAddress = it; done.add("Proton VPN tunnel address") }
-            f["key"]?.trim()?.takeIf { it.isNotEmpty() }?.let { Vpn.privateKey = it; Vpn.provider = Vpn.SURFSHARK; done.add("private key") }
-            f["address"]?.trim()?.takeIf { it.isNotEmpty() }?.let { Vpn.address = it; done.add("tunnel address") }
-            f["conf"]?.trim()?.takeIf { it.isNotEmpty() }?.let { text ->
+            // The key and address boxes are for the provider chosen on the TV (Surfshark unless it's Mullvad, IVPN or NordVPN).
+            val pv = if (Vpn.provider in listOf(Vpn.MULLVAD, Vpn.IVPN, Vpn.NORD)) Vpn.provider else Vpn.SURFSHARK
+            f["key"]?.trim()?.takeIf { it.isNotEmpty() }?.let { Vpn.setKey(pv, it); Vpn.provider = pv; done.add("${Vpn.providerName(pv)} private key") }
+            f["address"]?.trim()?.takeIf { it.isNotEmpty() }?.let { Vpn.setAddress(pv, it); done.add("tunnel address") }
+            // A config file for Mullvad, IVPN or NordVPN: just its key and address (the places come from their list).
+            val tookKey = !f["conf"].isNullOrBlank() && Vpn.takeKeyFrom(f["conf"]!!)
+            if (tookKey) done.add("${Vpn.providerName(Vpn.provider)} key and address")
+            f["conf"]?.trim()?.takeIf { it.isNotEmpty() && !tookKey }?.let { text ->
                 // Several files can be pasted one after another: each starts with [Interface].
                 val parts = text.split(Regex("(?=\\[Interface])", RegexOption.IGNORE_CASE)).map { it.trim() }.filter { it.isNotEmpty() }
                 val base = f["name"]?.trim().orEmpty()

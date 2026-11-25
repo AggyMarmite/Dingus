@@ -75,11 +75,7 @@ class VpnControls(
         Vpn.Status.OFF -> if (Vpn.ready) "Off  ·  press OK to connect" else "Off  ·  set it up in More VPN settings first"
     }
 
-    fun providerName() = when (Vpn.provider) {
-        Vpn.SURFSHARK -> "Surfshark"
-        Vpn.PROTON -> "Proton VPN"
-        else -> "WireGuard config files"
-    }
+    fun providerName() = Vpn.providerName(Vpn.provider)
 
     fun quickLine(): String {
         val here = Vpn.region().let { if (it.isEmpty()) "" else java.util.Locale("", it).getDisplayCountry(java.util.Locale.ENGLISH) }
