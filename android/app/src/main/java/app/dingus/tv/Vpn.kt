@@ -77,6 +77,8 @@ object Vpn {
     /** Where it was last connected (for "switched to …"). */
     private var lastOnLabel: String? = null
 
+    @Volatile private var lastCheckedLabel: String? = null
+
     private fun set(s: Status, msg: String) {
         val was = status
         status = s; message = msg
@@ -95,6 +97,12 @@ object Vpn {
             }
         }
         Ui.test("vpn ${s.name.lowercase()} $msg")
+        // A new way out to the internet (on, off or another location): servers that answered before may not now, and
+        // the other way round – so the playlist's status and the server in use are checked again straight away.
+        if ((s == Status.ON || s == Status.OFF) && (s != was || connectedTo?.label != lastCheckedLabel)) {
+            lastCheckedLabel = if (s == Status.ON) connectedTo?.label else null
+            Failover.networkChanged()
+        }
         val ls = synchronized(listeners) { listeners.toList() }
         main.post { ls.forEach { it() } }
     }

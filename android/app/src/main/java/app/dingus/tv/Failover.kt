@@ -1,6 +1,7 @@
 package app.dingus.tv
 
 import java.io.IOException
+import kotlinx.coroutines.launch
 
 /**
  * Backup server addresses for a playlist. When the playlist refreshes it tries the main address first, then each
@@ -103,6 +104,28 @@ object Failover {
             }
         }
         throw first ?: IOException("Couldn't connect to the server")
+    }
+
+    /**
+     * The way out to the internet changed (the VPN went on or off, or to another location): after a moment to settle,
+     * ask the provider again (so ● Online / Offline is right) and use the main server if it answers now, or another
+     * one if the one in use stopped.
+     */
+    fun networkChanged() {
+        val p = Store.playlist ?: return
+        Background.scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            kotlinx.coroutines.delay(2_000)
+            if (Store.playlist?.id != p.id) return@launch
+            try {
+                val all = addresses(p)
+                val cur = index(p)
+                when {
+                    all.size > 1 && cur > 0 && reachable(p, all[0]) -> { setIndex(p, 0); Ui.test("failover to 0 (network changed)") }
+                    all.size > 1 && !reachable(p, all[cur]) -> recover()
+                }
+            } catch (e: Exception) { android.util.Log.w("Dingus", "server check after network change", e) }
+            try { Account.check(p) } catch (e: Exception) { android.util.Log.w("Dingus", "account check after network change", e) }
+        }
     }
 
     /**
