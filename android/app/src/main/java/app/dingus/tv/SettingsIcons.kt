@@ -72,6 +72,7 @@ object SettingsIcons {
         "Remove config files" to 0xF1037,
         "Connect when Dingus starts" to 0xF0425,
         "Reconnect by itself" to 0xF006A,
+        "Find a location that works" to 0xF07D9,
         "Kill switch" to 0xF099C,
         "Switch server if slow" to 0xF0F86,
         "Only Dingus uses this VPN" to 0xF02FD,
