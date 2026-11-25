@@ -61,9 +61,10 @@ object PlaylistUpdate {
 }
 
 /**
- * The menu on every screen, down the left. Closed, it's a strip of icons (the screen you're on marked); LEFT at
- * the left edge of a screen stretches the same panel open – the icons stay where they are and their names, the
- * playlist and the subscription fade in – and RIGHT (or BACK) slides it shut again.
+ * The menu on every screen, Apple TV style. Closed, it's a slim frosted strip of icons floating on the left (the
+ * screen you're on marked), with the clock and the VPN's shield above it. LEFT at the left edge of a screen grows
+ * the strip into a rounded frosted panel floating over the page – the names slide in one after another, the
+ * playlist and the VPN appear at the top, and the page behind sinks back and dims – and RIGHT (or BACK) shuts it.
  *
  * [content] is moved across to make room for the strip.
  */
@@ -81,18 +82,18 @@ class SideMenu(
     private val root = a.findViewById<FrameLayout>(android.R.id.content)
     private val d = a.resources.displayMetrics.density
     private val strip = (60 * d).toInt()
-    private val full = (200 * d).toInt()
-    /** Darkens the left of the screen behind the open menu (fading out across it); the rest stays bright and live. */
-    private val scrim = View(a).apply {
-        background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
-            intArrayOf(0xED000000.toInt(), 0xEB000000.toInt(), 0xE8000000.toInt(), 0xCC000000.toInt(), 0x73000000, 0x14000000, 0))
-        alpha = 0f; visibility = View.GONE
-    }
+    private val content = content
+    /** Dims the whole screen behind the open menu (which floats over it). */
+    private val scrim = View(a).apply { setBackgroundColor(0xA6000000.toInt()); alpha = 0f; visibility = View.GONE }
     val panel: View = LayoutInflater.from(a).inflate(R.layout.side_menu, root, false)
-    private val edge: View = panel.findViewById(R.id.sideEdge)
-    private val fading = listOf<View>(panel.findViewById(R.id.sideName), panel.findViewById(R.id.sideHeader), panel.findViewById(R.id.status), panel.findViewById(R.id.sideVpnPlace))
+    private val column: ViewGroup = panel.findViewById(R.id.sideColumn)
+    private val clockRow: View = panel.findViewById(R.id.sideClockRow)
+    private val header: View = panel.findViewById(R.id.sideHeader)
+    private val vpnLine: View = panel.findViewById(R.id.sideVpnPlace)
+    private val line: View = panel.findViewById(R.id.sideLine)
+    private val status: View = panel.findViewById(R.id.status)
     private val clock: TextView = panel.findViewById(R.id.sideClock)
-    /** The time under the logo (every minute, on the minute). */
+    /** The time at the top (every minute, on the minute). */
     private val tick = object : Runnable {
         override fun run() {
             clock.text = Ui.time(System.currentTimeMillis())
@@ -106,6 +107,8 @@ class SideMenu(
     private var fraction = 0f
     private var anim: ValueAnimator? = null
     private var returnTo: View? = null
+    /** The page behind sinks back a little as the menu opens (not Live TV's: a video picture can't be scaled). */
+    private val sink = here != Page.LIVE
 
     var isOpen = false; private set
     /** Called once the menu has closed by itself (RIGHT / BACK), for screens that put the focus somewhere special. */
@@ -115,23 +118,27 @@ class SideMenu(
 
     init {
         if (pad) content.setPaddingRelative(content.paddingStart + strip, content.paddingTop, content.paddingEnd, content.paddingBottom)
-        panel.background = null
+        panel.background = Glass()
         root.addView(scrim, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        root.addView(panel, FrameLayout.LayoutParams(full, ViewGroup.LayoutParams.MATCH_PARENT))
+        root.addView(panel, FrameLayout.LayoutParams((260 * d).toInt(), ViewGroup.LayoutParams.MATCH_PARENT))
         panel.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> apply() }
 
         val size = (22 * d).toInt()
-        val colour = Themes.color(a, R.attr.dText)
         for (t in rows) t.compoundDrawablesRelative[0]?.mutate()?.let { dr ->
-            dr.setTint(colour); dr.setBounds(0, 0, size, size); t.setCompoundDrawablesRelative(dr, null, null, null)
+            dr.setBounds(0, 0, size, size); t.setCompoundDrawablesRelative(dr, null, null, null)
         }
         rowFor(here).isActivated = true
+        rowFor(here).setTypeface(rowFor(here).typeface, android.graphics.Typeface.BOLD)
         for (t in rows) {
             // (A background can bring its own padding; keep the row's own.)
             val pad = intArrayOf(t.paddingStart, t.paddingTop, t.paddingEnd, t.paddingBottom)
-            t.background = Pill(t)
+            t.background = Highlight(t)
             t.setPaddingRelative(pad[0], pad[1], pad[2], pad[3])
-            t.setOnFocusChangeListener { _, _ -> tintRows(((fraction - 0.25f) / 0.75f).coerceIn(0f, 1f)) }
+            t.setOnFocusChangeListener { v, has ->
+                tintRows()
+                // The highlighted name lifts, like everything else (only while it's open).
+                if (isOpen || !has) Motion.lift(v, has && isOpen, 1.04f, shine = false)
+            }
         }
 
         panel.findViewById<View>(R.id.navHome).setOnClickListener { go(Page.HOME) }
@@ -142,6 +149,7 @@ class SideMenu(
         panel.findViewById<View>(R.id.settings).setOnClickListener { go(Page.SETTINGS) }
         panel.findViewById<View>(R.id.navRefresh).setOnClickListener { close(); PlaylistUpdate.start(); Ui.test("menu-refresh") }
         playlistRow.setOnClickListener { switchPlaylist() }
+        playlistRow.setOnFocusChangeListener { _, has -> showAccount(); playlistRow.setTextColor(if (has) 0xFF0B0E14.toInt() else Themes.color(a, R.attr.dMuted)) }
         showDetails()
         apply()
         clock.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
@@ -153,32 +161,61 @@ class SideMenu(
 
     private fun rowFor(p: Page): TextView = rows[p.ordinal]
 
-    // ------------------------------------------------------------------ the buttons and pills
-    // Closed: light round buttons floating on the left (the screen you're on in a soft white). Opening: each one
-    // stretches into a pill and its name fades in, with no panel behind – just the left of the screen darkening.
-    // Open: the highlighted pill is white; the screen you're on keeps its soft white.
+    // ------------------------------------------------------------------ the glass, the highlight and the names
 
-    private inner class Pill(private val v: TextView) : android.graphics.drawable.Drawable() {
-        private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-        private val edgePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            style = android.graphics.Paint.Style.STROKE; strokeWidth = d; color = 0x1FFFFFFF
+    /** Where the frosted glass is: round the strip of icons when closed, the whole floating panel when open. */
+    private val glass = android.graphics.RectF()
+    private fun glassAt(p: Float) {
+        val h = panel.height.takeIf { it > 0 } ?: a.resources.displayMetrics.heightPixels
+        val shown = rows.take(6).filter { it.visibility == View.VISIBLE }
+        val top0 = (shown.firstOrNull()?.top ?: (h / 3)) - 10 * d
+        val bottom0 = (shown.lastOrNull()?.bottom ?: (h * 2 / 3)) + 10 * d
+        val l = 8 * d
+        val r0 = 52 * d; val r1 = panel.width.toFloat() - 6 * d
+        val top1 = 10 * d; val bottom1 = h - 10 * d
+        glass.set(l, top0 + (top1 - top0) * p, r0 + (r1 - r0) * p, bottom0 + (bottom1 - bottom0) * p)
+    }
+
+    private inner class Glass : android.graphics.drawable.Drawable() {
+        private val fill = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        private val edge = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { style = android.graphics.Paint.Style.STROKE; strokeWidth = d; color = 0x17FFFFFF }
+        private var shaderFor = -1f
+        override fun draw(c: android.graphics.Canvas) {
+            glassAt(fraction)
+            if (shaderFor != glass.height()) {
+                shaderFor = glass.height()
+                fill.shader = android.graphics.LinearGradient(0f, glass.top, 0f, glass.bottom, 0xE61E2636.toInt(), 0xF0101520.toInt(), android.graphics.Shader.TileMode.CLAMP)
+            }
+            // (Closed it's lighter, so the page shows through the strip.)
+            fill.alpha = (150 + 105 * fraction).toInt()
+            val rad = 22 * d + 6 * d * fraction
+            c.drawRoundRect(glass, rad, rad, fill)
+            c.drawRoundRect(glass, rad, rad, edge)
         }
+        override fun setAlpha(alpha: Int) {}
+        override fun setColorFilter(cf: android.graphics.ColorFilter?) {}
+        @Deprecated("Deprecated in Java")
+        override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
+    }
+
+    /** A white pill on the highlighted name; a small mark beside the screen you're on. */
+    private inner class Highlight(private val v: TextView) : android.graphics.drawable.Drawable() {
+        private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
         private val r = android.graphics.RectF()
         override fun draw(c: android.graphics.Canvas) {
-            val p = fraction
             val b = bounds
-            val inset = 2 * d * (1 - p)
-            val w = 40 * d + (b.width() - 40 * d) * p
-            r.set(b.left + inset, b.top + inset, b.left + inset + w - 2 * inset * 0, b.bottom - inset)
-            val rad = r.height() / 2
             val focused = v.isFocused && isOpen
-            paint.color = when {
-                focused -> 0xFFFFFFFF.toInt()
-                v.isActivated -> 0x38FFFFFF                                   // the screen you're on: soft white
-                else -> ((0.6f + 0.25f * p) * 255).toInt() shl 24 or 0x1E2636   // a dark see-through button / pill
+            if (focused) {
+                paint.color = 0xFFFFFFFF.toInt(); paint.alpha = (255 * fraction).toInt()
+                r.set(b.left.toFloat(), b.top.toFloat(), b.right.toFloat(), b.bottom.toFloat())
+                c.drawRoundRect(r, r.height() / 2, r.height() / 2, paint)
             }
-            c.drawRoundRect(r, rad, rad, paint)
-            if (!focused && !v.isActivated) c.drawRoundRect(r, rad, rad, edgePaint)
+            if (v.isActivated) {
+                paint.color = if (focused) 0xFF0B0E14.toInt() else 0xFFFFFFFF.toInt(); paint.alpha = 255
+                val cy = b.exactCenterY()
+                r.set(b.left + 2 * d, cy - 8 * d, b.left + 5 * d, cy + 8 * d)
+                c.drawRoundRect(r, 2 * d, 2 * d, paint)
+            }
         }
         override fun isStateful() = true
         override fun onStateChange(state: IntArray): Boolean { invalidateSelf(); return true }
@@ -188,35 +225,44 @@ class SideMenu(
         override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
     }
 
-    /** The names and icons: dark on the white highlight, light otherwise; the names fade in as it opens. */
-    private fun tintRows(labels: Float) {
-        val light = Themes.color(a, R.attr.dText)
-        for (t in rows) {
+    /** How far each name has come in: one after another as the menu opens. */
+    private fun labelIn(i: Int) = ((fraction - 0.2f - i * 0.06f) / 0.5f).coerceIn(0f, 1f)
+
+    /** The names and icons: dark on the white highlight; the screen you're on brighter than the rest. */
+    private fun tintRows() {
+        for ((i, t) in rows.withIndex()) {
             val dark = t.isFocused && isOpen
-            val c = if (dark) 0xFF0B0E14.toInt() else light
-            t.setTextColor((c and 0x00FFFFFF) or ((labels * 255).toInt() shl 24))
-            t.compoundDrawablesRelative[0]?.setTint(if (dark) 0xFF0B0E14.toInt() else 0xFFFFFFFF.toInt())
+            val labels = labelIn(i)
+            val base = when { dark -> 0xFF0B0E14.toInt(); t.isActivated -> 0xFFFFFFFF.toInt(); else -> 0xFFCBD5E1.toInt() }
+            t.setTextColor((base and 0x00FFFFFF) or ((labels * 255).toInt() shl 24))
+            val icon = when { dark -> 0xFF0B0E14.toInt(); t.isActivated -> 0xFFFFFFFF.toInt(); isOpen -> 0xFFE2E8F0.toInt(); else -> 0xFF94A3B8.toInt() }
+            t.compoundDrawablesRelative[0]?.setTint(icon)
             t.background?.invalidateSelf()
         }
+        rows.last().alpha = labelIn(6) // Refresh only once it's open
     }
 
-    /** How far open (0 = the strip, 1 = open): the panel's shown width, the names, the dimming behind. */
+    /** How far open (0 = the strip, 1 = open): the glass, the names, the top, the page behind. */
     private fun apply() {
-        val w = strip + ((full - strip) * fraction).toInt()
-        val h = panel.height.takeIf { it > 0 } ?: a.resources.displayMetrics.heightPixels
-        panel.clipBounds = Rect(0, 0, w, h)
-        edge.translationX = (w - 1).toFloat()
-        val labels = ((fraction - 0.25f) / 0.75f).coerceIn(0f, 1f)
-        for (v in fading) v.alpha = labels
-        tintRows(labels)
-        edge.alpha = 0f
+        panel.background?.invalidateSelf()
+        val top = ((fraction - 0.15f) / 0.6f).coerceIn(0f, 1f)
+        header.alpha = top; header.translationY = (1 - top) * -6 * d
+        vpnLine.alpha = top; line.alpha = top; status.alpha = top
+        clockRow.alpha = (1 - fraction * 2.5f).coerceIn(0f, 1f)
+        tintRows()
         scrim.alpha = fraction
         scrim.visibility = if (fraction > 0f) View.VISIBLE else View.GONE
+        if (sink && !Ui.lite) {
+            val s = 1f - 0.035f * fraction
+            if (content.width > 0) { content.pivotX = content.width * 0.7f; content.pivotY = content.height / 2f }
+            content.scaleX = s; content.scaleY = s
+        }
     }
 
     private fun animateTo(target: Float, ms: Long, end: (() -> Unit)? = null) {
         anim?.cancel()
         if (Ui.lite) { fraction = target; apply(); end?.invoke(); return } // lite mode: open and shut at once
+        if (sink) content.setLayerType(View.LAYER_TYPE_HARDWARE, null)
         anim = ValueAnimator.ofFloat(fraction, target).apply {
             duration = ms
             interpolator = Motion.glide
@@ -224,7 +270,10 @@ class SideMenu(
             addListener(object : android.animation.AnimatorListenerAdapter() {
                 var cancelled = false
                 override fun onAnimationCancel(animation: android.animation.Animator) { cancelled = true }
-                override fun onAnimationEnd(animation: android.animation.Animator) { if (!cancelled) end?.invoke() }
+                override fun onAnimationEnd(animation: android.animation.Animator) {
+                    if (sink && fraction == 0f) content.setLayerType(View.LAYER_TYPE_NONE, null)
+                    if (!cancelled) end?.invoke()
+                }
             })
             start()
         }
@@ -258,6 +307,7 @@ class SideMenu(
             null -> null
         }?.let { (t, c) -> val at = name.length; name.append(t); name.setSpan(android.text.style.ForegroundColorSpan(c), at, name.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
         playlistRow.text = name
+        if (playlistRow.isFocused) playlistRow.setTextColor(0xFF0B0E14.toInt())
         if (p == null) { accountRow.text = ""; return }
         val sb = android.text.SpannableStringBuilder()
         for ((line, colour) in Account.lines(Account.saved(), p).filter { !it.first.startsWith("Status") }) {
@@ -283,7 +333,7 @@ class SideMenu(
         for (t in rows) t.isFocusable = t.visibility == View.VISIBLE
         playlistRow.isFocusable = playlistRow.tag == true
         rowFor(here).requestFocus()
-        animateTo(1f, 200)
+        animateTo(1f, 420)
         Ui.test("menu-open")
     }
 
@@ -297,7 +347,7 @@ class SideMenu(
         for (t in rows) t.isFocusable = false
         playlistRow.isFocusable = false
         returnTo = null
-        animateTo(0f, 170)
+        animateTo(0f, 300)
         Ui.test("menu-closed")
         if (restore && back == null) onClosed?.invoke()
     }
@@ -398,12 +448,23 @@ class SideMenu(
     }
 
     companion object {
-        /** The VPN's location beside its indicator (seen once the menu's open). */
+        /** "VPN on · US – Boston" at the top of the open menu (amber while connecting, red if it dropped). */
         fun showVpnPlace(indicator: TextView) {
-            val place = (indicator.parent as? View)?.findViewById<TextView>(R.id.sideVpnPlace) ?: return
-            val on = Vpn.status == Vpn.Status.ON
-            place.text = if (on) Vpn.connectedTo?.label ?: "" else if (Vpn.status == Vpn.Status.CONNECTING) "Connecting…" else "VPN not connected"
-            place.visibility = indicator.visibility
+            val place = indicator.rootView?.findViewById<TextView>(R.id.sideVpnPlace) ?: return
+            val s = Vpn.status
+            if (s == Vpn.Status.OFF) { place.visibility = View.GONE; return }
+            place.visibility = View.VISIBLE
+            val (text, colour) = when (s) {
+                Vpn.Status.ON -> "VPN on  ·  ${Vpn.connectedTo?.label ?: ""}".trimEnd(' ', '·') to 0xFF4ADE80.toInt()
+                Vpn.Status.CONNECTING -> "VPN connecting…" to 0xFFFBBF24.toInt()
+                else -> "VPN not connected" to 0xFFF87171.toInt()
+            }
+            place.text = text
+            place.setTextColor((colour and 0x00FFFFFF) or 0xD9000000.toInt())
+            val dp = place.resources.displayMetrics.density
+            place.background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 12 * dp; setColor((colour and 0x00FFFFFF) or 0x1F000000) }
+            val icon = when (s) { Vpn.Status.ON -> R.drawable.vpn_shield_on; Vpn.Status.CONNECTING -> R.drawable.vpn_shield_busy; else -> R.drawable.vpn_shield_down }
+            place.context.getDrawable(icon)?.mutate()?.let { dr -> val px = (15 * dp).toInt(); dr.setBounds(0, 0, px, px); place.setCompoundDrawablesRelative(dr, null, null, null) }
         }
 
         @Volatile private var checking = false

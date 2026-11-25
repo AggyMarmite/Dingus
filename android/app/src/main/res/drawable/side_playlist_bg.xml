@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The playlist's name at the top of the open side menu: a white pill when the remote's on it (to switch playlist). -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android" android:enterFadeDuration="120" android:exitFadeDuration="120">
+    <item android:state_focused="true"><shape><solid android:color="#FFFFFFFF" /><corners android:radius="99dp" /></shape></item>
+    <item><shape><solid android:color="@android:color/transparent" /><corners android:radius="99dp" /></shape></item>
+</selector>
