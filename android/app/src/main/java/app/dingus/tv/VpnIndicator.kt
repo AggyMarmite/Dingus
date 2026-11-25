@@ -16,13 +16,17 @@ object VpnIndicator {
         if (Store.vpnIndicator == "text") {
             v.setCompoundDrawablesRelativeWithIntrinsicBounds(null, null, null, null)
             v.text = "VPN"
+            v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 13f)
             v.setTextColor(colour)
             v.setTypeface(null, android.graphics.Typeface.BOLD)
             v.letterSpacing = 0.06f
         } else {
             v.text = ""
+            // (No text line under the shield, so it lines up with the place name beside it.)
+            v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 1f)
             val icon = when (s) { Vpn.Status.ON -> R.drawable.vpn_shield_on; Vpn.Status.CONNECTING -> R.drawable.vpn_shield_busy; else -> R.drawable.vpn_shield_down }
-            v.setCompoundDrawablesRelativeWithIntrinsicBounds(icon, 0, 0, 0)
+            // On top (with no text) so it sits centred under the clock.
+            v.setCompoundDrawablesRelativeWithIntrinsicBounds(0, icon, 0, 0)
         }
         v.contentDescription = when (s) { Vpn.Status.ON -> "VPN connected"; Vpn.Status.CONNECTING -> "VPN connecting"; else -> "VPN not connected" }
         if (s == Vpn.Status.CONNECTING) startPulse(v) else stopPulse(v)

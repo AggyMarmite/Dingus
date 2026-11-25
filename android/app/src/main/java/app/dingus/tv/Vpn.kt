@@ -47,7 +47,8 @@ object Vpn {
         val id: String, val country: String, val city: String, val countryCode: String,
         val host: String = "", val publicKey: String = "", val load: Int = -1, val conf: String? = null, val port: Int = 51820,
     ) {
-        val label: String get() = if (city.isNotEmpty() && city != country) "$country – $city" else country
+        /** "US – Boston" (the country's short code when there's a city too), or just the country. */
+        val label: String get() = if (city.isNotEmpty() && city != country) "${countryCode.uppercase().ifEmpty { country }} – $city" else country
     }
 
     @Volatile var status = Status.OFF; private set
