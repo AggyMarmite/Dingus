@@ -352,6 +352,7 @@ class BrowseActivity : BaseActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (backHold(event)) return true
         val f = currentFocus
         val down = event.action == KeyEvent.ACTION_DOWN
         if (!side.isOpen && f != null) {

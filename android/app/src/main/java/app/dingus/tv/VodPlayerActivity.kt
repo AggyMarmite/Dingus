@@ -142,6 +142,8 @@ class VodPlayerActivity : BaseActivity() {
         p.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 when (state) {
+                    // Buffering again after it started (not a skip): the VPN may offer a quicker server.
+                    Player.STATE_BUFFERING -> if (rendered && skipTo < 0 && player?.playWhenReady == true) SlowVpn.onBuffering(this@VodPlayerActivity, "vod:${ids[index]}")
                     Player.STATE_READY -> {
                         retries = 0; triedBackup = false
                         message.text = ""
@@ -282,6 +284,7 @@ class VodPlayerActivity : BaseActivity() {
     override fun onDestroy() { scope.coroutineContext[kotlinx.coroutines.Job]?.cancel(); super.onDestroy() }
 
     private fun open(at: Long) {
+        if (Vpn.holding) { closedAt = at; message.text = "Waiting for the VPN to reconnect…"; return } // (kill switch: Streams reopens it)
         val p = player ?: return
         rendered = false
         handler.removeCallbacks(noPicture)
@@ -452,6 +455,7 @@ class VodPlayerActivity : BaseActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (backHold(event)) return true
         val p = player ?: return super.dispatchKeyEvent(event)
         val code = event.keyCode
         val down = event.action == KeyEvent.ACTION_DOWN

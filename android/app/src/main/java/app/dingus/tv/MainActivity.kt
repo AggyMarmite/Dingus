@@ -686,6 +686,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (backHold(event)) return true
         if (BuildConfig.DEBUG && event.action == KeyEvent.ACTION_DOWN)
             Ui.test("key ${KeyEvent.keyCodeToString(event.keyCode)} on ${if (live.fullScreen) "full screen" else currentFocus?.let { it.javaClass.simpleName + "/" + ((it as? TextView)?.text ?: "") }}")
         // Full screen: the remote controls live TV.

@@ -301,6 +301,8 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
 
     private fun onBuffering() {
         val p = player ?: return
+        if (playedOnce && p.playWhenReady && behindMs == 0L && System.currentTimeMillis() >= quietUntil)
+            list.getOrNull(index)?.let { SlowVpn.onBuffering(a, "live:${it.id}") }
         if (!p.playWhenReady || !hasOtherVersion()) return
         if (behindMs > 0 || buffer != null && pausedAt > 0 || System.currentTimeMillis() < quietUntil) return
         handler.removeCallbacks(bufferCheck)
@@ -393,6 +395,8 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
 
     private fun startChannel() {
         val p = player ?: return
+        // The VPN dropped and the kill switch is on: nothing plays until it's back (Streams reopens this then).
+        if (Vpn.holding) { p.stop(); message.text = "Waiting for the VPN to reconnect…"; Ui.test("vpn-holding"); return }
         slotGen++
         playedOnce = false; handler.removeCallbacks(bufferCheck)
         applyPicture()

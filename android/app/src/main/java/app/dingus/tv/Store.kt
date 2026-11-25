@@ -280,6 +280,20 @@ object Store {
         set(v) = prefs.edit().putString(k("account"), v).apply()
 
     /** Show official title logos for films and shows (when TMDB has one). */
+    /** Settings → VPN: reconnect by itself, kill switch, offer a quicker server when streams keep buffering. */
+    var vpnReconnect: Boolean
+        get() = try { prefs.getBoolean("vpnReconnect", true) } catch (_: Exception) { true }
+        set(v) = prefs.edit().putBoolean("vpnReconnect", v).apply()
+    var vpnKillSwitch: Boolean
+        get() = try { prefs.getBoolean("vpnKillSwitch", true) } catch (_: Exception) { true }
+        set(v) = prefs.edit().putBoolean("vpnKillSwitch", v).apply()
+    var vpnSwitchSlow: Boolean
+        get() = try { prefs.getBoolean("vpnSwitchSlow", true) } catch (_: Exception) { true }
+        set(v) = prefs.edit().putBoolean("vpnSwitchSlow", v).apply()
+    var vpnLastSpeed: String
+        get() = try { prefs.getString("vpnLastSpeed", "")!! } catch (_: Exception) { "" }
+        set(v) = prefs.edit().putString("vpnLastSpeed", v).apply()
+
     /** Settings → Live TV → Remove divider channels ("##### UK #####"). */
     var removeDividers: Boolean
         get() = try { prefs.getBoolean("removeDividers", true) } catch (_: Exception) { true }

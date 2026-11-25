@@ -48,6 +48,36 @@ object Themes {
 
 /** Every screen: applies the chosen theme, and redraws itself if the theme changed while it was open. */
 abstract class BaseActivity : Activity() {
+    // Hold BACK anywhere: straight to the last live channel, full screen (a normal press works as always).
+    // Screens with their own key handling call backHold() first.
+    private var backHeld = false
+    private var lastKey: android.view.KeyEvent? = null
+    private var lastKeyResult = false
+
+    protected fun backHold(event: android.view.KeyEvent): Boolean {
+        if (event === lastKey) return lastKeyResult
+        lastKey = event
+        lastKeyResult = run {
+            if (event.keyCode != android.view.KeyEvent.KEYCODE_BACK) return@run false
+            val downAct = event.action == android.view.KeyEvent.ACTION_DOWN
+            if (downAct && event.repeatCount == 0) { backHeld = false; return@run false }
+            if (downAct && (event.isLongPress || event.repeatCount >= 8)) { if (!backHeld) { backHeld = true; backToLive() }; return@run true }
+            if (downAct) return@run true // (still held: waiting to see whether it's a long press)
+            if (event.action == android.view.KeyEvent.ACTION_UP && backHeld) { backHeld = false; return@run true }
+            false
+        }
+        return lastKeyResult
+    }
+
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean = backHold(event) || super.dispatchKeyEvent(event)
+
+    private fun backToLive() {
+        val id = Store.lastChannel ?: return
+        Ui.test("back-held live $id")
+        startActivity(android.content.Intent(this, MainActivity::class.java).putExtra(MainActivity.PLAY, id).putExtra(MainActivity.PLAY_CATEGORY, if (Store.isFavourite(id)) Repo.FAV else Repo.ALL)
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP))
+    }
+
     private var themeVersion = -1
 
     /** Sized for a TV across the room: the usual Android TV size, with text a little smaller (less "phone"). */

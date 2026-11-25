@@ -125,6 +125,7 @@ class HomeActivity : BaseActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (backHold(event)) return true
         if (event.action == KeyEvent.ACTION_DOWN) feature?.noteKey()
         if (side.onKey(event)) return true
         // UP always goes to the row above: left to itself, focus can skip rows or stay put when the row above has

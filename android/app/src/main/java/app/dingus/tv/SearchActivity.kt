@@ -275,6 +275,6 @@ class SearchActivity : BaseActivity() {
         }
     }
 
-    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean = side.onKey(event) || super.dispatchKeyEvent(event)
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean = backHold(event) || side.onKey(event) || super.dispatchKeyEvent(event)
 
 }

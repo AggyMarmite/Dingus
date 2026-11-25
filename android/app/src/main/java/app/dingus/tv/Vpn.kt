@@ -12,6 +12,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
@@ -46,6 +47,10 @@ object Vpn {
     @Volatile var status = Status.OFF; private set
     @Volatile var message = ""; private set
     @Volatile var connectedTo: Location? = null; private set
+    /** You turned the VPN on (and haven't turned it off): a drop is put right, and the kill switch holds streams. */
+    @Volatile var wanted = false; private set
+    /** The VPN dropped and is being put right: with the kill switch on, nothing plays meanwhile. */
+    val holding: Boolean get() = wanted && Store.vpnKillSwitch && status != Status.ON
     private val listeners = ArrayList<() -> Unit>()
     private val main = Handler(Looper.getMainLooper())
     private val lock = Mutex()
@@ -54,7 +59,7 @@ object Vpn {
     private val tunnel = object : Tunnel {
         override fun getName() = "dingus"
         override fun onStateChange(newState: Tunnel.State) {
-            if (newState == Tunnel.State.DOWN && status == Status.ON) set(Status.OFF, "")
+            if (newState == Tunnel.State.DOWN && status == Status.ON) { set(Status.ERROR, "VPN dropped"); dropped() }
         }
     }
 
@@ -285,7 +290,10 @@ object Vpn {
                 try { backend.setState(tunnel, Tunnel.State.UP, configFor(target)) } finally { Streams.reopenAll() }
                 locationId = target.id
                 connectedTo = target
+                wanted = true
                 set(Status.ON, target.label)
+                Streams.reopenAll() // (held while switching: the kill switch keeps them until it's on)
+                watch()
                 null
             } catch (e: Throwable) {
                 Log.w("Dingus", "vpn", e)
@@ -306,8 +314,96 @@ object Vpn {
             try { backend.setState(tunnel, Tunnel.State.DOWN, null) } catch (e: Throwable) { Log.w("Dingus", "vpn down", e) }
             Streams.reopenAll()
             connectedTo = null
+            wanted = false
             set(Status.OFF, "")
         }
+    }
+
+    // ------------------------------------------------------------------ drops: kill switch and reconnecting
+
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+    private var watcher: kotlinx.coroutines.Job? = null
+    @Volatile private var fixing = false
+
+    /**
+     * While connected: every 30 seconds, is the server still answering? WireGuard renews its handshake every two
+     * minutes while there's traffic (and Dingus sends a keep-alive every 25 seconds), so none for over three minutes
+     * means the VPN has dropped.
+     */
+    private fun watch() {
+        watcher?.cancel()
+        watcher = scope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(30_000)
+                if (status != Status.ON || fixing) continue
+                val last = try { backend.getStatistics(tunnel).peers().firstOrNull()?.let { backend.getStatistics(tunnel).peer(it)?.latestHandshakeEpochMillis } } catch (_: Throwable) { null } ?: continue
+                if (last > 0 && System.currentTimeMillis() - last > 180_000) { set(Status.ERROR, "VPN dropped"); dropped() }
+            }
+        }
+    }
+
+    /** The VPN dropped: hold streams (kill switch), then reconnect – the same place three times, then the least busy nearby. */
+    private fun dropped() {
+        if (!wanted || fixing) return
+        fixing = true
+        Ui.test("vpn-dropped")
+        if (Store.vpnKillSwitch) { Streams.closeAll("vpn dropped"); Notice.working("VPN dropped  ·  reconnecting…") }
+        scope.launch {
+            try {
+                if (!Store.vpnReconnect) { if (Store.vpnKillSwitch) Notice.done("VPN dropped  ·  turn it on again in Settings → VPN", 8_000); return@launch }
+                val here = connectedTo
+                val all = try { locations() } catch (_: Exception) { emptyList() }
+                val nearby = all.filter { it.countryCode == here?.countryCode && it.id != here?.id }.sortedBy { if (it.load < 0) 100 else it.load }
+                val tries = listOfNotNull(here, here, here) + nearby.take(2)
+                for (loc in tries) {
+                    if (!wanted) return@launch // (turned off meanwhile)
+                    if (connect(loc) == null) { Ui.test("vpn-reconnected ${loc.label}"); Streams.reopenAll(); Notice.done("VPN back on  ·  ${loc.label}", 3_000); return@launch }
+                    kotlinx.coroutines.delay(3_000)
+                }
+                Notice.done(if (Store.vpnKillSwitch) "The VPN couldn't reconnect  ·  turn it off in Settings → VPN to watch without it" else "The VPN couldn't reconnect", 10_000)
+            } finally { fixing = false }
+        }
+    }
+
+    // ------------------------------------------------------------------ ping and speed
+
+    /** How quickly each place answers (ms), measured with ping; null where it doesn't. Several at once. */
+    suspend fun pings(list: List<Location>): Map<String, Int> = withContext(Dispatchers.IO) {
+        val out = java.util.concurrent.ConcurrentHashMap<String, Int>()
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(8)
+        for (l in list.filter { it.host.isNotEmpty() }) pool.execute { ping(l.host)?.let { out[l.id] = it } }
+        pool.shutdown(); pool.awaitTermination(6, java.util.concurrent.TimeUnit.SECONDS); pool.shutdownNow()
+        Ui.test("vpn-pings ${out.size}/${list.size}")
+        out
+    }
+
+    private val pingRx = Regex("""time[=<]([\d.]+)""")
+    private fun ping(host: String): Int? = try {
+        val p = ProcessBuilder("ping", "-c", "1", "-W", "2", host).redirectErrorStream(true).start()
+        val text = p.inputStream.bufferedReader().readText(); p.waitFor()
+        pingRx.find(text)?.groupValues?.get(1)?.toFloatOrNull()?.toInt()
+    } catch (_: Exception) { null }
+
+    /** Downloads a test file for up to ~10 seconds (through the VPN when it's on); Mbps. */
+    suspend fun speedTest(progress: (Float) -> Unit): Float = withContext(Dispatchers.IO) {
+        val c = java.net.URL("https://speed.cloudflare.com/__down?bytes=200000000").openConnection() as java.net.HttpURLConnection
+        c.connectTimeout = 8_000; c.readTimeout = 8_000
+        var bytes = 0L
+        val t0 = System.nanoTime()
+        try {
+            c.inputStream.use { s ->
+                val buf = ByteArray(64 * 1024)
+                while (true) {
+                    val n = s.read(buf); if (n < 0) break
+                    bytes += n
+                    val secs = (System.nanoTime() - t0) / 1e9f
+                    if (secs > 0.5f) progress(bytes * 8 / secs / 1e6f)
+                    if (secs >= 10f) break
+                }
+            }
+        } finally { c.disconnect() }
+        val secs = ((System.nanoTime() - t0) / 1e9f).coerceAtLeast(0.1f)
+        (bytes * 8 / secs / 1e6f).also { Ui.test("vpn-speed $it") }
     }
 
     /** At start: if "connect when Dingus starts" is on, connect first (so the playlist loads through the VPN). */
