@@ -2,4 +2,5 @@
 <resources>
     <!-- The VPN indicator's pulse while connecting (VpnIndicator.kt). -->
     <item name="vpnPulse" type="id" />
+    <item name="motionLifted" type="id" />
 </resources>

@@ -58,6 +58,8 @@ abstract class BaseActivity : Activity() {
      *  button or row by name instead of counting presses. */
     override fun onPostCreate(savedInstanceState: android.os.Bundle?) {
         super.onPostCreate(savedInstanceState)
+        // Buttons, pills and chips lift a little when highlighted, everywhere (cards lift themselves).
+        window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { o, n -> Motion.buttons(o, n) }
         if (BuildConfig.DEBUG) window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, n ->
             val id = n?.takeIf { it.id != android.view.View.NO_ID }?.let { try { resources.getResourceEntryName(it.id) } catch (_: Exception) { null } }
             if (id != null) Ui.test("focus $id")

@@ -37,7 +37,7 @@ object Motion {
     }
 
     /** The highlight arriving on (or leaving) a card. */
-    fun lift(v: View, has: Boolean, scale: Float = 1.08f) {
+    fun lift(v: View, has: Boolean, scale: Float = 1.08f, shine: Boolean = true) {
         v.animate().cancel()
         if (!has) {
             v.animate().scaleX(1f).scaleY(1f).rotationX(0f).rotationY(0f).setDuration(260).setInterpolator(glide).start()
@@ -50,7 +50,7 @@ object Motion {
             v.rotationY = dirX * 7f; v.rotationX = -dirY * 5f
         }
         v.animate().scaleX(scale).scaleY(scale).rotationX(0f).rotationY(0f).setDuration(420).setInterpolator(spring).start()
-        sheen(v)
+        if (shine) sheen(v)
     }
 
     /** A faint glint sweeping across the card once, as if it's caught the light. */
@@ -87,6 +87,32 @@ object Motion {
         override fun setAlpha(alpha: Int) {}
         override fun setColorFilter(cf: ColorFilter?) {}
         @Deprecated("Deprecated in Java") override fun getOpacity() = PixelFormat.TRANSLUCENT
+    }
+
+    /**
+     * The highlight moving between buttons (a film's Play, Trailer and season pills, Home's showcase buttons, choices
+     * in Settings): the new one lifts with the same soft bounce as the cards, the old one settles. Cards in rows look
+     * after themselves, and wide things (whole rows, lists) just change colour.
+     */
+    private val liftedKey = R.id.motionLifted
+    fun buttons(old: View?, new: View?) {
+        if (Ui.lite) return
+        if (old != null && old.getTag(liftedKey) == true) { old.setTag(liftedKey, null); lift(old, false) }
+        if (new == null || !liftable(new)) return
+        new.setTag(liftedKey, true)
+        // Room to grow: the button's row (and the row's row) mustn't trim the lifted edges.
+        (new.parent as? android.view.ViewGroup)?.let { p -> p.clipChildren = false; (p.parent as? android.view.ViewGroup)?.clipChildren = false }
+        lift(new, true, 1.06f, shine = false)
+    }
+
+    private fun liftable(v: View): Boolean {
+        if (v.background !is android.graphics.drawable.StateListDrawable) return false
+        if (v.parent is androidx.recyclerview.widget.RecyclerView) return false // (cards: their own lift)
+        val d = v.resources.displayMetrics
+        if (v.width > d.widthPixels * 0.34f || v.height > 90 * d.density) return false
+        var p = v.parent
+        while (p is View) { if (p.id == R.id.sideMenu) return false; p = p.parent }
+        return true
     }
 
     /** Opening a page from a card: the page grows out of the card. */

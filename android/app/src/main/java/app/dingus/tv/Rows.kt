@@ -111,7 +111,7 @@ class RowsAdapter(
     }
 
     /** Trending and Because you watched: wide cards with the title's art (the other rows keep posters). */
-    private fun wideRow(title: String) = !Ui.lite && title.startsWith("Because you watched")
+    @Suppress("UNUSED_PARAMETER") private fun wideRow(title: String) = false // (every row uses posters)
 
     /** Pictures and logos not known yet: looked up once each in the background, then the card's drawn again. */
     private val asked = HashSet<String>()
