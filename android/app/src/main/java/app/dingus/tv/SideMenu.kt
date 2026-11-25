@@ -81,7 +81,7 @@ class SideMenu(
     private val root = a.findViewById<FrameLayout>(android.R.id.content)
     private val d = a.resources.displayMetrics.density
     private val strip = (60 * d).toInt()
-    private val full = (232 * d).toInt()
+    private val full = (200 * d).toInt()
     /** Darkens the left of the screen behind the open menu (fading out across it); the rest stays bright and live. */
     private val scrim = View(a).apply {
         background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,

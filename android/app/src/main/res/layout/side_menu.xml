@@ -3,11 +3,11 @@
      panel open (SideMenu.kt clips it), so the icons stay put and their names, the playlist and the
      subscription fade in beside them. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/sideMenu" android:layout_width="232dp" android:layout_height="match_parent"
+    android:id="@+id/sideMenu" android:layout_width="200dp" android:layout_height="match_parent"
     android:clickable="true">
 
     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical"
-        android:paddingTop="22dp" android:paddingBottom="18dp">
+        android:paddingTop="16dp" android:paddingBottom="12dp">
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="horizontal" android:gravity="center_vertical" android:paddingStart="15dp">
@@ -30,14 +30,14 @@
                 android:paddingEnd="8dp" android:visibility="gone" />
         </LinearLayout>
         <!-- The playlist in use (OK to switch, when there's more than one) and the subscription. -->
-        <LinearLayout android:id="@+id/sideHeader" android:layout_width="match_parent" android:layout_height="80dp"
+        <LinearLayout android:id="@+id/sideHeader" android:layout_width="match_parent" android:layout_height="68dp"
             android:orientation="vertical" android:layout_marginTop="4dp">
             <TextView android:id="@+id/navPlaylist" style="@style/SideRow" android:layout_height="wrap_content"
                 android:paddingTop="3dp" android:paddingBottom="3dp" android:textSize="14sp" android:textColor="?attr/dMuted"
                 android:singleLine="true" android:ellipsize="end" />
             <TextView android:id="@+id/navAccount" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:paddingStart="19dp" android:paddingEnd="8dp" android:textSize="12sp" android:textColor="?attr/dMuted"
-                android:maxLines="3" android:lineSpacingExtra="1dp" />
+                android:maxLines="2" android:ellipsize="end" android:lineSpacingExtra="1dp" />
         </LinearLayout>
 
         <TextView android:id="@+id/navHome" style="@style/SideRow" android:layout_marginTop="8dp" android:text="Home"
