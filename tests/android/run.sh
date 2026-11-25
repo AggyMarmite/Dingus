@@ -10,7 +10,17 @@ shot() { adb exec-out screencap -p > "$OUT/$1.png"; }
 key() { adb shell input keyevent "$1"; sleep "${2:-1}"; }
 wait_log() { # wait_log <pattern> <seconds>
   for _ in $(seq 1 "$2"); do adb logcat -d -s DINGUS-TEST:I | grep -qE "$1" && return 0; sleep 1; done; return 1; }
-check() { if wait_log "$1" "$2"; then echo "PASS $3"; echo "PASS $3" >> "$OUT/result.txt"; else echo "::error title=android self-test::$3"; echo "FAIL $3" >> "$OUT/result.txt"; fail=1; fi; }
+check() { if wait_log "$1" "$2"; then echo "PASS $3"; echo "PASS $3" >> "$OUT/result.txt"; else echo "::error title=android self-test::$3"; echo "FAIL $3" >> "$OUT/result.txt"; [ "$fail" = 1 ] || diag "$3"; fail=1; fi; }
+# On the first failure: which window has the remote's focus, and what Dingus's main thread is doing.
+diag() {
+  { echo "== first failure: $1"; adb shell dumpsys window | grep -E "mCurrentFocus|mFocusedApp|mInputMethodTarget"
+    adb root >/dev/null 2>&1; sleep 2
+    p=$(adb shell pidof $PKG | tr -d '\r'); echo "pid $p"
+    adb shell kill -3 "$p"; sleep 3
+    t=$(adb shell ls -t /data/anr 2>/dev/null | head -1 | tr -d '\r'); echo "trace $t"
+    adb shell cat "/data/anr/$t" 2>/dev/null | sed -n '/"main"/,/^$/p' | head -60
+  } >> "$OUT/diag.txt" 2>&1
+}
 fresh() { adb logcat -c; }
 
 adb install -r "$APK" || exit 1
