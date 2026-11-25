@@ -170,9 +170,16 @@ class DetailActivity : BaseActivity() {
                 val b = LayoutInflater.from(this).inflate(R.layout.item_season, row, false) as TextView
                 b.text = if (s > 0) "Season $s" else "Episodes"
                 b.tag = s
-                b.setOnFocusChangeListener { _, has -> if (has) showSeason(s) }
+                // A season changes only with OK (highlighting one while moving about no longer switches it).
                 b.setOnClickListener { showSeason(s); focusEpisode() }
                 row.addView(b)
+            }
+            // ▲ from the episodes lands on the season being shown, not whichever chip happens to be above.
+            row.viewTreeObserver.addOnGlobalFocusChangeListener { old, new ->
+                if (old == null || new == null || new.parent !== row || new.isActivated) return@addOnGlobalFocusChangeListener
+                var p: android.view.ViewParent? = old.parent
+                while (p != null && p !== episodeList) p = p.parent
+                if (p === episodeList) (0 until row.childCount).map { row.getChildAt(it) }.firstOrNull { it.isActivated }?.requestFocus()
             }
             findViewById<View>(R.id.seasonsScroll).visibility = View.VISIBLE
             findViewById<View>(R.id.episodeHint).visibility = View.VISIBLE
