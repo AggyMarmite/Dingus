@@ -27,8 +27,8 @@
     <application
         android:name=".DingusApp"
         android:allowBackup="false"
-        android:banner="@drawable/banner"
-        android:icon="@drawable/ic_launcher"
+        android:banner="@drawable/dingus_banner"
+        android:icon="@drawable/dingus_icon"
         android:label="Dingus"
         android:largeHeap="true"
         android:supportsRtl="false"
@@ -39,8 +39,8 @@
             android:name=".HomeActivity"
             android:exported="true"
             android:theme="@style/Theme.Dingus.Launch"
-            android:icon="@drawable/ic_launcher"
-            android:banner="@drawable/banner"
+            android:icon="@drawable/dingus_icon"
+            android:banner="@drawable/dingus_banner"
             android:screenOrientation="landscape"
             android:configChanges="keyboard|keyboardHidden|navigation|screenSize|smallestScreenSize|screenLayout|orientation"
             android:launchMode="singleTask">
