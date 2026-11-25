@@ -60,7 +60,7 @@ class Hero(
                 if (d == null) handler.postDelayed({
                     job = scope.launch {
                         val got = try { Vod.details(card.kind, m) } catch (e: Exception) { null }
-                        if (showing === card && got != null) bindTitle(card, got)
+                        if (showing === card) { posterFallback = got == null; bindTitle(card, got); posterFallback = false }
                         if (showing === card && TitleLogos.enabled) TitleLogos.find(card.kind, m, got?.tmdbId)?.let { if (showing === card) TitleLogos.show(logo, title, it) }
                     }
                 }, 650)
@@ -94,6 +94,8 @@ class Hero(
         }
     }
 
+    private var posterFallback = false
+
     private fun bindTitle(card: Card.Title, d: Details?) {
         val m = card.item
         meta.text = listOfNotNull(
@@ -103,11 +105,14 @@ class Hero(
             card.label,
         ).joinToString("   ·   ")
         text.text = d?.plot ?: ""
+        // Details not known yet: no picture until they are (they have the right one) – showing the poster first and then
+        // swapping to the proper background looked like it fixed itself. (If they can't be had, the poster after all.)
+        if (d == null && !posterFallback) { art.removeCallbacks(loadArt); return }
         val pic = d?.backdrop ?: d?.poster ?: m.poster
-        // The big picture behind only once you've stopped on something for a moment (decoding and drawing a full-screen
-        // picture on every step made scrolling stutter, and opening a screen fetched one picture then another).
+        // The big picture behind only once you've stopped on something (decoding and drawing a full-screen picture
+        // on every step is what made scrolling stutter).
         pendingArt = pic
         art.removeCallbacks(loadArt)
-        if (art.tag != pic) art.postDelayed(loadArt, 800)
+        if (art.tag != pic) art.postDelayed(loadArt, 280)
     }
 }
