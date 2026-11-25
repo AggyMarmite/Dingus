@@ -66,6 +66,13 @@
         android:layout_marginStart="56dp" android:layout_marginEnd="56dp" android:layout_marginBottom="28dp"
         android:max="1000" android:progressDrawable="@drawable/progress_white" android:visibility="gone" />
 
+    <!-- During an episode's intro or recap (from TheIntroDB): OK skips it (while the controls are hidden). -->
+    <TextView android:id="@+id/skipIntro" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end" android:layout_marginEnd="56dp" android:layout_marginBottom="64dp"
+        android:paddingStart="22dp" android:paddingEnd="22dp" android:paddingTop="11dp" android:paddingBottom="11dp"
+        android:background="@drawable/skip_pill" android:textColor="#FF0B0E14" android:textSize="17sp" android:textStyle="bold"
+        android:text="Skip intro  ⏭" android:visibility="gone" />
+
     <!-- Near the end of an episode: what's next (OK plays it). -->
     <!-- The next episode, near the end: a picture, a countdown (when Auto-play is on), Play now and Episodes. -->
     <LinearLayout android:id="@+id/upNext" android:layout_width="430dp" android:layout_height="wrap_content"

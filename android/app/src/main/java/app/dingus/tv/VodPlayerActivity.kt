@@ -1,5 +1,6 @@
 package app.dingus.tv
 
+import kotlinx.coroutines.launch
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -237,12 +238,56 @@ class VodPlayerActivity : BaseActivity() {
         return "This won't play right now.\n${Players.plain(e)}\nPress BACK to go back."
     }
 
+    // ------------------------------------------------------------------ skipping the intro (TheIntroDB)
+
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main)
+    private var segments: Intros.Segments? = null
+    private var segmentsFor = -1
+
+    /** Looks up where this episode's intro, recap and credits are. */
+    private fun lookUpIntro() {
+        if (kind != Vod.SERIES || segmentsFor == index) return
+        segmentsFor = index; segments = null
+        val e = eps.getOrNull(index)?.takeIf { it.season > 0 } ?: return
+        val sid = showId ?: return
+        val i = index
+        scope.launch {
+            val tmdb = Vod.cachedDetails(Vod.SERIES, sid)?.tmdbId?.takeIf { it.isNotBlank() && it != "0" }
+                ?: Vod.cached(Vod.SERIES)?.byId?.get(sid)?.let { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { TitleLogos.tmdbIdFor(Vod.SERIES, it, null) } }
+                ?: return@launch
+            val s = Intros.find(tmdb, e.season, e.number)
+            if (index == i) segments = s
+        }
+    }
+
+    /** The part to skip right now (intro or recap), with its button's words. */
+    private fun skippable(pos: Long): Pair<Intros.Part, String>? {
+        val s = segments ?: return null
+        for ((p, name) in listOfNotNull(s.recap?.let { it to "Skip recap" }, s.intro?.let { it to "Skip intro" })) {
+            val end = if (p.end < 0) Long.MAX_VALUE else p.end
+            if (pos >= p.start && pos < end - 2_000) return p to name
+        }
+        return null
+    }
+
+    private fun skipPart() {
+        val p = player ?: return
+        val (part, _) = skippable(p.currentPosition) ?: return
+        val len = p.duration.takeIf { it > 0 } ?: return
+        p.seekTo(if (part.end < 0) len - 1_000 else part.end)
+        findViewById<View>(R.id.skipIntro).visibility = View.GONE
+        Ui.test("skip-intro")
+    }
+
+    override fun onDestroy() { scope.coroutineContext[kotlinx.coroutines.Job]?.cancel(); super.onDestroy() }
+
     private fun open(at: Long) {
         val p = player ?: return
         rendered = false
         handler.removeCallbacks(noPicture)
         handler.postDelayed(noPicture, 5_000)
         p.setMediaItem(Players.item(Failover.rewrite(urls[index]), guess), at)
+        lookUpIntro()
         p.prepare()
         p.playWhenReady = true
         showTitle()
@@ -347,8 +392,18 @@ class VodPlayerActivity : BaseActivity() {
             }
             pausedLine.progress = if (len > 0) (pos * 1000 / len).toInt() else 0
         }
-        // Near the end of an episode: the next one, with a countdown when Auto-play is on (it then plays by itself at the end).
-        val nearEnd = kind == Vod.SERIES && index + 1 < ids.size && len > 5 * 60_000L && len - pos in 1..UP_NEXT_MS
+        // During the intro or recap: Skip intro (OK while the controls are hidden).
+        val skip = skippable(pos)
+        findViewById<TextView>(R.id.skipIntro).apply {
+            val show = skip != null && epPanel.visibility != View.VISIBLE && upNext.visibility != View.VISIBLE
+            if (show) text = "${skip!!.second}  ⏭"
+            if (show && visibility != View.VISIBLE) Ui.test("skip-intro shown")
+            visibility = if (show) View.VISIBLE else View.GONE
+        }
+        // Near the end of an episode (or where its credits start): the next one, with a countdown when Auto-play is on.
+        val creditsAt = segments?.credits?.start?.takeIf { it > len / 2 && len - it > UP_NEXT_MS }
+        val nearEnd = kind == Vod.SERIES && index + 1 < ids.size && len > 5 * 60_000L &&
+            (len - pos in 1..UP_NEXT_MS || creditsAt != null && pos >= creditsAt && pos < len)
         if (nearEnd && upNextDismissed != index && upNext.visibility != View.VISIBLE && epPanel.visibility != View.VISIBLE) {
             upNext.visibility = View.VISIBLE
             val n = Regex("""S(\d+) E(\d+)\s*(.*)$""").find(titles[index + 1])
@@ -404,6 +459,12 @@ class VodPlayerActivity : BaseActivity() {
         if (epPanel.visibility == View.VISIBLE) {
             if (code == KeyEvent.KEYCODE_BACK) { if (!down) closeEpisodes(); return true }
             return super.dispatchKeyEvent(event)
+        }
+        // Skip intro showing and the controls hidden: OK skips.
+        if ((code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER) && controls.visibility != View.VISIBLE &&
+            findViewById<View>(R.id.skipIntro).visibility == View.VISIBLE) {
+            if (!down && event.repeatCount == 0) skipPart()
+            return true
         }
         // The Up next card, when it has the remote: OK plays it, BACK puts it away.
         if (upNext.visibility == View.VISIBLE && upNext.hasFocus()) {
