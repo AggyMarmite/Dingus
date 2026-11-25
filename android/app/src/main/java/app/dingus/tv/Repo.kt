@@ -81,7 +81,9 @@ object Repo {
             return ids.mapNotNull { byId[it] }.filter { it.id !in hiddenIds }
         }
         synchronized(listCache) { listCache[categoryId]?.let { return it } }
-        var list = (if (categoryId == ALL) channels else byCategory[categoryId] ?: emptyList())
+        // (All channels leaves out the categories you've hidden.)
+        var list = if (categoryId == ALL) hiddenCategoryIds(rawCategories).let { h -> if (h.isEmpty()) channels else channels.filter { it.categoryId !in h } }
+            else byCategory[categoryId] ?: emptyList()
         if (hiddenIds.isNotEmpty()) list = list.filter { it.id !in hiddenIds }
         if (renumbered) list = list.sortedBy { it.number }
         if (Store.mergeChannels) list = Merge.fold(list)
@@ -117,7 +119,8 @@ object Repo {
     fun sources(c: Channel): List<Channel> {
         val k = sourceKey(c.name)
         if (k.length < 2) return listOf(c)
-        return listOf(c) + channels.filter { it.id != c.id && it.id !in hiddenIds && sourceKey(it.name) == k }
+        val h = hiddenCategoryIds(rawCategories)
+        return listOf(c) + channels.filter { it.id != c.id && it.id !in hiddenIds && it.categoryId !in h && sourceKey(it.name) == k }
     }
 
     /** Sources showing exactly the same thing (the same guide listing): safe to switch to by themselves. */
@@ -170,6 +173,21 @@ object Repo {
         MiniMenu(a).show(MiniMenu.Page(pg.title, pg.subtitle, pg.items, "OK plays it  ·  ◀ closes"), anchor)
     }
 
+
+    /**
+     * The playlist's categories you've hidden (Live TV), by their own ids – when categories with the same name are
+     * merged, hiding the merged one hides each of them.
+     */
+    fun hiddenCategoryIds(cats: List<Category>): Set<String> {
+        if (cats.isEmpty()) return emptySet()
+        if (!Store.mergeCategories) return cats.mapNotNullTo(HashSet()) { c -> c.id.takeIf { Store.isHidden("live:$it") } }
+        val out = HashSet<String>()
+        cats.groupBy { categoryKey(it.name).ifEmpty { "\u0000" + it.id } }.values.forEach { g -> if (Store.isHidden("live:${g[0].id}")) g.forEach { out.add(it.id) } }
+        return out
+    }
+
+    /** A category was hidden: All channels (and the other lists) drop it straight away. */
+    fun hiddenChanged() { synchronized(listCache) { listCache.clear() }; changed() }
 
     /** Every channel including hidden ones, for the channel editor. */
     fun allForEditing(): List<Channel> = channels
@@ -333,10 +351,14 @@ object Repo {
         val r = already ?: Progress.step(Progress.LIVE) { Sources.load(p) }
         val t1 = System.currentTimeMillis()
         Sources.accountInfo?.let { Account.remember(it); Sources.accountInfo = null }
+        // Hidden categories' channels aren't kept at all (no saving, matching or guide listings for them): showing a
+        // category again updates the playlist to bring them back.
+        val hid = hiddenCategoryIds(r.categories)
+        val kept = if (hid.isEmpty()) r.channels else r.channels.filter { it.categoryId !in hid }
         // Keep guide matches from before, so now/next shows straight away until the guide's read again.
         val oldKeys = channels.associate { it.id to it.guideKey }
-        r.channels.forEach { it.guideKey = oldKeys[it.id]; it.guideLogo = guideLogos[it.id] }
-        set(r.categories, r.channels, r.guideUrl)
+        kept.forEach { it.guideKey = oldKeys[it.id]; it.guideLogo = guideLogos[it.id] }
+        set(r.categories, kept, r.guideUrl)
         channelsIn(ALL) // (worked out here, in the background, not when the guide first draws)
         try { Progress.saving { writeChannels() } } catch (e: Exception) { Log.w("Dingus", "save channels", e) }
         Log.i("Dingus", "Update: ${r.channels.size} channels, loaded in ${t1 - t0} ms, saved in ${System.currentTimeMillis() - t1} ms")

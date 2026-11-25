@@ -418,7 +418,7 @@ class SettingsActivity : BaseActivity() {
             visibility = if (text.isEmpty()) View.GONE else View.VISIBLE
         }
         findViewById<TextView>(R.id.settingsSub)?.text = listOfNotNull("Dingus ${BuildConfig.VERSION_NAME}", Store.playlist?.name).joinToString("  ·  ")
-        for ((v, f) in switches) if (v.parent != null) v.findViewById<android.widget.ImageView>(R.id.switchIcon).setImageResource(if (f()) R.drawable.switch_on else R.drawable.switch_off)
+        for ((v, f) in switches) if (v.parent != null) Motion.switch(v.findViewById(R.id.switchIcon), f())
     }
 
     // ------------------------------------------------------------------ rows
@@ -738,6 +738,10 @@ class SettingsActivity : BaseActivity() {
             .setMultiChoiceItems(names.toTypedArray(), show) { _, i, on -> show[i] = on }
             .setPositiveButton("Done") { _, _ ->
                 keys.forEachIndexed { i, k -> if (show[i]) Store.setHidden(k, false) }
+                // Hidden categories aren't downloaded: bring the ones shown again back now.
+                val shown = keys.filterIndexed { i, _ -> show[i] }
+                if (shown.any { it.startsWith("live:") }) PlaylistUpdate.start()
+                else if (shown.any { it.startsWith("movies:") || it.startsWith("series:") }) Vod.refreshInBackground()
                 update()
             }
             .setNegativeButton("Cancel", null)

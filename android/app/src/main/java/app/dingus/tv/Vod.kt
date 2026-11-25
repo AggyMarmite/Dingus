@@ -350,6 +350,7 @@ object Vod {
                 }
                 r.endObject()
                 if (id.isEmpty()) continue
+                if (Store.isHidden("$kind:$cat")) continue // (hidden categories aren't kept: less to save and sort)
                 if (year == 0) year = yearOf(name)
                 items.add(VodItem(id, clean(name).ifEmpty { "Untitled" }, poster.ifBlank { null }, cat, rating, year, ext, added))
             }

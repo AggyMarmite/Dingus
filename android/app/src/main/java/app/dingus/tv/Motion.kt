@@ -39,6 +39,7 @@ object Motion {
     /** The highlight arriving on (or leaving) a card. */
     fun lift(v: View, has: Boolean, scale: Float = 1.08f, shine: Boolean = true) {
         v.animate().cancel()
+        if (has && scale >= 1.08f) v.setTag(R.id.motionOwn, true)
         if (!has) {
             v.animate().scaleX(1f).scaleY(1f).rotationX(0f).rotationY(0f).setDuration(260).setInterpolator(glide).start()
             return
@@ -98,21 +99,73 @@ object Motion {
     fun buttons(old: View?, new: View?) {
         if (Ui.lite) return
         if (old != null && old.getTag(liftedKey) == true) { old.setTag(liftedKey, null); lift(old, false) }
-        if (new == null || !liftable(new)) return
-        new.setTag(liftedKey, true)
-        // Room to grow: the button's row (and the row's row) mustn't trim the lifted edges.
-        (new.parent as? android.view.ViewGroup)?.let { p -> p.clipChildren = false; (p.parent as? android.view.ViewGroup)?.clipChildren = false }
-        lift(new, true, 1.06f, shine = false)
+        if (new == null) return
+        // (After the view's own listeners: cards lift themselves, and say so.)
+        new.post {
+            if (!new.isFocused || new.getTag(R.id.motionOwn) == true) return@post
+            val scale = liftScale(new) ?: return@post
+            new.setTag(liftedKey, true)
+            // Room to grow: the button's row (and the row's row) mustn't trim the lifted edges.
+            (new.parent as? android.view.ViewGroup)?.let { p -> p.clipChildren = false; (p.parent as? android.view.ViewGroup)?.clipChildren = false }
+            lift(new, true, scale, shine = false)
+        }
     }
 
-    private fun liftable(v: View): Boolean {
-        if (v.background !is android.graphics.drawable.StateListDrawable) return false
-        if (v.parent is androidx.recyclerview.widget.RecyclerView) return false // (cards: their own lift)
+    /** How much a highlighted thing lifts: buttons and pills a little, whole rows only just (they're wide). */
+    private fun liftScale(v: View): Float? {
+        if (v.background !is android.graphics.drawable.StateListDrawable) return null
         val d = v.resources.displayMetrics
-        if (v.width > d.widthPixels * 0.34f || v.height > 90 * d.density) return false
+        if (v.height > 120 * d.density) return null
         var p = v.parent
-        while (p is View) { if (p.id == R.id.sideMenu) return false; p = p.parent }
-        return true
+        while (p is View) { if (p.id == R.id.sideMenu) return null; p = p.parent }
+        return if (v.width > d.widthPixels * 0.34f) 1.02f else 1.06f
+    }
+
+    /** A Settings switch: the knob slides across with a little bounce and the colour fades (instant in lite mode). */
+    fun switch(v: android.widget.ImageView, on: Boolean) {
+        val sw = v.drawable as? Switch
+        if (sw == null) { v.setImageDrawable(Switch(v.resources.displayMetrics.density, if (on) 1f else 0f)); return }
+        val goal = if (on) 1f else 0f
+        if (sw.goal == goal) return
+        sw.goal = goal
+        sw.anim?.cancel()
+        if (Ui.lite) { sw.t = goal; sw.invalidateSelf(); return }
+        sw.anim = ValueAnimator.ofFloat(sw.t, goal).apply {
+            duration = 340; interpolator = OvershootInterpolator(1.2f)
+            addUpdateListener { sw.t = it.animatedValue as Float; sw.invalidateSelf() }
+            start()
+        }
+    }
+
+    private class Switch(private val d: Float, var t: Float) : Drawable() {
+        var goal = t
+        var anim: ValueAnimator? = null
+        private var focused = false
+        private val p = Paint(Paint.ANTI_ALIAS_FLAG)
+        private val r = RectF()
+        override fun getIntrinsicWidth() = (40 * d).toInt()
+        override fun getIntrinsicHeight() = (22 * d).toInt()
+        override fun isStateful() = true
+        override fun onStateChange(state: IntArray): Boolean {
+            val f = state.contains(android.R.attr.state_focused) || state.contains(android.R.attr.state_selected)
+            if (f != focused) { focused = f; invalidateSelf(); return true }
+            return false
+        }
+        override fun draw(c: Canvas) {
+            val b = bounds; val k = t.coerceIn(0f, 1f)
+            val off = if (focused) 0xFFC9CED8.toInt() else 0x2EFFFFFF
+            val onC = if (focused) 0xFF16A34A.toInt() else 0xFF22C55E.toInt()
+            p.color = android.animation.ArgbEvaluator().evaluate(k, off, onC) as Int
+            r.set(b.left.toFloat(), b.top.toFloat(), b.right.toFloat(), b.bottom.toFloat())
+            c.drawRoundRect(r, r.height() / 2, r.height() / 2, p)
+            val knob = r.height() - 6 * d
+            val x = r.left + 3 * d + (r.width() - 6 * d - knob) * t // (t may overshoot a touch: the bounce)
+            p.color = android.animation.ArgbEvaluator().evaluate(k, if (focused) 0xFFFFFFFF.toInt() else 0xFFCFD6E4.toInt(), 0xFFFFFFFF.toInt()) as Int
+            c.drawOval(x, r.top + 3 * d, x + knob, r.top + 3 * d + knob, p)
+        }
+        override fun setAlpha(alpha: Int) {}
+        override fun setColorFilter(cf: ColorFilter?) {}
+        @Deprecated("Deprecated in Java") override fun getOpacity() = PixelFormat.TRANSLUCENT
     }
 
     /** Opening a page from a card: the page grows out of the card. */

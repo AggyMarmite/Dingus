@@ -337,7 +337,31 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         return super.onKeyUp(keyCode, event)
     }
 
+    // The white highlight glides from programme to programme (and channel to channel) rather than jumping.
+    private val hlFrom = android.graphics.RectF(); private val hlTo = android.graphics.RectF(); private val hlNow = android.graphics.RectF()
+    private var hlT = 1f; private var hlKey: Any? = null; private var hlHave = false; private var hlAnim: android.animation.ValueAnimator? = null
+    private var drawingRows = false
+    private class Target(val x0: Float, val x1: Float, val y0: Float, val y1: Float, val text: String, val p: Programme?, val airing: Boolean, val past: Boolean, val catchUp: Boolean)
+    private var target: Target? = null
+
+    private fun glideHighlight() {
+        val key = row to sel
+        if (key == hlKey) return
+        val had = hlKey != null && hlHave
+        hlKey = key
+        if (!had || Ui.lite) { hlT = 1f; return }
+        hlFrom.set(hlNow)
+        hlAnim?.cancel()
+        hlT = 0f
+        hlAnim = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 210; interpolator = Motion.glide
+            addUpdateListener { hlT = it.animatedValue as Float; invalidate() }
+            start()
+        }
+    }
+
     override fun onDraw(canvas: Canvas) {
+        glideHighlight()
         val w = width.toFloat()
         val now = now()
         val end = start + spanMin * 60_000L
@@ -355,9 +379,26 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         }
 
         val n = visibleRows + 1
+        target = null
+        drawingRows = true
         for (i in top until minOf(channels.size, top + n)) {
             val y = headerH + (i - top) * rowH
             drawRow(canvas, channels[i], i == row, y, w, now, end)
+        }
+        drawingRows = false
+        // The highlight on its way: white, moving across, the programme's name showing through as it arrives.
+        val tg = target
+        if (tg != null) {
+            hlHave = true
+            if (hlT < 1f) {
+                hlNow.set(hlFrom.left + (hlTo.left - hlFrom.left) * hlT, hlFrom.top + (hlTo.top - hlFrom.top) * hlT,
+                    hlFrom.right + (hlTo.right - hlFrom.right) * hlT, hlFrom.bottom + (hlTo.bottom - hlFrom.bottom) * hlT)
+                fill.color = 0xFFFFFFFF.toInt()
+                canvas.drawRoundRect(hlNow, 6 * d, 6 * d, fill)
+                canvas.save(); canvas.clipRect(hlNow)
+                block(canvas, tg.x0, tg.x1, tg.y0, tg.y1, tg.text, tg.p, true, tg.airing, tg.past, tg.catchUp, final = true)
+                canvas.restore()
+            } else hlNow.set(hlTo)
         }
 
         // The "now" line.
@@ -424,9 +465,16 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         }
     }
 
-    private fun block(canvas: Canvas, x0: Float, x1: Float, y0: Float, y1: Float, text: String, p: Programme?, on: Boolean, airing: Boolean,
-                      past: Boolean = false, catchUp: Boolean = false) {
+    private fun block(canvas: Canvas, x0: Float, x1: Float, y0: Float, y1: Float, text: String, p: Programme?, onIn: Boolean, airing: Boolean,
+                      past: Boolean = false, catchUp: Boolean = false, final: Boolean = false) {
         if (x1 - x0 < 3 * d) return
+        // (While the highlight glides, the programme it's going to is drawn plain here and white on top, after.)
+        var on = onIn
+        if (onIn && drawingRows && !final) {
+            target = Target(x0, x1, y0, y1, text, p, airing, past, catchUp)
+            hlTo.set(x0 + gap, y0, x1 - gap, y1)
+            if (hlT < 1f) on = false
+        }
         fill.color = when { on -> 0xFFFFFFFF.toInt(); airing -> cAiring; past -> cPast; else -> cSurface } // (white for the highlight, like everywhere)
         r.set(x0 + gap, y0, x1 - gap, y1)
         canvas.drawRoundRect(r, 6 * d, 6 * d, fill)

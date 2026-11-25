@@ -345,7 +345,7 @@ object Store {
     /** Forget per-playlist caches (after switching playlist). */
     fun switched() { cachedHidden = null; favCache = null }
     fun isHidden(key: String) = hiddenCache().contains(key)
-    fun setHidden(key: String, on: Boolean) { hidden = if (on) hidden + key else hidden - key; cachedHidden = null }
+    fun setHidden(key: String, on: Boolean) { hidden = if (on) hidden + key else hidden - key; cachedHidden = null; if (key.startsWith("live:")) Repo.hiddenChanged() }
     @Volatile private var cachedHidden: Set<String>? = null
     private fun hiddenCache(): Set<String> = cachedHidden ?: hidden.also { cachedHidden = it }
 }

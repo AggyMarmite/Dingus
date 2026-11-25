@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- A poster: a bright frame when the remote is on it. -->
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
+<selector xmlns:android="http://schemas.android.com/apk/res/android" android:enterFadeDuration="130" android:exitFadeDuration="130">
     <item android:state_focused="true">
         <shape><solid android:color="?attr/dSurface2" /><corners android:radius="10dp" />
             <stroke android:width="3dp" android:color="#FFFFFFFF" /></shape>
