@@ -51,7 +51,7 @@ class CheckActivity : BaseActivity() {
             v.findViewById<TextView>(R.id.title).text = n
             list.addView(v)
             val r = Row(n, v)
-            v.setOnClickListener { r.action?.invoke() ?: if (!running) runAll() }
+            v.setOnClickListener { val fix = r.action; if (fix != null) fix() else if (!running) runAll() }
             rows.add(r)
             draw(r)
         }
