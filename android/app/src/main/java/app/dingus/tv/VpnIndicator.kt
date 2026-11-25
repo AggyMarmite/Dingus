@@ -34,6 +34,11 @@ object VpnIndicator {
             duration = 700; repeatMode = android.animation.ValueAnimator.REVERSE; repeatCount = android.animation.ValueAnimator.INFINITE; start()
         }
         v.setTag(R.id.vpnPulse, a)
+        // (The screen closing stops it: an endless animation would otherwise keep the old screen alive.)
+        v.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(x: View) {}
+            override fun onViewDetachedFromWindow(x: View) { stopPulse(x); x.removeOnAttachStateChangeListener(this) }
+        })
     }
 
     private fun stopPulse(v: View) {

@@ -51,10 +51,10 @@ object PlaylistUpdate {
                 Notice.working("Updating playlist & TV guide…")
                 Vod.refreshInBackground() // films and shows download alongside, not afterwards
                 Repo.refreshChannels(p)
-                try { Repo.refreshGuide(); Notice.done("Playlist & TV guide updated") }
-                catch (e: Exception) { Notice.done("Playlist updated  ·  TV guide: ${Net.friendly(e)}", 6_000) }
+                try { Repo.refreshGuide(); Notice.updateDone("Playlist & TV guide updated") }
+                catch (e: Exception) { Notice.updateDone("Playlist updated  ·  TV guide: ${Net.friendly(e)}", 6_000) }
             } catch (e: Exception) {
-                Notice.done("Couldn't update the playlist: ${Net.friendly(e)}", 6_000)
+                Notice.updateDone("Couldn't update the playlist: ${Net.friendly(e)}", 6_000)
             } finally { running = false }
         }
     }

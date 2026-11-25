@@ -253,13 +253,20 @@ object Repo {
     private val guideLock = kotlinx.coroutines.sync.Mutex()
     @Volatile private var channelsDone = 0L to ""
     @Volatile private var guideDone = 0L to ""
+    /** Bumped when a setting changes what an update fetches (guide sources, backup servers): an update already
+     *  running started with the old ones, so the next request runs again instead of sharing it. */
+    @Volatile private var settingsVersion = 0
+    @Volatile private var channelsVersion = -1
+    @Volatile private var guideVersion = -1
+    fun settingsChanged() { settingsVersion++ }
 
     suspend fun refreshChannels(p: Playlist, already: Sources.Result? = null) = withContext(Dispatchers.IO) {
         val asked = System.currentTimeMillis()
         channelsLock.withLock {
-            if (already == null && channelsDone.first >= asked && channelsDone.second == p.id) return@withLock
+            if (already == null && channelsDone.first >= asked && channelsDone.second == p.id && channelsVersion == settingsVersion) return@withLock
+            val v = settingsVersion
             refreshChannelsNow(p, already)
-            channelsDone = System.currentTimeMillis() to p.id
+            channelsDone = System.currentTimeMillis() to p.id; channelsVersion = v
         }
     }
 
@@ -283,9 +290,10 @@ object Repo {
         val asked = System.currentTimeMillis()
         val id = Store.activeId
         guideLock.withLock {
-            if (guideDone.first >= asked && guideDone.second == id) return@withLock
+            if (guideDone.first >= asked && guideDone.second == id && guideVersion == settingsVersion) return@withLock
+            val v = settingsVersion
             refreshGuideNow()
-            guideDone = System.currentTimeMillis() to id
+            guideDone = System.currentTimeMillis() to id; guideVersion = v
         }
     }
 

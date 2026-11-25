@@ -35,8 +35,14 @@ object Progress {
     private val finish = Runnable {
         if (running) return@Runnable
         val d = pendingDone; pendingDone = null
-        if (d != null) Notice.show(d.first, d.second) else Notice.clear()
+        if (d != null) Notice.show(d.first, d.second) else if (shown) Notice.clear()
+        shown = false
     }
+    /** Whether the note showing is one of ours ("Updating …"), so finishing only clears that. */
+    @Volatile private var shown = false
+
+    /** Another note came: leave it alone. */
+    fun cancelFinish() { main.removeCallbacks(finish); shown = false }
 
     /** A "done" note that came while other steps were still going. */
     @Volatile var pendingDone: Pair<String, Long>? = null
@@ -51,6 +57,7 @@ object Progress {
             else -> "Updating " + when (work.size) { 1 -> work[0]; else -> work.dropLast(1).joinToString(", ") + " & " + work.last() } + "…"
         }
         Notice.working(text)
+        shown = true
         Ui.test("progress $text")
     }
 }

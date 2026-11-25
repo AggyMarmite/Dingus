@@ -92,7 +92,7 @@ class HomeActivity : BaseActivity() {
         super.onResume()
         if (Store.homeLite != lite) { recreate(); return } // switched in Settings
         Ui.test("home-shown")
-        Updater.onAvailable(showUpdate); showUpdate()
+        Updater.removeListener(showUpdate); Updater.onAvailable(showUpdate); showUpdate()
         // (Self-test: hold the loading screen up for a screenshot.)
         if (BuildConfig.DEBUG && intent.getBooleanExtra("dingus_test_loading", false)) {
             intent.removeExtra("dingus_test_loading")
@@ -130,7 +130,11 @@ class HomeActivity : BaseActivity() {
         // scrolled out of sight.
         if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_DPAD_UP) {
             val p = focusedItem()
-            if (p == 0) return true
+            if (p == 0) {
+                // The update pill sits above the first row: ▲ reaches it.
+                findViewById<View>(R.id.updatePill)?.takeIf { it.visibility == View.VISIBLE && !it.hasFocus() }?.let { it.requestFocus(); return true }
+                return true
+            }
             if (p > 0) { focusItem(p - 1); return true }
         }
         return super.dispatchKeyEvent(event)
@@ -227,10 +231,16 @@ class HomeActivity : BaseActivity() {
     /** The showcase's trending films and show get their plot, genre and picture (looked up once, then kept). */
     private fun slideDetails() {
         if (!Vod.available) return
-        val want = Vod.trending(Vod.MOVIES).take(2).map { Vod.MOVIES to it } + Vod.trending(Vod.SERIES).take(1).map { Vod.SERIES to it }
-        val missing = want.filter { (k, m) -> Vod.cachedDetails(k, m.id) == null }
-        if (missing.isEmpty()) return
-        scope.launch { for ((k, m) in missing) try { Vod.details(k, m) } catch (_: Exception) {}; build() }
+        scope.launch {
+            // (Matching the charts to the library is worked out off the main thread.)
+            val missing = kotlinx.coroutines.withContext(Dispatchers.Default) {
+                val want = Vod.trending(Vod.MOVIES).take(2).map { Vod.MOVIES to it } + Vod.trending(Vod.SERIES).take(1).map { Vod.SERIES to it }
+                want.filter { (k, m) -> Vod.cachedDetails(k, m.id) == null }
+            }
+            if (missing.isEmpty()) return@launch
+            for ((k, m) in missing) try { Vod.details(k, m) } catch (_: Exception) {}
+            build()
+        }
     }
 
     /** Channels and guide from the saved copy (refreshed when old), films and shows if the playlist has them. */
@@ -268,14 +278,14 @@ class HomeActivity : BaseActivity() {
                         }
                     }
                     build()
-                    try { Repo.refreshGuide(); Notice.done("Playlist & TV guide updated") }
-                    catch (e: Exception) { Notice.done("Playlist updated  ·  TV guide: ${Net.friendly(e)}", 6_000) }
+                    try { Repo.refreshGuide(); Notice.updateDone("Playlist & TV guide updated") }
+                    catch (e: Exception) { Notice.updateDone("Playlist updated  ·  TV guide: ${Net.friendly(e)}", 6_000) }
                     build()
                 } else if (Store.refreshDue) {
                     Notice.working("Updating playlist & TV guide…")
                     Vod.refreshInBackground() // films and shows download alongside, not afterwards
-                    try { Repo.refreshChannels(p); Repo.refreshGuide(); Notice.done("Playlist & TV guide updated") }
-                    catch (e: Exception) { Notice.done("Couldn't update: ${Net.friendly(e)}", 6_000) }
+                    try { Repo.refreshChannels(p); Repo.refreshGuide(); Notice.updateDone("Playlist & TV guide updated") }
+                    catch (e: Exception) { Notice.updateDone("Couldn't update: ${Net.friendly(e)}", 6_000) }
                     build()
                 }
                 if (Vod.available) {

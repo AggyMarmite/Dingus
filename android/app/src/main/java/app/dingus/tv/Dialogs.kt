@@ -35,8 +35,23 @@ object Dialogs {
             // screen behind) must not choose the first option straight away.
             var pressedHere = false
             d.setOnKeyListener { _, code, ev ->
+                // ▲▼ in a list move one item, always (a list that had lost its highlight used to swallow the first one).
+                if ((code == KeyEvent.KEYCODE_DPAD_DOWN || code == KeyEvent.KEYCODE_DPAD_UP) && d.listView?.adapter != null) {
+                    val l = d.listView
+                    // (On the dialog's buttons, or past either end of the list: the usual focus move, e.g. to the buttons.)
+                    if (d.currentFocus != null && !l.hasFocus()) return@setOnKeyListener false
+                    val cur = l.selectedItemPosition.takeIf { it >= 0 } ?: l.checkedItemPosition.takeIf { it >= 0 } ?: -1
+                    val next = if (code == KeyEvent.KEYCODE_DPAD_DOWN) cur + 1 else cur - 1
+                    if (next !in 0 until l.count) return@setOnKeyListener false
+                    if (ev.action == KeyEvent.ACTION_DOWN) {
+                        if (!l.hasFocus()) l.requestFocus()
+                        l.setSelection(next)
+                        Ui.test("dialog-move $next")
+                    }
+                    return@setOnKeyListener true
+                }
                 if (code != KeyEvent.KEYCODE_DPAD_CENTER && code != KeyEvent.KEYCODE_ENTER && code != KeyEvent.KEYCODE_NUMPAD_ENTER) return@setOnKeyListener false
-                val f = d.currentFocus ?: return@setOnKeyListener false
+                val f = d.currentFocus ?: d.listView?.takeIf { it.adapter != null } ?: run { Ui.test("dialog-ok nothing focused"); return@setOnKeyListener false }
                 if (f is EditText) return@setOnKeyListener false
                 if (ev.action == KeyEvent.ACTION_DOWN) { if (ev.repeatCount == 0) pressedHere = true; return@setOnKeyListener true }
                 if (ev.action == KeyEvent.ACTION_UP && !pressedHere) return@setOnKeyListener true

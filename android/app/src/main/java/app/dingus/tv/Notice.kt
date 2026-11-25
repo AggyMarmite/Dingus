@@ -31,10 +31,13 @@ object Notice {
     /** Stays until [done] (or [clear]). */
     fun working(t: String) = post { text = t; working = true; handler.removeCallbacks(hide); render(); Ui.test("notice-working $t") }
 
-    /** Shown for a few seconds (once the update's last step has finished, if some are still going). */
-    fun done(t: String, ms: Long = 4_000) {
+    /** Shown for a few seconds. */
+    fun done(t: String, ms: Long = 4_000) { Progress.cancelFinish(); show(t, ms) }
+
+    /** An update's "done" note: shown once its last step (films and shows downloading alongside) has finished. */
+    fun updateDone(t: String, ms: Long = 4_000) {
         if (Progress.running) { Progress.pendingDone = t to ms; return }
-        show(t, ms)
+        done(t, ms)
     }
 
     internal fun show(t: String, ms: Long) = post {

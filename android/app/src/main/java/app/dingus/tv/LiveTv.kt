@@ -207,7 +207,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         MiniGuide(a, overlay as android.widget.FrameLayout) { c ->
             val i = list.indexOfFirst { it.id == c.id }
             if (i >= 0 && i != index) {
-                version = null; versionTry = 0; slotWaited = false; retries = 0; rebuffers.clear()
+                version = null; versionTry = 0; slotWaited = false; retries = 0; rebuffers.clear(); guess = 0; triedBackup = false
                 pendingJump = -1; handler.removeCallbacks(doJump)
                 index = i
                 onChannel?.invoke(list[index])
@@ -292,13 +292,17 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     private var playedOnce = false
     private val rebuffers = ArrayList<Long>()
     private val bufferCheck = Runnable {
-        if (player?.playbackState == Player.STATE_BUFFERING && player?.playWhenReady == true && behindMs == 0L)
+        if (player?.playbackState == Player.STATE_BUFFERING && player?.playWhenReady == true && behindMs == 0L && System.currentTimeMillis() >= quietUntil)
             switchVersion(if (playedOnce) "kept buffering" else "wouldn't start")
     }
+
+    /** Until when buffering is expected (just rewound, paused or caught up): not a reason to change version. */
+    private var quietUntil = 0L
 
     private fun onBuffering() {
         val p = player ?: return
         if (!p.playWhenReady || !hasOtherVersion()) return
+        if (behindMs > 0 || buffer != null && pausedAt > 0 || System.currentTimeMillis() < quietUntil) return
         handler.removeCallbacks(bufferCheck)
         handler.postDelayed(bufferCheck, if (playedOnce) 8_000 else 15_000)
         if (!playedOnce) return
@@ -497,7 +501,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     /** Changing channel: the info bar updates straight away; the stream switches once you stop pressing. */
     private fun zap(step: Int) {
         if (list.size < 2) return
-        version = null; versionTry = 0; slotWaited = false; rebuffers.clear()
+        version = null; versionTry = 0; slotWaited = false; rebuffers.clear(); guess = 0; triedBackup = false
         pendingJump = -1; handler.removeCallbacks(doJump)
         index = (index + step + list.size) % list.size
         retries = 0
@@ -570,6 +574,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         val max = (b.secondsAvailable * 1000).toLong()
         val target = ms.coerceIn(0, maxOf(0, max - 1_000))
         val lead = if (target < 3_000) 2_000L else target // at "live", start a moment back so it doesn't stall
+        quietUntil = System.currentTimeMillis() + 10_000; rebuffers.clear(); handler.removeCallbacks(bufferCheck)
         p.setMediaItem(Players.item(b.urlAt(b.offsetBehind(lead / 1000.0))))
         p.prepare()
         p.playWhenReady = true
@@ -582,6 +587,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
 
     private fun togglePause() {
         val p = player ?: return
+        quietUntil = System.currentTimeMillis() + 10_000; rebuffers.clear(); handler.removeCallbacks(bufferCheck)
         if (buffer == null) { p.playWhenReady = !p.playWhenReady; showShift(); return } // (no rewind: still say it's paused)
         if (pausedAt == 0L) { p.playWhenReady = false; pausedAt = System.currentTimeMillis(); Ui.test("timeshift paused") }
         else {

@@ -230,7 +230,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
                 }
                 if (Repo.channels.isEmpty()) showEmpty("Couldn't load your playlist.\n${Net.friendly(e)}\n\nPress ◀ for settings.")
                 setStatus(Net.friendly(e))
-                Notice.done("Couldn't update the playlist: ${Net.friendly(e)}", 6_000)
+                Notice.updateDone("Couldn't update the playlist: ${Net.friendly(e)}", 6_000)
                 return
             }
             Ui.test("channels ${Repo.channels.size} categories ${Repo.categories.size}")
@@ -238,11 +238,11 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             try {
                 Repo.refreshGuide()
                 setStatus("")
-                Notice.done("Playlist & TV guide updated")
+                Notice.updateDone("Playlist & TV guide updated")
                 Ui.test("guide ${Repo.guideChannels}")
             } catch (e: Exception) {
                 setStatus("TV guide: ${Net.friendly(e)}")
-                Notice.done("Playlist updated  ·  TV guide: ${Net.friendly(e)}", 6_000)
+                Notice.updateDone("Playlist updated  ·  TV guide: ${Net.friendly(e)}", 6_000)
                 Ui.test("guide-failed ${e.message}")
             }
         } finally {

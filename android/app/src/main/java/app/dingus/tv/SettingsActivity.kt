@@ -146,10 +146,12 @@ class SettingsActivity : BaseActivity() {
                 val opts = listOfNotNull(if (i > 0) "Move up" else null, if (i < order.size - 1) "Move down" else null)
                 Dialogs.builder(this).setTitle(guideName(order[i]))
                     .setItems(opts.toTypedArray()) { _, k ->
-                        val list = order.toMutableList()
+                        // Swap it with its neighbour in the saved list (which keeps the provider guide's place even
+                        // while that's switched off).
                         val to = if (opts[k] == "Move up") i - 1 else i + 1
-                        list.add(to, list.removeAt(i))
-                        if (!p.useProviderGuide && Playlist.PROVIDER_GUIDE !in list) list.add(Playlist.PROVIDER_GUIDE)
+                        val list = rawGuides(p).also { if (Playlist.PROVIDER_GUIDE !in it) it.add(Playlist.PROVIDER_GUIDE) }
+                        val a = list.indexOf(order[i]); val b = list.indexOf(order[to])
+                        if (a >= 0 && b >= 0) { list[a] = order[to]; list[b] = order[i] }
                         savePlaylist(p.copy(epgUrl = list.joinToString("\n")))
                         Ui.test("guide-priority ${list.joinToString(",") { guideName(it) }}")
                         sourcePriority()
@@ -166,20 +168,22 @@ class SettingsActivity : BaseActivity() {
             if (refreshing) return@confirm
             refreshing = true
             Ui.test("full-refresh")
-            scope.launch {
+            // (Carries on if you leave Settings: everything saved has already been cleared.)
+            Background.scope.launch {
                 try {
                     Notice.working("Full refresh: clearing…")
                     Repo.clear(); Vod.clear(); Store.guideLoadedAt = 0
                     // Films and shows download at the same time as the channels and guide.
-                    val vod = if (Vod.available) listOf(Vod.MOVIES, Vod.SERIES).map { k -> async { try { Vod.library(k, fresh = true) } catch (_: Exception) { null } } } else emptyList()
+                    val vod = if (Vod.available) listOf(Vod.MOVIES, Vod.SERIES).map { k -> async(Dispatchers.IO) { try { Vod.library(k, fresh = true) } catch (_: Exception) { null } } } else emptyList()
                     Repo.refreshChannels(p)
                     Repo.refreshGuide()
                     vod.forEach { it.await() }
                     Notice.done("Full refresh done  ·  ${Repo.channels.size} channels")
                     Ui.test("full-refresh done ${Repo.channels.size}")
+                } catch (e: kotlinx.coroutines.CancellationException) { throw e
                 } catch (e: Exception) {
                     Notice.done("Full refresh didn't finish: ${Net.friendly(e)}", 6_000)
-                } finally { refreshing = false; update() }
+                } finally { refreshing = false; if (!isDestroyed) update() }
             }
         }
     }
@@ -193,9 +197,9 @@ class SettingsActivity : BaseActivity() {
         toggle("Pause & rewind live TV", "Keeps the last 15 minutes (MPEG-TS channels)", { Store.timeshift }) { Store.timeshift = it }
         row("Stream format", { "" }, { if (Store.streamFormat == "hls") "HLS" else "MPEG-TS" }) { streamFormat() }
         subhead("Channels")
-        toggle("Merge duplicate channels", "HD, FHD and backups shown as one", { Store.mergeChannels }) { Store.mergeChannels = it; Repo.reapply() }
-        toggle("Merge matching categories", "e.g. “UK| GENERAL” and “UK| GENERAL HEVC” as one, each channel beside its match", { Store.mergeCategories }) { Store.mergeCategories = it; Repo.reapply() }
-        toggle("Remove divider channels", "Leave out “##### UK #####” and the like", { Store.removeDividers }) { Store.removeDividers = it; Repo.reapply() }
+        toggle("Merge duplicate channels", "HD, FHD and backups shown as one", { Store.mergeChannels }) { Store.mergeChannels = it; reapplySoon() }
+        toggle("Merge matching categories", "e.g. “UK| GENERAL” and “UK| GENERAL HEVC” as one, each channel beside its match", { Store.mergeCategories }) { Store.mergeCategories = it; reapplySoon() }
+        toggle("Remove divider channels", "Leave out “##### UK #####” and the like", { Store.removeDividers }) { Store.removeDividers = it; reapplySoon() }
         row("Edit channels", { "Rename, renumber or hide" }, { "›" }) { startActivity(Intent(this, ChannelEditorActivity::class.java)) }
         row("Categories", { hiddenSummary() + "  ·  " + (if (listOf("live", "movies", "series").any { Store.categoryOrder(it).isNotEmpty() }) "your own order" else "the playlist's order") }, { "›" }) {
             val opts = listOf("Show hidden categories", "Put them back in the playlist's order")
@@ -352,6 +356,9 @@ class SettingsActivity : BaseActivity() {
 
     // ------------------------------------------------------------------ rows
 
+    /** Works the channel list out again with a changed setting – off the main thread (it can be big). */
+    private fun reapplySoon() { Background.scope.launch(Dispatchers.Default) { Repo.reapply() } }
+
     /** A small heading inside a section ("THE GUIDE", "REMINDERS"), so a long list is easy to scan. */
     private fun subhead(text: String) {
         val v = LayoutInflater.from(this).inflate(R.layout.item_heading, list, false) as TextView
@@ -478,6 +485,7 @@ class SettingsActivity : BaseActivity() {
     }
 
     private fun saveBackups(p: Playlist, list: List<String>) {
+        Repo.settingsChanged()
         Store.playlist = p.copy(backups = list.map { it.trim() }.filter { it.isNotEmpty() }.distinct().joinToString("\n"))
         update()
     }
@@ -514,6 +522,7 @@ class SettingsActivity : BaseActivity() {
     }
 
     private fun savePlaylist(p: Playlist) {
+        Repo.settingsChanged()
         Store.playlist = p
         Store.guideLoadedAt = 0
         update()
@@ -595,11 +604,11 @@ class SettingsActivity : BaseActivity() {
                 sub(row, "Updating the TV guide…")
                 Repo.refreshGuide()
                 refreshing = false
-                Notice.done("Playlist & TV guide updated")
+                Notice.updateDone("Playlist & TV guide updated")
                 update()
             } catch (e: Exception) {
                 refreshing = false
-                Notice.done("Couldn't update: ${Net.friendly(e)}", 6_000)
+                Notice.updateDone("Couldn't update: ${Net.friendly(e)}", 6_000)
                 sub(row, Net.friendly(e))
             }
         }

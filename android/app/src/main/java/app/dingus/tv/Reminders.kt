@@ -70,9 +70,11 @@ object Reminders {
     fun has(c: Channel, p: Programme) = all().any { it.channelId == c.id && it.start == p.start }
 
     /** Sets or clears a reminder; true when one is now set. */
-    fun toggle(c: Channel, p: Programme): Boolean {
+    @Synchronized fun toggle(c: Channel, p: Programme): Boolean {
         val list = all()
         val on = !has(c, p)
+        // One episode of a series cancelled: the series mustn't put it back when the guide updates.
+        if (!on && isSeries(c, p)) skip(c.id, p.start) else if (on) unskip(c.id, p.start)
         val r = Reminder(c.id, p.start, p.title, c.name)
         save(if (on) list + r else list.filterNot { it.channelId == c.id && it.start == p.start })
         if (on) schedule(r) else cancel(r)
@@ -105,14 +107,14 @@ object Reminders {
     fun isSeries(c: Channel, p: Programme) = series().any { it.channelId == c.id && it.title == seriesTitle(p.title) }
 
     /** Reminders for every showing of [p] on [c] from now on (and for new ones as the guide updates). */
-    fun addSeries(c: Channel, p: Programme) {
+    @Synchronized fun addSeries(c: Channel, p: Programme) {
         if (!isSeries(c, p)) saveSeries(series() + Series(c.id, seriesTitle(p.title), c.name))
         applySeries()
         Ui.test("series-reminder ${p.title} ${all().count { it.channelId == c.id && seriesTitle(it.title) == seriesTitle(p.title) }}")
     }
 
     /** Stops the series, and its reminders still to come. */
-    fun cancelSeries(channelId: String, title: String) {
+    @Synchronized fun cancelSeries(channelId: String, title: String) {
         val t = seriesTitle(title)
         saveSeries(series().filterNot { it.channelId == channelId && it.title == t })
         val now = System.currentTimeMillis()
@@ -120,6 +122,16 @@ object Reminders {
         save(keep)
         gone.forEach { cancel(it) }
     }
+
+    /** Episodes of a series you cancelled one by one ("channel|start"), so the series leaves them alone. */
+    private fun skips(): MutableSet<String> = try { Store.prefsString("seriesSkip", "").split('\n').filter { it.isNotBlank() }.toMutableSet() } catch (_: Exception) { HashSet() }
+    private fun saveSkips(s: Set<String>) {
+        val now = System.currentTimeMillis()
+        Store.putString("seriesSkip", s.filter { (it.substringAfter('|').toLongOrNull() ?: 0) > now }.joinToString("\n")) // (past ones go)
+    }
+    private fun skipped(channelId: String, start: Long) = "$channelId|$start" in skips()
+    private fun skip(channelId: String, start: Long) = saveSkips(skips() + "$channelId|$start")
+    private fun unskip(channelId: String, start: Long) = saveSkips(skips() - "$channelId|$start")
 
     /** Adds reminders for the series' showings in the guide that don't have one yet. */
     @Synchronized private fun applySeries() {
@@ -131,7 +143,8 @@ object Reminders {
         for (r in rules) {
             val c = Repo.channel(r.channelId) ?: continue
             for (p in Repo.programmes(c)) {
-                if (p.start <= now || seriesTitle(p.title) != r.title || (c.id to p.start) in have) continue
+                // (Not one about to start: its reminder may just have been shown and taken off the list.)
+                if (p.start <= now + lead() + 60_000 || seriesTitle(p.title) != r.title || (c.id to p.start) in have || skipped(c.id, p.start)) continue
                 added.add(Reminder(c.id, p.start, p.title, c.name))
             }
         }
@@ -182,7 +195,7 @@ object Reminders {
         handler.postDelayed({ check() }, 1500)
     }
 
-    private fun check() {
+    @Synchronized private fun check() {
         val a = current ?: return
         if (card != null || a.isFinishing) return
         val now = System.currentTimeMillis()
@@ -287,7 +300,7 @@ object Reminders {
     }
 
     /** An alarm went off: the card if Dingus is in front, the Fire TV's notification if not. */
-    internal fun fired(ctx: Context, channelId: String, start: Long) {
+    @Synchronized internal fun fired(ctx: Context, channelId: String, start: Long) {
         if (!::app.isInitialized) init(ctx)
         if (current != null) { handler.post { check() }; return }
         val r = all().firstOrNull { it.channelId == channelId && it.start == start } ?: return
