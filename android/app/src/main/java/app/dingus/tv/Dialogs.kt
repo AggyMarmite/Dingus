@@ -32,7 +32,12 @@ object Dialogs {
             d.setOnShowListener {
                 shownAt = android.os.SystemClock.uptimeMillis(); style(a, d, side)
                 // A list starts with its first item highlighted, so ▼ always moves to the second.
-                d.listView?.let { l -> if (l.adapter != null && l.count > 0 && l.selectedItemPosition < 0) { l.requestFocus(); l.setSelection(0) } }
+                // (Skipping headings, which can't be picked: starting on one left the list stuck – Choose source.)
+                d.listView?.let { l ->
+                    val ad = l.adapter ?: return@let
+                    val first = (0 until l.count).firstOrNull { ad.isEnabled(it) } ?: return@let
+                    if (l.selectedItemPosition < 0 || !ad.isEnabled(l.selectedItemPosition)) { l.requestFocus(); l.setSelection(first) }
+                }
             }
             d.setOnKeyListener { _, code, ev ->
                 if (code != KeyEvent.KEYCODE_DPAD_CENTER && code != KeyEvent.KEYCODE_ENTER && code != KeyEvent.KEYCODE_NUMPAD_ENTER) return@setOnKeyListener false

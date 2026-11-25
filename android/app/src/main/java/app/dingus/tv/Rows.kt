@@ -372,22 +372,35 @@ object Scrolling {
     }
 }
 
-/** Horizontal rows: the same steady scrolling as the rows themselves, the highlighted title kept in from the edge. */
+/**
+ * Horizontal rows, Apple TV style: the highlighted title always sits in the first place in the row, and the titles
+ * glide left and right underneath it. (Room at the end lets even the last title reach that place.)
+ */
 class RowLayoutManager(ctx: Context) : LinearLayoutManager(ctx, HORIZONTAL, false) {
     init { initialPrefetchItemCount = 6 }
+    private var rv: RecyclerView? = null
+    override fun onAttachedToWindow(view: RecyclerView) { super.onAttachedToWindow(view); rv = view }
+    override fun onDetachedFromWindow(view: RecyclerView, recycler: RecyclerView.Recycler) { super.onDetachedFromWindow(view, recycler); rv = null }
+
     // The next few titles off the edge are kept ready, so moving onto one glides there. (Without them, ▶ off the
     // edge had nothing to move to yet and the row jumped – while ◀, onto titles already made, glided.)
     override fun calculateExtraLayoutSpace(state: RecyclerView.State, extraLayoutSpace: IntArray) {
         val e = width / 2; extraLayoutSpace[0] = e; extraLayoutSpace[1] = e
     }
+
+    override fun onLayoutCompleted(state: RecyclerView.State?) {
+        super.onLayoutCompleted(state)
+        val v = rv ?: return
+        val first = getChildAt(0) ?: return
+        val lp = first.layoutParams as? RecyclerView.LayoutParams
+        val card = first.width + (lp?.leftMargin ?: 0) + (lp?.rightMargin ?: 0)
+        val room = (v.width - v.paddingLeft - card).coerceAtLeast(v.paddingLeft)
+        if (v.width > 0 && v.paddingRight != room) v.post { v.setPadding(v.paddingLeft, v.paddingTop, room, v.paddingBottom) }
+    }
+
     override fun requestChildRectangleOnScreen(parent: RecyclerView, child: View, rect: android.graphics.Rect, immediate: Boolean, focusedChildVisible: Boolean): Boolean {
-        val pad = parent.paddingLeft
-        val right = parent.width - parent.paddingRight
-        val dx = when {
-            child.left < pad -> child.left - pad
-            child.right > right -> child.right - right + (child.width / 3).coerceAtMost(right - pad - child.width).coerceAtLeast(0)
-            else -> 0
-        }
+        val lp = child.layoutParams as? RecyclerView.LayoutParams
+        val dx = child.left - (lp?.leftMargin ?: 0) - parent.paddingLeft
         if (dx == 0) return false
         Scrolling.by(parent, dx, 0, immediate)
         return true
