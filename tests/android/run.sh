@@ -270,8 +270,8 @@ fresh
 key KEYCODE_DPAD_LEFT 1.5
 check "browse-panel shown" 5 "LEFT from the first film brings in the categories panel"
 shot 19-films-panel
-key KEYCODE_DPAD_DOWN 0.6; key KEYCODE_DPAD_DOWN 1.5
-check "browse-cat (Recently added|Continue watching|Top rated) [0-9]" 5 "moving through the categories shows each one"
+key KEYCODE_DPAD_DOWN 0.6; key KEYCODE_DPAD_DOWN 0.6; key KEYCODE_DPAD_DOWN 1.5   # (past Coming soon and Continue watching)
+check "browse-cat (Recently added|Trending|Top rated|Top films) [0-9]" 5 "moving through the categories shows each one"
 key KEYCODE_DPAD_RIGHT 1.5
 check "browse-panel hidden" 5 "RIGHT goes into the films, the categories step aside"
 shot 19-films-grid
