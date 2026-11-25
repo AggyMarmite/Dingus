@@ -31,7 +31,7 @@ object Intro {
         val glow = View(a).apply {
             background = GradientDrawable().apply {
                 gradientType = GradientDrawable.RADIAL_GRADIENT; gradientRadius = 260 * d
-                colors = intArrayOf(0x806D4BFF, 0x002E6DFF)
+                colors = intArrayOf(0x806D4BFF.toInt(), 0x002E6DFF)
             }
             alpha = 0f
         }
