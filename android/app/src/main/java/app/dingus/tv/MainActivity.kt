@@ -303,12 +303,24 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         // Moving around the guide doesn't start anything: OK plays a channel in the window, OK again goes full screen.
     }
 
-    /** Choose source… for a channel in the guide: a version (remembered) or the same channel elsewhere; it plays. */
-    private fun chooseSourceFor(c: Channel) {
+    /** Choose source for a channel in the guide (a page of the mini menu): a version (remembered) or the same channel elsewhere; it plays. */
+    private fun sourcesFor(c: Channel): MiniMenu.Page {
         val here = live.current?.id == c.id
-        Repo.chooseSource(this, c, if (here) live.playing else null,
+        return Repo.sourcesPage(c, if (here) live.playing else null,
             pickVersion = { if (here) live.replayVersion() else if (Store.preview) preview(c) else goFullScreen(c) },
             pickOther = { src -> if (!here) { if (Store.preview) preview(c) else goFullScreen(c) }; live.playSource(src) })
+    }
+
+    /** (Stands in for Choose source in a menu's list: it opens the sources as a page inside the menu.) */
+    private val SOURCES: () -> Unit = {}
+
+    /** The guide's mini menu, springing out beside the highlighted programme. */
+    private fun mini(title: String, subtitle: String?, items: List<Pair<String, () -> Unit>>, c: Channel) {
+        val list = items.map { (t, f) ->
+            if (f === SOURCES) MiniMenu.Item(t, chips = listOf(MiniMenu.Chip(Repo.sourceCount(c).toString(), 0x1AFFFFFF, 0xFFE2E8F0.toInt())), page = { sourcesFor(c) })
+            else MiniMenu.Item(t, action = f)
+        }
+        MiniMenu(this).show(MiniMenu.Page(title, subtitle, list, "OK chooses  ·  ◀ closes"), grid.selectedRect())
     }
 
     private var infoLogoFor: String? = null
@@ -540,7 +552,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         if (Store.preview && live.current?.id != c.id) items.add("Watch here" to { preview(c) })
         items.add("Watch full screen" to { goFullScreen(c) })
         items.add((if (Store.isFavourite(c.id)) "Remove from Favourites" else "Add to Favourites") to { onFavourite(c) })
-        Repo.sourceCount(c).takeIf { it > 1 }?.let { n -> items.add("Choose source…  ·  $n" to { chooseSourceFor(c) }) }
+        if (Repo.sourceCount(c) > 1) items.add("⇄  Choose source" to SOURCES)
         items.add("Rename channel" to {
             Dialogs.input(this, "New name", c.name, "Channel name") { n ->
                 val e = ChannelEdits.all()[c.id]
@@ -549,9 +561,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             }
         })
         items.add("Hide channel" to { hideChannel(c) })
-        Dialogs.builder(this).setTitle(c.name)
-            .setItems(items.map { it.first }.toTypedArray()) { _, i -> items[i].second() }
-            .show()
+        mini(p?.title ?: c.name, if (p != null) "${c.name}  ·  ${Ui.span(p)}" else null, items, c)
         Ui.test("channel-menu ${c.name}")
     }
 
@@ -587,13 +597,10 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
                 if (p != null && Repo.canStartOver(c, p, now)) items.add("↺  Start over  ·  from ${Ui.time(p.start)}" to { stopPreview(); LiveTv.startOver(this, c, p) })
             }
         }
-        Repo.sourceCount(c).takeIf { it > 1 }?.let { n -> items.add("⇄  Choose source…  ·  $n" to { chooseSourceFor(c) }) }
+        if (Repo.sourceCount(c) > 1) items.add("⇄  Choose source" to SOURCES)
         items.add((if (Store.isFavourite(c.id)) "★  Remove from Favourites" else "★  Add to Favourites") to { onFavourite(c) })
         items.add("⊘  Hide channel" to { hideChannel(c) })
-        val title = p?.let { "${it.title}  ·  ${c.name}  ·  ${Ui.span(it)}" } ?: c.name
-        Dialogs.builder(this).setTitle(title)
-            .setItems(items.map { it.first }.toTypedArray()) { _, i -> items[i].second() }
-            .show()
+        mini(p?.title ?: c.name, if (p != null) "${c.name}  ·  ${Ui.span(p)}" else null, items, c)
         Ui.test("hold-menu ${c.name}")
     }
 

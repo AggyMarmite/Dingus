@@ -137,42 +137,37 @@ object Repo {
      * ≡ / hold OK → Choose source…: the channel's versions (FHD, HEVC… best first, with what they've played at) and the
      * same channel in other categories (with what's on). A version is remembered as the one to use; OK plays it.
      */
-    fun chooseSource(a: android.app.Activity, c: Channel, playing: Channel?, pickVersion: (Channel) -> Unit, pickOther: (Channel) -> Unit) {
+    /**
+     * Choose source, as a page of the mini menu: the channel's versions (best first, a quality tag on each, the one
+     * playing marked) and the same channel in other categories (with what's on, so you can see they match).
+     */
+    fun sourcesPage(c: Channel, playing: Channel?, pickVersion: (Channel) -> Unit, pickOther: (Channel) -> Unit): MiniMenu.Page {
         val vs = versions(c)
         val others = sources(c).filter { s -> vs.none { it.id == s.id } }
-        if (vs.size + others.size < 2) return
-        class Item(val ch: Channel?, val text: CharSequence, val version: Boolean)
-        val items = ArrayList<Item>()
-        fun mark(ch: Channel) = if (ch.id == playing?.id) "   ● Playing" else ""
-        if (others.isNotEmpty()) items.add(Item(null, "VERSIONS", true))
-        vs.forEach { v -> items.add(Item(v, v.name + "   ·   " + Merge.qualityText(v) + mark(v), true)) }
+        val items = ArrayList<MiniMenu.Item>()
+        if (others.isNotEmpty()) items.add(MiniMenu.Item("VERSIONS", heading = true))
+        vs.forEach { v ->
+            items.add(MiniMenu.Item(v.name, chips = MiniMenu.qualityChips(v), playing = v.id == playing?.id, action = {
+                Ui.test("source-chosen ${v.name}"); Store.setPreferredVersion(Merge.key(c), v.id); pickVersion(v)
+            }))
+        }
         if (others.isNotEmpty()) {
-            items.add(Item(null, "OTHER CATEGORIES", false))
+            items.add(MiniMenu.Item("ALSO IN", heading = true))
             others.forEach { o ->
                 val on = nowNext(o).first?.title
-                items.add(Item(o, o.name + mark(o) + "\n" + listOfNotNull(categoryName(o.categoryId).ifEmpty { null }, on).joinToString("  ·  "), false))
+                items.add(MiniMenu.Item(o.name, sub = listOfNotNull(categoryName(o.categoryId).ifEmpty { null }, on).joinToString("  ·  ").ifEmpty { null },
+                    chips = MiniMenu.qualityChips(o).take(1), playing = o.id == playing?.id, action = { Ui.test("source-chosen ${o.name}"); pickOther(o) }))
             }
         }
-        val d = a.resources.displayMetrics.density
-        val adapter = object : android.widget.ArrayAdapter<Item>(a, android.R.layout.simple_list_item_1, items) {
-            override fun isEnabled(position: Int) = items[position].ch != null
-            override fun areAllItemsEnabled() = false
-            override fun getView(position: Int, convertView: android.view.View?, parent: android.view.ViewGroup): android.view.View {
-                val v = super.getView(position, convertView, parent) as android.widget.TextView
-                val it = items[position]
-                v.text = it.text
-                if (it.ch == null) { v.textSize = 11f; v.alpha = 0.6f; v.letterSpacing = 0.1f; v.setPadding((24 * d).toInt(), (10 * d).toInt(), 0, 0); v.minHeight = 0 }
-                else { v.textSize = 16f; v.alpha = 1f; v.letterSpacing = 0f; v.setPadding((24 * d).toInt(), (8 * d).toInt(), (24 * d).toInt(), (8 * d).toInt()) }
-                return v
-            }
-        }
-        Dialogs.builder(a).setTitle("Choose source  ·  " + c.name.replace(sourcePrefixRx, ""))
-            .setAdapter(adapter) { _, i ->
-                val it = items[i]; val ch = it.ch ?: return@setAdapter
-                Ui.test("source-chosen ${ch.name}")
-                if (it.version) { Store.setPreferredVersion(Merge.key(c), ch.id); pickVersion(ch) } else pickOther(ch)
-            }.show()
         Ui.test("source-list ${vs.size + others.size}")
+        return MiniMenu.Page("Sources", c.name.replace(sourcePrefixRx, ""), items, "OK plays it  ·  ◀ back")
+    }
+
+    /** Choose source on its own (no menu around it). */
+    fun chooseSource(a: android.app.Activity, c: Channel, playing: Channel?, anchor: android.graphics.Rect?, pickVersion: (Channel) -> Unit, pickOther: (Channel) -> Unit) {
+        if (sourceCount(c) < 2) return
+        val pg = sourcesPage(c, playing, pickVersion, pickOther)
+        MiniMenu(a).show(MiniMenu.Page(pg.title, pg.subtitle, pg.items, "OK plays it  ·  ◀ closes"), anchor)
     }
 
 

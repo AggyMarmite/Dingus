@@ -155,6 +155,16 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
     private fun now() = System.currentTimeMillis()
     private fun floor30(t: Long) = t - t % (30 * 60_000L)
     private fun xOf(t: Long) = chanW + (t - start) * pxPerMs
+
+    /** Where the highlighted programme is on screen (for the mini menu to spring out beside it). */
+    fun selectedRect(): android.graphics.Rect {
+        val loc = IntArray(2); getLocationOnScreen(loc)
+        val y = headerH + (row - top) * rowH
+        val p = sel
+        val x0 = if (p != null) xOf(p.start).coerceIn(chanW, width.toFloat()) else chanW
+        val x1 = if (p != null) xOf(p.stop).coerceIn(x0, width.toFloat()) else width.toFloat()
+        return android.graphics.Rect(loc[0] + x0.toInt(), loc[1] + y.toInt(), loc[0] + x1.toInt(), loc[1] + (y + rowH).toInt())
+    }
     private val visibleRows get() = ((height - headerH) / rowH).toInt().coerceAtLeast(1)
     val current: Channel? get() = channels.getOrNull(row)
 

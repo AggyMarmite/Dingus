@@ -53,6 +53,8 @@ object Failover {
         return e is IOException && Regex("""answered (5\d\d|404)""").containsMatchIn(m)
     }
 
+    private fun wrongLogin(e: Throwable) = e.message?.contains("wasn't accepted") == true
+
     /** A quick "is anyone there?": any answer counts, even a refused login (that's the login's problem, not the server's). */
     private fun reachable(p: Playlist, address: String): Boolean = try {
         val url = if (p.type == "xtream") "${Sources.xtreamBase(address)}/player_api.php?username=${Sources.enc(p.user)}&password=${Sources.enc(p.pass)}" else address.trim()
@@ -75,7 +77,12 @@ object Failover {
                 Ui.test("server-in-use $i")
                 return r
             } catch (e: Exception) {
-                if (!isDown(e)) throw e // a wrong login or bad playlist: another address won't change that
+                // Only a refused login stops here (the same login is used on every address). Anything else – a "not
+                // found", a half-answered list, something garbled – means try the next address: a server can answer
+                // its login yet fail the channel list, and the backup then works (it was showing "Something went
+                // wrong talking to the server" or "The server answered 404" while a backup was fine).
+                if (wrongLogin(e)) throw e
+                android.util.Log.w("Dingus", "server ${i}: ${e.message}", e)
                 if (first == null) first = e
             }
         }

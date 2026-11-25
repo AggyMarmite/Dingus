@@ -665,8 +665,15 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
             Store.statsPinned = !Store.statsPinned; updateStats(); Ui.test("stats-pinned ${Store.statsPinned}")
         })
         items.add("Stream information" to { streamInfo() })
-        Repo.sourceCount(c).takeIf { it > 1 }?.let { n -> items.add(1, "Choose source…  ·  $n" to { Repo.chooseSource(a, c, version ?: c, pickVersion = { replayVersion() }, pickOther = { playSource(it) }) }) }
-        Dialogs.builder(a).setTitle(c.name).setItems(items.map { it.first }.toTypedArray()) { _, i -> items[i].second() }.show()
+        val sources: () -> Unit = {}
+        if (Repo.sourceCount(c) > 1) items.add(1.coerceAtMost(items.size), "⇄  Choose source" to sources)
+        // The mini menu, bottom right over the picture; Choose source is a page inside it.
+        val list = items.map { (t, f) ->
+            if (f === sources) MiniMenu.Item(t, chips = listOf(MiniMenu.Chip(Repo.sourceCount(c).toString(), 0x1AFFFFFF, 0xFFE2E8F0.toInt())),
+                page = { Repo.sourcesPage(c, version ?: c, pickVersion = { replayVersion() }, pickOther = { playSource(it) }) })
+            else MiniMenu.Item(t, action = f)
+        }
+        MiniMenu(a).show(MiniMenu.Page(c.name, Repo.nowNext(c).first?.title, list, "OK chooses  ·  BACK closes"), null)
     }
 
     // ------------------------------------------------------------------ stream stats
