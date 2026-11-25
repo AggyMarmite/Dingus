@@ -10,42 +10,31 @@ import android.text.style.ImageSpan
 import android.text.style.ReplacementSpan
 
 /**
- * The age rating as a round coloured badge (UK certificates: U, PG, 12/12A, 15, 18 – Dingus's own badges, not the
- * official symbols) and TMDB's mark with its score, for a details line.
+ * The age rating (the UK certificate) in a soft translucent tag, and TMDB's mark with its score, for a details line.
  */
 object Badges {
+    /** A soft translucent tag round the certificate – the same for every one (no colours). */
     private class Round(val bg: Int, val d: Float) : ReplacementSpan() {
         override fun getSize(p: Paint, t: CharSequence, s: Int, e: Int, fm: Paint.FontMetricsInt?): Int =
-            (maxOf(p.measureText(t, s, e) + 10 * d, (p.fontSpacing * 1.25f))).toInt()
+            (p.measureText(t, s, e) + 16 * d).toInt()
         override fun draw(c: Canvas, t: CharSequence, s: Int, e: Int, x: Float, top: Int, y: Int, bottom: Int, p: Paint) {
             val w = getSize(p, t, s, e, null).toFloat()
-            val h = p.fontSpacing * 1.25f
+            val h = p.fontSpacing * 1.2f
             val cy = (top + bottom) / 2f
             val old = p.color; val bold = p.isFakeBoldText
             p.color = bg
-            c.drawRoundRect(RectF(x, cy - h / 2, x + w, cy + h / 2), h / 2, h / 2, p)
+            c.drawRoundRect(RectF(x, cy - h / 2, x + w, cy + h / 2), 5 * d, 5 * d, p)
             p.color = 0xFFFFFFFF.toInt(); p.isFakeBoldText = true
-            val tw = p.measureText(t, s, e)
-            c.drawText(t, s, e, x + (w - tw) / 2, y.toFloat(), p)
+            c.drawText(t, s, e, x + 8 * d, y.toFloat(), p)
             p.color = old; p.isFakeBoldText = bold
         }
-    }
-
-    /** The colour for a certificate (UK first; other countries' letters get a neutral grey). */
-    private fun colour(age: String): Int = when (age.uppercase().trim()) {
-        "U", "UC" -> 0xFF16A34A.toInt()
-        "PG" -> 0xFFCA8A04.toInt()
-        "12", "12A" -> 0xFFEA580C.toInt()
-        "15" -> 0xFFE11D74.toInt()
-        "18", "R18" -> 0xFFDC2626.toInt()
-        else -> 0xFF475569.toInt()
     }
 
     fun age(sb: SpannableStringBuilder, age: String, ctx: Context) {
         val d = ctx.resources.displayMetrics.density
         val at = sb.length
         sb.append(age.trim())
-        sb.setSpan(Round(colour(age), d), at, sb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        sb.setSpan(Round(0x40FFFFFF, d), at, sb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
     }
 
     /** TMDB's mark, then the score as a percentage ("73%"). */
