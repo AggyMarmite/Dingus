@@ -338,6 +338,9 @@ check "guide-filled [1-9]" 15 "Live TV from Home shows the channels"
 check "guide-listings [1-9]" 15 "…with their listings, after Dingus was closed and opened again"
 check "categories-open" 10 "…with the categories open first"
 shot 19aa-live-from-home
+adb shell am start -n $PKG/.HomeActivity --ez dingus_test_check true
+sleep 15; shot 23-check-everything
+key KEYCODE_BACK 2
 fi
 
 # ---- Channel numbers off

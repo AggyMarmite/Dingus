@@ -103,6 +103,11 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
             loadingText("Getting your channels ready…")
             handler.postDelayed({ hideLoading() }, 6_100)
         }
+        // (Self-test: open Check everything for a screenshot.)
+        if (BuildConfig.DEBUG && intent.getBooleanExtra("dingus_test_check", false)) {
+            intent.removeExtra("dingus_test_check")
+            startActivity(Intent(this, CheckActivity::class.java))
+        }
         if (PlaylistUpdate.askAfterSwitch) PlaylistUpdate.ask(this)
         side.refresh()
         tick.run()
