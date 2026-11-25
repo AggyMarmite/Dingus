@@ -1,3 +1,13 @@
+## What's new in Dingus 0.15.25
+
+* Fire TV: a fresh new look, with a new font, richer cards, artwork-tinted pages and an animated start-up.
+* Fire TV: Coming soon, with alerts when new films and shows arrive.
+* Fire TV: trailers play inside Dingus.
+* Fire TV: a quick menu when you hold OK in the TV guide, and one place to choose a channel's source.
+* Fire TV: UK age ratings and TMDB scores, and easier-to-read film pages.
+* Fire TV: VPN notices, and the TV guide now keeps itself up to date.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.24
 
 * Fire TV: a richer Home showcase, with Continue watching and My list first.
