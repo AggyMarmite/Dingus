@@ -10,7 +10,7 @@
             android:background="@drawable/pill_bg" android:paddingStart="10dp" android:paddingEnd="10dp"
             android:paddingTop="4dp" android:paddingBottom="4dp" android:textSize="13sp" android:textStyle="bold" android:textColor="?attr/dText" />
         <ImageView android:id="@+id/heroLogo" android:layout_width="wrap_content" android:layout_height="124dp"
-            android:layout_marginTop="10dp" android:maxWidth="600dp" android:adjustViewBounds="true" android:scaleType="fitStart"
+            android:layout_marginTop="10dp" android:layout_marginBottom="14dp" android:maxWidth="600dp" android:adjustViewBounds="true" android:scaleType="fitStart"
             android:contentDescription="@null" android:visibility="gone" />
         <TextView android:id="@+id/heroTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="8dp" android:maxLines="2" android:ellipsize="end" android:textSize="46sp"

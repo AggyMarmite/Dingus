@@ -389,6 +389,7 @@ object Repo {
         val logos = HashMap<String, String>()
         var lastError: Exception? = null
         var anyWorked = false
+        val failed = ArrayList<String>()
         Progress.begin(Progress.GUIDE)
         try { for ((n, url) in sources.withIndex()) {
             val todo = chans.filter { !keys.containsKey(it.id) }
@@ -400,14 +401,23 @@ object Repo {
                 anyWorked = true
                 // Keys from different guides could clash, so each guide's are kept apart.
                 for ((k, v) in parsed.programmes) programmes["$n|$k"] = v
-                for ((id, k) in parsed.keysByChannelId) keys[id] = "$n|$k"
+                // A channel only counts as done when this guide actually has listings for it from now on – one it
+                // names but with nothing current (out of date, or empty) is left for the next guide to fill in.
+                val now = System.currentTimeMillis()
+                for ((id, k) in parsed.keysByChannelId) if (parsed.programmes[k]?.any { it.stop > now } == true) keys[id] = "$n|$k"
                 for ((id, l) in parsed.logosByChannelId) logos.putIfAbsent(id, l)
             } catch (e: Exception) {
                 Log.w("Dingus", "guide $n", e)
-                lastError = e
+                val where = try { java.net.URI(url).host ?: url } catch (_: Exception) { url }
+                lastError = IOException("$where: ${Net.friendly(e)}", e)
+                failed.add("$where (${Net.friendly(e)})")
             }
         } } finally { Progress.end(Progress.GUIDE) }
         if (!anyWorked) throw lastError ?: IOException("No TV guide")
+        // Some guides worked and one didn't: say which (after the "updated" note), so a broken link gets noticed.
+        if (failed.isNotEmpty()) android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            Notice.done("TV guide: couldn't read ${failed.joinToString(", ")}  ·  the others updated", 7_000)
+        }, 4_500)
         for (c in chans) { c.guideKey = keys[c.id]; c.guideLogo = logos[c.id] }
         for (c in raw) { c.guideKey = keys[c.id]; c.guideLogo = logos[c.id] }
         guide = programmes
