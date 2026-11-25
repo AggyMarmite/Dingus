@@ -379,7 +379,9 @@ class SettingsActivity : BaseActivity() {
             text = f()
             // A value sits in a small chip; "›" (opens a screen) and nothing at all don't.
             val plain = text == "›" || text.isEmpty()
+            // (Set both ways: a row's value can change from "" to an address, e.g. the IP address once looked up.)
             if (plain) { background = null; setPadding(0, 0, 0, 0); textSize = 18f }
+            else { val dp = resources.displayMetrics.density; setBackgroundResource(R.drawable.value_chip); setPadding((12 * dp).toInt(), (4 * dp).toInt(), (12 * dp).toInt(), (4 * dp).toInt()); textSize = 13f }
             visibility = if (text.isEmpty()) View.GONE else View.VISIBLE
         }
         findViewById<TextView>(R.id.settingsSub)?.text = listOfNotNull("Dingus ${BuildConfig.VERSION_NAME}", Store.playlist?.name).joinToString("  ·  ")

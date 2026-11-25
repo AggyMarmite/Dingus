@@ -503,23 +503,50 @@ object Vpn {
     } catch (_: Exception) { null }
 
     /** Downloads a test file for up to ~10 seconds (through the VPN when it's on); Mbps. */
+    /**
+     * Downloads for about 10 seconds and returns Mbps. Cloudflare first, in 25 MB pieces (it turns down very large
+     * single requests, and some VPN servers' addresses), then other public test files if that's refused.
+     */
     suspend fun speedTest(progress: (Float) -> Unit): Float = withContext(Dispatchers.IO) {
-        val c = java.net.URL("https://speed.cloudflare.com/__down?bytes=200000000").openConnection() as java.net.HttpURLConnection
-        c.connectTimeout = 8_000; c.readTimeout = 8_000
+        val sources = listOf(
+            "https://speed.cloudflare.com/__down?bytes=25000000",
+            "https://fsn1-speed.hetzner.com/100MB.bin",
+            "https://proof.ovh.net/files/100Mb.dat",
+            "http://speedtest.tele2.net/100MB.zip",
+        )
         var bytes = 0L
-        val t0 = System.nanoTime()
-        try {
-            c.inputStream.use { s ->
-                val buf = ByteArray(64 * 1024)
+        var t0 = 0L
+        var last: Exception? = null
+        for (src in sources) {
+            try {
                 while (true) {
-                    val n = s.read(buf); if (n < 0) break
-                    bytes += n
-                    val secs = (System.nanoTime() - t0) / 1e9f
-                    if (secs > 0.5f) progress(bytes * 8 / secs / 1e6f)
-                    if (secs >= 10f) break
+                    val c = java.net.URL(src).openConnection() as java.net.HttpURLConnection
+                    c.connectTimeout = 8_000; c.readTimeout = 8_000
+                    c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) Dingus")
+                    try {
+                        if (c.responseCode !in 200..299) throw java.io.IOException("the test server answered ${c.responseCode}")
+                        if (t0 == 0L) t0 = System.nanoTime()
+                        c.inputStream.use { s ->
+                            val buf = ByteArray(64 * 1024)
+                            while (true) {
+                                val n = s.read(buf); if (n < 0) break
+                                bytes += n
+                                val secs = (System.nanoTime() - t0) / 1e9f
+                                if (secs > 0.5f) progress(bytes * 8 / secs / 1e6f)
+                                if (secs >= 10f) break
+                            }
+                        }
+                    } finally { c.disconnect() }
+                    if ((System.nanoTime() - t0) / 1e9f >= 10f) break   // (otherwise that piece finished: another)
                 }
+                break
+            } catch (e: Exception) {
+                last = e
+                Ui.test("vpn-speed-source failed $src ${e.message}")
+                if (bytes > 2_000_000) break    // it was going: use what was measured
             }
-        } finally { c.disconnect() }
+        }
+        if (bytes == 0L || t0 == 0L) throw last ?: java.io.IOException("no test server answered")
         val secs = ((System.nanoTime() - t0) / 1e9f).coerceAtLeast(0.1f)
         (bytes * 8 / secs / 1e6f).also { Ui.test("vpn-speed $it") }
     }

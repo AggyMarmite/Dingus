@@ -285,7 +285,7 @@ object Store {
         get() = try { prefs.getBoolean("vpnReconnect", true) } catch (_: Exception) { true }
         set(v) = prefs.edit().putBoolean("vpnReconnect", v).apply()
     var vpnKillSwitch: Boolean
-        get() = try { prefs.getBoolean("vpnKillSwitch", true) } catch (_: Exception) { true }
+        get() = try { prefs.getBoolean("vpnKillSwitch", false) } catch (_: Exception) { false }
         set(v) = prefs.edit().putBoolean("vpnKillSwitch", v).apply()
     var vpnSwitchSlow: Boolean
         get() = try { prefs.getBoolean("vpnSwitchSlow", true) } catch (_: Exception) { true }
