@@ -207,7 +207,7 @@
 ## What's new in Dingus 0.14.0
 
 * Reorder and hide categories.
-* Multi-view can share one connection (experimental).
+* Multi-view improvements (experimental).
 * Lower processor use when idle.
 * Bug fixes and other improvements.
 
