@@ -25,10 +25,13 @@ fresh() { adb logcat -c; }
 # Moves with KEY until the log shows PATTERN (e.g. the highlight reaching "focus navFilms"), up to MAX presses, rather
 # than counting presses – so a new row, category or button somewhere doesn't throw the rest of the test off.
 # press_until KEY PATTERN MAX [DELAY]. (Clears the log first, so only what happens now counts.)
+# Only lines logged after it starts count (clearing the log first wasn't always done in time, so an old line could
+# match and it'd stop a step short).
 press_until() {
-  adb logcat -c
-  for _ in $(seq 1 "$3"); do key "$1" "${4:-0.6}"; adb logcat -d -s DINGUS-TEST:I | grep -qE "$2" && return 0; done
-  wait_log "$2" 2
+  local base; base=$(adb logcat -d -s DINGUS-TEST:I | wc -l)
+  new() { adb logcat -d -s DINGUS-TEST:I | tail -n +$((base + 1)) | grep -qE "$1"; }
+  for _ in $(seq 1 "$3"); do key "$1" "${4:-0.6}"; new "$2" && return 0; done
+  sleep 2; new "$2"
 }
 # Quick mode: ONLY="xtream,home" runs just those sections (after the first playlist loads). Sections: backup, xtream,
 # home, numbers, reminder, phone, vpn. Home and the films/shows checks need xtream (the login) before them.
