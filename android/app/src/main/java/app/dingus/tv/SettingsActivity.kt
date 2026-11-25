@@ -12,6 +12,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /** Settings: playlists, TV guide, playback, look, updates. */
@@ -268,6 +269,31 @@ class SettingsActivity : BaseActivity() {
         }
     }
 
+    // ------------------------------------------------------------------ cache
+
+    private var cacheSize: Long? = null
+    private fun mb(b: Long) = if (b < 1024 * 1024) "${b / 1024} KB" else "${b / (1024 * 1024)} MB"
+
+    /** Saved pictures plus anything else in the cache folder (not the live TV rewind buffer, which is in use). */
+    private fun cacheBytes(): Long = Logos.diskBytes() + Posters.diskBytes() +
+        (cacheDir.listFiles() ?: emptyArray()).filter { it.name !in setOf("logos", "posters", "timeshift") }.sumOf { f -> f.walkTopDown().filter { it.isFile }.sumOf { it.length() } }
+
+    private fun clearCache() {
+        Dialogs.confirm(this, "Clear the cache?", "Saved pictures, logos and posters are deleted to free up space. They come back as you browse.\n\nYour playlist, TV guide, favourites, My List and settings aren't touched.", "Clear cache") {
+            scope.launch {
+                val before = withContext(Dispatchers.IO) { cacheBytes() }
+                withContext(Dispatchers.IO) {
+                    Logos.clearAll(); Posters.clearAll()
+                    (cacheDir.listFiles() ?: emptyArray()).filter { it.name !in setOf("logos", "posters", "timeshift") }.forEach { it.deleteRecursively() }
+                }
+                cacheSize = withContext(Dispatchers.IO) { cacheBytes() }
+                update()
+                Notice.done("Cache cleared  ·  ${mb((before - (cacheSize ?: 0)).coerceAtLeast(0))} freed", 3_500)
+                Ui.test("cache-cleared")
+            }
+        }
+    }
+
     // ------------------------------------------------------------------ Home rows
 
     private fun homeRows() {
@@ -325,6 +351,8 @@ class SettingsActivity : BaseActivity() {
     override fun onPause() { Vpn.removeListener(vpnListener); super.onPause() }
 
     private fun aboutSection() {
+        row("Clear cache", { "Pictures, logos and posters saved to load faster. They come back as you browse." }, { cacheSize?.let { mb(it) } ?: "…" }) { clearCache() }
+        if (cacheSize == null) scope.launch { cacheSize = withContext(Dispatchers.IO) { cacheBytes() }; update() }
         updateRow = row("Check for updates", { Updater.available?.takeIf { Updater.newer(it.version, BuildConfig.VERSION_NAME) }?.let { "Dingus ${it.version} is ready  ·  OK to update" } ?: "" }, { "Version ${BuildConfig.VERSION_NAME}" }) {
             updateRow?.let { sub(it, "Checking…") }
             Updater.check(this, manual = true) { msg -> updateRow?.let { sub(it, msg) } }

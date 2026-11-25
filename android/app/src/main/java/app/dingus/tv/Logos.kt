@@ -62,6 +62,16 @@ class ImageCache(private val name: String, megabytes: Int, private val config: B
         }.start()
     }
 
+    /** Space the saved pictures take on the device (bytes). */
+    fun diskBytes(): Long = (dir.listFiles() ?: emptyArray()).sumOf { it.length() }
+
+    /** Settings → About → Clear cache: the saved pictures go (they come back as you browse). */
+    fun clearAll() {
+        main.post { cache.evictAll() }
+        synchronized(failed) { failed.clear() }
+        (dir.listFiles() ?: emptyArray()).forEach { it.delete() }
+    }
+
     /** Forget pictures in memory (e.g. when leaving a screen full of posters). */
     fun trim() = cache.trimToSize(cache.maxSize() / 3)
 
