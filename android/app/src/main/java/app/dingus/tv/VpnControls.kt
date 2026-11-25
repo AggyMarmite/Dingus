@@ -168,7 +168,7 @@ class VpnControls(
 
     private fun pick(options: List<Vpn.Location>) {
         // How quickly each answers (ping), measured first – a second or two.
-        if (options.any { it.id !in pings } && options.any { it.host.isNotEmpty() }) {
+        if (options.any { !pings.containsKey(it.id) } && options.any { it.host.isNotEmpty() }) {
             Notice.working("Checking each server's speed…")
             scope.launch { pings.putAll(Vpn.pings(options.take(40))); Notice.clear(); showPick(options) }
             return

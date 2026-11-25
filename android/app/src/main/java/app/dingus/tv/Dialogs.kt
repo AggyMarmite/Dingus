@@ -29,7 +29,11 @@ object Dialogs {
             // When it appeared: the release of the OK that opened it (pressed on the screen behind, before then) mustn't
             // choose its first option straight away.
             var shownAt = Long.MAX_VALUE
-            d.setOnShowListener { shownAt = android.os.SystemClock.uptimeMillis(); style(a, d, side) }
+            d.setOnShowListener {
+                shownAt = android.os.SystemClock.uptimeMillis(); style(a, d, side)
+                // A list starts with its first item highlighted, so ▼ always moves to the second.
+                d.listView?.let { l -> if (l.adapter != null && l.count > 0 && l.selectedItemPosition < 0) { l.requestFocus(); l.setSelection(0) } }
+            }
             d.setOnKeyListener { _, code, ev ->
                 if (code != KeyEvent.KEYCODE_DPAD_CENTER && code != KeyEvent.KEYCODE_ENTER && code != KeyEvent.KEYCODE_NUMPAD_ENTER) return@setOnKeyListener false
                 val f = d.currentFocus ?: return@setOnKeyListener false
