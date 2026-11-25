@@ -475,6 +475,13 @@ class HomeActivity : BaseActivity() {
 
     private fun guide() = startActivity(Intent(this, MainActivity::class.java))
 
+    /** A film or show's details line: genres · year · age rating · ★ score. */
+    private fun vodMeta(kind: String, m: VodItem): String {
+        val d = Vod.cachedDetails(kind, m.id)
+        return listOfNotNull(d?.genre?.takeIf { it.isNotBlank() }, (d?.year?.takeIf { it > 0 } ?: m.year).takeIf { it > 0 }?.toString(), Ratings.cached(kind, m)?.age,
+            (d?.rating?.toFloatOrNull() ?: m.rating).takeIf { it > 0 }?.let { "★ %.1f".format(it) }).joinToString("  ·  ")
+    }
+
     private fun left(p: Programme, now: Long) = "${(p.stop - now + 59_999) / 60_000} min left"
     private fun until(p: Programme, now: Long): String {
         val mins = (p.start - now + 59_999) / 60_000
@@ -506,15 +513,15 @@ class HomeActivity : BaseActivity() {
         }
         Vod.cached(Vod.SERIES)?.let { lib -> Vod.continueList(Vod.SERIES, lib).forEach { cont.add(Card.Title(Vod.SERIES, it, label = if (it.id in newEps) "New episode" else "Continue", isNew = it.id in newEps)) } }
         (cont.firstOrNull() as? Card.Title)?.let { t ->
-            slides.add(Slide("Continue watching", t.item.name, listOfNotNull(if (t.kind == Vod.MOVIES) "Film" else "TV show", t.item.year.takeIf { it > 0 }?.toString()).joinToString("  ·  "),
-                null, t.progress, Vod.cachedDetails(t.kind, t.item.id)?.backdrop ?: t.item.poster, watch = { openTitle(t.kind, t.item) }, ref = "vod:${t.kind}:${t.item.id}", title_ = t.kind to t.item))
+            slides.add(Slide("Continue watching", t.item.name, vodMeta(t.kind, t.item),
+                null, t.progress, Vod.cachedDetails(t.kind, t.item.id)?.backdrop ?: t.item.poster, watch = { openTitle(t.kind, t.item) }, ref = "vod:${t.kind}:${t.item.id}", title_ = t.kind to t.item, primary = "▶   Continue"))
         }
 
         // What's on your channels now, and next.
         val onNow = mine.mapNotNull { c -> Repo.nowNext(c).first?.let { c to it } }
         onNow.take(2).forEach { (c, p) ->
-            if (slides.none { it.title == p.title }) slides.add(Slide("On now", p.title, "${c.name}  ·  ${Ui.span(p)}  ·  ${left(p, now)}", p.desc,
-                Ui.progress(p) / 1000f, watch = { watch(c) }, ref = "ch:${c.id}", second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(p), until = p.stop))
+            if (slides.none { it.title == p.title }) slides.add(Slide("Live now", p.title, "${c.name}  ·  ${Ui.span(p)}  ·  ${left(p, now)}", p.desc,
+                Ui.progress(p) / 1000f, watch = { watch(c) }, ref = "ch:${c.id}", second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(p), until = p.stop, primary = "▶   Watch live"))
         }
 
         // Live sport now and tonight's picks: from your channels first, then the rest (only so many, to stay quick).
@@ -545,24 +552,25 @@ class HomeActivity : BaseActivity() {
         sport.firstOrNull()?.let { s ->
             val p = s.programme!!
             if (slides.none { it.title == p.title }) slides.add(Slide("Live sport", p.title, "${s.channel.name}  ·  ${Ui.span(p)}  ·  ${left(p, now)}", p.desc,
-                Ui.progress(p) / 1000f, watch = { watch(s.channel) }, ref = "ch:${s.channel.id}", second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(p), until = p.stop))
+                Ui.progress(p) / 1000f, watch = { watch(s.channel) }, ref = "ch:${s.channel.id}", second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(p), until = p.stop, primary = "▶   Watch live"))
         }
         // Tonight: the first film or sport this evening on your channels (or any).
         tonight.filter { it.second.start > now }.minByOrNull { it.second.start }?.let { (c, q) ->
-            if (slides.none { it.title == q.title }) slides.add(Slide("Tonight", q.title,
+            if (slides.none { it.title == q.title }) slides.add(Slide("Starts at ${Ui.time(q.start)}", q.title,
                 listOfNotNull(c.name, "${Ui.time(q.start)} – ${Ui.time(q.stop)}", Genres.name(q.genre)).joinToString("  ·  "), q.desc,
-                watch = { watch(c) }, ref = "ch:${c.id}", second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(q), until = q.start))
+                watch = { watch(c) }, ref = "ch:${c.id}", title_ = TitleLogos.forProgramme(q), until = q.start, primary = "▶   Watch live",
+                second = "🔔   Remind me" to { val on = Reminders.toggle(c, q); Notice.done(if (on) "Reminder set for ${q.title}" else "Reminder removed") }))
         }
         // Trending films and shows (TMDB) that are in your playlist, with their details.
         fun vodSlide(kicker: String, kind: String, m: VodItem) {
             val d = Vod.cachedDetails(kind, m.id)
-            slides.add(Slide(kicker, d?.title ?: m.name,
-                listOfNotNull((d?.year?.takeIf { it > 0 } ?: m.year).takeIf { it > 0 }?.toString(), Ratings.cached(kind, m)?.age, (d?.rating?.toFloatOrNull() ?: m.rating).takeIf { it > 0 }?.let { "★ %.1f".format(it) }, d?.genre, d?.duration).joinToString("  ·  "),
+            slides.add(Slide(kicker, d?.title ?: m.name, vodMeta(kind, m),
                 d?.plot, art = d?.backdrop ?: m.poster, watch = { openTitle(kind, m) }, ref = "vod:$kind:${m.id}",
-                second = (if (kind == Vod.MOVIES) "Films" else "TV Shows") to { startActivity(Intent(this, BrowseActivity::class.java).putExtra(BrowseActivity.KIND, kind)) }, title_ = kind to m))
+                second = (if (kind == Vod.MOVIES) "Films" else "TV Shows") to { startActivity(Intent(this, BrowseActivity::class.java).putExtra(BrowseActivity.KIND, kind)) }, title_ = kind to m,
+                primary = "ⓘ   More info"))
         }
-        Vod.trending(Vod.MOVIES).take(2).forEach { vodSlide("Trending film", Vod.MOVIES, it) }
-        Vod.trending(Vod.SERIES).firstOrNull()?.let { vodSlide("Trending TV show", Vod.SERIES, it) }
+        Vod.trending(Vod.MOVIES).take(2).forEach { vodSlide("Trending", Vod.MOVIES, it) }
+        Vod.trending(Vod.SERIES).firstOrNull()?.let { vodSlide("Trending", Vod.SERIES, it) }
         if (Vod.trending(Vod.MOVIES).isEmpty()) Vod.cached(Vod.MOVIES)?.newest?.firstOrNull()?.let { m ->
             slides.add(Slide("New film", m.name, listOfNotNull(m.year.takeIf { it > 0 }?.toString(), m.rating.takeIf { it > 0 }?.let { "★ %.1f".format(it) }).joinToString("  ·  "),
                 Vod.cachedDetails(Vod.MOVIES, m.id)?.plot, art = m.poster, watch = { openTitle(Vod.MOVIES, m) }, ref = "vod:${Vod.MOVIES}:${m.id}",
@@ -570,7 +578,7 @@ class HomeActivity : BaseActivity() {
         }
         // Nothing personal yet: something on now to start with.
         if (slides.isEmpty()) Repo.channelsIn(Repo.ALL).firstNotNullOfOrNull { c -> Repo.nowNext(c).first?.let { c to it } }?.let { (c, p) ->
-            slides.add(Slide("On now", p.title, "${c.name}  ·  ${Ui.span(p)}", p.desc, Ui.progress(p) / 1000f, watch = { watch(c) }, ref = "ch:${c.id}", second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(p), until = p.stop))
+            slides.add(Slide("Live now", p.title, "${c.name}  ·  ${Ui.span(p)}", p.desc, Ui.progress(p) / 1000f, watch = { watch(c) }, ref = "ch:${c.id}", second = "Live TV" to { guide() }, title_ = TitleLogos.forProgramme(p), until = p.stop, primary = "▶   Watch live"))
         }
 
         trendingRows(out)

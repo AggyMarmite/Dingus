@@ -33,7 +33,7 @@ object HomeSnapshot {
         val o = JSONObject()
         o.put("slides", JSONArray().apply {
             for (s in slides) put(JSONObject().put("k", s.kicker).put("t", s.title).put("m", s.meta).put("x", s.text ?: "")
-                .put("p", s.progress.toDouble()).put("a", s.art ?: "").put("r", s.ref).put("s", s.second?.first ?: "").put("u", s.until)
+                .put("p", s.progress.toDouble()).put("a", s.art ?: "").put("r", s.ref).put("s", s.second?.first ?: "").put("u", s.until).put("pr", s.primary)
                 .also { j -> s.title_?.let { j.put("tk", it.first).put("ti", item(it.second)) } })
         })
         o.put("rows", JSONArray().apply {
@@ -91,7 +91,7 @@ object HomeSnapshot {
                 }
                 slides.add(Slide(j.getString("k"), j.getString("t"), j.getString("m"), j.optString("x").ifEmpty { null },
                     j.optDouble("p", -1.0).toFloat(), j.optString("a").ifEmpty { null }, action(j.optString("r")), sec,
-                    j.optJSONObject("ti")?.let { j.getString("tk") to item(it) }, j.optString("r"), until))
+                    j.optJSONObject("ti")?.let { j.getString("tk") to item(it) }, j.optString("r"), until, j.optString("pr").ifEmpty { "▶   Watch" }))
             }
         }
         val rows = ArrayList<Row>()

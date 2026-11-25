@@ -26,6 +26,8 @@ class Slide(
     val ref: String = "",
     /** When the programme on a channel slide ends (so a saved copy knows it's out of date). */
     val until: Long = 0,
+    /** The big button's words. */
+    val primary: String = "▶   Watch",
 )
 
 /**
@@ -109,7 +111,18 @@ class HomeFeature(
         val h = H(v)
         h.watch.setOnClickListener { slides.getOrNull(index)?.watch?.invoke() }
         h.second.setOnClickListener { slides.getOrNull(index)?.second?.second?.invoke() }
-        h.next.setOnClickListener { if (slides.isNotEmpty()) { moveTo(h, (index + 1) % slides.size); noteKey() } }
+        h.next.visibility = View.GONE
+        // ◀ on the first button goes back a slide, ▶ on the last goes on to the next.
+        val keys = View.OnKeyListener { v, code, ev ->
+            if (ev.action != android.view.KeyEvent.ACTION_DOWN || slides.size < 2) return@OnKeyListener false
+            val last = if (h.second.visibility == View.VISIBLE) h.second else h.watch
+            when {
+                code == android.view.KeyEvent.KEYCODE_DPAD_LEFT && v === h.watch -> { moveTo(h, (index - 1 + slides.size) % slides.size); noteKey(); true }
+                code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT && v === last -> { moveTo(h, (index + 1) % slides.size); noteKey(); true }
+                else -> false
+            }
+        }
+        h.watch.setOnKeyListener(keys); h.second.setOnKeyListener(keys)
         return h
     }
 
@@ -144,6 +157,10 @@ class HomeFeature(
     private fun bind(h: H) {
         val s = slides.getOrNull(index) ?: return
         h.kicker.text = s.kicker
+        // "Live now" stands out in red; the rest are a quiet pill.
+        if (s.kicker == "Live now") h.kicker.background = GradientDrawable().apply { cornerRadius = 99f * a.resources.displayMetrics.density; setColor(0xE6DC2626.toInt()) }
+        else h.kicker.setBackgroundResource(R.drawable.pill_bg)
+        h.watch.text = s.primary
         h.title.text = s.title
         val t = s.title_
         TitleLogos.show(h.logo, h.title, t?.let { TitleLogos.cached(it.first, it.second) })
@@ -164,7 +181,6 @@ class HomeFeature(
         if (bg != null) Posters.load(art, bg, artH, wide = true, keep = true) else { art.setImageDrawable(null); art.tag = null }
         h.second.visibility = if (s.second != null) View.VISIBLE else View.GONE
         h.second.text = s.second?.first ?: ""
-        h.next.visibility = if (slides.size > 1) View.VISIBLE else View.GONE
         // Dots: the current slide is a wider bar.
         h.dots.removeAllViews()
         if (slides.size > 1) for (i in slides.indices) {
