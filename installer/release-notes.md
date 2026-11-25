@@ -2,10 +2,11 @@
 
 * Backup server addresses for playlists.
 * Fire TV: a mini guide, Start over and series reminders.
-* Fire TV: Trending and top films and shows, and a richer Home page.
+* Fire TV: Trending and top films and shows, "Because you watched", and a richer Home page.
+* Fire TV: age ratings and TMDB scores, trailers, Skip intro, and new-episode alerts.
 * Fire TV: plays more kinds of files and streams.
 * Fire TV: easier VPN settings, a VPN indicator and the clock by the logo.
-* Fire TV: tidier settings, with a text size option, picture size and more.
+* Fire TV: tidier settings, with text size, picture size, Clear cache and more.
 * Steadier playback: smarter channel fallback and cleaner reconnects.
 * The new Dingus logo everywhere.
 * Bug fixes and other improvements.
