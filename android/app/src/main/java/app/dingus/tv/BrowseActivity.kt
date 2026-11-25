@@ -259,8 +259,22 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
             .show()
     }
 
+    /**
+     * Featured's rows: worked out in the background (Trending and Top are matched against the whole library, which on
+     * a big library – just after a full refresh, say – took long enough to freeze the screen), then shown.
+     */
+    private var buildJob: kotlinx.coroutines.Job? = null
     private fun build() {
         val l = lib ?: return
+        buildJob?.cancel()
+        buildJob = scope.launch {
+            val out = kotlinx.coroutines.withContext(Dispatchers.Default) { featuredRows(l) }
+            if (lib !== l || current != Vod.FEATURED) return@launch
+            showFeatured(out)
+        }
+    }
+
+    private fun featuredRows(l: Vod.Library): List<Row> {
         val out = ArrayList<Row>()
         val cont = Vod.continueList(kind, l).map { m ->
             val pos = if (kind == Vod.MOVIES) Vod.position(m.id) else null
@@ -287,6 +301,10 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
             if (items.size > 24) cards.add(Card.SeeAll(kind, c.id, c.name))
             out.add(Row(c.name, cards))
         }
+        return out
+    }
+
+    private fun showFeatured(out: List<Row>) {
         adapter.set(out)
         if (current == Vod.FEATURED) {
             empty.visibility = if (out.isEmpty()) View.VISIBLE else View.GONE

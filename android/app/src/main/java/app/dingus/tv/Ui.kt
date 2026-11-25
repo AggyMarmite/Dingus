@@ -8,6 +8,36 @@ import java.util.Locale
 
 /** Small shared bits for the screens. */
 object Ui {
+    /**
+     * A description never cut off: once laid out, it shows only as many whole lines as fit above whatever's below it
+     * (or the bottom of its box) – fewer when there's no title logo and the name takes two lines, up to [max].
+     */
+    fun fitLines(t: android.widget.TextView, max: Int) {
+        val min = (t.getTag(R.id.heroKicker) as? Int) ?: t.minLines.also { t.setTag(R.id.heroKicker, it) }
+        t.minLines = minOf(min, max); t.maxLines = max
+        t.setTag(R.id.heroText, max)
+        // Again whenever the box is laid out (e.g. the title logo arriving a moment later).
+        if (t.getTag(R.id.heroMeta) == null) {
+            t.setTag(R.id.heroMeta, true)
+            (t.parent as? android.view.View)?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fitNow(t) }
+        }
+        t.post { fitNow(t) }
+    }
+
+    private fun fitNow(t: android.widget.TextView) {
+        val max = t.getTag(R.id.heroText) as? Int ?: return
+        val parent = t.parent as? android.view.ViewGroup ?: return
+        var limit = parent.height - parent.paddingBottom
+        // Anything under it in the same column (buttons, dots…) keeps its room.
+        val i = parent.indexOfChild(t)
+        for (j in i + 1 until parent.childCount) parent.getChildAt(j).takeIf { it.visibility != android.view.View.GONE }?.let { limit = minOf(limit, it.top - ((it.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.topMargin ?: 0)) }
+        if (t.lineHeight <= 0 || parent.height <= 0) return
+        // Room it has now, counting the lines it's already showing (so it can grow back as well as shrink).
+        val room = limit - t.top - t.paddingTop - t.paddingBottom
+        val fit = (room / t.lineHeight).coerceIn(1, max)
+        if (fit != t.maxLines) t.post { if (t.minLines > fit) t.minLines = fit; t.maxLines = fit }
+    }
+
     /** Lite mode (Settings): a simpler Home and next to no animation, for when Dingus feels slow. */
     val lite: Boolean get() = Store.homeLite
 

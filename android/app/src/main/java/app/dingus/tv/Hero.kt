@@ -110,6 +110,7 @@ class Hero(
             Ratings.find(card.kind, m, d.tmdbId)?.let { if (showing === card) bindTitle(card, d) }
         }
         text.text = d?.plot ?: ""
+        Ui.fitLines(text, 2)
         // Details not known yet: no picture until they are (they have the right one) – showing the poster first and then
         // swapping to the proper background looked like it fixed itself. (If they can't be had, the poster after all.)
         // (The last title's picture goes meanwhile, so it's never shown under this one's name.)

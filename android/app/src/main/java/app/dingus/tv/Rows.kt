@@ -155,6 +155,11 @@ class RowsAdapter(
             fun card(): Card? = (c.bindingAdapter as? CardsAdapter)?.cards?.getOrNull(c.bindingAdapterPosition)
             v.setOnClickListener { card()?.let(onClick) }
             v.setOnLongClickListener { card()?.let(onLong) ?: false }
+            // ▶ on the last card of a row stays there (it doesn't drop to the row below).
+            v.setOnKeyListener { _, code, ev ->
+                code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT && ev.action == android.view.KeyEvent.ACTION_DOWN &&
+                    c.bindingAdapterPosition >= 0 && c.bindingAdapterPosition == ((c.bindingAdapter as? CardsAdapter)?.cards?.size ?: 0) - 1
+            }
             v.setOnFocusChangeListener { view, has ->
                 Ui.grow(view, has)
                 // Artwork-tinted page: the poster's colour behind the rows and round the highlight.
