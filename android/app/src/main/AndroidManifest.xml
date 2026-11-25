@@ -17,6 +17,11 @@
     <queries>
         <intent><action android:name="android.intent.action.VIEW" /><data android:scheme="vnd.youtube" /></intent>
         <intent><action android:name="android.intent.action.VIEW" /><data android:scheme="https" /></intent>
+        <!-- The YouTube apps for Fire TV / Android TV (trailers play there when one's installed). -->
+        <package android:name="com.amazon.firetv.youtube" />
+        <package android:name="com.amazon.firetv.youtube.tv" />
+        <package android:name="com.google.android.youtube.tv" />
+        <package android:name="com.google.android.youtube" />
     </queries>
 
     <application

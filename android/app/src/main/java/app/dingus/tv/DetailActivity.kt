@@ -158,7 +158,7 @@ class DetailActivity : BaseActivity() {
             if (isDestroyed) return@launch
             findViewById<TextView>(R.id.trailer).apply {
                 visibility = View.VISIBLE
-                setOnClickListener { Ui.test("trailer-play"); TrailerActivity.open(this@DetailActivity, key, m.name) }
+                setOnClickListener { Ui.test("trailer-play"); if (!Tmdb.openInYouTubeApp(this@DetailActivity, key)) TrailerActivity.open(this@DetailActivity, key, m.name) }
             }
         }
         if (TitleLogos.enabled) scope.launch {

@@ -50,6 +50,27 @@ object Tmdb {
         list
     }
 
+    private val youTubeApps = listOf("com.amazon.firetv.youtube", "com.amazon.firetv.youtube.tv", "com.google.android.youtube.tv", "com.google.android.youtube")
+
+    /**
+     * The trailer in the Fire TV's YouTube app, when it's installed (smoothest); BACK there comes back to the film's
+     * page. Never a web browser. False when there's no YouTube app (then Dingus plays it itself).
+     */
+    fun openInYouTubeApp(a: android.app.Activity, key: String): Boolean {
+        val pm = a.packageManager
+        for (pkg in youTubeApps) {
+            try { pm.getPackageInfo(pkg, 0) } catch (e: Exception) { continue }
+            for (u in listOf("https://www.youtube.com/watch?v=$key", "vnd.youtube:$key")) {
+                val i = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(u)).setPackage(pkg)
+                    .putExtra("force_fullscreen", true).putExtra("finish_on_ended", true)
+                if (i.resolveActivity(pm) != null) {
+                    try { a.startActivity(i); Ui.test("trailer-youtube-app $pkg"); return true } catch (e: Exception) {}
+                }
+            }
+        }
+        return false
+    }
+
     /** Opens the trailer in the YouTube app; false when there's no app to play it. */
     fun playTrailer(a: android.app.Activity, key: String): Boolean {
         val i = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("vnd.youtube:$key"))
