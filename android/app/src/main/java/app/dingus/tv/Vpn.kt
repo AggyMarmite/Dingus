@@ -428,6 +428,8 @@ object Vpn {
 
     suspend fun disconnect() = lock.withLock {
         withContext(Dispatchers.IO) {
+            // Turned off on purpose: not "wanted" before the tunnel goes down, so that isn't taken for a drop.
+            wanted = false
             Streams.closeAll("vpn off")
             try { backend.setState(tunnel, Tunnel.State.DOWN, null) } catch (e: Throwable) { Log.w("Dingus", "vpn down", e) }
             Streams.reopenAll()
