@@ -218,6 +218,11 @@ object Store {
     }
 
     /** Plain settings shared by every playlist (e.g. the VPN). */
+    /** Soft sounds: 0 off (the default), 1–3 Felt soft / softer / faintest. */
+    var sounds: Int
+        get() = prefs.getInt("sounds", 0)
+        set(v) = prefs.edit().putInt("sounds", v).apply()
+
     fun prefsString(key: String, def: String): String = prefs.getString(key, def) ?: def
     fun putString(key: String, v: String) = prefs.edit().putString(key, v).apply()
 
