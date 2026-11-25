@@ -17,11 +17,13 @@ object Guide {
         var s = name.lowercase()
         s = s.replace(prefixRx, "")
         s = s.replace(qualityRx, "")
+        s = s.replace(smallRx, "")   // "Comedy Central ᶠᴴᴰ": small raised letters are always a quality tag
         return s.filter { it.isLetterOrDigit() }
     }
 
     // (Made once, not for every name in the guide.)
     private val prefixRx = Regex("""^\s*([a-z]{2,4})\s*[|:\-]\s*""")
+    private val smallRx = Regex("[\u1D00-\u1DBF\u02B0-\u02FF\u2070-\u209F]+")
     private val qualityRx = Regex("""\b(uhd|fhd|hd|sd|4k|hevc|h265|1080p|720p|50fps|backup|\+1)\b""")
 
     fun parse(input: InputStream, channels: List<Channel>, hoursAhead: Int = 14, hoursBack: Int = 1): Parsed {

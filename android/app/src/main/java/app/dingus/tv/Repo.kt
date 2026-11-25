@@ -190,17 +190,16 @@ object Repo {
             val first = g[0]
             keptCats.add(first)
             if (g.size == 1) continue
-            val list = ArrayList<Channel>(grouped[first.id] ?: emptyList())
-            for (other in g.drop(1)) {
-                val extra = grouped[other.id] ?: continue
-                out.remove(other.id)
-                for (ch in extra) {
-                    val k = Merge.key(ch)
-                    // After the last channel with the same name (so versions sit together), or at the end.
-                    val at = if (k.isEmpty()) -1 else list.indexOfLast { Merge.key(it) == k }
-                    if (at >= 0) list.add(at + 1, ch) else list.add(ch)
-                }
+            // Each channel joins the first one with the same name, wherever that is, so every version sits together
+            // ("Comedy Central FHD" too, even when the first category has it apart from "Comedy Central"). The first
+            // category's order decides where each group goes; ones from the others that match nothing go at the end.
+            val byKey = LinkedHashMap<String, MutableList<Channel>>()
+            var solo = 0
+            for (cat in g) {
+                if (cat !== first) out.remove(cat.id)
+                for (ch in grouped[cat.id] ?: continue) byKey.getOrPut(Merge.key(ch).ifEmpty { "\u0000${solo++}" }) { ArrayList(2) }.add(ch)
             }
+            val list = byKey.values.flatten()
             out[first.id] = list
         }
         return keptCats to out
