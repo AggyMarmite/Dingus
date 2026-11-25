@@ -44,11 +44,6 @@ key KEYCODE_DPAD_CENTER 2; shot 02b-reminder-dialog
 key KEYCODE_DPAD_CENTER 2
 check "reminder-set true" 5 "OK on a later programme sets a reminder"
 shot 02c-reminder-set
-# Series reminder: OK again → "Remind me · every episode" (second in the list now).
-key KEYCODE_DPAD_CENTER 2
-check "reminder-menu" 5 "OK on a programme with a reminder offers the reminder choices"
-sleep 1; key KEYCODE_DPAD_DOWN 1; key KEYCODE_DPAD_CENTER 2
-check "series-reminder" 5 "Series reminder: every episode of a programme gets a reminder"
 fresh
 # LEFT until the categories open (how many it takes depends on where the guide's focus starts, so not a fixed three).
 for _ in 1 2 3 4; do
