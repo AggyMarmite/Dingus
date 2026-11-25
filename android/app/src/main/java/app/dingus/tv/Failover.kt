@@ -73,9 +73,12 @@ object Failover {
     }
 
     /** A quick "is anyone there?": any answer counts, even a refused login (that's the login's problem, not the server's). */
-    private fun reachable(p: Playlist, address: String): Boolean = try {
+    private fun reachable(p: Playlist, address: String): Boolean = answers(p, address, PATIENCE_MS)
+
+    /** [reachable] with its own patience (the VPN fallback tries quicker). */
+    fun answers(p: Playlist, address: String, timeoutMs: Int): Boolean = try {
         val url = if (p.type == "xtream") "${Sources.xtreamBase(address)}/player_api.php?username=${Sources.enc(p.user)}&password=${Sources.enc(p.pass)}" else address.trim()
-        Net.open(url, PATIENCE_MS).close()
+        Net.open(url, timeoutMs).close()
         true
     } catch (e: Exception) { !isDown(e) }
 
@@ -103,6 +106,7 @@ object Failover {
                 if (first == null) first = e
             }
         }
+        if (Vpn.status == Vpn.Status.ON) VpnFallback.start(p) // (nothing answered: maybe another VPN location gets through)
         throw first ?: IOException("Couldn't connect to the server")
     }
 
@@ -119,10 +123,14 @@ object Failover {
             try {
                 val all = addresses(p)
                 val cur = index(p)
-                when {
-                    all.size > 1 && cur > 0 && reachable(p, all[0]) -> { setIndex(p, 0); Ui.test("failover to 0 (network changed)") }
-                    all.size > 1 && !reachable(p, all[cur]) -> recover()
+                val ok = when {
+                    all.size > 1 && cur > 0 && reachable(p, all[0]) -> { setIndex(p, 0); Ui.test("failover to 0 (network changed)"); true }
+                    reachable(p, all[cur]) -> true
+                    all.size > 1 -> recover()
+                    else -> false
                 }
+                // Nothing answers through this VPN location: try others (Settings → VPN → Find a location that works).
+                if (Vpn.status == Vpn.Status.ON && !VpnFallback.running) { if (ok) VpnFallback.remember(p, Vpn.connectedTo) else VpnFallback.start(p) }
             } catch (e: Exception) { android.util.Log.w("Dingus", "server check after network change", e) }
             try { Account.check(p) } catch (e: Exception) { android.util.Log.w("Dingus", "account check after network change", e) }
         }

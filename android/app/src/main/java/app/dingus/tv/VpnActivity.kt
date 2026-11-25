@@ -47,6 +47,9 @@ class VpnActivity : BaseActivity() {
         row("Reconnect by itself", { onOff(Store.vpnReconnect) + "if the VPN drops, connect again: the same place, or the least busy one nearby" }) {
             Store.vpnReconnect = !Store.vpnReconnect; update()
         }
+        row("Find a location that works", { onOff(VpnFallback.enabled) + "if your playlist can't connect through this location, try others until one does" }) {
+            VpnFallback.enabled = !VpnFallback.enabled; update()
+        }
         row("Kill switch", { onOff(Store.vpnKillSwitch) + "if the VPN drops, stop playing until it's back" }) {
             Store.vpnKillSwitch = !Store.vpnKillSwitch; update()
         }
