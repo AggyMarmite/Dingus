@@ -96,14 +96,23 @@ object Vod {
     suspend fun loadSaved(kind: String): Library? = withContext(Dispatchers.IO) {
         // (No lock: the saved file is swapped in whole, so it can be read while an update is downloading.)
         val lib = libs[kind] ?: try { read(kind)?.also { r -> if (libs[kind] == null) libs = HashMap(libs).apply { put(kind, r) } } } catch (e: Exception) { null }
-        lib?.also { it.byCategory; it.byId; it.newest }
+        lib?.also { warm(kind, it) }
+    }
+
+    /**
+     * Everything Films / TV Shows works out from a library – grouping, sorting, and finding TMDB's Trending and Top
+     * titles in it – done here in the background, so opening the screen after an update doesn't freeze while it's done.
+     */
+    private fun warm(kind: String, lib: Library) {
+        lib.byCategory; lib.byId; lib.newest
+        if (libs[kind] === lib) { Charts.cached(Charts.TRENDING, kind); Charts.cached(Charts.TOP, kind); topRated(lib, kind) }
     }
 
     /** The library, from memory, the saved copy, or the provider (in that order). [fresh] forces the provider. */
     suspend fun library(kind: String, fresh: Boolean = false): Library = withContext(Dispatchers.IO) {
         val lib = load(kind, fresh)
         // Sorting and grouping a big library happens here, off screen, not when a row is first drawn.
-        lib.byCategory; lib.byId; lib.newest
+        warm(kind, lib)
         lib
     }
 

@@ -104,10 +104,10 @@ class Hero(
         ).joinToString("   ·   ")
         text.text = d?.plot ?: ""
         val pic = d?.backdrop ?: d?.poster ?: m.poster
-        // The big picture behind only once you've stopped on something (decoding and drawing a full-screen picture
-        // on every step is what made scrolling stutter).
+        // The big picture behind only once you've stopped on something for a moment (decoding and drawing a full-screen
+        // picture on every step made scrolling stutter, and opening a screen fetched one picture then another).
         pendingArt = pic
         art.removeCallbacks(loadArt)
-        if (art.tag != pic) art.postDelayed(loadArt, 280)
+        if (art.tag != pic) art.postDelayed(loadArt, 800)
     }
 }
