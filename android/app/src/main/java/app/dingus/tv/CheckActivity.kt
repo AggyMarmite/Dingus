@@ -125,11 +125,13 @@ class CheckActivity : BaseActivity() {
                 // Each address: how quickly it answered, or why it didn't (shown for the main server).
                 val why = arrayOfNulls<String>(all.size)
                 val times = withContext(Dispatchers.IO) {
-                    all.mapIndexed { i, a -> if (a.isBlank()) null else try {
-                        val t0 = System.currentTimeMillis()
+                    all.mapIndexed { i, a -> if (a.isBlank()) null else { val t0 = System.currentTimeMillis(); try {
                         val url = if (p.type == "xtream") "${Sources.xtreamBase(a)}/player_api.php?username=${Sources.enc(p.user)}&password=${Sources.enc(p.pass)}" else a.trim()
                         Net.open(url, Failover.PATIENCE_MS).close(); System.currentTimeMillis() - t0
-                    } catch (e: Exception) { why[i] = Failover.reason(e); null } }
+                    } catch (e: Exception) {
+                        // (A 404 to this bare login check still means the server's there – it plays and lists fine.)
+                        if (e.message?.contains("answered 404") == true) System.currentTimeMillis() - t0 else { why[i] = Failover.reason(e); null }
+                    } } }
                 }
                 val mainWhy = why[0]?.let { "  ·  main server: $it" } ?: ""
                 val backups = if (all.size > 1) "  ·  backups: " + (1 until all.size).joinToString(", ") { i -> if (times[i] != null) "$i ✓" else "$i ✕" } else ""

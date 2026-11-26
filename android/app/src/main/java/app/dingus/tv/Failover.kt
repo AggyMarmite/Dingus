@@ -82,7 +82,11 @@ object Failover {
         val url = if (p.type == "xtream") "${Sources.xtreamBase(address)}/player_api.php?username=${Sources.enc(p.user)}&password=${Sources.enc(p.pass)}" else address.trim()
         Net.open(url, timeoutMs).close()
         true
-    } catch (e: Exception) { !isDown(e) }
+    } catch (e: Exception) {
+        // As on Windows: a server that answers is there. Some answer 404 to this bare login check yet play and list
+        // everything fine – that 404 had the Fire TV leave a working main server for a backup with fewer films.
+        !isDown(e) || e.message?.contains("answered 404") == true
+    }
 
     /** [load] with the main address, then each backup (only skipping ahead when the server can't be reached). */
     fun <T> load(p: Playlist, load: (Playlist) -> T): T {
