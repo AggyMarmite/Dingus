@@ -1,3 +1,8 @@
+## What's new in Dingus 0.15.39
+
+* Fire TV: more reliable loading of the films and shows library.
+* Fire TV: more detail in Check everything.
+
 ## What's new in Dingus 0.15.38
 
 * Fire TV: stays on the main server.
