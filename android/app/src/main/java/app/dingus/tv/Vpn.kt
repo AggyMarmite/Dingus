@@ -433,6 +433,14 @@ object Vpn {
                 // Close what's playing first, so the provider sees it end instead of counting it for minutes.
                 Streams.closeAll("vpn connecting")
                 try { backend.setState(tunnel, Tunnel.State.UP, configFor(target)) } finally { Streams.reopenAll() }
+                // Only "connected" once the VPN server has actually answered (its first handshake). The tunnel being
+                // set up proves nothing: it showed connected while nothing got through – no IP address, and the
+                // playlist offline.
+                if (!answered(10_000)) {
+                    try { backend.setState(tunnel, Tunnel.State.DOWN, null) } catch (_: Throwable) {}
+                    Ui.test("vpn-no-answer ${target.label}")
+                    return@withContext "${target.label} didn't answer".also { set(Status.ERROR, it) }
+                }
                 locationId = target.id
                 connectedTo = target
                 wanted = true
@@ -451,6 +459,46 @@ object Vpn {
                 msg
             }
         }
+    }
+
+    /** When the VPN server last answered (0: not yet). */
+    private fun handshakeAt(): Long = try {
+        val st = backend.getStatistics(tunnel)
+        st.peers().firstOrNull()?.let { st.peer(it)?.latestHandshakeEpochMillis } ?: 0L
+    } catch (_: Throwable) { 0L }
+
+    /** Waits up to [ms] for the server's first answer, nudging it with a small packet through the tunnel. */
+    private fun answered(ms: Long): Boolean {
+        val until = System.currentTimeMillis() + ms
+        var nudged = 0L
+        while (System.currentTimeMillis() < until) {
+            if (handshakeAt() > 0) return true
+            if (System.currentTimeMillis() - nudged > 2_000) {
+                nudged = System.currentTimeMillis()
+                // (A tiny DNS question: any traffic makes WireGuard say hello to the server.)
+                try { java.net.DatagramSocket().use { it.send(java.net.DatagramPacket(ByteArray(12), 12, java.net.InetAddress.getByName("1.1.1.1"), 53)) } } catch (_: Throwable) {}
+            }
+            Thread.sleep(200)
+        }
+        return handshakeAt() > 0
+    }
+
+    /**
+     * [connect], and if that location doesn't answer, the least busy others in the same country (two at most), by
+     * itself – with a note saying where it ended up.
+     */
+    suspend fun connectOrNearby(loc: Location? = null): String? {
+        val err = connect(loc) ?: return null
+        if (!err.endsWith("didn't answer")) return err
+        val from = loc ?: try { current(locations()) } catch (_: Exception) { null } ?: return err
+        val others = try { locations() } catch (_: Exception) { emptyList() }
+            .filter { it.countryCode == from.countryCode && it.id != from.id }.sortedBy { if (it.load < 0) 100 else it.load }.take(2)
+        for (next in others) {
+            Notice.working("⛨  ${from.label} didn't answer  ·  trying ${next.label}…")
+            if (connect(next) == null) { Notice.endWorking("⛨"); Notice.done("⛨  Now through ${next.label}  ·  ${from.label} didn't answer", 6_000); return null }
+        }
+        Notice.endWorking("⛨")
+        return err
     }
 
     suspend fun disconnect() = lock.withLock {
@@ -484,7 +532,7 @@ object Vpn {
                 kotlinx.coroutines.delay(30_000)
                 if (status != Status.ON || fixing) continue
                 val last = try { backend.getStatistics(tunnel).peers().firstOrNull()?.let { backend.getStatistics(tunnel).peer(it)?.latestHandshakeEpochMillis } } catch (_: Throwable) { null } ?: continue
-                if (last > 0 && System.currentTimeMillis() - last > 180_000) { set(Status.ERROR, "VPN dropped"); dropped() }
+                if (last <= 0 || System.currentTimeMillis() - last > 180_000) { set(Status.ERROR, "VPN dropped"); dropped() }
             }
         }
     }
@@ -585,7 +633,7 @@ object Vpn {
         if (!auto || status == Status.ON || !ready) return
         // (The connecting carries on by itself: a timeout can't cut short a slow download or the tunnel starting, so
         // only the waiting stops after 15 seconds, and the playlist loads.)
-        val job = kotlinx.coroutines.CoroutineScope(Dispatchers.IO).async { connect() }
+        val job = kotlinx.coroutines.CoroutineScope(Dispatchers.IO).async { connectOrNearby() }
         withTimeoutOrNull(15_000) { job.await() }
     }
 }

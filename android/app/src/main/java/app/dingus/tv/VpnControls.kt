@@ -38,9 +38,16 @@ class VpnControls(
             looking = true
             try {
                 val status = Vpn.status
-                val o = JSONObject(Net.open("https://ipinfo.io/json", 8_000).use { it.readBytes().toString(Charsets.UTF_8) })
-                val where = listOf(o.optString("city"), o.optString("country")).filter { it.isNotBlank() }.joinToString(", ")
-                ip = o.optString("ip").ifBlank { null }?.let { if (where.isEmpty()) it else "$it · $where" }
+                // (A second service if the first is slow or blocked, so the address shows quickly.)
+                ip = try {
+                    val o = JSONObject(Net.open("https://ipinfo.io/json", 5_000).use { it.readBytes().toString(Charsets.UTF_8) })
+                    val where = listOf(o.optString("city"), o.optString("country")).filter { it.isNotBlank() }.joinToString(", ")
+                    o.optString("ip").ifBlank { null }?.let { if (where.isEmpty()) it else "$it · $where" }
+                } catch (e: Exception) {
+                    val o = JSONObject(Net.open("https://ipwho.is/", 5_000).use { it.readBytes().toString(Charsets.UTF_8) })
+                    val where = listOf(o.optString("city"), o.optString("country_code")).filter { it.isNotBlank() }.joinToString(", ")
+                    o.optString("ip").ifBlank { null }?.let { if (where.isEmpty()) it else "$it · $where" }
+                }
                 ipFor = status
                 ipServer = Vpn.connectedTo?.id
                 Ui.test("vpn-ip ${ip ?: "none"}")
@@ -122,7 +129,7 @@ class VpnControls(
             return
         }
         scope.launch {
-            val err = Vpn.connect(loc)
+            val err = Vpn.connectOrNearby(loc)
             if (err != null) Dialogs.builder(a).setTitle("Couldn't connect").setMessage(err).setPositiveButton("OK", null).show()
         }
     }

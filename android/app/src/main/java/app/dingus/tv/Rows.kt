@@ -314,6 +314,10 @@ class RowsAdapter(
  */
 class RowsLayoutManager(ctx: Context, private val centered: Boolean = false) : LinearLayoutManager(ctx) {
     init { initialPrefetchItemCount = 3 }
+    // The list of rows always fills its space, so it needn't lay its rows out just to be measured. (It did: and
+    // measured without a height, it laid out every row in the list – drawing every card again, over and over,
+    // each time the screen was measured. That was the flicker, and the stutter.)
+    override fun isAutoMeasureEnabled() = false
     private var rv: RecyclerView? = null
     override fun onAttachedToWindow(view: RecyclerView) { super.onAttachedToWindow(view); rv = view }
     override fun onDetachedFromWindow(view: RecyclerView, recycler: RecyclerView.Recycler) { super.onDetachedFromWindow(view, recycler); rv = null }

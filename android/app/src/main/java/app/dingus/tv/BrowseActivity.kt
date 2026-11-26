@@ -237,7 +237,7 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
                 posters.addFrom(more)
                 gridCount.text = "·  ${Ui.count(more.size)} ${if (kind == Vod.MOVIES) (if (more.size == 1) "film" else "films") else (if (more.size == 1) "show" else "shows")}  ·  ◀ categories"
                 empty.visibility = if (more.isEmpty()) View.VISIBLE else View.GONE
-                setCategories()
+                // (The categories list isn't redrawn: that took the highlight off the category you're on.)
                 Ui.test("browse-cat-more $name ${more.size}")
             }
         }
