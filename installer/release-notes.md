@@ -1,3 +1,8 @@
+## What's new in Dingus 0.15.45
+
+* Fire TV: channels that won't play through the VPN find a location that works by themselves.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.44
 
 * Fire TV: the VPN finds a location that works with your playlist by itself.
