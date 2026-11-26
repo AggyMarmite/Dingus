@@ -1,3 +1,8 @@
+## What's new in Dingus 0.15.37
+
+* Fire TV: connects to the main server more reliably.
+* Fire TV: the full films and shows library.
+
 ## What's new in Dingus 0.15.36
 
 * Fire TV: more reliable loading of the films and shows library.
