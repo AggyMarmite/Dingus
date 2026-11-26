@@ -154,6 +154,11 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
 
     private fun now() = System.currentTimeMillis()
     private fun floor30(t: Long) = t - t % (30 * 60_000L)
+    /**
+     * Where the guide starts: the half hour now is in – or the one before, in a half hour's first few minutes, so the
+     * red "now" line is never right at the left edge, over the first letters of what's on ("rogramme", "0:00").
+     */
+    private fun nowStart() = floor30(now() - 8 * 60_000L)
     private fun xOf(t: Long) = chanW + (t - start) * pxPerMs
 
     /** Where the highlighted programme is on screen (for the mini menu to spring out beside it). */
@@ -177,7 +182,7 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
     fun setChannels(list: List<Channel>, focusId: String?) {
         channels = list
         row = list.indexOfFirst { it.id == focusId }.coerceAtLeast(0)
-        glide?.cancel(); start = floor30(now()); goal = start
+        glide?.cancel(); start = nowStart(); goal = start
         anchor = now()
         top = 0
         keepRowVisible(centre = true)
@@ -199,7 +204,7 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         // Move on with the clock – unless you're looking back at earlier programmes (catch-up).
         val past = sel?.let { it.stop <= now() } == true
         if (!past) {
-            val minStart = floor30(now())
+            val minStart = nowStart()
             if (goal < minStart) scrollTo(minStart)
             if (anchor < now()) anchor = now()
         }
@@ -244,8 +249,8 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
         var ns = cur
         if (p.start >= end - 30 * 60_000L) ns = floor30(p.start) - 30 * 60_000L
         else if (p.start < cur && !(sameTime && p.stop - cur >= 20 * 60_000L))
-            ns = if (p.stop <= now()) floor30(p.start) else maxOf(floor30(now()), floor30(p.start))
-        if (end <= ns) ns = floor30(now())
+            ns = if (p.stop <= now()) floor30(p.start) else maxOf(nowStart(), floor30(p.start))
+        if (end <= ns) ns = nowStart()
         if (ns != cur) scrollTo(ns)
     }
 
@@ -485,10 +490,7 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
             canvas.drawRoundRect(r, d, d, fill)
             fill.alpha = 255
         }
-        // The writing starts just after the red "now" line when that crosses the start of the programme (it was drawn
-        // over the first letters – "rogramme", "0:00").
-        val nowX = xOf(System.currentTimeMillis())
-        val tx = if (airing && nowX > x0 && nowX + 6 * d < x1 - 40 * d) maxOf(x0 + pad, nowX + 6 * d) else x0 + pad
+        val tx = x0 + pad
         val avail = x1 - tx - pad
         if (avail < 12 * d || text.isEmpty()) return
         titleP.color = if (on) 0xFF0B0E14.toInt() else if (past && !catchUp) cMuted else cText

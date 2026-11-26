@@ -22,12 +22,13 @@
         <LinearLayout android:id="@+id/catPanel" android:layout_width="240dp" android:layout_height="match_parent"
             android:layout_marginEnd="6dp"
             android:orientation="vertical" android:background="@drawable/cat_panel_flush" android:visibility="gone"
-            android:paddingStart="8dp" android:paddingEnd="8dp" android:paddingTop="22dp">
+            android:paddingTop="22dp">
             <TextView android:id="@+id/heading" android:layout_width="wrap_content" android:layout_height="34dp"
-                android:gravity="center_vertical" android:paddingStart="12dp" android:textSize="11sp" android:textStyle="bold"
+                android:gravity="center_vertical" android:paddingStart="20dp" android:textSize="11sp" android:textStyle="bold"
                 android:letterSpacing="0.12" android:textAllCaps="true" android:textColor="?attr/dMuted" />
             <androidx.recyclerview.widget.RecyclerView android:id="@+id/categories"
                 android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+                android:paddingStart="8dp" android:paddingEnd="8dp" android:clipToPadding="false"
                 android:scrollbars="none" android:descendantFocusability="afterDescendants" />
         </LinearLayout>
 

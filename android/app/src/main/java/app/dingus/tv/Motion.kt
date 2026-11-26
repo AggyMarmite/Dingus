@@ -84,10 +84,15 @@ object Motion {
             val cl = padL + p.scrollX; val cr = p.width - padR + p.scrollX; val ct = padT + p.scrollY; val cb = p.height - padB + p.scrollY
             // (Only along an edge the view isn't simply scrolled past: a card half off the end of a row is fine.)
             val onScreenX = v.right > 0 && l >= cl - v.width / 2 && r <= cr + v.width / 2
-            if (p.clipChildren && onScreenX && (l < cl - 1 || r > cr + 1) && p !is androidx.recyclerview.widget.RecyclerView) {
+            // (A list trims along the way it scrolls by design – a card half off the end of a row – but across it, a
+            // cut-off highlight is a real one: the category pills cut flat at both ends.)
+            val lm = (p as? androidx.recyclerview.widget.RecyclerView)?.layoutManager
+            val scrollsAcross = lm?.canScrollHorizontally() == true
+            val scrollsDown = lm?.canScrollVertically() == true || p is android.widget.ScrollView
+            if (p.clipChildren && onScreenX && (l < cl - 1 || r > cr + 1) && !scrollsAcross) {
                 Ui.test("clip-risk ${name(v)} in ${name(p)}"); return
             }
-            if (p.clipChildren && (t < ct - 1 || b > cb + 1) && p !is androidx.recyclerview.widget.RecyclerView && p !is android.widget.ScrollView) {
+            if (p.clipChildren && (t < ct - 1 || b > cb + 1) && !scrollsDown) {
                 Ui.test("clip-risk ${name(v)} in ${name(p)}"); return
             }
             // A clip set on the parent itself (the side menu clips its panel while it slides).
