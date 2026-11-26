@@ -438,8 +438,34 @@ object Vpn {
     /** Android's one-time "allow this app to set up a VPN" question: null when already allowed. */
     fun permissionIntent(ctx: Context) = android.net.VpnService.prepare(ctx)
 
-    /** Connects to [loc] (or the saved location). Returns an error message, or null when connected. */
-    suspend fun connect(loc: Location? = null, auto: Boolean = false): String? = lock.withLock {
+    /** The ending of the message for a location your playlist can't be reached through (see [connect]). */
+    const val NO_PLAYLIST = "can't reach your playlist"
+
+    /**
+     * Whether any of the playlist's addresses (main or backups) answers through the tunnel now – all asked at once,
+     * eight seconds at most. True with no playlist yet.
+     */
+    private fun playlistAnswers(): Boolean {
+        val p = Store.playlist ?: return true
+        val all = Failover.addresses(p).filter { it.isNotBlank() }
+        if (all.isEmpty()) return true
+        val done = java.util.concurrent.CountDownLatch(1)
+        val ok = java.util.concurrent.atomic.AtomicBoolean(false)
+        val left = java.util.concurrent.atomic.AtomicInteger(all.size)
+        for (a in all) Thread {
+            if (Failover.answers(p, a, 8_000)) { ok.set(true); done.countDown() }
+            if (left.decrementAndGet() == 0) done.countDown()
+        }.start()
+        done.await(9, java.util.concurrent.TimeUnit.SECONDS)
+        return ok.get()
+    }
+
+    /**
+     * Connects to [loc] (or the saved location). Returns an error message, or null when connected. With [needPlaylist]
+     * (the usual), a location your playlist can't be reached through doesn't count as connected: it's let go and the
+     * error ends with [NO_PLAYLIST], so another is tried.
+     */
+    suspend fun connect(loc: Location? = null, auto: Boolean = false, needPlaylist: Boolean = true): String? = lock.withLock {
         withContext(Dispatchers.IO) {
             try {
                 // (A try of its own that waited its turn while you turned the VPN off: not wanted any more.)
@@ -472,6 +498,14 @@ object Vpn {
                     Ui.test("vpn-no-answer ${target.label}")
                     return@withContext "${target.label} didn't answer".also { set(Status.ERROR, it); if (wanted && !fixing && !quiet && !VpnFallback.running) keepTrying() }
                 }
+                // …and only if your playlist can actually be reached through it: a VPN server that's fine but that
+                // your provider won't answer through is no use – it looked like the servers were offline.
+                if (needPlaylist && !playlistAnswers()) {
+                    try { backend.setState(tunnel, Tunnel.State.DOWN, null) } catch (_: Throwable) {}
+                    Ui.test("vpn-no-playlist ${target.label}")
+                    return@withContext "${target.label} $NO_PLAYLIST".also { set(Status.ERROR, it); if (wanted && !fixing && !quiet && !VpnFallback.running) keepTrying() }
+                }
+                if (needPlaylist) Store.playlist?.let { VpnFallback.remember(it, target) } // (tried first next time)
                 locationId = target.id
                 connectedTo = target
                 wanted = true
@@ -587,13 +621,14 @@ object Vpn {
 
     private suspend fun nearbyTries(loc: Location?): String? {
         val err = connect(loc) ?: return null
-        if (!err.endsWith("didn't answer")) return err
+        if (!err.endsWith("didn't answer") && !err.endsWith(NO_PLAYLIST)) return err
         val from = loc ?: try { current(locations()) } catch (_: Exception) { null } ?: return err
         val others = try { locations() } catch (_: Exception) { emptyList() }
             .filter { it.countryCode == from.countryCode && it.id != from.id }.sortedBy { if (it.load < 0) 100 else it.load }.take(2)
         for (next in others) {
-            Notice.working("⛨  ${from.label} didn't answer  ·  trying ${next.label}…")
-            if (connect(next) == null) { Notice.endWorking("⛨"); Notice.done("⛨  Now through ${next.label}  ·  ${from.label} didn't answer", 6_000); return null }
+            val why = if (err.endsWith(NO_PLAYLIST)) "your playlist doesn't answer through ${from.label}" else "${from.label} didn't answer"
+            Notice.working("⛨  $why  ·  trying ${next.label}…")
+            if (connect(next) == null) { Notice.endWorking("⛨"); Notice.done("⛨  Now through ${next.label}  ·  $why", 6_000); return null }
         }
         Notice.endWorking("⛨")
         return err
@@ -678,14 +713,29 @@ object Vpn {
                     val here = connectedTo ?: all.firstOrNull { it.id == locationId }
                     val nearby = all.filter { here != null && it.countryCode == here.countryCode && it.id != here.id }.sortedBy { if (it.load < 0) 100 else it.load }
                     val near2 = nearby.take(2)
-                    val overall = best(all)?.takeIf { b -> b.id != here?.id && near2.none { it.id == b.id } }
-                    val tries = listOfNotNull(here, here) + near2 + listOfNotNull(overall)
+                    val worked = Store.playlist?.let { p -> VpnFallback.goodFor(p).mapNotNull { id -> all.firstOrNull { it.id == id } } }.orEmpty()
+                    val overall = best(all)
+                    val tries = (listOfNotNull(here) + near2 + worked.take(2) + listOfNotNull(overall)).distinctBy { it.id }
+                        .let { if (here != null) listOf(here) + it else it }
+                    var onlyPlaylist = true
                     for (loc in tries) {
                         if (!wanted || status == Status.ON) break
-                        if (connect(loc, auto = true) == null) {
+                        val err = connect(loc, auto = true)
+                        if (err != null && !err.endsWith(NO_PLAYLIST)) onlyPlaylist = false
+                        if (err == null) {
                             Ui.test("vpn-reconnected ${loc.label}"); Streams.reopenAll()
                             Notice.done(if (loc.id == here?.id || here == null) "VPN back on  ·  ${loc.label}" else "VPN back on  ·  now through ${loc.label}", 3_000)
                             break
+                        }
+                    }
+                    // Every one connected but your playlist answered through none of them: most likely your
+                    // provider's down for now, not the VPN – so connected anyway (where it was) rather than leaving
+                    // the VPN off; its own check moves it once the playlist answers somewhere.
+                    if (status != Status.ON && onlyPlaylist && tries.isNotEmpty() && wanted) {
+                        val back = here ?: tries.first()
+                        if (connect(back, auto = true, needPlaylist = false) == null) {
+                            Ui.test("vpn-on-without-playlist ${back.label}")
+                            Notice.done("⛨  VPN on  ·  ${back.label}  ·  your playlist isn't answering through any location just now", 6_000)
                         }
                     }
                     if (status != Status.ON && round == 1)

@@ -20,6 +20,7 @@ object VpnFallback {
         set(v) = Store.putString("vpnFindWorking", if (v) "1" else "0")
 
     /** Locations the playlist has answered through (newest first). */
+    fun goodFor(p: Playlist): List<String> = good(p)
     private fun good(p: Playlist): List<String> = Store.prefsString("vpnGood_${p.id}", "").split('\n').filter { it.isNotBlank() }
     fun remember(p: Playlist, loc: Vpn.Location?) {
         loc ?: return
