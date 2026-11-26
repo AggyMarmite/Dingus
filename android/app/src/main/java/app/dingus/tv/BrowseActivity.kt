@@ -201,7 +201,9 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
     private fun setCategories() {
         val l = lib ?: return
         val list = Vod.categoriesFor(kind, l)
-        if (list.none { it.id == current }) current = Vod.FEATURED
+        // (Trending, the top ones, Coming soon and Continue watching aren't in the list – they're rows in Featured – but
+        // their "See all" still opens them.)
+        if (list.none { it.id == current } && current !in setOf(Vod.TRENDING, Vod.TOP, Vod.COMING, Vod.CONTINUE)) current = Vod.FEATURED
         cats.set(list, current)
     }
 
@@ -277,8 +279,14 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
      * a big library – just after a full refresh, say – took long enough to freeze the screen), then shown.
      */
     private var buildJob: kotlinx.coroutines.Job? = null
+    private var comingAsked = false
     private fun build() {
         val l = lib ?: return
+        // Coming soon's row: looked up once if it isn't known yet, then the rows again with it.
+        if (!comingAsked && TitleLogos.enabled && Upcoming.cached(kind).isEmpty()) {
+            comingAsked = true
+            scope.launch { Upcoming.refresh(kind); if (current == Vod.FEATURED && Upcoming.cached(kind).isNotEmpty()) build() }
+        }
         buildJob?.cancel()
         buildJob = scope.launch {
             val out = kotlinx.coroutines.withContext(Dispatchers.Default) { featuredRows(l) }
@@ -313,6 +321,13 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
             items.take(24).forEach { cards.add(Card.Title(kind, it)) }
             if (items.size > 24) cards.add(Card.SeeAll(kind, c.id, c.name))
             out.add(Row(c.name, cards))
+        }
+        // What's coming, at the bottom (a bell on the ones you've asked about).
+        if (TitleLogos.enabled) {
+            val up = Upcoming.cached(kind)
+            if (up.size >= 3) out.add(Row("Coming soon", up.take(24).map { u ->
+                Card.Title(kind, u.vodItem, label = (if (Upcoming.hasAlert(u.tmdbId)) "🔔  " else "") + Upcoming.shortDate(u))
+            } + (if (up.size > 24) listOf(Card.SeeAll(kind, Vod.COMING, "Coming soon")) else emptyList())))
         }
         return out
     }

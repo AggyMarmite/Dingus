@@ -163,15 +163,12 @@ object Vod {
     }
 
     fun categoriesFor(kind: String, lib: Library): List<Category> {
+        // Featured, everything, what's new, then the playlist's own. (Continue watching, Trending, the top ones and
+        // Coming soon are rows in Featured rather than categories of their own.)
         val out = ArrayList<Category>()
         out.add(Category(FEATURED, "Featured"))
-        continueList(kind, lib).size.let { if (it > 0) out.add(Category(CONTINUE, "Continue watching", it)) }
-        out.add(Category(RECENT, "Recently added"))
-        trending(kind).size.let { if (it > 0) out.add(Category(TRENDING, "Trending", it)) }
-        topRated(lib, kind).size.let { if (it > 0) out.add(Category(TOP, topName(kind), it)) }
-        // (Below the top ones: what's on its way isn't something to watch yet.)
-        if (TitleLogos.enabled) out.add(Category(COMING, "Coming soon"))
         out.add(Category(ALL, if (kind == MOVIES) "All films" else "All shows", lib.items.size))
+        out.add(Category(RECENT, "Recently added"))
         for (c in Store.ordered(kind, lib.categories.filter { lib.byCategory[it.id]?.isNotEmpty() == true && !Store.isHidden("$kind:${it.id}") }) { it.id })
             out.add(Category(c.id, c.name, lib.byCategory[c.id]?.size ?: 0))
         return out
