@@ -5,7 +5,7 @@ import android.app.Application
 class DingusApp : Application() {
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        if (level >= TRIM_MEMORY_RUNNING_LOW) { Posters.trim(); Logos.trim() }
+        if (level >= TRIM_MEMORY_RUNNING_LOW) { Posters.trim(); Backdrops.trim(); Logos.trim() }
     }
 
     override fun onCreate() {
@@ -14,6 +14,7 @@ class DingusApp : Application() {
         Repo.init(this)
         Logos.init(this)
         Posters.init(this)
+        Backdrops.init(this)
         Vod.init(this)
         Vpn.init(this)
         Streams.watchNetwork(this)

@@ -470,7 +470,7 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
 
     // (No clock here: it's in the side menu, under the logo.)
 
-    override fun onStop() { super.onStop(); Posters.trim() }
+    override fun onStop() { super.onStop(); Posters.trim(); Backdrops.trim() }
     override fun onDestroy() { scope.cancel(); super.onDestroy() }
 
     private fun open(card: Card) {

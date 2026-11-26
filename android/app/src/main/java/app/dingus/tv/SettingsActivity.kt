@@ -317,7 +317,7 @@ class SettingsActivity : BaseActivity() {
             scope.launch {
                 val before = withContext(Dispatchers.IO) { cacheBytes() }
                 withContext(Dispatchers.IO) {
-                    Logos.clearAll(); Posters.clearAll()
+                    Logos.clearAll(); Posters.clearAll(); Backdrops.clearAll()
                     (cacheDir.listFiles() ?: emptyArray()).filter { it.name !in setOf("logos", "posters", "timeshift") }.forEach { it.deleteRecursively() }
                 }
                 cacheSize = withContext(Dispatchers.IO) { cacheBytes() }
