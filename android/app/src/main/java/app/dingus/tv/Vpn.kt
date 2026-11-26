@@ -394,8 +394,14 @@ object Vpn {
 
     // ------------------------------------------------------------------ connecting
 
+    /** Settings → VPN → DNS: "" for the VPN company's own, else the addresses to use instead ("1.1.1.1, 1.0.0.1"). */
+    var dns: String
+        get() = Store.prefsString("vpnDns", "")
+        set(v) = Store.putString("vpnDns", v.trim())
+
     private fun configFor(loc: Location): Config {
-        val dns = when (provider) { PROTON -> "10.2.0.1"; MULLVAD -> "10.64.0.1"; IVPN -> "172.16.0.1"; NORD -> "103.86.96.100"; else -> "162.252.172.57, 149.154.159.92" }
+        val own = when (provider) { PROTON -> "10.2.0.1"; MULLVAD -> "10.64.0.1"; IVPN -> "172.16.0.1"; NORD -> "103.86.96.100"; else -> "162.252.172.57, 149.154.159.92" }
+        val dns = dns.ifEmpty { own }
         val text = loc.conf ?: """
             [Interface]
             PrivateKey = ${keyFor()}
@@ -408,7 +414,17 @@ object Vpn {
             AllowedIPs = 0.0.0.0/0
             PersistentKeepalive = 25
         """.trimIndent()
-        return Config.parse(onlyDingus(text).byteInputStream())
+        return Config.parse(withDns(onlyDingus(text)).byteInputStream())
+    }
+
+    /** A chosen DNS (Settings → VPN → DNS) replaces whatever a config file had. */
+    private fun withDns(text: String): String {
+        val chosen = dns
+        if (chosen.isEmpty()) return text
+        val lines = text.lines().filterNot { it.trim().startsWith("DNS", true) && it.contains('=') }
+        val i = lines.indexOfFirst { it.trim().equals("[Interface]", true) }
+        if (i < 0) return text
+        return (lines.subList(0, i + 1) + "DNS = $chosen" + lines.subList(i + 1, lines.size)).joinToString("\n")
     }
 
     /** Puts "only Dingus" in the [Interface] section (replacing any app list the file had). */

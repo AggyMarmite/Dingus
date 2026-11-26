@@ -56,6 +56,7 @@ class VpnActivity : BaseActivity() {
         row("Switch server if slow", { onOff(Store.vpnSwitchSlow) + "move to a quicker server when streams keep buffering" }) {
             Store.vpnSwitchSlow = !Store.vpnSwitchSlow; update()
         }
+        row("DNS", { dnsName() + "  ·  what looks up your playlist's server addresses through the VPN" }) { chooseDns() }
         header("About")
         row("Only Dingus uses this VPN", { "Other apps on your Fire TV aren't affected." }) {}
         first.requestFocus()
@@ -69,6 +70,34 @@ class VpnActivity : BaseActivity() {
     override fun onDestroy() { Vpn.removeListener(vpnListener); phone?.stop(); scope.cancel(); super.onDestroy() }
 
     private suspend fun loadLocations() = controls.loadLocations()
+
+    private val dnsChoices = listOf(
+        "The VPN company's own" to "", "Cloudflare (1.1.1.1)" to "1.1.1.1, 1.0.0.1",
+        "Google (8.8.8.8)" to "8.8.8.8, 8.8.4.4", "Quad9 (9.9.9.9)" to "9.9.9.9, 149.112.112.112")
+    private fun dnsName() = dnsChoices.firstOrNull { it.second == Vpn.dns }?.first ?: "Custom (${Vpn.dns})"
+
+    /** Settings → VPN → DNS. With the VPN on, it reconnects to the same place straight away so the change counts. */
+    private fun chooseDns() {
+        val names = dnsChoices.map { it.first } + "Custom…"
+        val cur = dnsChoices.indexOfFirst { it.second == Vpn.dns }.let { if (it < 0) names.size - 1 else it }
+        Dialogs.builder(this).setTitle("DNS")
+            .setSingleChoiceItems(names.toTypedArray(), cur) { d, i ->
+                d.dismiss()
+                if (i < dnsChoices.size) setDns(dnsChoices[i].second)
+                else Dialogs.input(this, "DNS server", Vpn.dns, "e.g. 1.1.1.1  (two can be given: 1.1.1.1, 1.0.0.1)") { t ->
+                    val ok = t.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+                    if (ok.isNotEmpty() && ok.all { Regex("""^[0-9a-fA-F:.]+$""").matches(it) }) setDns(ok.joinToString(", "))
+                    else Notice.done("That doesn't look like a DNS address (e.g. 1.1.1.1)", 4_000)
+                }
+            }.show()
+    }
+
+    private fun setDns(v: String) {
+        if (v == Vpn.dns) return
+        Vpn.dns = v; update()
+        Ui.test("vpn-dns ${v.ifEmpty { "own" }}")
+        if (Vpn.status == Vpn.Status.ON) Vpn.connectedTo?.let { here -> scope.launch { Vpn.connect(here) } }
+    }
 
     // ------------------------------------------------------------------ rows
 
