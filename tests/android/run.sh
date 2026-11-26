@@ -210,6 +210,7 @@ sleep 2; shot 11-film-details
 fresh
 key KEYCODE_DPAD_CENTER 3
 check "vod-playing" 40 "the film plays"
+check "vod-details .* meta true plot true" 15 "the player's controls show the film's details and description"
 for _ in 1 2 3 4 5; do key KEYCODE_DPAD_RIGHT 0.5; done
 check "vod-skip 10" 5 "RIGHT on the progress bar skips 10 seconds"
 sleep 3; check_none "vod-rebuffer" "skipping isn't taken for buffering"

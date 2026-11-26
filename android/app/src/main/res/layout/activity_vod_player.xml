@@ -15,8 +15,10 @@
     <FrameLayout android:id="@+id/controls" android:layout_width="match_parent" android:layout_height="match_parent"
         android:visibility="gone">
         <View android:id="@+id/topShade" android:layout_width="match_parent" android:layout_height="110dp" />
-        <View android:id="@+id/bottomShade" android:layout_width="match_parent" android:layout_height="280dp"
+        <View android:id="@+id/bottomShade" android:layout_width="match_parent" android:layout_height="380dp"
             android:layout_gravity="bottom" />
+        <!-- The picture darkens softly on the left too, behind the details (as on the pause screen). -->
+        <View android:id="@+id/leftShade" android:layout_width="match_parent" android:layout_height="match_parent" />
         <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="top|end"
             android:layout_marginTop="22dp" android:layout_marginEnd="48dp" android:orientation="horizontal" android:gravity="center_vertical">
             <TextView android:id="@+id/vpnBadge" android:layout_width="wrap_content" android:layout_height="wrap_content"
@@ -27,14 +29,28 @@
         </LinearLayout>
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="bottom"
             android:orientation="vertical" android:paddingStart="56dp" android:paddingEnd="56dp" android:paddingBottom="22dp">
+            <!-- The details, as on the pause screen: what it is, its logo (or name), year / rating / genre, two lines
+                 of the description and the time left. -->
             <TextView android:id="@+id/vodSub" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:maxLines="1" android:ellipsize="end" android:textSize="13sp" android:textStyle="bold"
-                android:letterSpacing="0.04" android:textColor="#FFCFD6E4" />
+                android:letterSpacing="0.12" android:textColor="#FFC7D0DE" />
+            <ImageView android:id="@+id/vodLogo" android:layout_width="wrap_content" android:layout_height="84dp"
+                android:layout_marginTop="8dp" android:adjustViewBounds="true" android:maxWidth="420dp"
+                android:scaleType="fitStart" android:visibility="gone" android:contentDescription="@null" />
             <TextView android:id="@+id/vodTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="2dp" android:maxLines="1" android:ellipsize="end" android:textSize="28sp"
+                android:layout_marginTop="2dp" android:maxLines="1" android:ellipsize="end" android:textSize="34sp"
                 android:textStyle="bold" android:textColor="#FFFFFFFF" />
-            <app.dingus.tv.PlayBar android:id="@+id/bar" android:layout_width="match_parent" android:layout_height="52dp"
-                android:layout_marginTop="6dp"
+            <TextView android:id="@+id/vodMeta" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="4dp" android:maxLines="1" android:ellipsize="end" android:textSize="14sp"
+                android:textColor="#FFD6DDE8" android:visibility="gone" />
+            <TextView android:id="@+id/vodPlot" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="6dp" android:maxWidth="620dp" android:maxLines="2" android:ellipsize="end"
+                android:textSize="15sp" android:lineSpacingExtra="2dp" android:textColor="#FFD0D7E2" android:visibility="gone" />
+            <TextView android:id="@+id/vodRemain" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" android:textSize="14sp" android:textStyle="bold" android:textColor="#FFE6EDF3" />
+            <!-- (Taller than the track: the time you're skipping to floats above the knob.) -->
+            <app.dingus.tv.PlayBar android:id="@+id/bar" android:layout_width="match_parent" android:layout_height="84dp"
+                android:layout_marginTop="-6dp"
                 android:focusable="true" />
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:orientation="horizontal">

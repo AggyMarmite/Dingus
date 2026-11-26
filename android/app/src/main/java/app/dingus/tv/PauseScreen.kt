@@ -84,8 +84,7 @@ class PauseScreen(private val a: Activity) {
     fun time(position: Long, length: Long) {
         if (length <= 0) { meta.text = ""; return }
         val leftMs = length - position
-        val mins = leftMs / 60_000L
-        meta.text = (if (mins >= 60) "${mins / 60} h ${mins % 60} min left" else "$mins min left") + "  ·  ends ${Ui.time(System.currentTimeMillis() + leftMs)}"
+        meta.text = left(leftMs) + "  ·  ends ${Ui.time(System.currentTimeMillis() + leftMs)}"
         pos.text = PlayBar.clock(position); left.text = "−" + PlayBar.clock(leftMs)
         line.progress = (position * 1000 / length).toInt()
     }
@@ -95,5 +94,10 @@ class PauseScreen(private val a: Activity) {
         if (Ui.lite) { root.visibility = View.GONE; return }
         root.animate().cancel()
         root.animate().alpha(0f).setDuration(220).withEndAction { root.visibility = View.GONE; root.alpha = 1f }.start()
+    }
+
+    companion object {
+        /** "26 min left", "1 h 12 min left". */
+        fun left(ms: Long): String { val mins = ms / 60_000L; return if (mins >= 60) "${mins / 60} h ${mins % 60} min left" else "$mins min left" }
     }
 }

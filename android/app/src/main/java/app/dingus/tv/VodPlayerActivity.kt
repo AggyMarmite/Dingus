@@ -110,6 +110,8 @@ class VodPlayerActivity : BaseActivity() {
         findViewById<View>(R.id.topShade).background = shadeTop
         findViewById<View>(R.id.bottomShade).background = android.graphics.drawable.GradientDrawable(
             android.graphics.drawable.GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(0xF50A0C12.toInt(), 0xCC0A0C12.toInt(), 0))
+        findViewById<View>(R.id.leftShade).background = android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT, intArrayOf(0xB305070A.toInt(), 0x6605070A, 0))
         findViewById<View>(R.id.epShade).background = android.graphics.drawable.GradientDrawable(
             android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT, intArrayOf(0x400A0C12, 0xD90A0C12.toInt(), 0xF70A0C12.toInt()))
         findViewById<View>(R.id.upNextPicBox).clipToOutline = true
@@ -313,21 +315,66 @@ class VodPlayerActivity : BaseActivity() {
         return "S%02d E%02d".format(ep.groupValues[1].toInt(), ep.groupValues[2].toInt())
     }
 
-    /** "FILM · 2024 · ★ 7.4" / "THE HOLLOW · SEASON 1" over the title ("Episode 3 · The Ferry"). */
+    /**
+     * The details over the bar, as on the pause screen: "SEASON 1 · EPISODE 3 · THE FERRY" over the show's logo (or
+     * its name), then year / rating / genre and two lines of the description. (Fetched if they aren't known yet.)
+     */
     private fun showTitle() {
         val t = titles[index]
         val ep = Regex("""^(.*?)\s+·\s+S(\d+) E(\d+)\s*(.*)$""").find(t)
         val subV = findViewById<TextView>(R.id.vodSub)
         val titleV = findViewById<TextView>(R.id.vodTitle)
-        if (kind == Vod.SERIES && ep != null) {
-            val (show, season, num, name) = ep.destructured
-            subV.text = "${show.uppercase()}  ·  SEASON $season"
-            titleV.text = if (name.isBlank()) "Episode $num" else "Episode $num  ·  $name"
+        val logoV = findViewById<android.widget.ImageView>(R.id.vodLogo)
+        val metaV = findViewById<TextView>(R.id.vodMeta)
+        val plotV = findViewById<TextView>(R.id.vodPlot)
+        val id = ids[index]
+        val series = kind == Vod.SERIES && ep != null
+        val detKind = if (series) Vod.SERIES else kind
+        val item = when {
+            series -> showId?.let { sid -> Vod.cached(Vod.SERIES)?.byId?.get(sid) }
+            kind == Vod.MOVIES -> Vod.cached(kind)?.byId?.get(id)
+            else -> null
+        }
+        val d = item?.let { Vod.cachedDetails(detKind, it.id) }
+        if (series) {
+            val (show, season, num, name) = ep!!.destructured
+            subV.text = listOfNotNull("SEASON $season", "EPISODE $num", name.takeIf { it.isNotBlank() }?.uppercase()).joinToString("  ·  ")
+            titleV.text = show
         } else {
-            subV.text = sub ?: when (kind) { CATCHUP -> "CATCH UP"; Vod.SERIES -> "TV SHOW"; else -> "FILM" }
+            // (The details screen's own line – "FILM · 2023 · ★ 6.1" – only when the details themselves aren't known.)
+            subV.text = when (kind) { CATCHUP -> sub ?: "CATCH UP"; Vod.SERIES -> "TV SHOW"; else -> if (d == null && sub != null) sub else "FILM" }
             titleV.text = t
         }
+        TitleLogos.show(logoV, titleV, item?.let { TitleLogos.cached(detKind, it) })
+        if (item != null && d != null) {
+            val genre = d.genre?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }?.take(2)?.joinToString(", ")
+            metaV.text = Badges.line(this, d.year.takeIf { it > 0 } ?: item.year, Ratings.cached(detKind, item), d.rating?.toFloatOrNull() ?: item.rating,
+                listOfNotNull(genre), metaV.textSize)
+            metaV.visibility = View.VISIBLE
+            val plot = if (series) d.episodes.firstOrNull { it.id == id }?.plot?.takeIf { it.isNotBlank() } ?: d.plot else d.plot
+            plotV.text = plot ?: ""
+            plotV.visibility = if (plot.isNullOrBlank()) View.GONE else View.VISIBLE
+        } else {
+            metaV.visibility = View.GONE; plotV.visibility = View.GONE
+            // Not known yet (straight from Continue watching, say): fetched, then shown.
+            if (item != null && detailsAsked.add("$detKind:${item.id}")) scope.launch {
+                try { Vod.details(detKind, item) } catch (_: Exception) { return@launch }
+                if (!isDestroyed && ids.getOrNull(index) == id) showTitle()
+            }
+        }
+        if (item != null && Ratings.cached(detKind, item) == null && d != null && ratingsAsked.add("$detKind:${item.id}")) scope.launch {
+            Ratings.find(detKind, item, d.tmdbId) ?: return@launch
+            if (!isDestroyed && ids.getOrNull(index) == id) showTitle()
+        }
+        if (item != null && TitleLogos.enabled && TitleLogos.cached(detKind, item) == null && logosAsked.add("$detKind:${item.id}")) scope.launch {
+            try { TitleLogos.find(detKind, item, d?.tmdbId) } catch (_: Exception) { null } ?: return@launch
+            if (!isDestroyed && ids.getOrNull(index) == id) showTitle()
+        }
+        Ui.test("vod-details ${titleV.text} meta ${metaV.visibility == View.VISIBLE} plot ${plotV.visibility == View.VISIBLE}")
     }
+    private val detailsAsked = HashSet<String>()
+    private val ratingsAsked = HashSet<String>()
+    private val logosAsked = HashSet<String>()
 
     private fun savePosition() {
         if (kind == CATCHUP) return
@@ -396,8 +443,8 @@ class VodPlayerActivity : BaseActivity() {
         bar.duration = len; bar.position = pos; bar.buffered = p.bufferedPosition; bar.playing = p.playWhenReady
         bar.invalidate()
         showPos(pos)
-        findViewById<TextView>(R.id.vodLeft).text = if (len > 0)
-            "−${PlayBar.clock(len - pos)}  ·  ends ${Ui.time(System.currentTimeMillis() + (len - pos))}" else ""
+        findViewById<TextView>(R.id.vodLeft).text = if (len > 0) "−${PlayBar.clock(len - pos)}" else ""
+        findViewById<TextView>(R.id.vodRemain).text = if (len > 0) "${PauseScreen.left(len - pos)}  ·  ends ${Ui.time(System.currentTimeMillis() + (len - pos))}" else ""
         findViewById<TextView>(R.id.vodClock).text = Ui.time(System.currentTimeMillis())
         // Paused with the controls hidden: the small pill and thin line.
         val paused = !p.playWhenReady && controls.visibility != View.VISIBLE && epPanel.visibility != View.VISIBLE

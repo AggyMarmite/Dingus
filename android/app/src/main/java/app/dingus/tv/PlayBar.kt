@@ -24,7 +24,7 @@ class PlayBar @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = nul
     private val p = Paint(Paint.ANTI_ALIAS_FLAG)
     private val glyph = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF0B0E14.toInt() }
     private val bubbleText = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = 15 * d; isFakeBoldText = true; color = 0xFF0B0E14.toInt(); textAlign = Paint.Align.CENTER
+        textSize = 15 * d; isFakeBoldText = true; color = 0xFFFFFFFF.toInt(); textAlign = Paint.Align.CENTER
     }
     private val deltaText = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = 12 * d; isFakeBoldText = true; color = 0xFFFFFFFF.toInt(); textAlign = Paint.Align.CENTER
@@ -39,9 +39,8 @@ class PlayBar @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = nul
 
     override fun onDraw(c: Canvas) {
         val w = width.toFloat()
-        // (The bar is a little taller than the track: the knob and its ring need the room. The skip shows by the time,
-        // bottom left, so no room's kept above for a bubble.)
-        val y = height / 2f
+        // (The track sits low in the bar: above it there's room for the time you're skipping to, floating over the knob.)
+        val y = height - 26 * d
         val th = 6 * d
         val left = 0f; val right = w
         fun xOf(t: Long) = if (duration > 0) left + (right - left) * (t.coerceIn(0, duration).toFloat() / duration) else left
@@ -56,6 +55,18 @@ class PlayBar @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = nul
         if (isFocused) { p.color = 0x40FFFFFF; c.drawCircle(kx, y, kr + 6 * d, p) }
         p.color = 0xFFFFFFFF.toInt(); p.setShadowLayer(6 * d, 0f, 2 * d, 0x80000000.toInt())
         c.drawCircle(kx, y, kr, p); p.clearShadowLayer()
+        // Skipping: where you'll land, in a small frosted bubble over the knob.
+        if (skipped != null && duration > 0) {
+            val label = clock(position)
+            val tw = bubbleText.measureText(label)
+            val bw = tw + 20 * d; val bh = 26 * d
+            val bx = (kx - bw / 2).coerceIn(0f, w - bw)
+            val by = y - kr - 12 * d - bh
+            p.color = 0xD9141A26.toInt(); r.set(bx, by, bx + bw, by + bh); c.drawRoundRect(r, 9 * d, 9 * d, p)
+            p.style = Paint.Style.STROKE; p.strokeWidth = d; p.color = 0x33FFFFFF
+            c.drawRoundRect(r, 9 * d, 9 * d, p); p.style = Paint.Style.FILL
+            c.drawText(label, bx + bw / 2, by + bh / 2 - (bubbleText.descent() + bubbleText.ascent()) / 2, bubbleText)
+        }
         if (playing) { // pause bars
             val bw = 3.6f * d; val bh = 12 * d; val gap = 3 * d
             r.set(kx - gap - bw, y - bh / 2, kx - gap, y + bh / 2); c.drawRoundRect(r, d, d, glyph)
