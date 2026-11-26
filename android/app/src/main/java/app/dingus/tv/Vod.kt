@@ -217,6 +217,8 @@ object Vod {
         val keep = kind == SERIES || !finished && pos >= 30_000
         e.putString("c:$kind", ((if (keep) listOf(owner) else emptyList()) + list).take(40).joinToString("\n"))
         if (showId != null) { e.putString("last:$showId", id); if (label != null) e.putString("lastLabel:$showId", label) }
+        // The new episode, started: not new any more.
+        if (showId != null && newEpisode(showId)?.let { it.episodeId == id || it.episodeId.isEmpty() } == true) e.putString("newEps", newLines(newEpisodeInfo() - showId))
         // Watched past halfway: Home's "Because you watched …" (the last two titles).
         if (length > 0 && pos >= length / 2) {
             val k = "$kind:$owner"
@@ -231,38 +233,72 @@ object Vod {
 
     // ------------------------------------------------------------------ new episodes (shows in My list or being watched)
 
-    /** Shows with a new episode since last checked: show id → "S2 E5". */
-    fun newEpisodes(): Map<String, String> = (progress.getString("newEps", "") ?: "").split('\n').filter { '|' in it }
-        .associate { it.substringBefore('|') to it.substringAfter('|') }
+    /** A show's new episode: "S2 E5", the episode, and its name. */
+    class NewEp(val label: String, val episodeId: String, val title: String)
 
-    /** The show's page was opened: it's not "new" any more, and this is how many episodes it has now. */
-    fun clearNewEpisode(showId: String, episodes: Int) {
-        val m = newEpisodes() - showId
-        progress.edit().putString("newEps", m.entries.joinToString("\n") { "${it.key}|${it.value}" }).putInt("eps:$showId", episodes).apply()
+    @Volatile private var newRaw: String? = null
+    @Volatile private var newParsed: Map<String, NewEp> = emptyMap()
+
+    /** Shows with a new episode not watched yet: show id → the episode. (Read often – by every card – so kept parsed.) */
+    fun newEpisodeInfo(): Map<String, NewEp> {
+        val raw = progress.getString("newEps", "") ?: ""
+        if (raw == newRaw) return newParsed
+        val m = raw.split('\n').filter { '|' in it }.associate { l -> val p = l.split('|'); p[0] to NewEp(p.getOrElse(1) { "" }, p.getOrElse(2) { "" }, p.getOrElse(3) { "" }) }
+        newParsed = m; newRaw = raw
+        return m
+    }
+    fun newEpisodes(): Map<String, String> = newEpisodeInfo().mapValues { it.value.label }
+    fun newEpisode(showId: String): NewEp? = newEpisodeInfo()[showId]
+    private fun newLines(m: Map<String, NewEp>) = m.entries.joinToString("\n") { (k, v) -> "$k|${v.label}|${v.episodeId}|${v.title.replace('|', ' ').replace('\n', ' ')}" }
+
+    /** The show's page has its episodes: how many, remembered (so they aren't announced later). The "new" stays until it's watched. */
+    fun knowEpisodes(showId: String, episodes: Int) {
+        if (progress.getInt("eps:$showId", -1) != episodes) progress.edit().putInt("eps:$showId", episodes).apply()
+    }
+
+    /** Whether a show's new episodes are looked out for: the 🔔 button on its page, else on for shows in My list or being watched. */
+    fun following(showId: String): Boolean = when (progress.getString("follow:$showId", null)) {
+        "1" -> true
+        "0" -> false
+        else -> inMyList(SERIES, showId) || (progress.getString("c:$SERIES", "") ?: "").split('\n').contains(showId)
+    }
+
+    fun setFollowing(showId: String, on: Boolean) {
+        val e = progress.edit().putString("follow:$showId", if (on) "1" else "0")
+        if (!on) e.putString("newEps", newLines(newEpisodeInfo() - showId))
+        e.apply()
     }
 
     /**
-     * Looks at the shows in My list and Continue watching (at most every 6 hours, 20 shows): one with more episodes
-     * than last time is marked "new episode". The first look at a show only remembers how many it has.
+     * Looks at the shows being followed (at most every half hour, 25 shows, one at a time): one with more episodes in
+     * the playlist than last time has a new one – the first of the new ones. The first look at a show only remembers
+     * how many it has. Returns the ones found this time (each is only announced once).
      */
-    suspend fun checkNewEpisodes(): Boolean = withContext(Dispatchers.IO) {
-        if (!available) return@withContext false
+    suspend fun checkNewEpisodes(): List<Pair<VodItem, NewEp>> = withContext(Dispatchers.IO) {
+        if (!available) return@withContext emptyList()
         val now = System.currentTimeMillis()
-        if (now - progress.getLong("newEpsAt", 0) < 6 * 3_600_000L) return@withContext false
-        val lib = try { library(SERIES) } catch (e: Exception) { return@withContext false }
-        val shows = (continueList(SERIES, lib) + myList(mapOf(SERIES to lib)).map { it.second }).distinctBy { it.id }.take(20)
-        val found = HashMap(newEpisodes())
-        val e = progress.edit()
+        if (now - progress.getLong("newEpsAt", 0) < 30 * 60_000L) return@withContext emptyList()
+        progress.edit().putLong("newEpsAt", now).apply()
+        val lib = try { library(SERIES) } catch (e: Exception) { return@withContext emptyList() }
+        val picked = progress.all.keys.filter { it.startsWith("follow:") && progress.getString(it, null) == "1" }.mapNotNull { lib.byId[it.removePrefix("follow:")] }
+        val shows = (continueList(SERIES, lib) + myList(mapOf(SERIES to lib)).map { it.second } + picked)
+            .distinctBy { it.id }.filter { following(it.id) }.take(25)
+        val fresh = ArrayList<Pair<VodItem, NewEp>>()
         for (show in shows) {
-            val d = try { details(SERIES, show) } catch (_: Exception) { continue }
-            val count = d.episodes.size
+            val d = try { details(SERIES, show, fresh = true) } catch (_: Exception) { continue }
+            val eps = d.episodes
             val before = progress.getInt("eps:${show.id}", -1)
-            if (before in 0 until count) d.episodes.maxWithOrNull(compareBy({ it.season }, { it.number }))?.let { found[show.id] = "S${it.season} E${it.number}" }
-            e.putInt("eps:${show.id}", count)
+            if (before in 0 until eps.size) {
+                val e = eps[before.coerceIn(0, eps.size - 1)]
+                val name = e.title.substringAfterLast(" - ").trim().takeIf { it.isNotEmpty() && !it.equals("Episode", true) } ?: ""
+                val n = NewEp(if (e.season > 0) "S${e.season} E${e.number}" else "E${e.number}", e.id, name)
+                if (newEpisode(show.id)?.episodeId != n.episodeId) fresh.add(show to n)
+                progress.edit().putString("newEps", newLines(newEpisodeInfo() + (show.id to n))).apply()
+            }
+            progress.edit().putInt("eps:${show.id}", eps.size).apply()
         }
-        e.putString("newEps", found.entries.joinToString("\n") { "${it.key}|${it.value}" }).putLong("newEpsAt", now).apply()
-        Ui.test("new-episodes ${found.size}")
-        found.isNotEmpty()
+        Ui.test("new-episodes ${newEpisodeInfo().size} fresh ${fresh.size}")
+        fresh
     }
 
     fun watched(id: String) = progress.getBoolean("w:$id", false)

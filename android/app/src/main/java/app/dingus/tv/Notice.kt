@@ -99,11 +99,12 @@ object Notice {
         if (next != null) handler.postDelayed(tidy, (next - now).coerceAtLeast(50))
     }
 
-    private enum class Kind { WORKING, DONE, VPN, PROBLEM, INFO }
+    private enum class Kind { WORKING, DONE, VPN, PROBLEM, INFO, BELL }
 
     private fun kind(n: Note): Kind {
         val t = n.text
         if (n.working) return Kind.WORKING
+        if (n.text.startsWith("🔔")) return Kind.BELL
         if (Regex("(?i)couldn|can.t|failed|error|not reach|no connection|won.t|expired|offline|not connected|dropped").containsMatchIn(t)) return Kind.PROBLEM
         if (t.startsWith("⛨")) return Kind.VPN
         if (Regex("(?i)updated|added|saved|connected|done|set|ready|removed|switched|online").containsMatchIn(t)) return Kind.DONE
@@ -114,7 +115,7 @@ object Notice {
         val d = a.resources.displayMetrics.density
         val k = kind(n)
         // "VPN connected  ·  US – Boston": the first part on top, the rest underneath.
-        val clean = n.text.removePrefix("⛨").trim()
+        val clean = n.text.removePrefix("⛨").removePrefix("🔔").trim()
         val cut = clean.indexOf("  ·  ")
         val title = if (cut > 0) clean.substring(0, cut) else clean
         val sub = if (cut > 0) clean.substring(cut + 5) else null
@@ -131,6 +132,7 @@ object Notice {
             Kind.VPN -> Triple(0x2622C55E, 0xFF4ADE80.toInt(), "⛨")
             Kind.PROBLEM -> Triple(0x33D97706, 0xFFFBBF24.toInt(), "!")
             Kind.INFO -> Triple(0x333B82F6, 0xFF93C5FD.toInt(), "i")
+            Kind.BELL -> Triple(0xFFFFFFFF.toInt(), 0xFF0B0E14.toInt(), "🔔︎")
             Kind.WORKING -> Triple(0x333B82F6, 0xFF93C5FD.toInt(), "")
         }
         val icon = FrameLayout(a).apply { background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(fill) } }
