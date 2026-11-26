@@ -376,9 +376,18 @@ object Vod {
         // The whole list first (one request)…
         var full: List<VodItem>? = null
         readCutShort = false
-        try { full = Net.open(api + listAction, 90_000).use { readList(it, kind, null) } }
+        // Downloaded in full first, then read from the file: reading while downloading is slow on a Fire TV, and a
+        // server that gives up on a slow reader can end the list early. (What came is noted for Check everything.)
+        var raw = ""
+        val tmp = File(app.cacheDir, "list_$kind.json")
+        try {
+            Net.open(api + listAction, 90_000).use { i -> FileOutputStream(tmp).use { o -> i.copyTo(o, 1 shl 16) } }
+            raw = rawInfo(tmp, if (kind == MOVIES) "\"stream_id\"" else "\"series_id\"")
+            full = BufferedInputStream(FileInputStream(tmp), 1 shl 16).use { readList(it, kind, null) }
+        }
         catch (e: Exception) { Log.w("Dingus", "whole $kind list", e) }
-        fetchInfo["$kind-whole"] = when { full == null -> "the whole list didn't come"; readCutShort -> "the whole list was cut short at ${Ui.count(full!!.size)}"; else -> "whole list ${Ui.count(full!!.size)}" }
+        finally { tmp.delete() }
+        fetchInfo["$kind-whole"] = when { full == null -> "the whole list didn't come"; readCutShort -> "the whole list was cut short at ${Ui.count(full!!.size)}"; else -> "whole list ${Ui.count(full!!.size)}" } + raw
         // Whole list in hand: shown straight away, and each category's own list checked in the background (below).
         // Without it: the categories' own lists now.
         val whole = full?.filter { m -> m.categories.any { !Store.isHidden("$kind:$it") } }?.map { m ->
@@ -611,6 +620,19 @@ object Vod {
         return out
     }
     @Volatile private var readCutShort = false
+
+    /** " (6.2 MB, 24,299 entries, ends …}])": how big the list that came was, how many entries it holds and how it ends. */
+    private fun rawInfo(f: File, key: String): String {
+        val k = key.toByteArray(); var n = 0; var m = 0
+        BufferedInputStream(FileInputStream(f), 1 shl 16).use { s ->
+            while (true) { val b = s.read(); if (b < 0) break
+                m = if (b == k[m].toInt()) m + 1 else if (b == k[0].toInt()) 1 else 0
+                if (m == k.size) { n++; m = 0 } }
+        }
+        val tail = java.io.RandomAccessFile(f, "r").use { r -> val len = minOf(24L, r.length()); r.seek(r.length() - len); ByteArray(len.toInt()).also { r.readFully(it) } }
+            .toString(Charsets.UTF_8).replace(Regex("\\s+"), " ").trim()
+        return " (${"%.1f".format(f.length() / 1_048_576.0)} MB, ${Ui.count(n)} entries, ends “…${tail.takeLast(12)}”)"
+    }
 
     /** How the last fetch of each library went (Check everything shows it). */
     val fetchInfo = java.util.concurrent.ConcurrentHashMap<String, String>()
