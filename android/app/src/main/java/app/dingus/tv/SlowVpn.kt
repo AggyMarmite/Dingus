@@ -7,8 +7,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
- * Settings → VPN → Switch server if slow: a stream that buffers three times in a minute while the VPN is on gets an
- * offer of a quicker server in the same country (by ping and how busy it is). Asked once per stream.
+ * Settings → VPN → Switch server if slow: a stream that buffers three times in a minute while the VPN is on moves
+ * by itself to a quicker server in the same country (by ping and how busy it is), with a note saying so. Once per stream.
  */
 object SlowVpn {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -34,10 +34,9 @@ object SlowVpn {
                 if (cur != null && p[best.id]!! + best.load.coerceAtLeast(0) >= cur + here.load.coerceAtLeast(0)) return@launch
                 if (a.isFinishing || a.isDestroyed) return@launch
                 val name = best.city.ifEmpty { best.label }
-                Ui.test("vpn-slow-offer $name")
-                Dialogs.confirm(a, "This keeps buffering",
-                    "$name answers quicker (${p[best.id]} ms${if (best.load >= 0) ", ${best.load}% busy" else ""}) than ${here.city.ifEmpty { here.label }}.",
-                    "Switch to $name") { scope.launch { Vpn.locationId = best.id; Vpn.connect(best) } }
+                Ui.test("vpn-slow-switch $name")
+                Notice.done("⛨  Kept buffering  ·  moving to $name, which answers quicker", 6_000)
+                Vpn.locationId = best.id; Vpn.connect(best)
             } finally { busy = false }
         }
     }

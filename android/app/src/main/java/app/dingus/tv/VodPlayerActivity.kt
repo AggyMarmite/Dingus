@@ -142,9 +142,11 @@ class VodPlayerActivity : BaseActivity() {
         p.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 when (state) {
-                    // Buffering again after it started (not a skip): the VPN may offer a quicker server.
-                    Player.STATE_BUFFERING -> if (rendered && skipTo < 0 && player?.playWhenReady == true) SlowVpn.onBuffering(this@VodPlayerActivity, "vod:${ids[index]}")
+                    // Buffering again after it started – not because of a skip (that has to fill up again
+                    // wherever it lands): the VPN may move to a quicker server.
+                    Player.STATE_BUFFERING -> if (rendered && skipTo < 0 && !afterSkip && player?.playWhenReady == true) { Ui.test("vod-rebuffer"); SlowVpn.onBuffering(this@VodPlayerActivity, "vod:${ids[index]}") }
                     Player.STATE_READY -> {
+                        afterSkip = false
                         retries = 0; triedBackup = false
                         message.text = ""
                         if (!rendered) { handler.removeCallbacks(noPicture); handler.postDelayed(noPicture, 4_000) }
@@ -156,6 +158,11 @@ class VodPlayerActivity : BaseActivity() {
                 }
             }
             override fun onIsPlayingChanged(isPlaying: Boolean) { tickNow() }
+            override fun onPositionDiscontinuity(old: Player.PositionInfo, new: Player.PositionInfo, reason: Int) {
+                if (reason == Player.DISCONTINUITY_REASON_SEEK || reason == Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT) {
+                    afterSkip = true; Ui.test("vod-skipped")
+                }
+            }
             override fun onRenderedFirstFrame() {
                 rendered = true
                 handler.removeCallbacks(noPicture)
@@ -454,6 +461,8 @@ class VodPlayerActivity : BaseActivity() {
 
     /** Where the skip presses add up to: the player only jumps once they stop (held ◀/▶ repeats many times a second). */
     private var skipTo = -1L
+    /** Just skipped (or restarted, or jumped past the intro), until it's playing again: buffering then is expected. */
+    private var afterSkip = false
     private val doSkip = Runnable { val t = skipTo; skipTo = -1L; if (t >= 0) player?.seekTo(t) }
 
     private fun skip(by: Long) {

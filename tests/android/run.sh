@@ -212,6 +212,7 @@ key KEYCODE_DPAD_CENTER 3
 check "vod-playing" 40 "the film plays"
 for _ in 1 2 3 4 5; do key KEYCODE_DPAD_RIGHT 0.5; done
 check "vod-skip 10" 5 "RIGHT on the progress bar skips 10 seconds"
+sleep 3; check_none "vod-rebuffer" "skipping isn't taken for buffering"
 sleep 0.5; shot 12-film-playing
 fresh
 key KEYCODE_DPAD_CENTER 1
@@ -269,6 +270,15 @@ shot 15a-search-keyboard
 key KEYCODE_BACK 1.5
 check "search-typing-done" 10 "BACK closes the voice search keyboard"
 shot 15b-search-keyboard-closed
+# The side menu on Search: UP and DOWN move through it.
+fresh
+key KEYCODE_DPAD_LEFT 1.5
+check "menu-open" 5 "LEFT on Search opens the side menu"
+key KEYCODE_DPAD_UP 0.8
+check "menu-row TV Shows" 5 "UP moves up the side menu on Search"
+key KEYCODE_DPAD_DOWN 0.8; key KEYCODE_DPAD_DOWN 0.8
+check "menu-row Settings" 5 "DOWN moves down the side menu on Search"
+key KEYCODE_DPAD_RIGHT 1
 fi
 
 # ---- Home

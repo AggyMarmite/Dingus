@@ -53,7 +53,7 @@ class VpnActivity : BaseActivity() {
         row("Kill switch", { onOff(Store.vpnKillSwitch) + "if the VPN drops, stop playing until it's back" }) {
             Store.vpnKillSwitch = !Store.vpnKillSwitch; update()
         }
-        row("Switch server if slow", { onOff(Store.vpnSwitchSlow) + "offer a quicker server when streams keep buffering" }) {
+        row("Switch server if slow", { onOff(Store.vpnSwitchSlow) + "move to a quicker server when streams keep buffering" }) {
             Store.vpnSwitchSlow = !Store.vpnSwitchSlow; update()
         }
         header("About")

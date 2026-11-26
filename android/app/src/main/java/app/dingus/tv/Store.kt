@@ -285,7 +285,7 @@ object Store {
         set(v) = prefs.edit().putString(k("account"), v).apply()
 
     /** Show official title logos for films and shows (when TMDB has one). */
-    /** Settings → VPN: reconnect by itself, kill switch, offer a quicker server when streams keep buffering. */
+    /** Settings → VPN: reconnect by itself, kill switch, move to a quicker server when streams keep buffering. */
     var vpnReconnect: Boolean
         get() = try { prefs.getBoolean("vpnReconnect", true) } catch (_: Exception) { true }
         set(v) = prefs.edit().putBoolean("vpnReconnect", v).apply()

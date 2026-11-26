@@ -351,10 +351,16 @@ class SideMenu(
                 }
             }
             if (e.action == KeyEvent.ACTION_DOWN && !inside(a.currentFocus)) { rowFor(here).requestFocus(); return true }
-            // Up and down stay in the menu (never off into the screen behind it).
+            // Up and down step through the menu's own rows, in order (worked out here rather than by Android's
+            // nearest-view search, which some screens – Search – steered off into the page behind).
             if (e.keyCode == KeyEvent.KEYCODE_DPAD_UP || e.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-                val next = a.currentFocus?.focusSearch(if (e.keyCode == KeyEvent.KEYCODE_DPAD_UP) View.FOCUS_UP else View.FOCUS_DOWN)
-                if (next == null || !inside(next)) return true
+                if (e.action == KeyEvent.ACTION_DOWN) {
+                    val order = (listOf(playlistRow) + rows).filter { it.isFocusable && it.visibility == View.VISIBLE }
+                    val i = order.indexOf(a.currentFocus)
+                    val j = if (i < 0) order.indexOf(rowFor(here)) else i + if (e.keyCode == KeyEvent.KEYCODE_DPAD_UP) -1 else 1
+                    order.getOrNull(j)?.let { it.requestFocus(); Ui.test("menu-row ${it.text}") }
+                }
+                return true
             }
             return false
         }

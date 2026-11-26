@@ -24,6 +24,8 @@ import java.io.InputStreamReader
 class VodItem(
     val id: String, val name: String, val poster: String?, val categoryId: String,
     val rating: Float, val year: Int, val ext: String, val added: Long,
+    /** Its number on TMDB, when the provider's list gives it (used to match someone's films on their page). */
+    val tmdb: String = "",
 ) {
     val key: String get() = id
 }
@@ -335,7 +337,7 @@ object Vod {
             val r = JsonReader(InputStreamReader(s, Charsets.UTF_8))
             r.beginArray()
             while (r.hasNext()) {
-                var id = ""; var name = ""; var poster = ""; var cat = ""; var rating = 0f; var year = 0; var ext = "mp4"; var added = 0L
+                var id = ""; var name = ""; var poster = ""; var cat = ""; var rating = 0f; var year = 0; var ext = "mp4"; var added = 0L; var tmdb = ""
                 r.beginObject()
                 while (r.hasNext()) when (r.nextName()) {
                     "stream_id", "series_id" -> id = Sources.str(r)
@@ -346,13 +348,14 @@ object Vod {
                     "year", "releaseDate", "release_date" -> { val y = yearOf(Sources.str(r)); if (year == 0) year = y }
                     "container_extension" -> ext = Sources.str(r).ifBlank { "mp4" }
                     "added", "last_modified" -> added = Sources.str(r).toLongOrNull() ?: 0L
+                    "tmdb", "tmdb_id" -> tmdb = Sources.str(r).trim().takeIf { t -> t.isNotEmpty() && t != "0" && t.all { it.isDigit() } } ?: tmdb
                     else -> r.skipValue()
                 }
                 r.endObject()
                 if (id.isEmpty()) continue
                 if (Store.isHidden("$kind:$cat")) continue // (hidden categories aren't kept: less to save and sort)
                 if (year == 0) year = yearOf(name)
-                items.add(VodItem(id, clean(name).ifEmpty { "Untitled" }, poster.ifBlank { null }, cat, rating, year, ext, added))
+                items.add(VodItem(id, clean(name).ifEmpty { "Untitled" }, poster.ifBlank { null }, cat, rating, year, ext, added, tmdb))
             }
             r.endArray()
         }
@@ -445,13 +448,13 @@ object Vod {
     private fun write(kind: String, lib: Library) {
         val tmp = File(dir, "vod_$kind.bin.tmp")
         DataOutputStream(BufferedOutputStream(FileOutputStream(tmp), 1 shl 16)).use { o ->
-            o.writeInt(1); o.writeLong(lib.loadedAt)
+            o.writeInt(2); o.writeLong(lib.loadedAt)
             o.writeInt(lib.categories.size)
             for (c in lib.categories) { o.writeUTF(c.id); o.writeUTF(c.name) }
             o.writeInt(lib.items.size)
             for (m in lib.items) {
                 o.writeUTF(m.id); o.writeUTF(m.name.take(300)); o.writeUTF(m.poster ?: ""); o.writeUTF(m.categoryId)
-                o.writeFloat(m.rating); o.writeShort(m.year); o.writeUTF(m.ext); o.writeLong(m.added)
+                o.writeFloat(m.rating); o.writeShort(m.year); o.writeUTF(m.ext); o.writeLong(m.added); o.writeUTF(m.tmdb)
             }
         }
         tmp.renameTo(File(dir, "vod_$kind.bin"))
@@ -461,13 +464,14 @@ object Vod {
         val f = File(dir, "vod_$kind.bin")
         if (!f.exists()) return null
         DataInputStream(BufferedInputStream(FileInputStream(f), 1 shl 16)).use { i ->
-            if (i.readInt() != 1) return null
+            val v = i.readInt()
+            if (v != 1 && v != 2) return null
             val at = i.readLong()
             val cats = List(i.readInt()) { Category(i.readUTF(), i.readUTF()) }
             val items = List(i.readInt()) {
                 // (Names are saved already tidied: no tidying again here, which made a big library slow to open.)
                 VodItem(i.readUTF(), i.readUTF(), i.readUTF().ifEmpty { null }, i.readUTF(), i.readFloat(),
-                    i.readShort().toInt(), i.readUTF(), i.readLong())
+                    i.readShort().toInt(), i.readUTF(), i.readLong(), if (v >= 2) i.readUTF() else "")
             }
             return Library(cats, items, at)
         }
