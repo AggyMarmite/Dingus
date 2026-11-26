@@ -141,7 +141,7 @@ class CheckActivity : BaseActivity() {
                     }
                     times[at] == null -> set(2, State.BAD, "No server is answering$mainWhy$backups", "The provider may be down: try again later")
                     at > 0 -> {
-                        val back: (() -> Unit)? = if (times[0] != null) ({ scope.launch { withContext(Dispatchers.IO) { Failover.recover() }; runAll() }; Unit }) else null
+                        val back: (() -> Unit)? = if (times[0] != null) ({ scope.launch { withContext(Dispatchers.IO) { Failover.goBackToMain() }; runAll() }; Unit }) else null
                         set(2, State.WARN, "Using backup server $at (${times[at]} ms)$mainWhy$backups", if (back != null) "OK to go back to the main server (it's answering again)" else "Fine for now: Dingus goes back to the main server when it answers", back)
                     }
                     else -> set(2, State.OK, "Main server  ·  ${times[at]} ms$backups")

@@ -17,12 +17,26 @@ object Failover {
 
     /** Which address is in use: 0 = the main one. */
     fun index(p: Playlist): Int {
-        val i = Store.prefsString("failover:${p.id}", "0").toIntOrNull() ?: 0
-        return if (i in 0 until addresses(p).size) i else 0
+        // Saved with the address it points at: when the backups are changed (removed and added again, reordered),
+        // an old "backup 1" no longer counts and it's the main server again.
+        val saved = Store.prefsString("failover:${p.id}", "0")
+        val i = saved.substringBefore('|').toIntOrNull() ?: 0
+        val all = addresses(p)
+        if (i !in all.indices) return 0
+        return if (i == 0 || saved.substringAfter('|', "") == all[i]) i else 0
     }
 
     fun backToMain(p: Playlist) = setIndex(p, 0)
-    private fun setIndex(p: Playlist, i: Int) { if (index(p) != i) Store.putString("failover:${p.id}", i.toString()) }
+    private fun setIndex(p: Playlist, i: Int) {
+        if (index(p) != i) Store.putString("failover:${p.id}", if (i == 0) "0" else "$i|${addresses(p)[i]}")
+    }
+
+    /** On a backup and the main server answers again: back to it. Returns whether it moved. */
+    fun goBackToMain(): Boolean {
+        val p = Store.playlist ?: return false
+        if (index(p) == 0 || !reachable(p, addresses(p)[0])) return false
+        setIndex(p, 0); Ui.test("failover to 0"); return true
+    }
 
     /** The address in use now. */
     fun active(p: Playlist): String = addresses(p)[index(p)]
@@ -162,8 +176,11 @@ object Failover {
         val all = addresses(p)
         if (all.size < 2) return false
         val cur = index(p)
-        for (step in 1 until all.size) {
-            val i = (cur + step) % all.size
+        // The server in use still answers: it's that one stream that failed, not the server – stay.
+        if (all[cur].isNotBlank() && reachable(p, all[cur])) return false
+        // Otherwise the first that answers, the main server first.
+        for (i in all.indices) {
+            if (i == cur) continue
             if (all[i].isNotBlank() && reachable(p, all[i])) { setIndex(p, i); Ui.test("failover to ${i}"); return true }
         }
         return false
