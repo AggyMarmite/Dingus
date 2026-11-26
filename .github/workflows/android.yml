@@ -19,6 +19,11 @@ on:
 permissions:
   contents: write
 
+# A newer push replaces a test still running for an older one (only the latest is worth testing).
+concurrency:
+  group: android-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
 jobs:
   apk:
     runs-on: ubuntu-latest
