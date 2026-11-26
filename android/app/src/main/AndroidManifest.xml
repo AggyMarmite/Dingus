@@ -28,20 +28,20 @@
         android:name=".DingusApp"
         android:allowBackup="false"
         android:banner="@drawable/dingus_banner"
-        android:icon="@drawable/dingus_tile"
+        android:icon="@drawable/dingus_icon"
         android:label="Dingus"
         android:largeHeap="true"
         android:supportsRtl="false"
         android:theme="@style/Theme.Dingus"
         android:usesCleartextTraffic="true">
 
-        <!-- The icon is the wide white tile (the banner's picture): Fire TV's home row shows a sideloaded app's icon,
-             not its banner, fitted into a wide tile – a square icon came out small with grey either side. -->
+        <!-- (Fire TV's home row shows an app from outside Amazon's store by its square icon in a grey frame – the
+             banner isn't used. A wide picture as the icon came out squashed on Fire OS 8, so it's the square logo.) -->
         <activity
             android:name=".HomeActivity"
             android:exported="true"
             android:theme="@style/Theme.Dingus.Launch"
-            android:icon="@drawable/dingus_tile"
+            android:icon="@drawable/dingus_icon"
             android:banner="@drawable/dingus_banner"
             android:screenOrientation="landscape"
             android:configChanges="keyboard|keyboardHidden|navigation|screenSize|smallestScreenSize|screenLayout|orientation"
