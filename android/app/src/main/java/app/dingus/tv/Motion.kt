@@ -89,7 +89,17 @@ object Motion {
         }
     }
 
-    private fun name(v: View): String = try { if (v.id != View.NO_ID) v.resources.getResourceEntryName(v.id) else v.javaClass.simpleName } catch (_: Exception) { v.javaClass.simpleName }
+    private fun name(v: View): String {
+        val base = try { if (v.id != View.NO_ID) v.resources.getResourceEntryName(v.id) else v.javaClass.simpleName } catch (_: Exception) { v.javaClass.simpleName }
+        // (With the first words in it and the screen, so a nameless row can be found.)
+        fun firstText(x: View): String? = when (x) {
+            is android.widget.TextView -> x.text?.toString()?.takeIf { it.isNotBlank() }?.take(24)
+            is android.view.ViewGroup -> (0 until x.childCount).firstNotNullOfOrNull { firstText(x.getChildAt(it)) }
+            else -> null
+        }
+        val screen = (v.context as? Activity)?.javaClass?.simpleName ?: ""
+        return listOfNotNull(base, firstText(v)?.let { "\"$it\"" }, screen.takeIf { it.isNotEmpty() }?.let { "@$it" }).joinToString(" ")
+    }
 
     /** A faint glint sweeping across the card once, as if it's caught the light. */
     private fun sheen(v: View) {
