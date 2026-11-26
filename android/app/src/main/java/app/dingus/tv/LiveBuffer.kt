@@ -140,7 +140,10 @@ class LiveBuffer(private val url: String, root: File, private val maxSeconds: In
         val r = byteRate
         val keep = if (r > 0) (r * maxSeconds).toLong() else 64L * 1024 * 1024
         val free = dir.usableSpace
-        val limit = minOf(keep, 2L * 1024 * 1024 * 1024, maxOf(32L * 1024 * 1024, free / 2 + (written - oldest)))
+        // (At most 700 MB, and always leaving the Fire TV 1.5 GB: a 4K channel's 15 minutes is gigabytes, and a nearly
+        // full Fire Stick slows to a halt – it froze.)
+        val spare = maxOf(32L * 1024 * 1024, free - 1536L * 1024 * 1024 + (written - oldest))
+        val limit = minOf(keep, 700L * 1024 * 1024, spare)
         synchronized(lock) {
             while (segs.size > 2 && written - segs[1].start > limit) segs.removeAt(0).file.delete()
         }

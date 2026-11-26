@@ -39,13 +39,26 @@ object Players {
         // Modest buffers: quick to start, and kind to the Fire Stick's memory.
         val load = DefaultLoadControl.Builder()
             .setBufferDurationsMs(if (small) 4_000 else 8_000, if (small) 12_000 else 30_000, 1_000, 2_000)
-            .setPrioritizeTimeOverSizeThresholds(true)
+            // (A cap in memory too: 30 seconds of a 4K stream is well over 100 MB, which on the Fire Stick could
+            // freeze the whole device.)
+            .setTargetBufferBytes(if (small) 16 * 1024 * 1024 else 48 * 1024 * 1024)
+            .setPrioritizeTimeOverSizeThresholds(false)
             .build()
         // If the first-choice video decoder can't start for a stream (some 4K / Dolby Vision files), try the next one
         // instead of playing the sound over a black picture.
         // Sound the Fire Stick can't decode itself (DTS, TrueHD, and AC-3/E-AC-3 on TVs without it) and pictures its own
         // decoders turn down are decoded in software by FFmpeg instead; the built-in decoders still come first.
-        val renderers = io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory(ctx)
+        // (Software decoding is for sound only: decoding a picture in software – a 4K one the built-in decoder turned
+        // down – locked the Fire Stick up.)
+        val renderers = object : io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory(ctx) {
+            override fun buildVideoRenderers(context: Context, extensionRendererMode: Int, mediaCodecSelector: androidx.media3.exoplayer.mediacodec.MediaCodecSelector,
+                                             enableDecoderFallback: Boolean, eventHandler: android.os.Handler,
+                                             eventListener: androidx.media3.exoplayer.video.VideoRendererEventListener,
+                                             allowedVideoJoiningTimeMs: Long, out: java.util.ArrayList<androidx.media3.exoplayer.Renderer>) {
+                super.buildVideoRenderers(context, DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF, mediaCodecSelector, enableDecoderFallback,
+                    eventHandler, eventListener, allowedVideoJoiningTimeMs, out)
+            }
+        }
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
             .setEnableDecoderFallback(true)
         val p = ExoPlayer.Builder(ctx, renderers)
