@@ -769,6 +769,8 @@ object Vpn {
                             searchAfter = back to noPlaylist.toSet()
                         }
                     }
+                    // (Kill switch off: what was playing carries on without the VPN until the next round.)
+                    if (status != Status.ON && !Store.vpnKillSwitch) Streams.reopenAll()
                     if (status != Status.ON && round == 1)
                         Notice.done(if (Store.vpnKillSwitch) "The VPN hasn't reconnected yet  ·  still trying (Settings → VPN to watch without it)" else "The VPN hasn't reconnected yet  ·  still trying", 8_000)
                     round++
@@ -966,8 +968,8 @@ object Vpn {
         if (permissionIntent(app) != null) return // (asked for in Settings → VPN)
         wanted = true // (on from the start: if it can't connect yet, it keeps trying by itself)
         // (The connecting carries on by itself: a timeout can't cut short a slow download or the tunnel starting, so
-        // only the waiting stops after 15 seconds, and the playlist loads.)
+        // only the waiting stops after 30 seconds, and the playlist loads.)
         val job = kotlinx.coroutines.CoroutineScope(Dispatchers.IO).async { connectOrNearby() }
-        withTimeoutOrNull(15_000) { job.await() }
+        withTimeoutOrNull(30_000) { job.await() } // (30 s: the check that your playlist answers through it takes a few more)
     }
 }
