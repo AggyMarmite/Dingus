@@ -119,7 +119,16 @@ class RowsAdapter(
     // (Self-test: cards being drawn again, summed up every half second – a screen sitting still should draw none.)
     private var binds = 0
     private val bindLog = Runnable { Ui.test("card-binds $binds"); binds = 0 }
-    private fun countBind() { if (binds++ == 0) android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(bindLog, 500) }
+    private var stackAt = 0L
+    private fun countBind() {
+        if (binds++ == 0) android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(bindLog, 500)
+        // (Every few seconds, where a draw-again came from – the frames between Android's and ours.)
+        val now = System.currentTimeMillis()
+        if (now - stackAt > 3_000) {
+            stackAt = now
+            Ui.test("card-bind-from " + Throwable().stackTrace.drop(1).take(40).joinToString(" < ") { "${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}" })
+        }
+    }
 
     /** Pictures and logos not known yet: looked up once each in the background, then the card's drawn again. */
     private val asked = HashSet<String>()
