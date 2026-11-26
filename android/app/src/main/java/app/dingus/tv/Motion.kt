@@ -53,7 +53,15 @@ object Motion {
         }
         v.animate().scaleX(scale).scaleY(scale).rotationX(0f).rotationY(0f).setDuration(420).setInterpolator(spring).start()
         if (shine) sheen(v)
-        if (BuildConfig.DEBUG) checkRoom(v, scale)
+        if (BuildConfig.DEBUG) { checkRoom(v, scale); v.postDelayed({ if (v.hasFocus()) checkOnScreen(v) }, 700) }
+    }
+
+    /** (Self-test only.) Once it's settled, the highlighted thing is wholly on the screen, top to bottom. */
+    private fun checkOnScreen(v: View) {
+        val at = IntArray(2); v.getLocationOnScreen(at)
+        val h = v.resources.displayMetrics.heightPixels
+        // (Where it is on screen already takes in its lift.)
+        if (at[1] < -1 || at[1] + v.height * v.scaleY > h + 1) Ui.test("clip-risk ${name(v)} off the screen")
     }
 
     /**
