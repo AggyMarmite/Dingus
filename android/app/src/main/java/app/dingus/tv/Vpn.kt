@@ -465,7 +465,7 @@ object Vpn {
      * (the usual), a location your playlist can't be reached through doesn't count as connected: it's let go and the
      * error ends with [NO_PLAYLIST], so another is tried.
      */
-    suspend fun connect(loc: Location? = null, auto: Boolean = false, needPlaylist: Boolean = true): String? = lock.withLock {
+    suspend fun connect(loc: Location? = null, auto: Boolean = false, needPlaylist: Boolean = true, reopen: Boolean = true): String? = lock.withLock {
         withContext(Dispatchers.IO) {
             try {
                 // (A try of its own that waited its turn while you turned the VPN off: not wanted any more.)
@@ -487,7 +487,10 @@ object Vpn {
                 val config = configFor(target)
                 lastRx = -1L
                 tunnelDns = try { config.`interface`.dnsServers.firstOrNull() } catch (_: Throwable) { null }
-                try { backend.setState(tunnel, Tunnel.State.UP, config) } finally { Streams.reopenAll() }
+                // (What was playing starts again only once this location is known to work – see the end. Started
+                // straight away, it went out through a location not yet checked, and while a channel was being tried
+                // through each place it took the one connection a plan allows, so the try was refused.)
+                backend.setState(tunnel, Tunnel.State.UP, config)
                 // Only "connected" once the VPN server has actually answered (its first handshake). The tunnel being
                 // set up proves nothing: it showed connected while nothing got through – no IP address, and the
                 // playlist offline.
@@ -496,21 +499,21 @@ object Vpn {
                 if (!answered(10_000) || !works()) {
                     try { backend.setState(tunnel, Tunnel.State.DOWN, null) } catch (_: Throwable) {}
                     Ui.test("vpn-no-answer ${target.label}")
-                    return@withContext "${target.label} didn't answer".also { set(Status.ERROR, it); if (wanted && !fixing && !quiet && !VpnFallback.running) keepTrying() }
+                    return@withContext "${target.label} didn't answer".also { set(Status.ERROR, it); afterFailure() }
                 }
                 // …and only if your playlist can actually be reached through it: a VPN server that's fine but that
                 // your provider won't answer through is no use – it looked like the servers were offline.
                 if (needPlaylist && !playlistAnswers()) {
                     try { backend.setState(tunnel, Tunnel.State.DOWN, null) } catch (_: Throwable) {}
                     Ui.test("vpn-no-playlist ${target.label}")
-                    return@withContext "${target.label} $NO_PLAYLIST".also { set(Status.ERROR, it); if (wanted && !fixing && !quiet && !VpnFallback.running) keepTrying() }
+                    return@withContext "${target.label} $NO_PLAYLIST".also { set(Status.ERROR, it); afterFailure() }
                 }
                 if (needPlaylist) Store.playlist?.let { VpnFallback.remember(it, target) } // (tried first next time)
                 locationId = target.id
                 connectedTo = target
                 wanted = true
                 set(Status.ON, target.label)
-                Streams.reopenAll() // (held while switching: the kill switch keeps them until it's on)
+                if (reopen) Streams.reopenAll() // (held while switching: the kill switch keeps them until it's on)
                 watch()
                 null
             } catch (e: Throwable) {
@@ -521,10 +524,21 @@ object Vpn {
                     else -> "The VPN couldn't connect. Try another location, or Quick Connect."
                 }
                 set(Status.ERROR, msg)
-                if (wanted && !fixing && !quiet && !VpnFallback.running) keepTrying()
+                afterFailure()
                 msg
             }
         }
+    }
+
+    /**
+     * A try that didn't work. Part of a search ([keepTrying], [keepSearching], [connectOrNearby], Find a location
+     * that works): the search carries on. On its own, with the VPN meant to be on: [keepTrying] takes over. Either way,
+     * with the kill switch off, what was playing starts again meanwhile (without the VPN); with it on, it waits.
+     */
+    private fun afterFailure() {
+        val searchingNow = fixing || quiet || VpnFallback.running || searcher?.isActive == true
+        if (wanted && !searchingNow) keepTrying()
+        if (!searchingNow) Streams.reopenAll()
     }
 
     /** Waits (up to [ms]) until the VPN service has stopped, after the tunnel was taken down. */
@@ -698,6 +712,7 @@ object Vpn {
     fun keepTrying() {
         if (!wanted || !Store.vpnReconnect) return
         if (keeper?.isActive == true) { tryNow = true; return }
+        if (searcher?.isActive == true && fixing) return // (in the middle of trying places: it parks back on one itself)
         keeper = scope.launch {
             fixing = true
             try {
@@ -813,7 +828,7 @@ object Vpn {
                 if (status == Status.ON && works()) {
                     Ui.test("vpn-search-done (works now)")
                     if (stream == null) Notice.done("⛨  Your playlist's answering again  ·  ${connectedTo?.label ?: ""}", 5_000)
-                    Streams.reopenAll()
+                    Streams.reopenAll(force = true)
                     break
                 }
                 val all = try { locations() } catch (_: Exception) { emptyList() }
@@ -827,15 +842,17 @@ object Vpn {
                     for (loc in batch) {
                         if (!wanted) break
                         tried.add(loc.id)
-                        if (connect(loc, auto = true) == null && (stream == null || streamPlays(stream))) { found = loc; break }
+                        if (connect(loc, auto = true, reopen = stream == null) == null && (stream == null || streamPlays(stream))) { found = loc; break }
                     }
-                    if (found == null && wanted) connect(home, auto = true, needPlaylist = false)
+                    // (Parked back where it was. Looking for a place a refused channel plays through: it isn't
+                    // started again there – it'd only be refused again, using up the connection each minute.)
+                    if (found == null && wanted) connect(home, auto = true, needPlaylist = false, reopen = stream == null)
                 } finally { fixing = false }
                 if (found != null) {
                     Ui.test("vpn-search-found ${found.label} after ${tried.size}")
                     Notice.done("⛨  Found one that works  ·  now through ${found.label}", 6_000)
                     Failover.networkChanged()
-                    Streams.reopenAll() // (what was refused starts again)
+                    Streams.reopenAll(force = true) // (what was refused starts again)
                     break
                 }
                 Ui.test("vpn-search-tried ${tried.size}")

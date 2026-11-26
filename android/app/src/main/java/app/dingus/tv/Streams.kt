@@ -52,8 +52,10 @@ object Streams {
     }
 
     /** Starts them again on the new connection (after a moment for it to settle). */
-    fun reopenAll(delayMs: Long = 1_200) {
-        if (!closed || Vpn.holding) return // (the VPN's kill switch: not until it's back)
+    fun reopenAll(delayMs: Long = 1_200, force: Boolean = false) {
+        // (force: start them again even if they weren't closed here – a channel that had given up, say, once a VPN
+        // location it plays through has been found.)
+        if ((!closed && !force) || Vpn.holding) return // (the VPN's kill switch: not until it's back)
         closed = false
         main.postDelayed({ all().forEach { runCatching { it.reopen() } }; Ui.test("streams-reopened") }, delayMs)
     }
