@@ -472,6 +472,23 @@ if [ -n "${WG_CONF:-}" ] && [ -f "$WG_CONF" ]; then
   fresh
   adb shell am start -n $PKG/.MainActivity --ez dingus_test_vpn_off true
   check "vpn off" 15 "VPN: disconnects again"
+  # The VPN server stops answering (its side taken down): Dingus notices it isn't carrying anything within a few
+  # checks, stops saying connected, and reconnects by itself once the server's back.
+  if sudo -n true 2>/dev/null; then
+    fresh
+    adb shell am start -n $PKG/.MainActivity --es dingus_test_m3u http://10.66.0.1:8000/playlist.m3u
+    adb shell am start -n $PKG/.MainActivity --es dingus_test_vpn_connect Test
+    if check "vpn on Test" 40 "VPN: connects with the playlist reachable through it"; then
+      sleep 3; fresh
+      sudo ip link set wg0 down
+      check "vpn-not-working" 45 "VPN: notices within seconds when nothing gets through, and stops saying connected"
+      sleep 5; sudo ip link set wg0 up
+      check "vpn-reconnected" 90 "VPN: reconnects by itself once the server answers again"
+      adb shell am start -n $PKG/.MainActivity --ez dingus_test_vpn_off true
+      check "vpn off" 15 "VPN: off after the reconnect"
+    fi
+    sudo ip link set wg0 up 2>/dev/null || true
+  fi
   # A playlist that can't be reached through the VPN (nothing at that address in the tunnel): the location mustn't
   # count as connected.
   fresh
