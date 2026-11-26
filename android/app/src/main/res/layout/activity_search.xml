@@ -12,7 +12,8 @@
                 android:background="@drawable/search_box" android:paddingStart="18dp" android:paddingEnd="14dp"
                 android:singleLine="true" android:textSize="17sp" android:textStyle="bold" android:textColor="?attr/dText"
                 android:textColorHint="#6B7488" android:hint="Search everything" android:inputType="text"
-                android:imeOptions="actionSearch" android:focusable="false" android:focusableInTouchMode="false" />
+                android:imeOptions="actionSearch" android:focusable="true" android:focusableInTouchMode="false"
+                android:nextFocusDown="@+id/voice" />
             <TextView android:id="@+id/voice" android:layout_width="match_parent" android:layout_height="42dp"
                 android:layout_marginTop="12dp" android:background="@drawable/pill_btn_bg" android:focusable="true"
                 android:clickable="true" android:gravity="center" android:text="🎤  Voice search" android:textSize="15sp"

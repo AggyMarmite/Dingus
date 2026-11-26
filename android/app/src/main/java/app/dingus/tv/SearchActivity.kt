@@ -76,7 +76,20 @@ class SearchActivity : BaseActivity() {
         }
         // Speaking or typing into the box (Fire TV's keyboard): BACK or DOWN once it's closed comes back out.
         (query as? SearchBox)?.onBack = { endTyping(); voice.requestFocus() }
+        // The box itself can be highlighted (UP from Voice search): OK on it brings up Fire TV's keyboard, with its mic
+        // for speaking the search. Only then – highlighting it alone doesn't pop the keyboard up.
+        query.showSoftInputOnFocus = false
+        query.setOnClickListener { if (!typing) startTyping() }
+        // (Highlighted but not typing: the cursor at the start, so ◀ still opens the side menu.)
+        query.setOnFocusChangeListener { _, has -> if (has && !typing) query.setSelection(0) }
         query.setOnKeyListener { _, code, ev ->
+            if (!typing && (code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER)) {
+                if (ev.action == KeyEvent.ACTION_UP) startTyping()
+                return@setOnKeyListener true
+            }
+            if (!typing && code == KeyEvent.KEYCODE_DPAD_DOWN && ev.action == KeyEvent.ACTION_DOWN) { voice.requestFocus(); return@setOnKeyListener true }
+            // (Not typing: ◀ ▶ don't wander through the text.)
+            if (!typing && (code == KeyEvent.KEYCODE_DPAD_LEFT || code == KeyEvent.KEYCODE_DPAD_RIGHT)) return@setOnKeyListener code == KeyEvent.KEYCODE_DPAD_RIGHT
             if (ev.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
             when (code) {
                 KeyEvent.KEYCODE_DPAD_DOWN -> { endTyping(); (firstResult() ?: voice).requestFocus(); true }
@@ -238,7 +251,11 @@ class SearchActivity : BaseActivity() {
     // ------------------------------------------------------------------ the keyboard and voice
 
     /** Voice search: the box takes the Fire TV keyboard (hold the remote's mic to speak, or type). */
+    private var typing = false
+
     private fun startTyping() {
+        typing = true
+        query.showSoftInputOnFocus = true
         query.isFocusable = true; query.isFocusableInTouchMode = true
         query.requestFocus()
         query.setSelection(query.text.length)
@@ -248,7 +265,9 @@ class SearchActivity : BaseActivity() {
 
     private fun endTyping() {
         (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(query.windowToken, 0)
-        query.isFocusable = false; query.isFocusableInTouchMode = false
+        typing = false
+        query.showSoftInputOnFocus = false
+        query.isFocusableInTouchMode = false
         if (query.text.isNotBlank()) Store.addRecentSearch(query.text.toString())
         Ui.test("search-typing-done")
     }
@@ -304,6 +323,10 @@ class SearchActivity : BaseActivity() {
     override fun onStart() { super.onStart(); findViewById<View>(R.id.clock)?.removeCallbacks(tick); tick.run() }
     override fun onStop() { super.onStop(); findViewById<View>(R.id.clock)?.removeCallbacks(tick) }
 
-    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean = backHold(event) || side.onKey(event) || super.dispatchKeyEvent(event)
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        // The remote's search / voice button, when Fire TV passes it on: straight to the keyboard and its mic.
+        if (!typing && event.action == KeyEvent.ACTION_UP && (event.keyCode == KeyEvent.KEYCODE_SEARCH || event.keyCode == KeyEvent.KEYCODE_VOICE_ASSIST)) { startTyping(); return true }
+        return backHold(event) || side.onKey(event) || super.dispatchKeyEvent(event)
+    }
 
 }
