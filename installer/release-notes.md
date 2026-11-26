@@ -1,3 +1,10 @@
+## What's new in Dingus 0.15.32
+
+* Fire TV: every film and show your provider has now shows up in its categories.
+* Fire TV: smoother Home showcase and scrolling.
+* Fire TV: tidier guide and categories.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.31
 
 * Fire TV: smoother scrolling – posters no longer flicker.
