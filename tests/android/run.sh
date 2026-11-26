@@ -390,6 +390,22 @@ shot 19aa-live-from-home
 adb shell am start -n $PKG/.HomeActivity --ez dingus_test_check true
 sleep 15; shot 23-check-everything
 key KEYCODE_BACK 2
+# Move to another Fire TV: this one sends, and copies from itself (by address – as if found on the Wi-Fi).
+fresh
+adb shell am start -n $PKG/.MainActivity --ez dingus_test_move_send true
+check "move-send code [0-9]{4} port [0-9]+" 10 "Move to another Fire TV shows a code and waits"
+sleep 1; shot 24-move-send
+mv_line=$(adb logcat -d -s DINGUS-TEST:I | grep -oE "move-send code [0-9]{4} port [0-9]+" | tail -1)
+mv_code=$(echo "$mv_line" | awk '{print $3}'); mv_port=$(echo "$mv_line" | awk '{print $5}')
+adb shell am start -n $PKG/.MainActivity --es dingus_test_move_from "127.0.0.1:$mv_port"
+check "move-found" 10 "Copy from another Fire TV finds it"
+sleep 1; key KEYCODE_DPAD_CENTER 1
+for ch in $(echo "$mv_code" | grep -o .); do key KEYCODE_$ch 0.4; done
+sleep 1; shot 24a-move-what
+key KEYCODE_DPAD_CENTER 3
+check "move-copied [0-9]+" 15 "…and copies the playlists, categories and settings across with the code"
+check "move-sent" 10 "…and the sending one says it's been sent"
+key KEYCODE_BACK 1; key KEYCODE_BACK 1
 fi
 
 # ---- Channel numbers off

@@ -41,6 +41,10 @@ class AddPlaylistActivity : BaseActivity() {
 
         findViewById<View>(R.id.typeXtream).setOnClickListener { setType("xtream") }
         findViewById<View>(R.id.typeM3u).setOnClickListener { setType("m3u") }
+        findViewById<View>(R.id.copyFromTv).apply {
+            visibility = if (Store.playlists.isEmpty()) View.VISIBLE else View.GONE
+            setOnClickListener { startActivity(android.content.Intent(this@AddPlaylistActivity, MoveActivity::class.java).putExtra(MoveActivity.SEND, false)) }
+        }
         save.setOnClickListener { trySave() }
 
         val existing = when {

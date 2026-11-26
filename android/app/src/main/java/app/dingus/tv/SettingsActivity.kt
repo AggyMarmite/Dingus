@@ -394,6 +394,12 @@ class SettingsActivity : BaseActivity() {
             updateRow?.let { sub(it, "Checking…") }
             Updater.check(this, manual = true) { msg -> updateRow?.let { sub(it, msg) } }
         }
+        row("Move to another Fire TV", { "Send your playlists, categories and settings to another Fire TV on this Wi-Fi" }, { "›" }) {
+            startActivity(Intent(this, MoveActivity::class.java).putExtra(MoveActivity.SEND, true))
+        }
+        row("Copy from another Fire TV", { "Bring them here from a Fire TV that already has Dingus" }, { "›" }) {
+            startActivity(Intent(this, MoveActivity::class.java).putExtra(MoveActivity.SEND, false))
+        }
         row("About Dingus", { "Film and show logos from TMDB (not endorsed or certified by TMDB)" }, { "Version ${BuildConfig.VERSION_NAME}" }) {}
     }
 

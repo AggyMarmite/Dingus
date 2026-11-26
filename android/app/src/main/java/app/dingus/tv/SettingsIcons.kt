@@ -75,6 +75,8 @@ object SettingsIcons {
         "Find a location that works" to 0xF07D9,
         "Kill switch" to 0xF099C,
         "Switch server if slow" to 0xF0F86,
+        "Move to another Fire TV" to 0xF0207,
+        "Copy from another Fire TV" to 0xF0318,
         "Only Dingus uses this VPN" to 0xF02FD,
         "§Playlist" to 0xF0411,
         "§TV guide" to 0xF0503,
