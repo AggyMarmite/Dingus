@@ -36,6 +36,8 @@ object Streams {
     fun remove(p: Playing) { synchronized(playing) { playing.remove(p) } }
 
     private fun all() = synchronized(playing) { playing.toList() }
+    /** Anything open to play (a channel or film screen with its player), playing or not. */
+    val any: Boolean get() = synchronized(playing) { playing.isNotEmpty() }
 
     /** Closes every stream now (on the main thread; waits for it when called from elsewhere, up to a second). */
     fun closeAll(why: String) {

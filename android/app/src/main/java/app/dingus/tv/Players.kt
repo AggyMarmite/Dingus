@@ -156,6 +156,26 @@ object Players {
         return code == 401 || code == 403
     }
 
+    /**
+     * The server couldn't be reached or refused (not a channel that's simply gone, 404): what makes the menu say
+     * Offline. One dead channel mustn't.
+     */
+    fun unreachable(e: androidx.media3.common.PlaybackException): Boolean = refused(e) ||
+        e.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
+        e.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT
+
+    /**
+     * Through a VPN, worth looking for another location: refused, couldn't connect, timed out, cut off – but not a
+     * channel the server says is gone (404) or a server error (5xx): another location wouldn't help those, and the
+     * search would go on and on testing a dead channel.
+     */
+    fun blockedLike(e: androidx.media3.common.PlaybackException): Boolean {
+        if (unreachable(e)) return true
+        if (!network(e)) return false
+        val code = (e.cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.responseCode ?: return true
+        return code != 404 && code != 410 && code < 500
+    }
+
     /** Any network failure fetching the stream (couldn't connect, cut off, a bad answer…). */
     fun network(e: androidx.media3.common.PlaybackException): Boolean = e.errorCode in 2000..2999
 

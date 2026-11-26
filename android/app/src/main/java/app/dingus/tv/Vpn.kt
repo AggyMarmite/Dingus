@@ -827,6 +827,11 @@ object Vpn {
                 first = false
                 if (!wanted) break
                 if (fixing || keeper?.isActive == true) continue // (something else is putting it right)
+                // Looking for a place a refused channel plays through, but something's playing fine now (you picked
+                // another channel, say): no need to carry on for that one.
+                if (stream != null && Streams.flowing) { Ui.test("vpn-search-stop (playing)"); break }
+                // …or nothing's open to play any more (you left the channel or film): stop looking for it.
+                if (stream != null && !Streams.any) { Ui.test("vpn-search-stop (closed)"); break }
                 if (status == Status.ON && works()) {
                     Ui.test("vpn-search-done (works now)")
                     if (stream == null) Notice.done("⛨  Your playlist's answering again  ·  ${connectedTo?.label ?: ""}", 5_000)

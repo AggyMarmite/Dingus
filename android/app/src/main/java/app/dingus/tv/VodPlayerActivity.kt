@@ -175,7 +175,12 @@ class VodPlayerActivity : BaseActivity() {
                 Ui.test("vod-error ${error.errorCodeName}")
                 val pos = player?.currentPosition ?: 0
                 if (Players.unrecognised(error) && guess < 2) { guess++; Ui.test("vod-format-guess $guess"); open(pos); return }
-                if (retries++ < 2) {
+                if (Vpn.status == Vpn.Status.ON && Players.refused(error) && retries >= 1) {
+                    // Refused through the VPN again (a blocked location): find one it plays through (picks up here).
+                    message.text = cantPlay(error)
+                    Streams.failedAt = System.currentTimeMillis(); Account.soon()
+                    closedAt = pos; Vpn.streamBlocked(Failover.rewrite(urls[index]))
+                } else if (retries++ < 2) {
                     message.text = "Reconnecting…"
                     handler.postDelayed({ open(pos) }, 1_500L * retries)
                 } else if (!triedBackup && Failover.hasBackups() && Players.serverDown(error)) {
@@ -188,9 +193,9 @@ class VodPlayerActivity : BaseActivity() {
                 } else {
                     message.text = cantPlay(error)
                     if (Players.serverDown(error) || Players.refused(error) || Players.network(error)) {
-                        Streams.failedAt = System.currentTimeMillis(); Account.soon() // (the menu's status says so)
+                        if (Players.unreachable(error)) { Streams.failedAt = System.currentTimeMillis(); Account.soon() } // (the menu's status says so)
                         // Through a VPN: find a location this plays through; it picks up where it was once found.
-                        if (Vpn.status == Vpn.Status.ON) { closedAt = pos; Vpn.streamBlocked(Failover.rewrite(urls[index])) } else Failover.vpnElsewhere()
+                        if (Vpn.status == Vpn.Status.ON && Players.blockedLike(error)) { closedAt = pos; Vpn.streamBlocked(Failover.rewrite(urls[index])) } else Failover.vpnElsewhere()
                     }
                 }
             }

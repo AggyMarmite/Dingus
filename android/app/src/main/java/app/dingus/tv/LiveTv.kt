@@ -273,6 +273,13 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
                 if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) { p.seekToDefaultPosition(); p.prepare(); return }
                 // An address that doesn't say what it is (no ".m3u8" but really HLS, say): try the other kinds before retrying.
                 if (Players.unrecognised(error) && guess < 2) { guess++; Ui.test("format-guess $guess"); startChannel(); return }
+                // Refused through the VPN (403 – a blocked location): one more try, then straight to finding a
+                // location it plays through, rather than three retries, the backups and a wait for a free connection
+                // first (around 40 seconds of "Reconnecting…" before the search even started).
+                if (Vpn.status == Vpn.Status.ON && Players.refused(error)) {
+                    if (retries < 1) { scheduleRetry("Reconnecting…"); return }
+                    failed(error); return
+                }
                 if (retries < 3) { scheduleRetry("Reconnecting…"); return }
                 // The server can't be reached: try the playlist's backup server addresses, if it has any.
                 if (!triedBackup && Failover.hasBackups() && Players.serverDown(error)) {
@@ -371,9 +378,9 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         handler.post {
             showFailed(error)
             if (Players.serverDown(error) || Players.refused(error) || Players.network(error)) {
-                Streams.failedAt = System.currentTimeMillis(); Account.soon() // (the menu's status says so)
+                if (Players.unreachable(error)) { Streams.failedAt = System.currentTimeMillis(); Account.soon() } // (the menu's status says so)
                 val c = list.getOrNull(index)
-                if (Vpn.status == Vpn.Status.ON && c != null) {
+                if (Vpn.status == Vpn.Status.ON && c != null && Players.blockedLike(error)) {
                     Vpn.streamBlocked(Players.liveUrl(version ?: c))
                     message.text = (if (fullScreen) "This channel isn't playing through ${Vpn.connectedTo?.label ?: "this VPN location"}.\n" else "Not playing\n") +
                         "Looking for a VPN location it plays through…"

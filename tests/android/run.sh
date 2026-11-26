@@ -472,6 +472,16 @@ if [ -n "${WG_CONF:-}" ] && [ -f "$WG_CONF" ]; then
   fresh
   adb shell am start -n $PKG/.MainActivity --ez dingus_test_vpn_off true
   check "vpn off" 15 "VPN: disconnects again"
+  # A playlist that can't be reached through the VPN (nothing at that address in the tunnel): the location mustn't
+  # count as connected.
+  fresh
+  adb shell am start -n $PKG/.MainActivity --es dingus_test_m3u http://10.66.0.9:8000/playlist.m3u
+  sleep 3; fresh
+  adb shell am start -n $PKG/.MainActivity --es dingus_test_vpn_connect Test
+  check "vpn-no-playlist Test" 40 "VPN: a location your playlist can't be reached through isn't counted as connected"
+  if adb logcat -d -s DINGUS-TEST:I | grep -q "vpn on Test"; then echo "FAIL VPN: said connected though the playlist wasn't reachable" | tee -a "$OUT/result.txt"; fail=1; fi
+  adb shell am start -n $PKG/.MainActivity --ez dingus_test_vpn_off true
+  check "vpn off" 15 "VPN: off again"
 fi
 fi
 
