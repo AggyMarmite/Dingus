@@ -27,6 +27,8 @@ class VodItem(
     val rating: Float, val year: Int, val ext: String, val added: Long,
     /** Its number on TMDB, when the provider's list gives it (used to match someone's films on their page). */
     val tmdb: String = "",
+    /** Every category it's in (providers can file a film under several – "category_ids"), the main one first. */
+    val categories: List<String> = listOf(categoryId),
 ) {
     val key: String get() = id
 }
@@ -59,7 +61,13 @@ object Vod {
     const val COMING = "\u0001coming"
 
     class Library(val categories: List<Category>, val items: List<VodItem>, val loadedAt: Long) {
-        val byCategory: Map<String, List<VodItem>> by lazy { items.groupBy { it.categoryId } }
+        // (A film filed under several categories is in each of them – it was only in its first, so a category like
+        // "Broadway / musical" showed one film where other apps show lots.)
+        val byCategory: Map<String, List<VodItem>> by lazy {
+            val m = LinkedHashMap<String, ArrayList<VodItem>>()
+            for (v in items) for (c in v.categories) m.getOrPut(c) { ArrayList() }.add(v)
+            m
+        }
         val byId: Map<String, VodItem> by lazy { items.associateBy { it.id } }
         val newest: List<VodItem> by lazy { items.sortedByDescending { it.added }.take(300) }
     }
@@ -340,12 +348,17 @@ object Vod {
             r.beginArray()
             while (r.hasNext()) {
                 var id = ""; var name = ""; var poster = ""; var cat = ""; var rating = 0f; var year = 0; var ext = "mp4"; var added = 0L; var tmdb = ""
+                val more = ArrayList<String>(0)
                 r.beginObject()
                 while (r.hasNext()) when (r.nextName()) {
                     "stream_id", "series_id" -> id = Sources.str(r)
                     "name" -> name = Sources.str(r)
                     "stream_icon", "cover" -> poster = Sources.str(r)
                     "category_id" -> cat = Sources.str(r)
+                    "category_ids" -> when (r.peek()) {
+                        android.util.JsonToken.BEGIN_ARRAY -> { r.beginArray(); while (r.hasNext()) Sources.str(r).trim().takeIf { it.isNotEmpty() }?.let { more.add(it) }; r.endArray() }
+                        else -> Sources.str(r).split(',').map { it.trim() }.filter { it.isNotEmpty() }.let { more.addAll(it) }
+                    }
                     "rating" -> rating = Sources.str(r).toFloatOrNull() ?: 0f
                     "year", "releaseDate", "release_date" -> { val y = yearOf(Sources.str(r)); if (year == 0) year = y }
                     "container_extension" -> ext = Sources.str(r).ifBlank { "mp4" }
@@ -355,9 +368,12 @@ object Vod {
                 }
                 r.endObject()
                 if (id.isEmpty()) continue
-                if (Store.isHidden("$kind:$cat")) continue // (hidden categories aren't kept: less to save and sort)
+                // Its categories, the main one first; the hidden ones left out (and the film too, if all of them are).
+                val all = (listOf(cat) + more).filter { it.isNotEmpty() }.distinct().ifEmpty { listOf(cat) }
+                val shown = all.filter { !Store.isHidden("$kind:$it") }
+                if (shown.isEmpty()) continue // (hidden categories aren't kept: less to save and sort)
                 if (year == 0) year = yearOf(name)
-                items.add(VodItem(id, clean(name).ifEmpty { "Untitled" }, poster.ifBlank { null }, cat, rating, year, ext, added, tmdb))
+                items.add(VodItem(id, clean(name).ifEmpty { "Untitled" }, poster.ifBlank { null }, shown.first(), rating, year, ext, added, tmdb, shown))
             }
             r.endArray()
         }
@@ -368,7 +384,9 @@ object Vod {
 
     // "EN - ", "UK| ", "[EN] ", "|EN| " at the start; quality tags and "(2021)" at the end (the year is shown separately).
     private val prefixRx = Regex("""^\s*(?:\[[A-Za-z]{2,5}]\s*[|:\-–]?\s*|\|[A-Za-z]{2,5}\|\s*|[A-Z]{2,5}\s*[|:]\s*|[A-Z]{2,5}\s+[-–]\s+)""")
-    private val suffixRx = Regex("""\s*[\[(]?(?:4k|uhd|2160p|1080p|720p|fhd|hd|multi|sub|dub)[\])]?\s*$|\s*\(\d{4}\)\s*$""", RegexOption.IGNORE_CASE)
+    // (Also a country or language tag in brackets – "(US)", "(FRE)", "[MULTI-SUB]" – which kept a title from being found
+    // on TMDB, so it had no logo: "12 12 12 (2026) (US)".)
+    private val suffixRx = Regex("""\s*[\[(]?(?:4k|uhd|2160p|1080p|720p|fhd|hd|multi|sub|dub|multi[- ]?sub|vostfr|subbed|dubbed)[\])]?\s*$|\s*\(\d{4}\)\s*$|(?-i:\s*[\[(][A-Z]{2,3}[\])]\s*$)|(?-i:\s*[\[(](?:[A-Z]{2,3}[ /,+-]+)+[A-Z]{2,3}[\])]\s*$)""", RegexOption.IGNORE_CASE)
 
     /** "EN - The Long Journey (2021) 4K" → "The Long Journey". Same idea as the desktop app. */
     fun clean(name: String): String {
@@ -492,18 +510,84 @@ object Vod {
         ))
     }
 
+    // ------------------------------------------------------------------ one category, asked for by itself
+
+    private val checkedCats = java.util.Collections.synchronizedSet(HashSet<String>())
+
+    /**
+     * A category's own list from the provider (as other apps fetch it), once per session: anything it holds that the
+     * whole list hadn't filed under it is added. Some providers only give each film's main category in the whole list,
+     * so a category like "Broadway / musical" looked almost empty. Returns the library with them, or null if nothing changed.
+     */
+    suspend fun checkCategory(kind: String, categoryId: String): Library? = withContext(Dispatchers.IO) {
+        if (kind != MOVIES && kind != SERIES || categoryId.startsWith("\u0001")) return@withContext null
+        val lib = libs[kind] ?: return@withContext null
+        if (!checkedCats.add("${Store.activeId}:$kind:$categoryId")) return@withContext null
+        val p = Store.playlist ?: return@withContext null
+        val auth = "username=${Sources.enc(p.user)}&password=${Sources.enc(p.pass)}"
+        val url = "${base(p)}/player_api.php?$auth&action=${if (kind == MOVIES) "get_vod_streams" else "get_series"}&category_id=${Sources.enc(categoryId)}"
+        val got = LinkedHashMap<String, VodItem>()
+        try {
+            Net.open(url, 30_000).use { st ->
+                val r = JsonReader(InputStreamReader(st, Charsets.UTF_8))
+                if (r.peek() != android.util.JsonToken.BEGIN_ARRAY) return@withContext null
+                r.beginArray()
+                while (r.hasNext()) {
+                    var id = ""; var name = ""; var poster = ""; var rating = 0f; var year = 0; var ext = "mp4"; var added = 0L; var tmdb = ""
+                    r.beginObject()
+                    while (r.hasNext()) when (r.nextName()) {
+                        "stream_id", "series_id" -> id = Sources.str(r)
+                        "name" -> name = Sources.str(r)
+                        "stream_icon", "cover" -> poster = Sources.str(r)
+                        "rating" -> rating = Sources.str(r).toFloatOrNull() ?: 0f
+                        "year", "releaseDate", "release_date" -> { val y = yearOf(Sources.str(r)); if (year == 0) year = y }
+                        "container_extension" -> ext = Sources.str(r).ifBlank { "mp4" }
+                        "added", "last_modified" -> added = Sources.str(r).toLongOrNull() ?: 0L
+                        "tmdb", "tmdb_id" -> tmdb = Sources.str(r).trim().takeIf { t -> t.isNotEmpty() && t != "0" && t.all { it.isDigit() } } ?: tmdb
+                        else -> r.skipValue()
+                    }
+                    r.endObject()
+                    if (id.isEmpty()) continue
+                    if (year == 0) year = yearOf(name)
+                    got[id] = VodItem(id, clean(name).ifEmpty { "Untitled" }, poster.ifBlank { null }, categoryId, rating, year, ext, added, tmdb, listOf(categoryId))
+                }
+                r.endArray()
+            }
+        } catch (e: Exception) { checkedCats.remove("${Store.activeId}:$kind:$categoryId"); return@withContext null }
+        val have = lib.byCategory[categoryId]?.mapTo(HashSet()) { it.id } ?: emptySet()
+        val missing = got.keys.filter { it !in have }.toHashSet()
+        Ui.test("category-check $kind $categoryId had ${have.size} provider ${got.size}")
+        if (missing.isEmpty()) return@withContext null
+        // Films the library has, filed elsewhere: this category added to them. Ones it didn't have at all: added.
+        val known = HashSet<String>()
+        val items = ArrayList<VodItem>(lib.items.size + missing.size)
+        for (m in lib.items) {
+            known.add(m.id)
+            items.add(if (m.id in missing && categoryId !in m.categories)
+                VodItem(m.id, m.name, m.poster, m.categoryId, m.rating, m.year, m.ext, m.added, m.tmdb, m.categories + categoryId) else m)
+        }
+        for (id in missing) if (id !in known) got[id]?.let { items.add(it) }
+        val fresh = Library(lib.categories, items, lib.loadedAt)
+        if (libs[kind] !== lib) return@withContext null
+        libs = HashMap(libs).apply { put(kind, fresh) }
+        warm(kind, fresh)
+        try { write(kind, fresh) } catch (e: Exception) { Log.w("Dingus", "save $kind", e) }
+        fresh
+    }
+
     // ------------------------------------------------------------------ saved copy
 
     private fun write(kind: String, lib: Library) {
         val tmp = File(dir, "vod_$kind.bin.tmp")
         DataOutputStream(BufferedOutputStream(FileOutputStream(tmp), 1 shl 16)).use { o ->
-            o.writeInt(2); o.writeLong(lib.loadedAt)
+            o.writeInt(3); o.writeLong(lib.loadedAt)
             o.writeInt(lib.categories.size)
             for (c in lib.categories) { o.writeUTF(c.id); o.writeUTF(c.name) }
             o.writeInt(lib.items.size)
             for (m in lib.items) {
                 o.writeUTF(m.id); o.writeUTF(m.name.take(300)); o.writeUTF(m.poster ?: ""); o.writeUTF(m.categoryId)
                 o.writeFloat(m.rating); o.writeShort(m.year); o.writeUTF(m.ext); o.writeLong(m.added); o.writeUTF(m.tmdb)
+                o.writeUTF(if (m.categories.size > 1) m.categories.joinToString(",") else "")
             }
         }
         tmp.renameTo(File(dir, "vod_$kind.bin"))
@@ -514,13 +598,18 @@ object Vod {
         if (!f.exists()) return null
         DataInputStream(BufferedInputStream(FileInputStream(f), 1 shl 16)).use { i ->
             val v = i.readInt()
-            if (v != 1 && v != 2) return null
-            val at = i.readLong()
+            if (v !in 1..3) return null
+            // (An older copy doesn't know films filed under several categories: counted as out of date, so it's
+            // fetched again straight away.)
+            val at = i.readLong().let { if (v < 3) 0L else it }
             val cats = List(i.readInt()) { Category(i.readUTF(), i.readUTF()) }
             val items = List(i.readInt()) {
                 // (Names are saved already tidied: no tidying again here, which made a big library slow to open.)
-                VodItem(i.readUTF(), i.readUTF(), i.readUTF().ifEmpty { null }, i.readUTF(), i.readFloat(),
-                    i.readShort().toInt(), i.readUTF(), i.readLong(), if (v >= 2) i.readUTF() else "")
+                val id = i.readUTF(); val name = i.readUTF(); val poster = i.readUTF().ifEmpty { null }; val cat = i.readUTF()
+                val rating = i.readFloat(); val year = i.readShort().toInt(); val ext = i.readUTF(); val added = i.readLong()
+                val tmdb = if (v >= 2) i.readUTF() else ""
+                val inCats = if (v >= 3) i.readUTF().takeIf { it.isNotEmpty() }?.split(',') ?: listOf(cat) else listOf(cat)
+                VodItem(id, name, poster, cat, rating, year, ext, added, tmdb, inCats)
             }
             return Library(cats, items, at)
         }

@@ -43,11 +43,16 @@ def xtream(q):
                 {"num": 201, "name": "Test 3 Sport", "stream_id": 3, "category_id": "2", "epg_channel_id": "test3.uk", "stream_icon": ""}]
     if a == "get_vod_categories": return [{"category_id": "10", "category_name": "Action"}, {"category_id": "11", "category_name": "Comedy"}, {"category_id": "12", "category_name": "Drama"}]
     if a == "get_vod_streams":
-        return [{"stream_id": 501, "name": "The Test Pattern (2021)", "category_id": "10", "rating": "7.4", "container_extension": "mp4", "added": "1700000000", "stream_icon": f"{HOST}/poster1.png"},
+        films = [{"stream_id": 501, "name": "The Test Pattern (2021)", "category_id": "10", "rating": "7.4", "container_extension": "mp4", "added": "1700000000", "stream_icon": f"{HOST}/poster1.png"},
                 {"stream_id": 502, "name": "Colour Bars Returns", "category_id": "10", "rating": "6.1", "year": "2023", "container_extension": "mp4", "added": "1700000500", "stream_icon": f"{HOST}/poster2.png"},
                 {"stream_id": 503, "name": "A Very Long Sine Wave", "category_id": "11", "rating": 8, "container_extension": "mp4", "added": 1700001000, "stream_icon": None}] + \
                [{"stream_id": 600 + i, "name": f"Drama {i}", "category_id": "12", "container_extension": "mp4", "added": 1600000000 + i,
                  "stream_icon": f"{HOST}/poster{1 + i % 2}.png"} for i in range(1, 21)]
+        c = q.get("category_id", [""])[0]
+        # (Like some real providers: the whole list gives each film one category, while a category's own list also
+        # has the films filed under it as a second one – "A Very Long Sine Wave" is in Drama too.)
+        if c: return [f for f in films if f["category_id"] == c or (c == "12" and f["stream_id"] == 503)]
+        return films
     if a == "get_series_categories": return [{"category_id": "20", "category_name": "Drama"}]
     if a == "get_series":
         return [{"series_id": 701, "name": "Signal Lost", "category_id": "20", "cover": f"{HOST}/poster2.png", "rating": "8.2", "releaseDate": "2022-01-01", "last_modified": "1700002000"},

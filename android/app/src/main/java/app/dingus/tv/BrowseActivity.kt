@@ -227,6 +227,19 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
             }
             empty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
             Ui.test("browse-cat $name ${items.size}")
+            // The provider's own list for this category, in the background: any films the whole list had filed
+            // elsewhere (or left out) come in, and the posters update where you are.
+            scope.launch {
+                val fresh = Vod.checkCategory(kind, id) ?: return@launch
+                if (lib !== l || current != id) { lib = fresh; return@launch }
+                lib = fresh
+                val more = Vod.itemsIn(kind, fresh, id)
+                posters.set(more)
+                gridCount.text = "·  ${Ui.count(more.size)} ${if (kind == Vod.MOVIES) (if (more.size == 1) "film" else "films") else (if (more.size == 1) "show" else "shows")}  ·  ◀ categories"
+                empty.visibility = if (more.isEmpty()) View.VISIBLE else View.GONE
+                setCategories()
+                Ui.test("browse-cat-more $name ${more.size}")
+            }
         }
     }
 

@@ -329,6 +329,8 @@ check "browse-panel shown" 5 "LEFT from the first film brings in the categories 
 shot 19-films-panel
 press_until KEYCODE_DPAD_DOWN "browse-cat (Recently added|All films) [0-9]" 8 0.9   # down to a big category
 check "browse-cat (Recently added|All films) [0-9]" 5 "moving through the categories shows each one"
+press_until KEYCODE_DPAD_DOWN "browse-cat Drama" 6 0.9
+check "browse-cat-more Drama 21" 15 "a category's own list brings in the films filed under it as a second category"
 key KEYCODE_DPAD_RIGHT 1.5
 check "browse-panel hidden" 5 "RIGHT goes into the films, the categories step aside"
 shot 19-films-grid
