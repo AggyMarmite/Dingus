@@ -112,12 +112,16 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         if (Repo.channels.isNotEmpty()) runPendingPlay()
     }
 
+    /** The first category in the list (Live TV from the side menu starts there). */
+    private fun firstCategory(): String = Repo.sideCategories().firstOrNull()?.id ?: Repo.ALL
+
     private fun takePlayRequest(i: Intent) {
         if (i.getBooleanExtra(CATEGORIES, false)) {
             i.removeExtra(CATEGORIES)
             // Already showing the guide: straight to the categories. Otherwise once it's filled in (start()).
             // Live TV from the side menu starts at the top of the category (not the channel you last watched).
-            if (started && Repo.channels.isNotEmpty() && !live.fullScreen) handler.post { showCategory(current, null); openCategories() } else showCategoriesFirst = true
+            // …and in the first category in the list (not wherever it was left).
+            if (started && Repo.channels.isNotEmpty() && !live.fullScreen) handler.post { current = firstCategory(); showCategory(current, null); openCategories() } else showCategoriesFirst = true
         }
         val id = i.getStringExtra(PLAY) ?: return
         pendingPlay = id to (i.getStringExtra(PLAY_CATEGORY) ?: Repo.ALL)
@@ -202,6 +206,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             // The category may belong to another playlist (after switching).
             val cats = Repo.sideCategories()
             if (cats.none { it.id == current }) current = Store.lastCategory?.takeIf { id -> cats.any { it.id == id } } ?: Repo.ALL
+            if (showCategoriesFirst) current = firstCategory()
             // From the side menu: the top of the category. (Otherwise back on the channel you last watched.)
             showCategory(current, if (showCategoriesFirst) null else Store.lastChannel)
             grid.requestFocus()
