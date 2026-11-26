@@ -24,7 +24,12 @@ object Sources {
     fun xtreamBase(server: String): String {
         var s = server.trim()
         if (!s.startsWith("http://", true) && !s.startsWith("https://", true)) s = "http://$s"
-        return s.trimEnd('/') // (the address exactly as typed)
+        // As the Windows app does: the server and port exactly as typed, without anything pasted after them
+        // (".../player_api.php", ".../get.php?…", a trailing folder) – with that left on, the server answered 404.
+        return try {
+            val u = java.net.URL(s)
+            if (u.host.isNullOrEmpty()) s.trimEnd('/') else "${u.protocol}://${u.host}${if (u.port > 0) ":${u.port}" else ""}"
+        } catch (_: Exception) { s.trimEnd('/') }
     }
 
     internal fun enc(s: String) = URLEncoder.encode(s, "UTF-8")

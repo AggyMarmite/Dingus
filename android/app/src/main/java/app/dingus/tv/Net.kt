@@ -16,7 +16,7 @@ object Net {
      * (some providers answer "not found" to playlist requests that say they're VLC). If a server refuses it, VLC's is
      * tried once.
      */
-    private val API = "Mozilla/5.0 (Linux; Android ${android.os.Build.VERSION.RELEASE}) Dingus/${BuildConfig.VERSION_NAME}"
+    private val API = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Dingus/0.2"
 
     /** For films and shows lists: the app name that's been found to get the fullest lists from this provider, if any. */
     @Volatile var listAgent: String? = null
