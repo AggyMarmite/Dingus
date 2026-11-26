@@ -121,6 +121,18 @@ class DetailActivity : BaseActivity() {
         }
     }
 
+    private fun reveal(v: View) {
+        val scroll = findViewById<android.widget.ScrollView>(R.id.detailScroll) ?: return
+        if (!v.isAttachedToWindow) return
+        val r = android.graphics.Rect(); v.getDrawingRect(r)
+        scroll.offsetDescendantRectToMyCoords(v, r)
+        val grow = (v.height * 0.08f / 2).toInt()
+        val bottom = r.bottom + grow + Ui.dp(this, 20)
+        val visibleBottom = scroll.scrollY + scroll.height
+        if (bottom > visibleBottom) scroll.smoothScrollBy(0, bottom - visibleBottom)
+        Ui.test("episode-reveal ${maxOf(0, bottom - visibleBottom)}")
+    }
+
     private fun sameEpisodes(a: Details, b: Details) =
         a.episodes.size == b.episodes.size && a.episodes.indices.all { a.episodes[it].id == b.episodes[it].id }
 
@@ -397,6 +409,9 @@ class DetailActivity : BaseActivity() {
                 // (Its space is always kept: the cards changing height as you moved along re-laid the page out, and
                 // the highlight could jump up to the buttons.)
                 holder.plot.visibility = if (has && holder.plot.text.isNotEmpty()) View.VISIBLE else View.INVISIBLE
+                // The page moves up just enough for the whole card and its description (at its lifted size) to show –
+                // the description ran off the bottom of the screen.
+                if (has) view.post { reveal(view) }
             }
             // MENU on an episode marks it watched or not.
             v.setOnKeyListener { _, code, ev ->
