@@ -1,3 +1,10 @@
+## What's new in Dingus 0.15.34
+
+* Fire TV: films and shows categories fill in fully.
+* Fire TV: steadier 4K playback.
+* Fire TV: more detail in Check everything.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.33
 
 * Fire TV: tidier Films and TV Shows categories.
