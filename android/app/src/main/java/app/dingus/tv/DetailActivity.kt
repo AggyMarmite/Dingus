@@ -49,7 +49,8 @@ class DetailActivity : BaseActivity() {
         restart = findViewById(R.id.restart)
         status = findViewById(R.id.status)
         episodeList = findViewById(R.id.episodes)
-        episodeList.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        // (The same glide as the rows elsewhere, with the next episodes kept ready so moving along never jumps.)
+        episodeList.layoutManager = RowLayoutManager(this)
         episodeList.adapter = episodes
         episodeList.itemAnimator = null
 
@@ -369,10 +370,23 @@ class DetailActivity : BaseActivity() {
             // Highlighted: the card grows a little and shows what the episode's about.
             v.setOnFocusChangeListener { view, has ->
                 Ui.grow(view, has)
-                holder.plot.visibility = if (has && holder.plot.text.isNotEmpty()) View.VISIBLE else View.GONE
+                // (Its space is always kept: the cards changing height as you moved along re-laid the page out, and
+                // the highlight could jump up to the buttons.)
+                holder.plot.visibility = if (has && holder.plot.text.isNotEmpty()) View.VISIBLE else View.INVISIBLE
             }
             // MENU on an episode marks it watched or not.
             v.setOnKeyListener { _, code, ev ->
+                // ◀ ▶ go episode to episode, always within the row (never off it to the buttons); the row glides.
+                if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT || code == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+                    if (ev.action != android.view.KeyEvent.ACTION_DOWN) return@setOnKeyListener true
+                    val p = holder.bindingAdapterPosition
+                    val t = p + if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
+                    if (p < 0 || t < 0 || t >= items.size) return@setOnKeyListener true
+                    val next = episodeList.findViewHolderForAdapterPosition(t)?.itemView
+                    if (next != null) next.requestFocus()
+                    else { episodeList.smoothScrollToPosition(t); episodeList.postDelayed({ episodeList.findViewHolderForAdapterPosition(t)?.itemView?.requestFocus() }, 120) }
+                    return@setOnKeyListener true
+                }
                 if (code != android.view.KeyEvent.KEYCODE_MENU) return@setOnKeyListener false
                 val p = holder.bindingAdapterPosition
                 if (ev.action == android.view.KeyEvent.ACTION_UP && p >= 0) {

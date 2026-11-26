@@ -237,6 +237,10 @@ check "details .* episodes 4" 30 "a show's seasons and episodes load"
 sleep 3; shot 14-show-details
 # The first episode highlighted: nothing cut off on the left (then back up to Play).
 press_until KEYCODE_DPAD_DOWN "focus episodeCard" 3 0.8; sleep 1; shot 14c-first-episode
+fresh
+for _ in 1 2 3; do key KEYCODE_DPAD_RIGHT 0.7; done
+check_none "focus (play|restart|trailer|myList|watched)\b" "moving along the episodes stays on the episodes (never jumps up to the buttons)"
+for _ in 1 2 3; do key KEYCODE_DPAD_LEFT 0.7; done
 press_until KEYCODE_DPAD_UP "focus (play|restart|trailer|myList|watched)\b" 3 0.8
 # (UP can land on a button further along: then LEFT along to Play – never LEFT from Play itself, which opens the menu.)
 adb logcat -d -s DINGUS-TEST:I | grep "focus " | tail -1 | grep -qE "focus play\b" || press_until KEYCODE_DPAD_LEFT "focus play\b" 4 0.6
