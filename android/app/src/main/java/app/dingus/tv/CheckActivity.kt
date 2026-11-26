@@ -169,7 +169,7 @@ class CheckActivity : BaseActivity() {
                 else {
                     // How the films list was put together: the provider's whole list, then each category's own.
                     val how = listOfNotNull(Vod.fetchInfo["${Vod.MOVIES}-whole"], Vod.fetchInfo[Vod.MOVIES], Vod.fetchInfo["agents"],
-                        Net.listAgent?.let { "asking as ${it.substringBefore('/').substringBefore(' ')}" }).joinToString("  ·  ")
+                        Net.listAgent?.let { "asking as ${Vod.agentName(it)}" }).joinToString("  ·  ")
                     val hidden = Vod.cached(Vod.MOVIES)?.categories?.count { Store.isHidden("${Vod.MOVIES}:${it.id}") } ?: 0
                     set(5, State.OK, "${Ui.count(m ?: 0)} films  ·  ${Ui.count(sh ?: 0)} shows" + (if (hidden > 0) "  ·  $hidden film categories hidden" else ""),
                         how.ifEmpty { null })

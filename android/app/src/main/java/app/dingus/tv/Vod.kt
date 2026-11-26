@@ -85,7 +85,22 @@ object Vod {
         return progressPrefs!!
     }
 
-    fun init(ctx: Context) { app = ctx.applicationContext; Net.listAgent = Store.prefsString("listAgent", "").ifEmpty { null } }
+    /** How the Windows app asks for lists – it gets the full films list from the same login, so it's the default. */
+    const val WINDOWS_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Dingus/0.2"
+
+    fun init(ctx: Context) {
+        app = ctx.applicationContext
+        if (Store.prefsString("listAgentV", "") != "2") {
+            // Once: ask as Windows from now on and fetch films and shows again (they were short before).
+            Store.putString("listAgentV", "2"); Store.putString("listAgent", ""); Store.putString("listAgentAt", "0")
+            Net.listAgent = WINDOWS_AGENT
+            Background.scope.launch(Dispatchers.IO) {
+                for (k in listOf(MOVIES, SERIES)) if (File(dir, "vod_$k.bin").exists())
+                    try { library(k, fresh = true) } catch (_: Exception) {}
+            }
+        }
+        Net.listAgent = Store.prefsString("listAgent", "").ifEmpty { WINDOWS_AGENT }
+    }
 
     /** After switching playlist: forget what's in memory (saved copies stay). */
     fun reset() { libs = HashMap() }
@@ -425,7 +440,8 @@ object Vod {
      * once a day. If one gets noticeably more, films and shows are asked for as that one from then on, and fetched
      * again now. (Same login, same address – the lists came back shorter for Dingus than for another app.)
      */
-    private val probeAgentsList = listOf("okhttp/4.12.0", "IPTVSmartersPlayer", "TiviMate/5.1.6 (Android 11)", "Dalvik/2.1.0 (Linux; U; Android 9; AFTMM Build/PS7633)")
+    private val probeAgentsList = listOf(WINDOWS_AGENT, "okhttp/4.12.0", "IPTVSmartersPlayer", "TiviMate/5.1.6 (Android 11)", "Dalvik/2.1.0 (Linux; U; Android 9; AFTMM Build/PS7633)")
+    fun agentName(a: String) = when { a.contains("Windows") -> "Windows"; else -> a.substringBefore('/').substringBefore(' ') }
     private fun probeAgents(listUrl: String, have: Int) {
         val at = Store.prefsString("listAgentAt", "0").toLongOrNull() ?: 0L
         if (System.currentTimeMillis() - at < 24 * 3_600_000L) return
@@ -435,7 +451,7 @@ object Vod {
             if (a == Net.listAgent) continue
             counts[a] = try { Net.openAs(listUrl, 90_000, a, true).use { readList(it, MOVIES, null).size } } catch (e: Exception) { -1 }
         }
-        fetchInfo["agents"] = "as other apps: " + counts.entries.joinToString(", ") { (a, n) -> "${a.substringBefore('/').substringBefore(' ')} ${if (n < 0) "–" else Ui.count(n)}" }
+        fetchInfo["agents"] = "as other apps: " + counts.entries.joinToString(", ") { (a, n) -> "${agentName(a)} ${if (n < 0) "–" else Ui.count(n)}" }
         Ui.test("vod-agents have $have ${counts.entries.joinToString(" ") { "${it.key.substringBefore('/')}=${it.value}" }}")
         val best = counts.maxByOrNull { it.value } ?: return
         if (best.value > have + maxOf(20, have / 50)) {
