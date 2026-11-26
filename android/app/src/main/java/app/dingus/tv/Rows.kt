@@ -68,6 +68,8 @@ class RowsAdapter(
     private val d = ctx.resources.displayMetrics.density
 
     fun set(list: List<Row>) {
+        // (Self-test: who asked for the rows again.)
+        if (BuildConfig.DEBUG) Ui.test("rows-set ${Throwable().stackTrace.drop(1).firstOrNull { it.className.startsWith("app.dingus") && !it.className.contains("RowsAdapter") }?.let { "${it.fileName}:${it.lineNumber}" }}")
         val old = rows
         val same = list.size == old.size && list.indices.all { list[it].title == old[it].title }
         rows = list
@@ -102,6 +104,7 @@ class RowsAdapter(
 
     override fun onBindViewHolder(h: H, position: Int) {
         val row = rows[position]
+        if (BuildConfig.DEBUG) Ui.test("row-bind ${row.title}")
         if (h.key.isNotEmpty()) (h.list.layoutManager as LinearLayoutManager).findFirstVisibleItemPosition().let { if (it >= 0) scroll[h.key] = it }
         h.key = row.title
         h.title.text = row.title
