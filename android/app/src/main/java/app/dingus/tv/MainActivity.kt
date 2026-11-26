@@ -135,8 +135,13 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         pendingPlay = null
         if (catPanel.visibility == View.VISIBLE) { catPanel.visibility = View.GONE; findViewById<View>(R.id.catHead)?.visibility = View.VISIBLE; grid.isFocusable = true }
         side.close(restore = false)
-        val list = Repo.channelsIn(cat).let { l -> if (l.any { it.id == id }) l else Repo.channelsIn(Repo.ALL) }
-        val useCat = if (Repo.channelsIn(cat).any { it.id == id }) cat else Repo.ALL
+        // (In its own category when it isn't in the one asked for – "All channels" isn't in the list any more.)
+        val useCat = when {
+            cat != Repo.ALL && Repo.channelsIn(cat).any { it.id == id } -> cat
+            Repo.channelsIn(c.categoryId).any { it.id == id } -> c.categoryId
+            else -> Repo.ALL
+        }
+        val list = Repo.channelsIn(useCat)
         if (useCat != current || !gridIds.contains(id)) showCategory(useCat, id) else grid.focusChannel(id)
         goFullScreen(c, list, animate = false)
     }
@@ -205,7 +210,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             if (readGuide) launch { Repo.loadSavedGuide() }
             // The category may belong to another playlist (after switching).
             val cats = Repo.sideCategories()
-            if (cats.none { it.id == current }) current = Store.lastCategory?.takeIf { id -> cats.any { it.id == id } } ?: Repo.ALL
+            if (cats.none { it.id == current }) current = Store.lastCategory?.takeIf { id -> cats.any { it.id == id } } ?: firstCategory()
             if (showCategoriesFirst) current = firstCategory()
             // From the side menu: the top of the category. (Otherwise back on the channel you last watched.)
             showCategory(current, if (showCategoriesFirst) null else Store.lastChannel)
@@ -277,7 +282,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     private fun onRepoChanged() {
         val focus = grid.current?.id ?: Store.lastChannel
         catAdapter.set(Repo.sideCategories())
-        if (catAdapter.items.none { it.id == current }) current = Repo.ALL
+        if (catAdapter.items.none { it.id == current }) current = firstCategory()
         val list = Repo.channelsIn(current)
         if (list.map { it.id } != gridIds) showCategory(current, focus) else grid.refresh()
     }

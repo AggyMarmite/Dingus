@@ -66,11 +66,12 @@ object Repo {
 
     /** The categories down the side: Favourites and Recently watched first, then the playlist's. */
     fun sideCategories(): List<Category> {
+        // (No "All channels": not needed – the categories are the way in. Kept only when there are no categories.)
         val out = ArrayList<Category>()
-        out.add(Category(ALL, "All channels"))
         if (Store.favourites.any { byId.containsKey(it) }) out.add(Category(FAV, "Favourites"))
         if (Store.recent.any { byId.containsKey(it) }) out.add(Category(RECENT, "Recently watched"))
         out.addAll(Store.ordered("live", categories.filter { byCategory[it.id]?.isNotEmpty() == true && !Store.isHidden("live:${it.id}") }) { it.id })
+        if (out.none { it.id != FAV && it.id != RECENT }) out.add(0, Category(ALL, "All channels"))
         return out
     }
 
