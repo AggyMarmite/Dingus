@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.util.JsonReader
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -380,16 +381,32 @@ object Vod {
     }
     private fun yearOf(s: String) = yearRx.find(s)?.value?.toIntOrNull() ?: 0
 
-    private val detailsCache = android.util.LruCache<String, Details>(60)
+    private val detailsCache = android.util.LruCache<String, Details>(250)
+    /** When each show's details were fetched: a show's episode list is fetched again after a while, a film's never. */
+    private val detailsAt = HashMap<String, Long>()
+    /** Details being fetched right now (the banner, a search result and the page can all ask for the same one). */
+    private val fetching = HashMap<String, kotlinx.coroutines.Deferred<Details>>()
+    private val detailsScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+    private const val SHOW_FRESH_MS = 15 * 60_000L
 
     /** Details already fetched (for the banner on Home and in Films / TV Shows). */
     fun cachedDetails(kind: String, id: String): Details? = detailsCache.get("$kind:$id")
         ?: if (id.startsWith("tmdb:")) Upcoming.find(id)?.let { Upcoming.details(it) } else null
 
-    /** Plot, cast and (for shows) the episodes. */
-    suspend fun details(kind: String, item: VodItem): Details = withContext(Dispatchers.IO) {
-        detailsCache.get("$kind:${item.id}")?.takeIf { kind == MOVIES }?.let { return@withContext it }
-        fetchDetails(kind, item).also { detailsCache.put("$kind:${item.id}", it) }
+    /**
+     * Plot, cast and (for shows) the episodes. Fetched once and shared: asking again while it's on its way waits for
+     * that one rather than starting another, and a show's episodes fetched in the last few minutes are used as they are.
+     */
+    suspend fun details(kind: String, item: VodItem): Details {
+        val key = "$kind:${item.id}"
+        detailsCache.get(key)?.takeIf { kind == MOVIES || System.currentTimeMillis() - (synchronized(detailsAt) { detailsAt[key] } ?: 0L) < SHOW_FRESH_MS }?.let { return it }
+        val d = synchronized(fetching) {
+            fetching[key] ?: detailsScope.async {
+                try { fetchDetails(kind, item).also { detailsCache.put(key, it); synchronized(detailsAt) { detailsAt[key] = System.currentTimeMillis() } } }
+                finally { synchronized(fetching) { fetching.remove(key) } }
+            }.also { fetching[key] = it }
+        }
+        return d.await()
     }
 
     private fun fetchDetails(kind: String, item: VodItem): Details {
