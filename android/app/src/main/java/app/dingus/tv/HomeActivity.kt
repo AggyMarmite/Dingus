@@ -169,12 +169,24 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
         val bg = Themes.color(this, R.attr.dBg)
         fade.background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
             intArrayOf(bg, bg, bg and 0x00FFFFFF))
+        fade.visibility = View.VISIBLE; fade.alpha = 0f
         rows.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            // While the list glides, the showcase (big writing, logo, buttons) moves as one ready-drawn picture
+            // instead of being drawn again on every frame.
+            override fun onScrollStateChanged(rv: RecyclerView, state: Int) {
+                if (feature == null || Ui.lite) return
+                val v = rv.findViewHolderForAdapterPosition(0)?.itemView ?: return
+                val want = if (state == RecyclerView.SCROLL_STATE_IDLE) View.LAYER_TYPE_NONE else View.LAYER_TYPE_HARDWARE
+                if (v.layerType != want) v.setLayerType(want, null)
+            }
             override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
                 val first = rv.getChildAt(0) ?: return
                 // The feature (the first item) still showing at the top: no fade needed.
                 val featureTop = feature != null && rv.getChildAdapterPosition(first) == 0 && first.top > -Ui.dp(this@HomeActivity, 60)
-                fade.visibility = if (featureTop || feature == null) View.GONE else View.VISIBLE
+                // (Shown and hidden by fading, not by taking it out of the layout: that re-laid the whole screen out
+                // mid-glide – a stutter going from the showcase to the first row.)
+                val fa = if (featureTop || feature == null) 0f else 1f
+                if (fade.alpha != fa) fade.alpha = fa
                 // The picture behind dims as the feature scrolls away (the rows over it stay easy to read).
                 if (feature != null) {
                     val gone = if (rv.getChildAdapterPosition(first) == 0) (-first.top).toFloat() / first.height.coerceAtLeast(1) else 1f
