@@ -348,10 +348,15 @@ object Vod {
         fetchInfo["$kind-whole"] = when { full == null -> "the whole list didn't come"; readCutShort -> "the whole list was cut short at ${Ui.count(full!!.size)}"; else -> "whole list ${Ui.count(full!!.size)}" }
         // Whole list in hand: shown straight away, and each category's own list checked in the background (below).
         // Without it: the categories' own lists now.
-        val items = if (full != null) full.filter { m -> m.categories.any { !Store.isHidden("$kind:$it") } }.map { m ->
+        val whole = full?.filter { m -> m.categories.any { !Store.isHidden("$kind:$it") } }?.map { m ->
             val c = m.categories.filter { !Store.isHidden("$kind:$it") }
             if (c == m.categories) m else VodItem(m.id, m.name, m.poster, c.first(), m.rating, m.year, m.ext, m.added, m.tmdb, c)
-        } else byCategories(api + listAction, kind, cats, emptyList()) ?: throw java.io.IOException("Couldn't get the list")
+        }
+        if (whole != null) wholeLists[kind] = whole
+        // What the categories' own lists brought in last time is kept meanwhile (it was lost on every update until
+        // they'd all been asked again – minutes, on a big library – so most of the time only the whole list showed).
+        val items = if (whole != null) withEarlier(kind, whole)
+            else byCategories(api + listAction, kind, cats, emptyList()) ?: throw java.io.IOException("Couldn't get the list")
         val at = System.currentTimeMillis()
         if (full != null) Background.scope.launch(Dispatchers.IO) {
             // (Once this library's in use: it's handed back and saved first.)
@@ -366,7 +371,8 @@ object Vod {
      * whole list, or name only one of a film's categories there – so categories came up short of what other apps
      * show. Null when there were too many categories to ask (or none).
      */
-    private fun byCategories(listUrl: String, kind: String, cats: List<Category>, base: List<VodItem>): List<VodItem>? {
+    private fun byCategories(listUrl: String, kind: String, cats: List<Category>, base: List<VodItem>,
+                             onBatch: ((List<Pair<String, List<VodItem>>>) -> Unit)? = null): List<VodItem>? {
         val wanted = cats.filter { !Store.isHidden("$kind:${it.id}") }
         if (wanted.isEmpty() || wanted.size > 2000) return null
         val ids = LinkedHashMap<String, VodItem>()
@@ -385,10 +391,13 @@ object Vod {
                 inCats.getOrPut(m.id) { LinkedHashSet() }.add(cid)
             }
         }
+        val batch = ArrayList<Pair<String, List<VodItem>>>()
         for ((cid, f) in jobs) {
             val got = try { f.get(maxOf(1_000L, until - System.currentTimeMillis()), java.util.concurrent.TimeUnit.MILLISECONDS) } catch (e: Exception) { f.cancel(true); null }
-            if (got == null) missed.add(cid) else take(cid, got)
+            if (got == null) missed.add(cid) else { take(cid, got); batch.add(cid to got) }
+            if (batch.size >= 30) { onBatch?.invoke(ArrayList(batch)); batch.clear() }
         }
+        if (batch.isNotEmpty()) { onBatch?.invoke(ArrayList(batch)); batch.clear() }
         pool.shutdownNow()
         // The ones that didn't come: once more, one at a time (a busy provider can turn several at once away).
         var failed = 0
@@ -396,6 +405,7 @@ object Vod {
             val got = try { Net.open(listUrl + "&category_id=" + Sources.enc(cid), 60_000).use { readList(it, kind, cid) } } catch (e: Exception) { null }
             if (got == null) failed++ else take(cid, got)
         }
+        lastFailed[kind] = failed
         fetchInfo[kind] = "${wanted.size} categories checked  ·  ${Ui.count(added)} added from them" + (if (failed > 0) "  ·  $failed couldn't be read" else "")
         Ui.test("vod-categories $kind ${wanted.size} had ${base.size} added $added failed $failed")
         if (failed == wanted.size) return null
@@ -407,12 +417,59 @@ object Vod {
         return out
     }
 
+    /** How many categories' lists couldn't be read, last time. */
+    private val lastFailed = java.util.concurrent.ConcurrentHashMap<String, Int>()
+
+    /** The provider's whole list, as last fetched (each category's own list is checked against it). */
+    private val wholeLists = java.util.concurrent.ConcurrentHashMap<String, List<VodItem>>()
+
+    /** [whole] with what the library had before from the categories' own lists: their films, and the extra categories. */
+    private fun withEarlier(kind: String, whole: List<VodItem>): List<VodItem> {
+        val prev = libs[kind] ?: try { read(kind) } catch (e: Exception) { null } ?: return whole
+        val before = prev.items.associateBy { it.id }
+        val seen = HashSet<String>(whole.size * 2)
+        val out = ArrayList<VodItem>(maxOf(whole.size, prev.items.size))
+        for (m in whole) {
+            seen.add(m.id)
+            val old = before[m.id]
+            val c = if (old == null) m.categories else (m.categories + old.categories).distinct().filter { !Store.isHidden("$kind:$it") }
+            out.add(if (c == m.categories) m else VodItem(m.id, m.name, m.poster, c.first(), m.rating, m.year, m.ext, m.added, m.tmdb, c))
+        }
+        for (m in prev.items) if (m.id !in seen && m.categories.any { !Store.isHidden("$kind:$it") }) out.add(m)
+        return out
+    }
+
+    /** Films from the categories' own lists, put into the library as they come (and saved), so none wait for all of them. */
+    private fun addIn(kind: String, batch: List<Pair<String, List<VodItem>>>) {
+        val lib = libs[kind] ?: return
+        val byId = LinkedHashMap<String, VodItem>(lib.items.size * 2); for (m in lib.items) byId[m.id] = m
+        var changed = false
+        for ((cid, got) in batch) for (m in got) {
+            val old = byId[m.id]
+            if (old == null) { byId[m.id] = m; changed = true }
+            else if (cid !in old.categories && !Store.isHidden("$kind:$cid")) {
+                byId[m.id] = VodItem(old.id, old.name, old.poster, old.categoryId, old.rating, old.year, old.ext, old.added, old.tmdb, old.categories + cid); changed = true
+            }
+        }
+        if (!changed || libs[kind] !== lib) return
+        val fresh = Library(lib.categories, ArrayList(byId.values), lib.loadedAt)
+        libs = HashMap(libs).apply { put(kind, fresh) }
+        warm(kind, fresh)
+        try { write(kind, fresh) } catch (e: Exception) { Log.w("Dingus", "save $kind", e) }
+        changedListeners.forEach { try { it(kind) } catch (_: Exception) {} }
+    }
+
     /** After the whole list: each category's own list, and the library (and its saved copy) updated if anything came in. */
     private fun enrich(kind: String, listUrl: String) {
         val lib = libs[kind] ?: return
-        val more = byCategories(listUrl, kind, lib.categories, lib.items) ?: return
-        val changed = more.size != lib.items.size || more.zip(lib.items).any { (a, b) -> a.id != b.id || a.categories != b.categories }
-        if (!changed || libs[kind] !== lib) return
+        val more = byCategories(listUrl, kind, lib.categories, wholeLists[kind] ?: lib.items) { batch -> addIn(kind, batch) } ?: return
+        val now = libs[kind] ?: return
+        if (now.loadedAt != lib.loadedAt) return // (a newer update since)
+        // (Some lists didn't come: what's in already stays – nothing's taken away on the strength of a missing list.)
+        if ((lastFailed[kind] ?: 0) > 0) return
+        val changed = more.size != now.items.size || more.zip(now.items).any { (a, b) -> a.id != b.id || a.categories != b.categories }
+        if (!changed) return
+        // The full set now (anything no longer in any list is gone).
         val fresh = Library(lib.categories, more, lib.loadedAt)
         libs = HashMap(libs).apply { put(kind, fresh) }
         warm(kind, fresh)
@@ -427,16 +484,14 @@ object Vod {
     private fun readList(st: java.io.InputStream, kind: String, forced: String?): List<VodItem> {
         val out = ArrayList<VodItem>()
         val r = JsonReader(InputStreamReader(st, Charsets.UTF_8)).apply { isLenient = true }
-        if (r.peek() != android.util.JsonToken.BEGIN_ARRAY) return out
-        r.beginArray()
-        // (A bad entry, or the connection dropping part-way, keeps everything read up to there – it lost the lot.)
-        try { while (r.hasNext()) {
+        // One film or show.
+        fun one() {
             var id = ""; var name = ""; var poster = ""; var cat = ""; var rating = 0f; var year = 0; var ext = "mp4"; var added = 0L; var tmdb = ""
             val more = ArrayList<String>(0)
             r.beginObject()
             while (r.hasNext()) when (r.nextName()) {
                 "stream_id", "series_id" -> id = Sources.str(r)
-                "name" -> name = Sources.str(r)
+                "name", "title" -> { val n = Sources.str(r); if (name.isEmpty()) name = n }
                 "stream_icon", "cover" -> poster = Sources.str(r)
                 "category_id" -> cat = Sources.str(r)
                 "category_ids" -> when (r.peek()) {
@@ -451,13 +506,22 @@ object Vod {
                 else -> r.skipValue()
             }
             r.endObject()
-            if (id.isEmpty()) continue
+            if (id.isEmpty()) return
             // Its categories, the main one first (and the one asked for, when it's a category's own list).
             val all = (listOfNotNull(forced) + listOf(cat) + more).filter { it.isNotEmpty() }.distinct().ifEmpty { listOf(cat) }
             if (year == 0) year = yearOf(name)
             out.add(VodItem(id, clean(name).ifEmpty { "Untitled" }, poster.ifBlank { null }, all.first(), rating, year, ext, added, tmdb, all))
         }
-        r.endArray() } catch (e: Exception) { Log.w("Dingus", "list cut short after ${out.size}", e); readCutShort = true }
+        // (A bad entry, or the connection dropping part-way, keeps everything read up to there – it lost the lot.)
+        try {
+            when (r.peek()) {
+                android.util.JsonToken.BEGIN_ARRAY -> { r.beginArray(); while (r.hasNext()) { if (r.peek() == android.util.JsonToken.BEGIN_OBJECT) one() else r.skipValue() }; r.endArray() }
+                // Some panels send a category's list as an object of numbered entries ({"0": {…}, "1": {…}}) rather than
+                // a list – it was read as empty, so those categories never filled in.
+                android.util.JsonToken.BEGIN_OBJECT -> { r.beginObject(); while (r.hasNext()) { r.nextName(); if (r.peek() == android.util.JsonToken.BEGIN_OBJECT) one() else r.skipValue() }; r.endObject() }
+                else -> {}
+            }
+        } catch (e: Exception) { Log.w("Dingus", "list cut short after ${out.size}", e); readCutShort = true }
         return out
     }
     @Volatile private var readCutShort = false
@@ -613,31 +677,7 @@ object Vod {
         val url = "${base(p)}/player_api.php?$auth&action=${if (kind == MOVIES) "get_vod_streams" else "get_series"}&category_id=${Sources.enc(categoryId)}"
         val got = LinkedHashMap<String, VodItem>()
         try {
-            Net.open(url, 30_000).use { st ->
-                val r = JsonReader(InputStreamReader(st, Charsets.UTF_8))
-                if (r.peek() != android.util.JsonToken.BEGIN_ARRAY) return@withContext null
-                r.beginArray()
-                while (r.hasNext()) {
-                    var id = ""; var name = ""; var poster = ""; var rating = 0f; var year = 0; var ext = "mp4"; var added = 0L; var tmdb = ""
-                    r.beginObject()
-                    while (r.hasNext()) when (r.nextName()) {
-                        "stream_id", "series_id" -> id = Sources.str(r)
-                        "name" -> name = Sources.str(r)
-                        "stream_icon", "cover" -> poster = Sources.str(r)
-                        "rating" -> rating = Sources.str(r).toFloatOrNull() ?: 0f
-                        "year", "releaseDate", "release_date" -> { val y = yearOf(Sources.str(r)); if (year == 0) year = y }
-                        "container_extension" -> ext = Sources.str(r).ifBlank { "mp4" }
-                        "added", "last_modified" -> added = Sources.str(r).toLongOrNull() ?: 0L
-                        "tmdb", "tmdb_id" -> tmdb = Sources.str(r).trim().takeIf { t -> t.isNotEmpty() && t != "0" && t.all { it.isDigit() } } ?: tmdb
-                        else -> r.skipValue()
-                    }
-                    r.endObject()
-                    if (id.isEmpty()) continue
-                    if (year == 0) year = yearOf(name)
-                    got[id] = VodItem(id, clean(name).ifEmpty { "Untitled" }, poster.ifBlank { null }, categoryId, rating, year, ext, added, tmdb, listOf(categoryId))
-                }
-                r.endArray()
-            }
+            Net.open(url, 30_000).use { st -> for (m in readList(st, kind, categoryId)) got[m.id] = m }
         } catch (e: Exception) { checkedCats.remove("${Store.activeId}:$kind:$categoryId"); return@withContext null }
         val have = lib.byCategory[categoryId]?.mapTo(HashSet()) { it.id } ?: emptySet()
         val missing = got.keys.filter { it !in have }.toHashSet()
