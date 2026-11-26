@@ -1,3 +1,14 @@
+## What's new in Dingus 0.15.31
+
+* Fire TV: smoother scrolling – posters no longer flicker.
+* Fire TV: richer player controls when you skip or pause.
+* Fire TV: move your playlists and settings to another Fire TV.
+* Fire TV: film and show categories list everything your provider has.
+* Fire TV: TV shows open faster, and actor pages find more.
+* Fire TV: more dependable VPN connections.
+* Fire TV: tidier guide, side menu and info bar.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.30
 
 * Fire TV: a redesigned search.
