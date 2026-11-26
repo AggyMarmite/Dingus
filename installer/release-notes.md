@@ -1,3 +1,13 @@
+## What's new in Dingus 0.15.30
+
+* Fire TV: a redesigned search.
+* Fire TV: wider Continue watching cards and a slimmer, see-through side menu.
+* Fire TV: smoother scrolling along and between rows.
+* Fire TV: TV shows open faster, and episode descriptions are filled in.
+* Fire TV: actor pages find more of their films and shows.
+* Fire TV: the VPN moves to a quicker server by itself when streams keep buffering.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.29
 
 * Fire TV: a redesigned live TV info bar.
