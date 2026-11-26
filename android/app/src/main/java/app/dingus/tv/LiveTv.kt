@@ -358,14 +358,26 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
             Ui.test("fallback ${next.name}")
             handler.postDelayed({ startChannel(); showInfo() }, 500)
         } else if (!slotWaited) { slotWaited = true; waitForFreeConnection(error) }
-        else {
+        else failed(error)
+    }
+
+    /**
+     * The channel won't play, every way tried: says so – and through a VPN, where a stream that won't even connect
+     * most likely means this location's blocked, looks for a location it does play through (it starts again by
+     * itself once found). Also where waiting for a free connection couldn't find out how many are in use (through a
+     * VPN the provider often won't say), which used to end there without trying another location.
+     */
+    private fun failed(error: PlaybackException) {
+        handler.post {
             showFailed(error)
-            if (Players.serverDown(error) || Players.refused(error)) {
+            if (Players.serverDown(error) || Players.refused(error) || Players.network(error)) {
                 Streams.failedAt = System.currentTimeMillis(); Account.soon() // (the menu's status says so)
-                // Through a VPN: most likely this location's blocked for streams – find one this channel plays through
-                // (it starts again by itself once found).
                 val c = list.getOrNull(index)
-                if (Vpn.status == Vpn.Status.ON && c != null) Vpn.streamBlocked(Players.liveUrl(version ?: c)) else Failover.vpnElsewhere()
+                if (Vpn.status == Vpn.Status.ON && c != null) {
+                    Vpn.streamBlocked(Players.liveUrl(version ?: c))
+                    message.text = (if (fullScreen) "This channel isn't playing through ${Vpn.connectedTo?.label ?: "this VPN location"}.\n" else "Not playing\n") +
+                        "Looking for a VPN location it plays through…"
+                } else Failover.vpnElsewhere()
             }
         }
     }
@@ -393,7 +405,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
             while (gen == slotGen && player != null) {
                 val info = try { Account.refresh(pl) } catch (e: Exception) { null }
                 if (gen != slotGen || player == null) return@launch
-                if (info == null || info.maxConnections <= 0) { showFailed(error); return@launch }
+                if (info == null || info.maxConnections <= 0) { failed(error); return@launch }
                 if (info.activeConnections < info.maxConnections) {
                     Ui.test("connection free ${info.activeConnections}/${info.maxConnections}")
                     retries = 0; startChannel(); return@launch
@@ -403,7 +415,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
                 message.text = "Waiting for a free connection  ·  ${info.activeConnections} of ${info.maxConnections} in use\n" +
                     (if (info.maxConnections == 1) "Your plan allows one connection. If another TV or phone is watching with this login, stop it there; otherwise it frees up by itself in a few minutes."
                      else "If other TVs or phones are watching with this login, stop one there; otherwise it frees up by itself in a few minutes.")
-                if (System.currentTimeMillis() > until) { showFailed(error); return@launch }
+                if (System.currentTimeMillis() > until) { failed(error); return@launch }
                 delay(15_000)
             }
         }

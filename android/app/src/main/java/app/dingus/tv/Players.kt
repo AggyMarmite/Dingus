@@ -156,6 +156,9 @@ object Players {
         return code == 401 || code == 403
     }
 
+    /** Any network failure fetching the stream (couldn't connect, cut off, a bad answer…). */
+    fun network(e: androidx.media3.common.PlaybackException): Boolean = e.errorCode in 2000..2999
+
     fun serverDown(e: androidx.media3.common.PlaybackException): Boolean {
         if (e.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
             e.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT) return true

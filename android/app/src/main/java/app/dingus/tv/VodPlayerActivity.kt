@@ -187,7 +187,7 @@ class VodPlayerActivity : BaseActivity() {
                     }.start()
                 } else {
                     message.text = cantPlay(error)
-                    if (Players.serverDown(error) || Players.refused(error)) {
+                    if (Players.serverDown(error) || Players.refused(error) || Players.network(error)) {
                         Streams.failedAt = System.currentTimeMillis(); Account.soon() // (the menu's status says so)
                         // Through a VPN: find a location this plays through; it picks up where it was once found.
                         if (Vpn.status == Vpn.Status.ON) { closedAt = pos; Vpn.streamBlocked(Failover.rewrite(urls[index])) } else Failover.vpnElsewhere()
