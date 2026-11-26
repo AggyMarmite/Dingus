@@ -45,14 +45,46 @@ object Motion {
             return
         }
         val recent = System.currentTimeMillis() - dirAt < 400
-        if (recent) {
+        // (Only cards and buttons lean: a long pill leaning in 3D swings its far end out past its edges.)
+        if (recent && (v.height == 0 || v.width < v.height * 2.5f)) {
             v.cameraDistance = 9000 * v.resources.displayMetrics.density
             // Lean in the direction the highlight came from, then settle as it lifts.
             v.rotationY = dirX * 7f; v.rotationX = -dirY * 5f
         }
         v.animate().scaleX(scale).scaleY(scale).rotationX(0f).rotationY(0f).setDuration(420).setInterpolator(spring).start()
         if (shine) sheen(v)
+        if (BuildConfig.DEBUG) checkRoom(v, scale)
     }
+
+    /**
+     * (Self-test only.) Whether the lifted view, at its full size, still fits inside everything that clips it – a
+     * highlight that's cut off at an edge is logged, and the test fails on it.
+     */
+    private fun checkRoom(v: View, scale: Float) {
+        if (v.width == 0) return
+        val growX = v.width * (scale - 1f) / 2f; val growY = v.height * (scale - 1f) / 2f
+        var l = v.left - growX; var t = v.top - growY; var r = v.right + growX; var b = v.bottom + growY
+        var p = v.parent
+        var depth = 0
+        while (p is android.view.ViewGroup && depth < 6) {
+            // Clipped by this parent's edges (or its padding)?
+            val padL = if (p.clipToPadding) p.paddingLeft else 0; val padR = if (p.clipToPadding) p.paddingRight else 0
+            val padT = if (p.clipToPadding) p.paddingTop else 0; val padB = if (p.clipToPadding) p.paddingBottom else 0
+            val cl = padL + p.scrollX; val cr = p.width - padR + p.scrollX; val ct = padT + p.scrollY; val cb = p.height - padB + p.scrollY
+            // (Only along an edge the view isn't simply scrolled past: a card half off the end of a row is fine.)
+            val onScreenX = v.right > 0 && l >= cl - v.width / 2 && r <= cr + v.width / 2
+            if (p.clipChildren && onScreenX && (l < cl - 1 || r > cr + 1) && p !is androidx.recyclerview.widget.RecyclerView) {
+                Ui.test("clip-risk ${name(v)} in ${name(p)}"); return
+            }
+            if (p.clipChildren && (t < ct - 1 || b > cb + 1) && p !is androidx.recyclerview.widget.RecyclerView && p !is android.widget.ScrollView) {
+                Ui.test("clip-risk ${name(v)} in ${name(p)}"); return
+            }
+            l += p.left - p.scrollX; r += p.left - p.scrollX; t += p.top - p.scrollY; b += p.top - p.scrollY
+            p = p.parent; depth++
+        }
+    }
+
+    private fun name(v: View): String = try { if (v.id != View.NO_ID) v.resources.getResourceEntryName(v.id) else v.javaClass.simpleName } catch (_: Exception) { v.javaClass.simpleName }
 
     /** A faint glint sweeping across the card once, as if it's caught the light. */
     private fun sheen(v: View) {

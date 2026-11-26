@@ -454,5 +454,8 @@ adb logcat -d -s DINGUS-TEST:I AndroidRuntime:E > "$OUT/log.txt"
 adb logcat -d -v brief '*:W' | grep -v "com.android.tv\|AsyncDvr" | tail -1500 > "$OUT/log-warnings.txt"
 kill %1 2>/dev/null
 if grep -A1 "FATAL EXCEPTION" "$OUT/log-all.txt" | grep -q "Process: $PKG"; then echo "::error title=android self-test::app crashed"; fail=1; fi
+# Every highlight anywhere in the run, at its full lifted size: nothing cut off at an edge.
+if grep -q "clip-risk" "$OUT/log-all.txt"; then echo "::error title=android self-test::a highlight is cut off"; echo "FAIL no highlight is cut off (clip-risk)" >> "$OUT/result.txt"; grep "clip-risk" "$OUT/log-all.txt" | sed 's/.*DINGUS-TEST: //' | sort | uniq -c | sort -rn | head -15 | tee -a "$OUT/result.txt"; fail=1
+else echo "PASS no highlight is cut off" >> "$OUT/result.txt"; fi
 [ $fail = 0 ] && echo PASSED >> "$OUT/result.txt" || echo FAILED >> "$OUT/result.txt"
 exit $fail
