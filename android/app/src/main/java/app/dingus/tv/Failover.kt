@@ -120,8 +120,6 @@ object Failover {
                 val r = load(q)
                 setIndex(p, i)
                 Ui.test("server-in-use $i")
-                // On a backup only because the main server refused this VPN location: look for one it answers through.
-                if (i > 0 && Vpn.status == Vpn.Status.ON) Vpn.findForMain()
                 return r
             } catch (e: Exception) {
                 // Only a refused login stops here (the same login is used on every address). Anything else – a "not
@@ -158,8 +156,6 @@ object Failover {
                 }
                 // Nothing answers through this VPN location: try others (Settings → VPN → Find a location that works).
                 if (Vpn.status == Vpn.Status.ON && !VpnFallback.running) { if (ok) VpnFallback.remember(p, Vpn.connectedTo) else VpnFallback.start(p) }
-                // Answering, but only on a backup (the main server refused this VPN location): look for a better one.
-                if (ok && Vpn.status == Vpn.Status.ON && index(p) > 0) Vpn.findForMain()
             } catch (e: Exception) { android.util.Log.w("Dingus", "server check after network change", e) }
             try { Account.check(p) } catch (e: Exception) { android.util.Log.w("Dingus", "account check after network change", e) }
         }
