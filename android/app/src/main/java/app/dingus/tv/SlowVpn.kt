@@ -36,7 +36,10 @@ object SlowVpn {
                 val name = best.city.ifEmpty { best.label }
                 Ui.test("vpn-slow-switch $name")
                 Notice.done("⛨  Kept buffering  ·  moving to $name, which answers quicker", 6_000)
-                Vpn.locationId = best.id; Vpn.connect(best)
+                // If it doesn't answer: the next quickest nearby, and failing that back where it was – never left
+                // with the VPN down (with the kill switch on, nothing would play).
+                if (Vpn.connectOrNearby(best) == null) { Vpn.locationId = best.id; return@launch }
+                if (Vpn.wanted && Vpn.connect(here) == null) Notice.done("⛨  ${name} didn't answer  ·  staying on ${here.city.ifEmpty { here.label }}", 6_000)
             } finally { busy = false }
         }
     }
