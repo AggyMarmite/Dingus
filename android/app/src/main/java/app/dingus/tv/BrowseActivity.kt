@@ -363,12 +363,16 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
         if (tries < 30) rows.postDelayed({ focusContent(tries + 1, ask) }, 50)
     }
 
-    private fun focusCategory(id: String = current) {
+    private fun focusCategory(id: String = current, tries: Int = 0, ask: Int = focusAsk) {
+        if (ask != focusAsk) return // moved on since
         val i = cats.indexOf(id).coerceAtLeast(0)
         val v = categories.findViewHolderForAdapterPosition(i)?.itemView
-        if (v != null && v.isShown) { v.requestFocus(); return }
-        categories.scrollToPosition(i)
-        categories.post { categories.findViewHolderForAdapterPosition(i)?.itemView?.requestFocus() }
+        if (v != null && v.isShown && v.requestFocus()) { Ui.test("browse-category-focus $i"); return }
+        // Not there yet: while the categories slide in, their list isn't laid out (the slide holds it back), so the
+        // highlight stayed on the titles and the list only scrolled once the slide was over. Asked again each frame
+        // until it's there.
+        if (tries == 0) categories.scrollToPosition(i)
+        if (tries < 40) categories.postOnAnimation { focusCategory(id, tries + 1, ask) }
     }
 
     private fun smoothly() {
@@ -424,8 +428,14 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
             return pos >= 0 && pos % (grid.layoutManager as GridLayoutManager).spanCount == 0
         }
         if (inside(f, rows)) {
-            val list = f.parent as? RecyclerView ?: return false
-            return list !== rows && list.getChildAdapterPosition(f) == 0
+            // The card's own row (the highlight may be on something inside the card), and whether it's the first.
+            var v: View = f
+            while (true) {
+                val parent = v.parent as? View ?: return false
+                if (parent === rows) return false // (not in a row of cards: the banner)
+                if (parent is RecyclerView) return parent.getChildAdapterPosition(v) == 0
+                v = parent
+            }
         }
         return false
     }

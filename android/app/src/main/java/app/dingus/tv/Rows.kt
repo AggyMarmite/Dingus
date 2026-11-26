@@ -359,20 +359,32 @@ class RowsLayoutManager(ctx: Context, private val centered: Boolean = false) : L
 object CentredRows {
     fun attach(a: android.app.Activity, rows: RecyclerView) {
         rows.post { rows.setPadding(rows.paddingLeft, rows.paddingTop, rows.paddingRight, rows.height / 2) }
+        // A dimmed row is kept as a ready-made picture (a hardware layer): see-through drawn that way costs next to
+        // nothing as the rows glide. (Drawn the ordinary way, each dimmed row was painted off-screen and blended
+        // again on every frame of the glide – too much for a Fire Stick, so going down Home wasn't smooth.)
+        fun layer(item: View, on: Boolean) {
+            val t = if (on) View.LAYER_TYPE_HARDWARE else View.LAYER_TYPE_NONE
+            if (item.layerType != t) item.setLayerType(t, null)
+        }
         fun dim(item: View, animate: Boolean) {
             if (item.findViewById<View>(R.id.heroWatch) != null) { item.alpha = 1f; return }
             val f = a.currentFocus
             val holder = f?.let { rows.findContainingItemView(it) }
             val a1 = if (holder == null || holder === item) 1f else 0.45f
-            if (item.alpha == a1) return
-            if (animate && !Ui.lite) item.animate().alpha(a1).setDuration(160).start() else { item.animate().cancel(); item.alpha = a1 }
+            if (item.alpha == a1) { layer(item, a1 < 1f); return }
+            item.animate().cancel()
+            // (Only once it's settled: a picture is cut at the row's edges, and while the highlight's leaving or
+            // arriving, its lifted card still reaches past them.)
+            layer(item, false)
+            if (animate && !Ui.lite) item.animate().alpha(a1).setDuration(160).withEndAction { layer(item, item.alpha < 1f) }.start()
+            else { item.alpha = a1; layer(item, a1 < 1f) }
         }
         a.window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, _ ->
             for (i in 0 until rows.childCount) dim(rows.getChildAt(i), true)
         }
         rows.addOnChildAttachStateChangeListener(object : RecyclerView.OnChildAttachStateChangeListener {
             override fun onChildViewAttachedToWindow(v: View) = dim(v, false)
-            override fun onChildViewDetachedFromWindow(v: View) { v.animate().cancel(); v.alpha = 1f }
+            override fun onChildViewDetachedFromWindow(v: View) { v.animate().cancel(); v.alpha = 1f; layer(v, false) }
         })
     }
 }

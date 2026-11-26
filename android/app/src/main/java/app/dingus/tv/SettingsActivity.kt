@@ -102,6 +102,7 @@ class SettingsActivity : BaseActivity() {
         row("Backup servers", { backupSummary() }) { backupServers() }
         refreshRow = row("Update now", { refreshSummary() }) { refresh() }
         row("Update every", { "" }, { hoursName(Store.refreshHours) }) { refreshInterval() }
+        toggle("Update when Dingus opens", "Channels, TV guide, films and shows update each time you open Dingus", { Store.refreshOnOpen }) { Store.refreshOnOpen = it }
         row("Full refresh", { "Clears the saved channels, films, shows and TV guide, then downloads everything again" }, { "›" }) { fullRefresh() }
         if (Vod.available) {
             row("Coming soon alerts", { Upcoming.alerts().size.let { if (it == 0) "None yet  ·  Films or TV Shows → Coming soon → OK on a title" else "$it waiting  ·  OK to see or cancel them" } }, { "›" }) {

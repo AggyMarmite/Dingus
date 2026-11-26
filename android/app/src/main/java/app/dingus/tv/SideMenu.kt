@@ -347,9 +347,8 @@ class SideMenu(
                 KeyEvent.KEYCODE_DPAD_RIGHT -> { if (e.action == KeyEvent.ACTION_DOWN) close(); return true }
                 KeyEvent.KEYCODE_DPAD_LEFT -> return true
                 KeyEvent.KEYCODE_BACK -> {
-                    // Home and Live TV: BACK carries on stepping out (leaving the app / back to Home). Elsewhere it closes.
-                    if (here == Page.HOME || here == Page.LIVE) return false
-                    if (e.action == KeyEvent.ACTION_UP) close()
+                    // BACK on the menu leaves Dingus, from every screen.
+                    if (e.action == KeyEvent.ACTION_UP && !e.isCanceled) { Ui.test("menu-back-exit"); a.finishAffinity() }
                     return true
                 }
             }

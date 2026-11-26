@@ -219,7 +219,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
             runPendingPlay()
             Vpn.startup() // (before anything goes online)
             if (Repo.channels.isEmpty()) refresh(p, true)
-            else if (Store.refreshDue) refresh(p, false)
+            else if (Store.takeOpenRefresh() || Store.refreshDue) refresh(p, false)
             runPendingPlay()
             maybeAutoPlay()
         }

@@ -39,7 +39,7 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
         setTheme(R.style.Theme_Dingus) // (from the launch theme: the logo shown while Dingus starts)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
-        if (savedInstanceState == null) Intro.play(this)
+        if (savedInstanceState == null) { Intro.play(this); Store.appOpened() }
         // Just copied from another Fire TV (Settings → About): say so, once.
         Store.prefsString("movedFrom", "").takeIf { it.isNotEmpty() }?.let { from ->
             Store.putString("movedFrom", "")
@@ -373,7 +373,7 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
                     try { Repo.refreshGuide(); Notice.updateDone("Playlist & TV guide updated") }
                     catch (e: Exception) { Notice.updateDone("Playlist updated  ·  TV guide: ${Net.friendly(e)}", 6_000) }
                     build()
-                } else if (Store.refreshDue) {
+                } else if (Store.takeOpenRefresh() || Store.refreshDue) {
                     Notice.working("Updating playlist & TV guide…")
                     Vod.refreshInBackground() // films and shows download alongside, not afterwards
                     try { Repo.refreshChannels(p); Repo.refreshGuide(); Notice.updateDone("Playlist & TV guide updated") }

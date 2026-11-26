@@ -259,6 +259,15 @@ object Store {
     var refreshHours: Int
         get() = prefs.getInt("refreshHours", 24)
         set(v) = prefs.edit().putInt("refreshHours", v).apply()
+    /** Update the playlist and guide every time Dingus is opened (as well as every [refreshHours]). */
+    var refreshOnOpen: Boolean
+        get() = prefs.getBoolean("refreshOnOpen", false)
+        set(v) = prefs.edit().putBoolean("refreshOnOpen", v).apply()
+    @Volatile private var openRefreshUsed = false
+    /** Dingus was just opened (from the Fire TV's home screen): [takeOpenRefresh] says yes once more. */
+    fun appOpened() { openRefreshUsed = false }
+    /** True once per opening when [refreshOnOpen] is on. */
+    fun takeOpenRefresh(): Boolean { if (!refreshOnOpen || openRefreshUsed) return false; openRefreshUsed = true; return true }
     val refreshDue: Boolean get() = System.currentTimeMillis() - minOf(guideLoadedAt, channelsLoadedAt) > refreshHours * 3600_000L
 
     /** The simpler Home page (for devices that struggle with the full one). */
