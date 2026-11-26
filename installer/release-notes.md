@@ -1,3 +1,10 @@
+## What's new in Dingus 0.15.41
+
+* Fire TV: smoother scrolling and animations.
+* Fire TV: option to update the playlist each time Dingus opens.
+* Fire TV: BACK on the menu closes Dingus.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.40
 
 * Fire TV: stays on the main server more reliably.
