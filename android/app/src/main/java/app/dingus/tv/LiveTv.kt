@@ -548,15 +548,6 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         Logos.load(overlay.findViewById<ImageView>(R.id.logo), c.logo, Ui.dp(a, 56), overlay.findViewById(R.id.initials))
         val (now, next) = Repo.nowNext(c)
         overlay.findViewById<View>(R.id.liveChip)?.visibility = if (now != null) View.VISIBLE else View.GONE
-        // The programme's own picture, when one's already known (nothing's looked up while you watch).
-        overlay.findViewById<ImageView>(R.id.infoArt)?.let { art ->
-            val pic = now?.let { TitleLogos.forProgramme(it) }?.let { TitleLogos.cachedBackdrop(it.first, it.second) }
-            if (pic != null && !Ui.lite) {
-                art.visibility = View.VISIBLE
-                art.clipToOutline = true
-                Posters.load(art, pic, Ui.dp(a, 84), null, wide = true)
-            } else art.visibility = View.GONE
-        }
         val nowV = overlay.findViewById<TextView>(R.id.now)
         val times = overlay.findViewById<TextView>(R.id.times)
         val prog = overlay.findViewById<ProgressBar>(R.id.progress)

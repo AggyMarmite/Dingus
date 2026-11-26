@@ -34,8 +34,6 @@
                 <ImageView android:id="@+id/logo" android:layout_width="match_parent" android:layout_height="match_parent"
                     android:padding="6dp" android:scaleType="fitCenter" android:contentDescription="@null" />
             </FrameLayout>
-            <ImageView android:id="@+id/infoArt" android:layout_width="150dp" android:layout_height="84dp" android:layout_marginStart="16dp"
-                android:scaleType="centerCrop" android:background="@drawable/info_art_bg" android:contentDescription="@null" android:visibility="gone" />
 
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
                 android:layout_marginStart="20dp" android:orientation="vertical">
