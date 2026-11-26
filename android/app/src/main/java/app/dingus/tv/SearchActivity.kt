@@ -262,6 +262,7 @@ class SearchActivity : BaseActivity() {
                     h.initials.text = Ui.initials(r.c.name)
                     h.image.scaleType = ImageView.ScaleType.FIT_CENTER
                     Logos.load(h.image, r.c.logo, logoH, h.initials)
+                    h.itemView.onFocusChangeListener = null
                 }
                 is Row.Item -> {
                     val h = holder as H
@@ -270,6 +271,11 @@ class SearchActivity : BaseActivity() {
                     h.initials.text = Ui.initials(r.m.name)
                     h.image.scaleType = ImageView.ScaleType.CENTER_CROP
                     Posters.load(h.image, r.m.poster, logoH, h.initials)
+                    // Resting on a film or show fetches its details in the background, so its page opens with them.
+                    h.itemView.onFocusChangeListener = android.view.View.OnFocusChangeListener { v, has ->
+                        if (!has || Vod.cachedDetails(r.kind, r.m.id) != null) return@OnFocusChangeListener
+                        scope.launch { delay(250); if (v.isFocused) try { Vod.details(r.kind, r.m) } catch (_: Exception) {} }
+                    }
                 }
             }
         }
