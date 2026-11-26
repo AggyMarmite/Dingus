@@ -24,11 +24,7 @@ object Sources {
     fun xtreamBase(server: String): String {
         var s = server.trim()
         if (!s.startsWith("http://", true) && !s.startsWith("https://", true)) s = "http://$s"
-        // Only what can never be part of a server's address is taken off: a login or a page pasted on the end
-        // ("…/get.php?username=…", "…/player_api.php"). Anything else is used exactly as typed.
-        s = s.substringBefore('?').trimEnd('/')
-        s = s.replace(Regex("""/(get|player_api|panel_api|xmltv)\.php$""", RegexOption.IGNORE_CASE), "")
-        return s.trimEnd('/')
+        return s.trimEnd('/') // (the address exactly as typed)
     }
 
     internal fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
