@@ -21,6 +21,7 @@ object Failover {
         return if (i in 0 until addresses(p).size) i else 0
     }
 
+    fun backToMain(p: Playlist) = setIndex(p, 0)
     private fun setIndex(p: Playlist, i: Int) { if (index(p) != i) Store.putString("failover:${p.id}", i.toString()) }
 
     /** The address in use now. */

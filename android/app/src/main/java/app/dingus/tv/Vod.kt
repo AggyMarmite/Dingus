@@ -171,10 +171,14 @@ object Vod {
         }
     }
 
+    /** Full refresh: everything saved or remembered about this playlist's films and shows goes, nothing is carried over. */
     fun clear() {
         libs = HashMap()
+        wholeLists.clear(); fetchInfo.clear(); detailsCache.evictAll(); synchronized(detailsAt) { detailsAt.clear() }
         File(dir, "vod_$MOVIES.bin").delete()
         File(dir, "vod_$SERIES.bin").delete()
+        File(dir, "details").deleteRecursively()
+        Store.putString("listServer_${Store.activeId}", ""); Store.putString("listProbeAt_${Store.activeId}", "0")
     }
 
     fun categoriesFor(kind: String, lib: Library): List<Category> {

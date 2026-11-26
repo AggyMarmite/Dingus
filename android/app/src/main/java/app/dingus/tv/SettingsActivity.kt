@@ -208,6 +208,7 @@ class SettingsActivity : BaseActivity() {
                 try {
                     Notice.working("Full refresh: clearing…")
                     Repo.clear(); Vod.clear(); Store.guideLoadedAt = 0
+                    Failover.backToMain(p) // (starts again from the main server)
                     // Films and shows download at the same time as the channels and guide.
                     val vod = if (Vod.available) listOf(Vod.MOVIES, Vod.SERIES).map { k -> async(Dispatchers.IO) { try { Vod.library(k, fresh = true) } catch (_: Exception) { null } } } else emptyList()
                     Repo.refreshChannels(p)
