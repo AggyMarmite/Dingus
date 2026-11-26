@@ -70,7 +70,7 @@ object Vpn {
         }
     }
 
-    fun init(ctx: Context) { app = ctx.applicationContext }
+    fun init(ctx: Context) { app = ctx.applicationContext; listenForNetwork() }
 
     fun onChanged(l: () -> Unit) { synchronized(listeners) { listeners.add(l) } }
     fun removeListener(l: () -> Unit) { synchronized(listeners) { listeners.remove(l) } }
@@ -439,9 +439,11 @@ object Vpn {
     fun permissionIntent(ctx: Context) = android.net.VpnService.prepare(ctx)
 
     /** Connects to [loc] (or the saved location). Returns an error message, or null when connected. */
-    suspend fun connect(loc: Location? = null): String? = lock.withLock {
+    suspend fun connect(loc: Location? = null, auto: Boolean = false): String? = lock.withLock {
         withContext(Dispatchers.IO) {
             try {
+                // (A try of its own that waited its turn while you turned the VPN off: not wanted any more.)
+                if (auto && !wanted) return@withContext "VPN off"
                 if (!ready) return@withContext "Set up your VPN first".also { set(Status.ERROR, it) }
                 if (permissionIntent(app) != null) return@withContext "Dingus needs permission to use a VPN – open Settings → VPN".also { set(Status.ERROR, it) }
                 val target = loc ?: current(locations()) ?: return@withContext "No VPN locations".also { set(Status.ERROR, it) }
@@ -456,14 +458,17 @@ object Vpn {
                     try { backend.setState(tunnel, Tunnel.State.DOWN, null) } catch (e: Throwable) { Log.w("Dingus", "vpn down for switch", e) }
                     waitServiceClosed(4_000)
                 }
-                try { backend.setState(tunnel, Tunnel.State.UP, configFor(target)) } finally { Streams.reopenAll() }
+                val config = configFor(target)
+                lastRx = -1L
+                tunnelDns = try { config.`interface`.dnsServers.firstOrNull() } catch (_: Throwable) { null }
+                try { backend.setState(tunnel, Tunnel.State.UP, config) } finally { Streams.reopenAll() }
                 // Only "connected" once the VPN server has actually answered (its first handshake). The tunnel being
                 // set up proves nothing: it showed connected while nothing got through – no IP address, and the
                 // playlist offline.
                 if (!answered(10_000)) {
                     try { backend.setState(tunnel, Tunnel.State.DOWN, null) } catch (_: Throwable) {}
                     Ui.test("vpn-no-answer ${target.label}")
-                    return@withContext "${target.label} didn't answer".also { set(Status.ERROR, it) }
+                    return@withContext "${target.label} didn't answer".also { set(Status.ERROR, it); if (wanted && !fixing && !quiet && !VpnFallback.running) keepTrying() }
                 }
                 locationId = target.id
                 connectedTo = target
@@ -480,6 +485,7 @@ object Vpn {
                     else -> "The VPN couldn't connect. Try another location, or Quick Connect."
                 }
                 set(Status.ERROR, msg)
+                if (wanted && !fixing && !quiet && !VpnFallback.running) keepTrying()
                 msg
             }
         }
@@ -507,7 +513,45 @@ object Vpn {
         st.peers().firstOrNull()?.let { st.peer(it)?.latestHandshakeEpochMillis } ?: 0L
     } catch (_: Throwable) { 0L }
 
-    /** Waits up to [ms] for the server's first answer, nudging it with a small packet through the tunnel. */
+    /** The DNS server the tunnel in use was given (asked by [works]). */
+    @Volatile private var tunnelDns: java.net.InetAddress? = null
+
+    /** A real DNS question ("who runs the internet's root?"): small, and every DNS server answers it. */
+    private fun dnsQuestion(): ByteArray = byteArrayOf(0x44, 0x47, 0x01, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0, 0x00, 0x00, 0x02, 0x00, 0x01)
+
+    /** Asks [to] that question through the tunnel (Dingus's own traffic goes through it); true when it answers. */
+    private fun ask(to: java.net.InetAddress, timeoutMs: Int): Boolean = try {
+        java.net.DatagramSocket().use { s ->
+            s.soTimeout = timeoutMs
+            val q = dnsQuestion()
+            s.send(java.net.DatagramPacket(q, q.size, to, 53))
+            val buf = ByteArray(512)
+            s.receive(java.net.DatagramPacket(buf, buf.size))
+            true
+        }
+    } catch (_: Throwable) { false }
+
+    @Volatile private var lastRx = -1L
+    private fun received(): Long = try { backend.getStatistics(tunnel).totalRx() } catch (_: Throwable) { -1L }
+
+    /**
+     * Whether anything actually gets through the tunnel right now (not just "connected"): something received since
+     * the last check (a stream playing, say) settles it; otherwise a DNS question, two tries, a few seconds.
+     */
+    private fun works(): Boolean {
+        val rx = received()
+        val before = lastRx; lastRx = rx
+        if (rx > 0 && before >= 0 && rx > before) return true
+        val one = tunnelDns
+        val cf = try { java.net.InetAddress.getByAddress(byteArrayOf(1, 1, 1, 1)) } catch (_: Throwable) { null }
+        repeat(2) {
+            if (one != null && ask(one, 3_000)) return true
+            if (cf != null && cf != one && ask(cf, 3_000)) return true
+        }
+        return false
+    }
+
+    /** Waits up to [ms] for the server's first answer, nudging it with a small DNS question through the tunnel. */
     private fun answered(ms: Long): Boolean {
         val until = System.currentTimeMillis() + ms
         var nudged = 0L
@@ -515,8 +559,9 @@ object Vpn {
             if (handshakeAt() > 0) return true
             if (System.currentTimeMillis() - nudged > 2_000) {
                 nudged = System.currentTimeMillis()
-                // (A tiny DNS question: any traffic makes WireGuard say hello to the server.)
-                try { java.net.DatagramSocket().use { it.send(java.net.DatagramPacket(ByteArray(12), 12, java.net.InetAddress.getByName("1.1.1.1"), 53)) } } catch (_: Throwable) {}
+                // (Any traffic makes WireGuard say hello to the server.)
+                val to = tunnelDns ?: try { java.net.InetAddress.getByAddress(byteArrayOf(1, 1, 1, 1)) } catch (_: Throwable) { null }
+                if (to != null) try { java.net.DatagramSocket().use { val q = dnsQuestion(); it.send(java.net.DatagramPacket(q, q.size, to, 53)) } } catch (_: Throwable) {}
             }
             Thread.sleep(200)
         }
@@ -527,7 +572,18 @@ object Vpn {
      * [connect], and if that location doesn't answer, the least busy others in the same country (two at most), by
      * itself – with a note saying where it ended up.
      */
+    /** Set while [connectOrNearby] tries the others itself (a failed one isn't handed to [keepTrying] meanwhile). */
+    @Volatile private var quiet = false
+
     suspend fun connectOrNearby(loc: Location? = null): String? {
+        quiet = true
+        val err = try { nearbyTries(loc) } finally { quiet = false }
+        // Still not on, though it's meant to be (switching location, or at start-up): keeps trying by itself.
+        if (err != null && wanted) keepTrying()
+        return err
+    }
+
+    private suspend fun nearbyTries(loc: Location?): String? {
         val err = connect(loc) ?: return null
         if (!err.endsWith("didn't answer")) return err
         val from = loc ?: try { current(locations()) } catch (_: Exception) { null } ?: return err
@@ -561,42 +617,110 @@ object Vpn {
     @Volatile private var fixing = false
 
     /**
-     * While connected: every 30 seconds, is the server still answering? WireGuard renews its handshake every two
-     * minutes while there's traffic (and Dingus sends a keep-alive every 25 seconds), so none for over three minutes
-     * means the VPN has dropped.
+     * While connected: every 30 seconds, is the server still answering, and does anything actually get through? No
+     * handshake for over three minutes (WireGuard renews it every two while there's traffic, and Dingus sends a
+     * keep-alive every 25 seconds), or two checks in a row with nothing getting through, means it has dropped – a
+     * tunnel can stay "connected" while carrying nothing, which looked like the playlist's servers being offline.
      */
     private fun watch() {
         watcher?.cancel()
         watcher = scope.launch {
+            var misses = 0
             while (true) {
                 kotlinx.coroutines.delay(30_000)
-                if (status != Status.ON || fixing) continue
+                if (status != Status.ON || fixing) { misses = 0; continue }
                 val last = try { backend.getStatistics(tunnel).peers().firstOrNull()?.let { backend.getStatistics(tunnel).peer(it)?.latestHandshakeEpochMillis } } catch (_: Throwable) { null } ?: continue
-                if (last <= 0 || System.currentTimeMillis() - last > 180_000) { set(Status.ERROR, "VPN dropped"); dropped() }
+                val stale = last <= 0 || System.currentTimeMillis() - last > 180_000
+                misses = if (stale || !works()) misses + 1 else 0
+                if (stale || misses >= 2) { misses = 0; Ui.test("vpn-not-working"); set(Status.ERROR, "VPN dropped"); dropped() }
             }
         }
     }
 
-    /** The VPN dropped: hold streams (kill switch), then reconnect – the same place three times, then the least busy nearby. */
+    /** The VPN dropped: hold streams (kill switch), then put it right – see [keepTrying]. */
     private fun dropped() {
         if (!wanted || fixing) return
-        fixing = true
         Ui.test("vpn-dropped")
         if (Store.vpnKillSwitch) { Streams.closeAll("vpn dropped"); Notice.working("VPN dropped  ·  reconnecting…") }
-        scope.launch {
+        if (!Store.vpnReconnect) { if (Store.vpnKillSwitch) Notice.done("VPN dropped  ·  turn it on again in Settings → VPN", 8_000); return }
+        keepTrying()
+    }
+
+    private var keeper: kotlinx.coroutines.Job? = null
+    /** Set by a change of network: the next try happens now rather than after the wait. */
+    @Volatile private var tryNow = false
+
+    /**
+     * The VPN is meant to be on but isn't (it dropped, didn't come on at start-up, or a new location didn't answer):
+     * it keeps trying by itself until it's back – where it was, then the least busy nearby, then the best overall –
+     * quickly at first, then every two minutes, and straight away when the network comes back. It never gives up
+     * while you want it on; you're told once that it's still trying.
+     */
+    fun keepTrying() {
+        if (!wanted || !Store.vpnReconnect) return
+        if (keeper?.isActive == true) { tryNow = true; return }
+        keeper = scope.launch {
+            fixing = true
             try {
-                if (!Store.vpnReconnect) { if (Store.vpnKillSwitch) Notice.done("VPN dropped  ·  turn it on again in Settings → VPN", 8_000); return@launch }
-                val here = connectedTo
-                val all = try { locations() } catch (_: Exception) { emptyList() }
-                val nearby = all.filter { it.countryCode == here?.countryCode && it.id != here?.id }.sortedBy { if (it.load < 0) 100 else it.load }
-                val tries = listOfNotNull(here, here, here) + nearby.take(2)
-                for (loc in tries) {
-                    if (!wanted) return@launch // (turned off meanwhile)
-                    if (connect(loc) == null) { Ui.test("vpn-reconnected ${loc.label}"); Streams.reopenAll(); Notice.done("VPN back on  ·  ${loc.label}", 3_000); return@launch }
-                    kotlinx.coroutines.delay(3_000)
+                val waits = longArrayOf(0, 3_000, 10_000, 30_000, 60_000)
+                var round = 0
+                while (wanted && status != Status.ON) {
+                    val wait = waits.getOrElse(round) { 120_000L }
+                    var waited = 0L
+                    while (waited < wait && !tryNow && wanted) { kotlinx.coroutines.delay(1_000); waited += 1_000 }
+                    tryNow = false
+                    if (!wanted || status == Status.ON) break
+                    val all = try { locations() } catch (_: Exception) { emptyList() }
+                    val here = connectedTo ?: all.firstOrNull { it.id == locationId }
+                    val nearby = all.filter { here != null && it.countryCode == here.countryCode && it.id != here.id }.sortedBy { if (it.load < 0) 100 else it.load }
+                    val near2 = nearby.take(2)
+                    val overall = best(all)?.takeIf { b -> b.id != here?.id && near2.none { it.id == b.id } }
+                    val tries = listOfNotNull(here, here) + near2 + listOfNotNull(overall)
+                    for (loc in tries) {
+                        if (!wanted || status == Status.ON) break
+                        if (connect(loc, auto = true) == null) {
+                            Ui.test("vpn-reconnected ${loc.label}"); Streams.reopenAll()
+                            Notice.done(if (loc.id == here?.id || here == null) "VPN back on  ·  ${loc.label}" else "VPN back on  ·  now through ${loc.label}", 3_000)
+                            break
+                        }
+                    }
+                    if (status != Status.ON && round == 1)
+                        Notice.done(if (Store.vpnKillSwitch) "The VPN hasn't reconnected yet  ·  still trying (Settings → VPN to watch without it)" else "The VPN hasn't reconnected yet  ·  still trying", 8_000)
+                    round++
                 }
-                Notice.done(if (Store.vpnKillSwitch) "The VPN couldn't reconnect  ·  turn it off in Settings → VPN to watch without it" else "The VPN couldn't reconnect", 10_000)
             } finally { fixing = false }
+        }
+    }
+
+    /**
+     * Wi-Fi back, a different network, or the Fire TV waking up: the VPN is checked straight away (and put right if
+     * it isn't carrying anything) instead of waiting minutes for the next check to notice.
+     */
+    private fun listenForNetwork() {
+        val cm = app.getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager ?: return
+        val req = android.net.NetworkRequest.Builder()
+            .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN).build()
+        try {
+            cm.registerNetworkCallback(req, object : android.net.ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: android.net.Network) { networkBack() }
+            })
+        } catch (e: Throwable) { Log.w("Dingus", "vpn network callback", e) }
+    }
+
+    @Volatile private var lastNetworkCheck = 0L
+    private fun networkBack() {
+        if (!wanted) return
+        val now = System.currentTimeMillis()
+        if (now - lastNetworkCheck < 5_000) return
+        lastNetworkCheck = now
+        scope.launch {
+            kotlinx.coroutines.delay(2_000) // (the new network settling)
+            if (!wanted) return@launch
+            when {
+                status == Status.ON && !fixing -> if (!works()) { Ui.test("vpn-network-check failed"); set(Status.ERROR, "VPN dropped"); dropped() } else Ui.test("vpn-network-check ok")
+                status != Status.ON -> keepTrying().also { tryNow = true }
+            }
         }
     }
 
@@ -671,6 +795,8 @@ object Vpn {
     /** At start: if "connect when Dingus starts" is on, connect first (so the playlist loads through the VPN). */
     suspend fun startup() {
         if (!auto || status == Status.ON || !ready) return
+        if (permissionIntent(app) != null) return // (asked for in Settings → VPN)
+        wanted = true // (on from the start: if it can't connect yet, it keeps trying by itself)
         // (The connecting carries on by itself: a timeout can't cut short a slow download or the tunnel starting, so
         // only the waiting stops after 15 seconds, and the playlist loads.)
         val job = kotlinx.coroutines.CoroutineScope(Dispatchers.IO).async { connectOrNearby() }

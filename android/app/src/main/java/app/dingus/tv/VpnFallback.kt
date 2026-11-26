@@ -59,7 +59,11 @@ object VpnFallback {
                 Notice.done("Couldn't find a VPN location your playlist answers through", 7_000)
             } catch (e: Exception) {
                 android.util.Log.w("Dingus", "vpn fallback", e)
-            } finally { running = false }
+            } finally {
+                running = false
+                // (Left without the VPN while it's meant to be on: it keeps trying by itself.)
+                if (Vpn.wanted && Vpn.status != Vpn.Status.ON) Vpn.keepTrying()
+            }
         }
     }
 

@@ -38,8 +38,8 @@ object SlowVpn {
                 Notice.done("⛨  Kept buffering  ·  moving to $name, which answers quicker", 6_000)
                 // If it doesn't answer: the next quickest nearby, and failing that back where it was – never left
                 // with the VPN down (with the kill switch on, nothing would play).
-                if (Vpn.connectOrNearby(best) == null) { Vpn.locationId = best.id; return@launch }
-                if (Vpn.wanted && Vpn.connect(here) == null) Notice.done("⛨  ${name} didn't answer  ·  staying on ${here.city.ifEmpty { here.label }}", 6_000)
+                // (If neither it nor the next nearby answers, the VPN puts itself back by itself – where it was first.)
+                if (Vpn.connectOrNearby(best) == null) Vpn.locationId = best.id
             } finally { busy = false }
         }
     }
