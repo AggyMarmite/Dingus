@@ -142,15 +142,16 @@ class HomeFeature(
         val shift = 28 * a.resources.displayMetrics.density
         val parts = listOf<View>(h.kicker, h.logo, h.title, h.meta, h.progress, h.text, h.dots)
         val ease = Motion.glide
-        art.animate().alpha(0f).setDuration(240).start()
-        parts.forEach { it.animate().alpha(0f).translationX(-shift).setDuration(200).setInterpolator(android.view.animation.AccelerateInterpolator()).start() }
+        // (Each moving part as a ready-drawn picture while it moves – fading text with shadows was being drawn twice over
+        // on every frame – and the background picture crossfades once, by itself, rather than fading out and in as
+        // well: the Fire TV Stick was dropping frames.)
+        parts.forEach { it.animate().alpha(0f).translationX(-shift).setDuration(200).setInterpolator(android.view.animation.AccelerateInterpolator()).withLayer().start() }
         h.itemView.postDelayed({
             index = next; bind(h)
             parts.forEach { v ->
                 v.translationX = shift
-                v.animate().alpha(1f).translationX(0f).setDuration(380).setInterpolator(ease).start()
+                v.animate().alpha(1f).translationX(0f).setDuration(380).setInterpolator(ease).withLayer().start()
             }
-            art.animate().alpha(1f).setDuration(520).setInterpolator(ease).start()
         }, 210)
         h.itemView.postDelayed({ moving = false; art.alpha = 1f; parts.forEach { it.alpha = 1f; it.translationX = 0f } }, 800)
     }
@@ -183,6 +184,18 @@ class HomeFeature(
         h.second.visibility = if (s.second != null) View.VISIBLE else View.GONE
         h.second.text = s.second?.first ?: ""
         // Dots: the current slide is a wider bar.
+        // (The same dots kept, just restyled, when there are as many: adding new ones re-laid the screen out mid-move.)
+        if (h.dots.childCount == slides.size && slides.size > 1) {
+            val d = a.resources.displayMetrics.density
+            for (i in slides.indices) {
+                val dot = h.dots.getChildAt(i)
+                val w = ((if (i == index) 16 else 6) * d).toInt()
+                if (dot.layoutParams.width != w) dot.layoutParams = dot.layoutParams.apply { width = w }
+                (dot.background as? GradientDrawable)?.setColor(if (i == index) 0xFFFFFFFF.toInt() else 0x66FFFFFF)
+            }
+            Ui.test("home-feature ${index + 1}/${slides.size} ${s.title}")
+            return
+        }
         h.dots.removeAllViews()
         if (slides.size > 1) for (i in slides.indices) {
             val d = a.resources.displayMetrics.density

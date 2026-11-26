@@ -195,7 +195,7 @@ class ImageCache(private val name: String, megabytes: Int, private val config: B
             if (old == null || Ui.lite) { view.setImageDrawable(new); return }
             val oldD = (old as? android.graphics.drawable.TransitionDrawable)?.let { it.getDrawable(it.numberOfLayers - 1) } ?: old
             val t = android.graphics.drawable.TransitionDrawable(arrayOf(oldD, new)).apply { isCrossFadeEnabled = true }
-            view.setImageDrawable(t); t.startTransition(220)
+            view.setImageDrawable(t); t.startTransition(360)
         }
         cache.get(key(url, heightPx))?.let { put(it); return }
         val ref = WeakReference(view)
