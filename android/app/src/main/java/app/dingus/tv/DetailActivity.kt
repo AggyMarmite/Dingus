@@ -100,20 +100,29 @@ class DetailActivity : BaseActivity() {
                 finish(); return@launch
             }
             if (item?.id != it.id) { item = it; showBasics(it) }
+            // Opened before: the copy saved last time, straight away (the provider can take a while over a show's
+            // episodes), then checked with the provider – the page only redrawn if something actually changed.
+            if (details == null) Vod.savedDetails(kind, it)?.let { d -> details = d; showDetails(); refreshButtons(); Ui.test("details-saved ${it.name}") }
             if (details == null) status.text = "Loading details…"
             try {
-                details = Vod.details(kind, it)
+                val shown = details
+                val got = Vod.details(kind, it)
                 status.text = ""
-                showDetails()
+                if (shown == null || !sameEpisodes(shown, got) || shown.plot != got.plot) { details = got; showDetails() } else details = got
                 Ui.test("details ${it.name} episodes ${details?.episodes?.size}")
             } catch (e: Exception) {
-                status.text = "Couldn't load the details: ${Net.friendly(e)}"
-                if (kind == Vod.SERIES) play.visibility = View.GONE
+                if (details == null) {
+                    status.text = "Couldn't load the details: ${Net.friendly(e)}"
+                    if (kind == Vod.SERIES) play.visibility = View.GONE
+                }
             }
             refreshButtons()
             if (play.visibility != View.VISIBLE) findViewById<View>(R.id.myList).requestFocus() // (focus was on Play)
         }
     }
+
+    private fun sameEpisodes(a: Details, b: Details) =
+        a.episodes.size == b.episodes.size && a.episodes.indices.all { a.episodes[it].id == b.episodes[it].id }
 
     /** Coming soon: its picture, logo, details, cast and trailer, and the alert – no Play or My list. */
     private fun showComing(id: String) {

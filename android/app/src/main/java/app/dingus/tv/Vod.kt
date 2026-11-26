@@ -397,9 +397,9 @@ object Vod {
      * Plot, cast and (for shows) the episodes. Fetched once and shared: asking again while it's on its way waits for
      * that one rather than starting another, and a show's episodes fetched in the last few minutes are used as they are.
      */
-    suspend fun details(kind: String, item: VodItem): Details {
+    suspend fun details(kind: String, item: VodItem, fresh: Boolean = false): Details {
         val key = "$kind:${item.id}"
-        detailsCache.get(key)?.takeIf { kind == MOVIES || System.currentTimeMillis() - (synchronized(detailsAt) { detailsAt[key] } ?: 0L) < SHOW_FRESH_MS }?.let { return it }
+        if (!fresh) detailsCache.get(key)?.takeIf { kind == MOVIES || System.currentTimeMillis() - (synchronized(detailsAt) { detailsAt[key] } ?: 0L) < SHOW_FRESH_MS }?.let { return it }
         val d = synchronized(fetching) {
             fetching[key] ?: detailsScope.async {
                 try { fetchDetails(kind, item).also { detailsCache.put(key, it); synchronized(detailsAt) { detailsAt[key] = System.currentTimeMillis() } } }
@@ -409,12 +409,43 @@ object Vod {
         return d.await()
     }
 
+    /**
+     * Details from memory, else the copy saved on disk the last time they were fetched (any age): for showing a page
+     * straight away while [details] checks with the provider. Null when it's never been opened.
+     */
+    suspend fun savedDetails(kind: String, item: VodItem): Details? = detailsCache.get("$kind:${item.id}") ?: withContext(Dispatchers.IO) {
+        try {
+            val f = detailsFile(kind, item.id).takeIf { it.exists() } ?: return@withContext null
+            val text = java.util.zip.GZIPInputStream(FileInputStream(f)).use { it.readBytes().toString(Charsets.UTF_8) }
+            parseDetails(text, item).also { d -> if (detailsCache.get("$kind:${item.id}") == null) detailsCache.put("$kind:${item.id}", d) }
+        } catch (e: Exception) { null }
+    }
+
+    private fun detailsFile(kind: String, id: String) = File(File(dir, "details").apply { mkdirs() }, "${kind}_${id.replace(Regex("[^A-Za-z0-9_-]"), "_")}.gz")
+
+    private fun saveDetails(kind: String, id: String, text: String) {
+        val f = detailsFile(kind, id)
+        val tmp = File(f.path + ".tmp")
+        java.util.zip.GZIPOutputStream(FileOutputStream(tmp)).use { it.write(text.toByteArray(Charsets.UTF_8)) }
+        tmp.renameTo(f)
+        // The 200 most recently opened are kept.
+        val all = f.parentFile?.listFiles { x -> x.name.endsWith(".gz") } ?: return
+        if (all.size > 220) all.sortedByDescending { it.lastModified() }.drop(200).forEach { it.delete() }
+    }
+
     private fun fetchDetails(kind: String, item: VodItem): Details {
         val p = Store.playlist ?: throw IllegalStateException("No playlist")
         val auth = "username=${Sources.enc(p.user)}&password=${Sources.enc(p.pass)}"
         val url = "${base(p)}/player_api.php?$auth&action=" +
             if (kind == MOVIES) "get_vod_info&vod_id=${item.id}" else "get_series_info&series_id=${item.id}"
         val text = Net.open(url, 30_000).use { it.readBytes().toString(Charsets.UTF_8) }
+        val d = parseDetails(text, item)
+        // (Kept on disk too, so the page opens straight away next time – even after a restart – while it's checked again.)
+        if (d.title != null || d.episodes.isNotEmpty() || d.plot != null) try { saveDetails(kind, item.id, text) } catch (e: Exception) { Log.w("Dingus", "save details", e) }
+        return d
+    }
+
+    private fun parseDetails(text: String, item: VodItem): Details {
         val root = try { JSONObject(text) } catch (e: Exception) { JSONObject() }
         val info = root.optJSONObject("info") ?: JSONObject()
         fun s(vararg k: String) = k.firstNotNullOfOrNull { info.optString(it).takeIf { v -> v.isNotBlank() && v != "null" } }

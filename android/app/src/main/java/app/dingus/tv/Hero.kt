@@ -62,7 +62,7 @@ class Hero(
                 if (d == null) handler.postDelayed({
                     job = scope.launch {
                         val logoJob = if (TitleLogos.enabled) async { try { TitleLogos.find(card.kind, m, null) } catch (e: Exception) { null } } else null
-                        val got = try { Vod.details(card.kind, m) } catch (e: Exception) { null }
+                        val got = try { Vod.savedDetails(card.kind, m) ?: Vod.details(card.kind, m) } catch (e: Exception) { null }
                         if (showing === card) { posterFallback = got == null; bindTitle(card, got); posterFallback = false }
                         val found = logoJob?.await() ?: if (TitleLogos.enabled && got?.tmdbId != null) TitleLogos.find(card.kind, m, got.tmdbId) else null
                         if (showing === card) found?.let { TitleLogos.show(logo, title, it) }

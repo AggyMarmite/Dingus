@@ -257,6 +257,13 @@ key KEYCODE_DPAD_CENTER 2
 check "vod-episodes 4" 5 "Episodes in the player lists the show's episodes"
 shot 14b-player-episodes
 key KEYCODE_BACK 2; key KEYCODE_BACK 3
+# A show opened before opens straight away next time, even after a restart (the saved copy, then checked).
+adb shell am force-stop $PKG; sleep 1
+fresh
+adb shell am start -n $PKG/.MainActivity --es dingus_test_show 701
+check "details-saved " 15 "a show opened before shows its details straight away after a restart"
+check "details .* episodes 4" 30 "then checks them with the provider"
+key KEYCODE_BACK 2
 fresh
 adb shell am start -n $PKG/.MainActivity --es dingus_test_search test
 check "search \"test\" [1-9]" 30 "search finds channels, films and shows"
