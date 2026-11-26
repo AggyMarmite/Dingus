@@ -60,10 +60,23 @@ abstract class BaseActivity : Activity() {
         super.onPostCreate(savedInstanceState)
         // Buttons, pills and chips lift a little when highlighted, everywhere (cards lift themselves).
         window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { o, n -> Motion.buttons(o, n) }
+        plainOverlays(window.decorView)
         if (BuildConfig.DEBUG) window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, n ->
             val id = n?.takeIf { it.id != android.view.View.NO_ID }?.let { try { resources.getResourceEntryName(it.id) } catch (_: Exception) { null } }
             if (id != null) Ui.test("focus $id")
         }
+    }
+
+    /**
+     * The plain shades and dims laid over a screen (a colour or gradient, nothing inside): faded by drawing them
+     * see-through directly. Left as they were, each one faded part-way was painted into a whole-screen buffer and
+     * blended again on every frame – while the rows glided, the dim behind them cost the Fire Stick a whole extra
+     * screen's worth of drawing each frame.
+     */
+    private fun plainOverlays(v: android.view.View) {
+        if (android.os.Build.VERSION.SDK_INT < 24) return
+        if (v.javaClass == android.view.View::class.java) v.forceHasOverlappingRendering(false)
+        if (v is android.view.ViewGroup) for (i in 0 until v.childCount) plainOverlays(v.getChildAt(i))
     }
 
     protected fun backHold(event: android.view.KeyEvent): Boolean {

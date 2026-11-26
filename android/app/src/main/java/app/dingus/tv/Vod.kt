@@ -345,7 +345,7 @@ object Vod {
         val listAction = if (kind == MOVIES) "get_vod_streams" else "get_series"
         // The whole list first (one request)…
         var full: List<VodItem>? = null
-        readCutShort = false
+        readCutShort.set(false)
         // Downloaded in full first, then read from the file: reading while downloading is slow on a Fire TV, and a
         // server that gives up on a slow reader can end the list early. (What came is noted for Check everything.)
         var raw = ""
@@ -357,7 +357,7 @@ object Vod {
         }
         catch (e: Exception) { Log.w("Dingus", "whole $kind list", e) }
         finally { tmp.delete() }
-        fetchInfo["$kind-whole"] = when { full == null -> "the whole list didn't come"; readCutShort -> "the whole list was cut short at ${Ui.count(full!!.size)}"; else -> "whole list ${Ui.count(full!!.size)}" } + raw
+        fetchInfo["$kind-whole"] = when { full == null -> "the whole list didn't come"; readCutShort.get() == true -> "the whole list was cut short at ${Ui.count(full!!.size)}"; else -> "whole list ${Ui.count(full!!.size)}" } + raw
         // Whole list in hand: shown straight away, and each category's own list checked in the background (below).
         // Without it: the categories' own lists now.
         val whole = full?.filter { m -> m.categories.any { !Store.isHidden("$kind:$it") } }?.map { m ->
@@ -535,10 +535,11 @@ object Vod {
                 android.util.JsonToken.BEGIN_OBJECT -> { r.beginObject(); while (r.hasNext()) { r.nextName(); if (r.peek() == android.util.JsonToken.BEGIN_OBJECT) one() else r.skipValue() }; r.endObject() }
                 else -> {}
             }
-        } catch (e: Exception) { Log.w("Dingus", "list cut short after ${out.size}", e); readCutShort = true }
+        } catch (e: Exception) { Log.w("Dingus", "list cut short after ${out.size}", e); readCutShort.set(true) }
         return out
     }
-    @Volatile private var readCutShort = false
+    /** (Per thread: the category lists read alongside mustn't mark the whole list as cut short.) */
+    private val readCutShort = ThreadLocal<Boolean>()
 
     /** " (6.2 MB, 24,299 entries, ends …}])": how big the list that came was, how many entries it holds and how it ends. */
     private fun rawInfo(f: File, key: String): String {

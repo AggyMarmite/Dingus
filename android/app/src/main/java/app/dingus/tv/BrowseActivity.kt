@@ -134,7 +134,7 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
         val wdp = resources.displayMetrics.widthPixels / resources.displayMetrics.density - 60 - 56
         colsWide = (wdp / 146).toInt().coerceIn(3, 10)
         colsNarrow = ((wdp - 246) / 146).toInt().coerceIn(3, colsWide)
-        grid.layoutManager = GridLayoutManager(this, colsWide)
+        grid.layoutManager = LiftGrid(this, colsWide)
         grid.adapter = posters
         grid.itemAnimator = null
         grid.setHasFixedSize(true)
@@ -588,3 +588,23 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
         }
     }
 }
+
+/**
+ * The titles grid: a highlighted title is brought fully into view lifted, not just at its resting size (at the top
+ * and bottom of the grid, the lifted card reached past the edge and was cut off).
+ */
+private class LiftGrid(ctx: android.content.Context, span: Int) : GridLayoutManager(ctx, span) {
+    override fun requestChildRectangleOnScreen(parent: RecyclerView, child: View, rect: android.graphics.Rect, immediate: Boolean, focusedChildVisible: Boolean): Boolean {
+        val m = (child.height * 0.06f).toInt() + 2 // (half of what the lift adds, plus a pixel or two)
+        val top = parent.paddingTop; val bottom = parent.height - parent.paddingBottom
+        val dy = when {
+            child.top - m < top -> child.top - m - top
+            child.bottom + m > bottom -> minOf(child.bottom + m - bottom, child.top - m - top)
+            else -> 0
+        }
+        if (dy == 0) return false
+        Scrolling.by(parent, 0, dy, immediate)
+        return true
+    }
+}
+
