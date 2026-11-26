@@ -431,6 +431,10 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
             lm.scrollToPositionWithOffset(t, if (downwards) maxOf(0, grid.height - grid.paddingBottom - rowH) else 0)
             grid.post { grid.findViewHolderForAdapterPosition(t)?.itemView?.requestFocus() }
         }
+        // The next two rows' posters fetched now, so they're ready by the time you get there (further down the
+        // list they were only fetched on arrival – loading, and stuttering, as you went).
+        val ahead = if (downwards) (t + span until minOf(n, t + span * 3)) else (maxOf(0, t - span * 2) until maxOf(0, t - span))
+        Posters.prefetch(ahead.map { posters.items[it].poster }, (189 * resources.displayMetrics.density).toInt())
         Ui.test("grid-step $t")
     }
 
