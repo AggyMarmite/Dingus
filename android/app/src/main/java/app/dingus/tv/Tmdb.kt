@@ -26,6 +26,19 @@ object Tmdb {
         key
     }
 
+    /** A season's episode descriptions and stills from TMDB, by episode number (for episodes the provider left blank). */
+    suspend fun season(item: VodItem, tmdbId: String?, season: Int): Map<Int, Pair<String?, String?>> = withContext(Dispatchers.IO) {
+        try {
+            val id = TitleLogos.tmdbIdFor(Vod.SERIES, item, tmdbId) ?: return@withContext emptyMap()
+            val eps = TitleLogos.get("/tv/$id/season/$season").optJSONArray("episodes") ?: return@withContext emptyMap()
+            (0 until eps.length()).associate { i ->
+                val e = eps.getJSONObject(i)
+                e.optInt("episode_number") to (e.optString("overview").takeIf { it.isNotBlank() } to
+                    e.optString("still_path").takeIf { it.isNotBlank() && it != "null" }?.let { "https://image.tmdb.org/t/p/w300$it" })
+            }
+        } catch (e: Exception) { emptyMap() }
+    }
+
     /** TMDB's recommendations for a title that are in the playlist (same kind), up to [max]. */
     suspend fun similar(kind: String, item: VodItem, tmdbId: String?, max: Int = 10): List<VodItem> = withContext(Dispatchers.IO) {
         val k = "$kind:${item.id}"

@@ -232,7 +232,20 @@ class DetailActivity : BaseActivity() {
         season = s
         val row = findViewById<LinearLayout>(R.id.seasons)
         for (i in 0 until row.childCount) row.getChildAt(i).isActivated = row.getChildAt(i).tag == s
-        episodes.set(d.episodes.filter { it.season == s })
+        val list = d.episodes.filter { it.season == s }
+        episodes.set(list)
+        // Episodes the provider sent without a description (or picture): filled in from TMDB.
+        val m = item
+        if (m != null && list.any { it.plot.isNullOrBlank() }) scope.launch {
+            val extra = Tmdb.season(m, d.tmdbId, s)
+            if (extra.isEmpty() || season != s) return@launch
+            episodes.update(list.map { e ->
+                val (plot, still) = extra[e.number] ?: return@map e
+                if (!e.plot.isNullOrBlank() && !e.image.isNullOrBlank()) e
+                else Episode(e.id, e.title, e.season, e.number, e.ext, e.plot?.takeIf { it.isNotBlank() } ?: plot, e.image?.takeIf { it.isNotBlank() } ?: still, e.duration)
+            })
+            Ui.test("episodes filled from tmdb ${extra.size}")
+        }
     }
 
     private fun focusEpisode() {
@@ -348,6 +361,8 @@ class DetailActivity : BaseActivity() {
     private inner class EpisodeAdapter : RecyclerView.Adapter<EpisodeAdapter.H>() {
         var items: List<Episode> = emptyList()
         fun set(list: List<Episode>) { items = list; notifyDataSetChanged() }
+        /** The same episodes with more filled in: redrawn where they are, so the highlight stays put. */
+        fun update(list: List<Episode>) { if (list.size != items.size) return set(list); items = list; notifyItemRangeChanged(0, list.size) }
         private val h by lazy { (125 * resources.displayMetrics.density).toInt() }
 
         inner class H(v: View) : RecyclerView.ViewHolder(v) {

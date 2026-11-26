@@ -433,7 +433,10 @@ object Vod {
         fun i(k: String) = info?.optString(k)?.takeIf { it.isNotBlank() && it != "null" }
         out.add(Episode(
             id, e.optString("title").ifBlank { "Episode" }, season, e.optString("episode_num").toIntOrNull() ?: 0,
-            e.optString("container_extension").ifBlank { "mp4" }, i("plot"), i("movie_image"), i("duration"),
+            e.optString("container_extension").ifBlank { "mp4" },
+            // (Providers put an episode's description in different places.)
+            i("plot") ?: i("overview") ?: i("description") ?: e.optString("plot").takeIf { it.isNotBlank() && it != "null" },
+            i("movie_image") ?: i("cover_big"), i("duration"),
         ))
     }
 
