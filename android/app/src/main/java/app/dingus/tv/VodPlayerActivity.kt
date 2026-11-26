@@ -185,7 +185,14 @@ class VodPlayerActivity : BaseActivity() {
                         val ok = Failover.recover()
                         runOnUiThread { if (ok) { retries = 0; open(pos) } else { message.text = cantPlay(error); Failover.vpnElsewhere() } }
                     }.start()
-                } else { message.text = cantPlay(error); if (Players.serverDown(error)) Failover.vpnElsewhere() }
+                } else {
+                    message.text = cantPlay(error)
+                    if (Players.serverDown(error) || Players.refused(error)) {
+                        Streams.failedAt = System.currentTimeMillis(); Account.soon() // (the menu's status says so)
+                        // Through a VPN: find a location this plays through; it picks up where it was once found.
+                        if (Vpn.status == Vpn.Status.ON) { closedAt = pos; Vpn.streamBlocked(Failover.rewrite(urls[index])) } else Failover.vpnElsewhere()
+                    }
+                }
             }
         })
         video.player = p

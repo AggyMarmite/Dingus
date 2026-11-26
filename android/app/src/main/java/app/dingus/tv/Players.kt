@@ -150,6 +150,12 @@ object Players {
         e.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED
 
     /** Whether a stream failed because the server can't be reached (a backup server may be worth trying). */
+    /** The server refused the stream (401/403): through a VPN, what a provider answers a location it blocks. */
+    fun refused(e: androidx.media3.common.PlaybackException): Boolean {
+        val code = (e.cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.responseCode ?: return false
+        return code == 401 || code == 403
+    }
+
     fun serverDown(e: androidx.media3.common.PlaybackException): Boolean {
         if (e.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
             e.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT) return true

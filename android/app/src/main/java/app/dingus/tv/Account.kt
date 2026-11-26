@@ -59,14 +59,15 @@ object Account {
         lastCheck = System.currentTimeMillis()
         return try {
             val info = if (login(p) != null) refresh(p) else { ping(p); saved() }
-            online = p.id to true
+            // Answering isn't enough: channels refused (a blocked VPN location) with nothing playing since is offline.
+            online = p.id to !Streams.failing
             Ui.test("account ${info?.activeConnections}/${info?.maxConnections} online")
             info
         } catch (e: Exception) {
             // Not offline when it plainly isn't: the server answered (some answer this account question 404 yet
             // play and list everything fine), or what you're watching is still coming in from it.
             val answered = e.message?.contains("answered 404") == true
-            val up = answered || Streams.flowing
+            val up = (answered && !Streams.failing) || Streams.flowing
             online = p.id to up
             Ui.test("account ${if (up) "online (check: ${e.message})" else "offline ${e.message}"}")
             if (up) saved() else null

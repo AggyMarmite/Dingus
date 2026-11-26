@@ -28,6 +28,9 @@ object Streams {
     @Volatile var dataAt = 0L
     /** Something is coming in from the provider right now: the server's plainly online, whatever a check says. */
     val flowing: Boolean get() = System.currentTimeMillis() - dataAt < 20_000
+    /** When a stream was last refused or couldn't reach the server (with nothing coming in since, it isn't "online"). */
+    @Volatile var failedAt = 0L
+    val failing: Boolean get() = System.currentTimeMillis() - failedAt < 3 * 60_000L && dataAt < failedAt
 
     fun add(p: Playing) { synchronized(playing) { playing.add(p) } }
     fun remove(p: Playing) { synchronized(playing) { playing.remove(p) } }

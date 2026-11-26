@@ -358,7 +358,16 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
             Ui.test("fallback ${next.name}")
             handler.postDelayed({ startChannel(); showInfo() }, 500)
         } else if (!slotWaited) { slotWaited = true; waitForFreeConnection(error) }
-        else { showFailed(error); if (Players.serverDown(error)) Failover.vpnElsewhere() }
+        else {
+            showFailed(error)
+            if (Players.serverDown(error) || Players.refused(error)) {
+                Streams.failedAt = System.currentTimeMillis(); Account.soon() // (the menu's status says so)
+                // Through a VPN: most likely this location's blocked for streams – find one this channel plays through
+                // (it starts again by itself once found).
+                val c = list.getOrNull(index)
+                if (Vpn.status == Vpn.Status.ON && c != null) Vpn.streamBlocked(Players.liveUrl(version ?: c)) else Failover.vpnElsewhere()
+            }
+        }
     }
 
     private fun showFailed(error: PlaybackException) {

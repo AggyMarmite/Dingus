@@ -765,6 +765,23 @@ object Vpn {
         }
     }
 
+    /** Whether [url] (a channel or film) starts coming in through the VPN as it is now: its first bytes, then closed. */
+    private fun streamPlays(url: String): Boolean = try {
+        Net.open(url, 8_000).use { it.read() >= 0 }
+    } catch (_: Throwable) { false }
+
+    /**
+     * A channel or film was refused (or couldn't reach the server) through this VPN location: looks for one it plays
+     * through, straight away and then without end like [keepSearching], and starts it again once found.
+     */
+    fun streamBlocked(url: String) {
+        if (!wanted || status != Status.ON) return
+        if (searcher?.isActive == true) return // (already looking)
+        Ui.test("vpn-stream-blocked")
+        Notice.done("⛨  That didn't play through ${connectedTo?.label ?: "this VPN location"}  ·  looking for one it plays through…", 6_000)
+        keepSearching(connectedTo, setOfNotNull(connectedTo?.id), url)
+    }
+
     /** Handed from [keepTrying] to [keepSearching] once it's on (without the playlist) somewhere. */
     @Volatile private var searchAfter: Pair<Location, Set<String>>? = null
     private var searcher: kotlinx.coroutines.Job? = null
@@ -779,17 +796,26 @@ object Vpn {
      * playlist answers, wherever it is, or the VPN's turned off. Trying costs nothing to watch: the playlist isn't
      * working through the location it's parked on anyway.
      */
-    fun keepSearching(park: Location? = connectedTo, alreadyTried: Set<String> = emptySet()) {
+    fun keepSearching(park: Location? = connectedTo, alreadyTried: Set<String> = emptySet(), stream: String? = null) {
         if (park == null || !wanted || searcher?.isActive == true || !VpnFallback.enabled) return // (Settings → VPN → Find a location that works)
+        // With a [stream]: it's that (a channel or film that was refused) that has to work, not just the playlist.
+        val works: () -> Boolean = if (stream != null) { { playlistAnswers() && streamPlays(stream) } } else { { playlistAnswers() } }
         searcher = scope.launch {
             val tried = LinkedHashSet(alreadyTried)
             var home = park
-            Ui.test("vpn-search-start ${tried.size}")
+            var first = stream != null // (a refused stream: the first look straight away)
+            Ui.test("vpn-search-start ${tried.size}${if (stream != null) " (stream)" else ""}")
             while (wanted) {
-                kotlinx.coroutines.delay(60_000)
+                if (!first) kotlinx.coroutines.delay(60_000)
+                first = false
                 if (!wanted) break
                 if (fixing || keeper?.isActive == true) continue // (something else is putting it right)
-                if (status == Status.ON && playlistAnswers()) { Ui.test("vpn-search-done (answers now)"); Notice.done("⛨  Your playlist's answering again  ·  ${connectedTo?.label ?: ""}", 5_000); break }
+                if (status == Status.ON && works()) {
+                    Ui.test("vpn-search-done (works now)")
+                    if (stream == null) Notice.done("⛨  Your playlist's answering again  ·  ${connectedTo?.label ?: ""}", 5_000)
+                    Streams.reopenAll()
+                    break
+                }
                 val all = try { locations() } catch (_: Exception) { emptyList() }
                 if (all.isEmpty()) continue
                 val good = Store.playlist?.let { VpnFallback.goodFor(it) }.orEmpty()
@@ -801,7 +827,7 @@ object Vpn {
                     for (loc in batch) {
                         if (!wanted) break
                         tried.add(loc.id)
-                        if (connect(loc, auto = true) == null) { found = loc; break }
+                        if (connect(loc, auto = true) == null && (stream == null || streamPlays(stream))) { found = loc; break }
                     }
                     if (found == null && wanted) connect(home, auto = true, needPlaylist = false)
                 } finally { fixing = false }
@@ -809,6 +835,7 @@ object Vpn {
                     Ui.test("vpn-search-found ${found.label} after ${tried.size}")
                     Notice.done("⛨  Found one that works  ·  now through ${found.label}", 6_000)
                     Failover.networkChanged()
+                    Streams.reopenAll() // (what was refused starts again)
                     break
                 }
                 Ui.test("vpn-search-tried ${tried.size}")
