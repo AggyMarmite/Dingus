@@ -1,3 +1,10 @@
+## What's new in Dingus 0.15.42
+
+* Fire TV: a more reliable VPN that keeps itself connected.
+* Fire TV: choose the DNS used with the VPN.
+* Fire TV: TV show pages open faster.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.41
 
 * Fire TV: smoother scrolling and animations.
