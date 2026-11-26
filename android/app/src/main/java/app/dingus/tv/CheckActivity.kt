@@ -166,7 +166,13 @@ class CheckActivity : BaseActivity() {
             else {
                 val m = Vod.cached(Vod.MOVIES)?.items?.size; val sh = Vod.cached(Vod.SERIES)?.items?.size
                 if (m == null && sh == null) set(5, State.WARN, "Not loaded yet", "Open Films or TV Shows to load them")
-                else set(5, State.OK, "${Ui.count(m ?: 0)} films  ·  ${Ui.count(sh ?: 0)} shows")
+                else {
+                    // How the films list was put together: the provider's whole list, then each category's own.
+                    val how = listOfNotNull(Vod.fetchInfo["${Vod.MOVIES}-whole"], Vod.fetchInfo[Vod.MOVIES]).joinToString("  ·  ")
+                    val hidden = Vod.cached(Vod.MOVIES)?.categories?.count { Store.isHidden("${Vod.MOVIES}:${it.id}") } ?: 0
+                    set(5, State.OK, "${Ui.count(m ?: 0)} films  ·  ${Ui.count(sh ?: 0)} shows" + (if (hidden > 0) "  ·  $hidden film categories hidden" else ""),
+                        how.ifEmpty { null })
+                }
             }
 
             // VPN

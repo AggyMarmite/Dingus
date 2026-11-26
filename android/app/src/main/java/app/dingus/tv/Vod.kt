@@ -342,8 +342,10 @@ object Vod {
         val listAction = if (kind == MOVIES) "get_vod_streams" else "get_series"
         // The whole list first (one request)…
         var full: List<VodItem>? = null
+        readCutShort = false
         try { full = Net.open(api + listAction, 90_000).use { readList(it, kind, null) } }
         catch (e: Exception) { Log.w("Dingus", "whole $kind list", e) }
+        fetchInfo["$kind-whole"] = when { full == null -> "the whole list didn't come"; readCutShort -> "the whole list was cut short at ${Ui.count(full!!.size)}"; else -> "whole list ${Ui.count(full!!.size)}" }
         // Whole list in hand: shown straight away, and each category's own list checked in the background (below).
         // Without it: the categories' own lists now.
         val items = if (full != null) full.filter { m -> m.categories.any { !Store.isHidden("$kind:$it") } }.map { m ->
@@ -366,7 +368,7 @@ object Vod {
      */
     private fun byCategories(listUrl: String, kind: String, cats: List<Category>, base: List<VodItem>): List<VodItem>? {
         val wanted = cats.filter { !Store.isHidden("$kind:${it.id}") }
-        if (wanted.isEmpty() || wanted.size > 800) return null
+        if (wanted.isEmpty() || wanted.size > 2000) return null
         val ids = LinkedHashMap<String, VodItem>()
         val inCats = HashMap<String, LinkedHashSet<String>>()
         for (m in base) { ids[m.id] = m; inCats[m.id] = LinkedHashSet(m.categories) }
@@ -374,17 +376,27 @@ object Vod {
         val jobs = wanted.map { c -> c.id to pool.submit<List<VodItem>?> {
             try { Net.open(listUrl + "&category_id=" + Sources.enc(c.id), 45_000).use { readList(it, kind, c.id) } } catch (e: Exception) { null }
         } }
-        var added = 0; var failed = 0
-        val until = System.currentTimeMillis() + 240_000
-        for ((cid, f) in jobs) {
-            val got = try { f.get(maxOf(1_000L, until - System.currentTimeMillis()), java.util.concurrent.TimeUnit.MILLISECONDS) } catch (e: Exception) { f.cancel(true); null }
-            if (got == null) { failed++; continue }
+        var added = 0
+        val until = System.currentTimeMillis() + 420_000
+        val missed = ArrayList<String>()
+        fun take(cid: String, got: List<VodItem>) {
             for (m in got) {
                 if (ids[m.id] == null) { ids[m.id] = m; added++ }
                 inCats.getOrPut(m.id) { LinkedHashSet() }.add(cid)
             }
         }
+        for ((cid, f) in jobs) {
+            val got = try { f.get(maxOf(1_000L, until - System.currentTimeMillis()), java.util.concurrent.TimeUnit.MILLISECONDS) } catch (e: Exception) { f.cancel(true); null }
+            if (got == null) missed.add(cid) else take(cid, got)
+        }
         pool.shutdownNow()
+        // The ones that didn't come: once more, one at a time (a busy provider can turn several at once away).
+        var failed = 0
+        for (cid in missed) {
+            val got = try { Net.open(listUrl + "&category_id=" + Sources.enc(cid), 60_000).use { readList(it, kind, cid) } } catch (e: Exception) { null }
+            if (got == null) failed++ else take(cid, got)
+        }
+        fetchInfo[kind] = "${wanted.size} categories checked  ·  ${Ui.count(added)} added from them" + (if (failed > 0) "  ·  $failed couldn't be read" else "")
         Ui.test("vod-categories $kind ${wanted.size} had ${base.size} added $added failed $failed")
         if (failed == wanted.size) return null
         val out = ArrayList<VodItem>(ids.size)
@@ -414,10 +426,11 @@ object Vod {
     /** One list of films or shows from the provider ([forced]: the category it was asked for, which they're all in). */
     private fun readList(st: java.io.InputStream, kind: String, forced: String?): List<VodItem> {
         val out = ArrayList<VodItem>()
-        val r = JsonReader(InputStreamReader(st, Charsets.UTF_8))
+        val r = JsonReader(InputStreamReader(st, Charsets.UTF_8)).apply { isLenient = true }
         if (r.peek() != android.util.JsonToken.BEGIN_ARRAY) return out
         r.beginArray()
-        while (r.hasNext()) {
+        // (A bad entry, or the connection dropping part-way, keeps everything read up to there – it lost the lot.)
+        try { while (r.hasNext()) {
             var id = ""; var name = ""; var poster = ""; var cat = ""; var rating = 0f; var year = 0; var ext = "mp4"; var added = 0L; var tmdb = ""
             val more = ArrayList<String>(0)
             r.beginObject()
@@ -444,9 +457,13 @@ object Vod {
             if (year == 0) year = yearOf(name)
             out.add(VodItem(id, clean(name).ifEmpty { "Untitled" }, poster.ifBlank { null }, all.first(), rating, year, ext, added, tmdb, all))
         }
-        r.endArray()
+        r.endArray() } catch (e: Exception) { Log.w("Dingus", "list cut short after ${out.size}", e); readCutShort = true }
         return out
     }
+    @Volatile private var readCutShort = false
+
+    /** How the last fetch of each library went (Check everything shows it). */
+    val fetchInfo = java.util.concurrent.ConcurrentHashMap<String, String>()
 
     private val yearRx = Regex("""(19|20)\d\d""")
 
