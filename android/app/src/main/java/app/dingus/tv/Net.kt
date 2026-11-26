@@ -9,23 +9,18 @@ import java.util.zip.GZIPInputStream
 
 /** Plain web requests, the way IPTV servers expect them (they often only answer a media player's name). */
 object Net {
-    private const val VLC = "VLC/3.0.21 LibVLC/3.0.21"
-    private val OWN = "Dingus/${BuildConfig.VERSION_NAME} (Android TV)"
+    /** The name the video player gives (VLC's: streams play under it fine). */
+    const val USER_AGENT = "VLC/3.0.21 LibVLC/3.0.21"
     /**
-     * The name Dingus gives servers. VLC's by default (widely recognised), but some providers turn VLC away – often
-     * with "not found" – so when a playlist request is refused under VLC's name it's tried once under Dingus's own,
-     * and if that works, Dingus's own name is used from then on (remembered).
+     * The name for the playlist, guide and films lists – the same kind the Windows app has always used without trouble
+     * (some providers answer "not found" to playlist requests that say they're VLC). If a server refuses it, VLC's is
+     * tried once.
      */
-    val USER_AGENT: String get() = if (Store.prefsString("ownUserAgent", "0") == "1") OWN else VLC
-    private fun useOwn() { if (Store.prefsString("ownUserAgent", "0") != "1") { Store.putString("ownUserAgent", "1"); android.util.Log.i("Dingus", "using Dingus's own name with servers") } }
+    private val API = "Mozilla/5.0 (Linux; Android ${android.os.Build.VERSION.RELEASE}) Dingus/${BuildConfig.VERSION_NAME}"
 
-    /** Opens an address for reading (following redirects, unpacking gzip). The caller closes it. */
-    fun open(url: String, timeoutMs: Int = 20_000): InputStream = try { openAs(url, timeoutMs, USER_AGENT) } catch (e: IOException) {
-        // Refused under VLC's name on a playlist request: once more under Dingus's own.
+    fun open(url: String, timeoutMs: Int = 20_000): InputStream = try { openAs(url, timeoutMs, API) } catch (e: IOException) {
         val refused = Regex("""answered 404|refused the login""").containsMatchIn(e.message ?: "")
-        if (refused && USER_AGENT == VLC && Regex("""(player_api|get|xmltv|panel_api)\.php""").containsMatchIn(url)) {
-            val r = openAs(url, timeoutMs, OWN); useOwn(); r
-        } else throw e
+        if (refused && Regex("""(player_api|get|xmltv|panel_api)\.php""").containsMatchIn(url)) openAs(url, timeoutMs, USER_AGENT) else throw e
     }
 
     private fun openAs(url: String, timeoutMs: Int, agent: String): InputStream {
