@@ -438,6 +438,9 @@ object Vpn {
     /** Android's one-time "allow this app to set up a VPN" question: null when already allowed. */
     fun permissionIntent(ctx: Context) = android.net.VpnService.prepare(ctx)
 
+    /** Set once the main server hasn't answered through many locations: a location a backup answers through will do. */
+    @Volatile private var backupsWillDo = false
+
     /** The ending of the message for a location your playlist can't be reached through (see [connect]). */
     const val NO_PLAYLIST = "can't reach your playlist"
 
@@ -447,7 +450,10 @@ object Vpn {
      */
     private fun playlistAnswers(): Boolean {
         val p = Store.playlist ?: return true
-        val all = Failover.addresses(p).filter { it.isNotBlank() }
+        // The main server, not just any backup: a location where the main server refuses (403 – a blocked VPN
+        // address) but a backup answers left Dingus on the backup, with its smaller films list. (Backups count only
+        // once the main server's been refused through many places – see keepTrying.)
+        val all = (if (backupsWillDo) Failover.addresses(p) else Failover.addresses(p).take(1)).filter { it.isNotBlank() }
         if (all.isEmpty()) return true
         val done = java.util.concurrent.CountDownLatch(1)
         val ok = java.util.concurrent.atomic.AtomicBoolean(false)
@@ -743,6 +749,9 @@ object Vpn {
                     // provider's down for now, not the VPN – so connected anyway (where it was) rather than leaving
                     // the VPN off; its own check moves it once the playlist answers somewhere.
                     if (status != Status.ON && onlyPlaylist && tries.isNotEmpty()) onlyPlaylistRounds++
+                    // Two rounds with the main server refusing everywhere: a location your backup works through
+                    // will do (better than none), for the rest of this search.
+                    if (onlyPlaylistRounds >= 2) backupsWillDo = true
                     // Only after trying widely (three rounds – around fifteen places across several countries) with
                     // every one connecting but none reaching the playlist: on anyway (where it was) rather than off,
                     // saying why it could be. It carries on looking from there by itself (Find a location that works).
@@ -757,6 +766,39 @@ object Vpn {
                         Notice.done(if (Store.vpnKillSwitch) "The VPN hasn't reconnected yet  ·  still trying (Settings → VPN to watch without it)" else "The VPN hasn't reconnected yet  ·  still trying", 8_000)
                     round++
                 }
+            } finally { fixing = false; backupsWillDo = false }
+        }
+    }
+
+    @Volatile private var mainSearchAt = 0L
+
+    /**
+     * Connected, but the playlist's main server refuses this location (a blocked VPN address) and only a backup
+     * answers – with its smaller films list. A short look for a location the main server answers through: up to five
+     * (nearby, ones that worked before, the best overall), at most every half hour; none: back where it was, on the
+     * backup as before.
+     */
+    fun findForMain() {
+        if (!wanted || fixing || status != Status.ON || keeper?.isActive == true) return
+        if (System.currentTimeMillis() - mainSearchAt < 30 * 60_000L) return
+        mainSearchAt = System.currentTimeMillis()
+        val from = connectedTo ?: return
+        keeper = scope.launch {
+            fixing = true
+            try {
+                Ui.test("vpn-find-for-main")
+                val all = try { locations() } catch (_: Exception) { emptyList() }
+                val good = Store.playlist?.let { VpnFallback.goodFor(it) }.orEmpty()
+                val tries = VpnFallback.order(all, from, good).take(5)
+                for (loc in tries) {
+                    if (!wanted) return@launch
+                    if (connect(loc, auto = true) == null) {
+                        Notice.done("⛨  Now through ${loc.label}  ·  your playlist's main server answers there", 6_000)
+                        Failover.networkChanged()
+                        return@launch
+                    }
+                }
+                if (wanted) connect(from, auto = true, needPlaylist = false)
             } finally { fixing = false }
         }
     }
