@@ -750,14 +750,69 @@ object Vpn {
                         val back = here ?: tries.first()
                         if (connect(back, auto = true, needPlaylist = false) == null) {
                             Ui.test("vpn-on-without-playlist ${back.label} tried ${noPlaylist.size}")
-                            Notice.done("⛨  VPN on  ·  ${back.label}  ·  your playlist didn't answer through ${noPlaylist.size} VPN locations – your provider may be blocking this VPN's servers, or be down", 10_000)
+                            Notice.done("⛨  VPN on  ·  ${back.label}  ·  your playlist isn't answering through it  ·  still looking for a location that works", 8_000)
+                            searchAfter = back to noPlaylist.toSet()
                         }
                     }
                     if (status != Status.ON && round == 1)
                         Notice.done(if (Store.vpnKillSwitch) "The VPN hasn't reconnected yet  ·  still trying (Settings → VPN to watch without it)" else "The VPN hasn't reconnected yet  ·  still trying", 8_000)
                     round++
                 }
-            } finally { fixing = false }
+            } finally {
+                fixing = false
+                searchAfter?.let { (park, tried) -> searchAfter = null; keepSearching(park, tried) }
+            }
+        }
+    }
+
+    /** Handed from [keepTrying] to [keepSearching] once it's on (without the playlist) somewhere. */
+    @Volatile private var searchAfter: Pair<Location, Set<String>>? = null
+    private var searcher: kotlinx.coroutines.Job? = null
+    /** Looking for a location your playlist answers through, in the background (see [keepSearching]). */
+    val searching: Boolean get() = searcher?.isActive == true
+
+    /**
+     * Connected, but your playlist doesn't answer through this location (your provider blocks it, or blocks that VPN
+     * company's servers around there): keeps looking, by itself and without end, until it finds one that works –
+     * five places not tried yet every minute (further and further afield, every location in the end, then round
+     * again, as blocks come and go), parking back on [park] in between so the VPN stays on. It stops as soon as the
+     * playlist answers, wherever it is, or the VPN's turned off. Trying costs nothing to watch: the playlist isn't
+     * working through the location it's parked on anyway.
+     */
+    fun keepSearching(park: Location? = connectedTo, alreadyTried: Set<String> = emptySet()) {
+        if (park == null || !wanted || searcher?.isActive == true || !VpnFallback.enabled) return // (Settings → VPN → Find a location that works)
+        searcher = scope.launch {
+            val tried = LinkedHashSet(alreadyTried)
+            var home = park
+            Ui.test("vpn-search-start ${tried.size}")
+            while (wanted) {
+                kotlinx.coroutines.delay(60_000)
+                if (!wanted) break
+                if (fixing || keeper?.isActive == true) continue // (something else is putting it right)
+                if (status == Status.ON && playlistAnswers()) { Ui.test("vpn-search-done (answers now)"); Notice.done("⛨  Your playlist's answering again  ·  ${connectedTo?.label ?: ""}", 5_000); break }
+                val all = try { locations() } catch (_: Exception) { emptyList() }
+                if (all.isEmpty()) continue
+                val good = Store.playlist?.let { VpnFallback.goodFor(it) }.orEmpty()
+                var batch = VpnFallback.order(all, home, good).filter { it.id !in tried }.take(5)
+                if (batch.isEmpty()) { tried.clear(); batch = VpnFallback.order(all, home, good).take(5) } // (all tried: round again)
+                fixing = true
+                var found: Location? = null
+                try {
+                    for (loc in batch) {
+                        if (!wanted) break
+                        tried.add(loc.id)
+                        if (connect(loc, auto = true) == null) { found = loc; break }
+                    }
+                    if (found == null && wanted) connect(home, auto = true, needPlaylist = false)
+                } finally { fixing = false }
+                if (found != null) {
+                    Ui.test("vpn-search-found ${found.label} after ${tried.size}")
+                    Notice.done("⛨  Found one that works  ·  now through ${found.label}", 6_000)
+                    Failover.networkChanged()
+                    break
+                }
+                Ui.test("vpn-search-tried ${tried.size}")
+            }
         }
     }
 

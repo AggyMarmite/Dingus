@@ -33,7 +33,7 @@ object VpnFallback {
 
     /** Called when nothing answered: off it goes, in the background (once at a time). */
     fun start(p: Playlist) {
-        if (running || !enabled || Vpn.status != Vpn.Status.ON) return
+        if (running || !enabled || Vpn.status != Vpn.Status.ON || Vpn.searching) return
         running = true
         Background.scope.launch(Dispatchers.IO) {
             val from = Vpn.connectedTo
@@ -55,9 +55,10 @@ object VpnFallback {
                         return@launch
                     }
                 }
-                // Nothing worked: back where it was, and say so.
-                if (from != null && Vpn.wanted) Vpn.connect(from)
-                Notice.done("Couldn't find a VPN location your playlist answers through", 7_000)
+                // Nothing yet: back where it was (the VPN stays on), and it keeps looking by itself.
+                if (from != null && Vpn.wanted) Vpn.connect(from, needPlaylist = false)
+                Notice.done("Your playlist isn't answering through this VPN location  ·  still looking for one that works", 7_000)
+                if (from != null) Vpn.keepSearching(from, order.map { it.id }.toSet())
             } catch (e: Exception) {
                 android.util.Log.w("Dingus", "vpn fallback", e)
             } finally {
