@@ -330,7 +330,7 @@ shot 19-films-panel
 press_until KEYCODE_DPAD_DOWN "browse-cat (Recently added|All films) [0-9]" 8 0.9   # down to a big category
 check "browse-cat (Recently added|All films) [0-9]" 5 "moving through the categories shows each one"
 press_until KEYCODE_DPAD_DOWN "browse-cat Drama" 6 0.9
-check "browse-cat-more Drama 21" 15 "a category's own list brings in the films filed under it as a second category"
+check "browse-cat(-more)? Drama 21" 15 "a category's own list brings in the films filed under it as a second category"
 press_until KEYCODE_DPAD_UP "browse-cat (Recently added|All films) [0-9]" 6 0.9   # back up to a big category for the grid checks
 key KEYCODE_DPAD_RIGHT 1.5
 check "browse-panel hidden" 5 "RIGHT goes into the films, the categories step aside"
@@ -481,6 +481,9 @@ adb logcat -d -s DINGUS-TEST:I AndroidRuntime:E > "$OUT/log.txt"
 adb logcat -d -v brief '*:W' | grep -v "com.android.tv\|AsyncDvr" | tail -1500 > "$OUT/log-warnings.txt"
 kill %1 2>/dev/null
 if grep -A1 "FATAL EXCEPTION" "$OUT/log-all.txt" | grep -q "Process: $PKG"; then echo "::error title=android self-test::app crashed"; fail=1; fi
+# Films: every category's own list was checked in the background (the whole list can leave films out).
+if grep -q "vod-categories movies 3 had 23 added 0 failed 0" "$OUT/log-all.txt"; then echo "PASS every film category's own list is checked" >> "$OUT/result.txt"
+else echo "::error title=android self-test::film categories not checked"; echo "FAIL every film category's own list is checked" >> "$OUT/result.txt"; grep "vod-categories" "$OUT/log-all.txt" | head -3 >> "$OUT/result.txt"; fail=1; fi
 # Every highlight anywhere in the run, at its full lifted size: nothing cut off at an edge.
 if grep -q "clip-risk" "$OUT/log-all.txt"; then echo "::error title=android self-test::a highlight is cut off"; echo "FAIL no highlight is cut off (clip-risk)" >> "$OUT/result.txt"; grep "clip-risk" "$OUT/log-all.txt" | sed 's/.*DINGUS-TEST: //' | sort | uniq -c | sort -rn | head -15 | tee -a "$OUT/result.txt"; fail=1
 else echo "PASS no highlight is cut off" >> "$OUT/result.txt"; fi

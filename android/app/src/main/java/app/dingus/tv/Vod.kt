@@ -342,42 +342,113 @@ object Vod {
             }
             r.endArray()
         }
-        val items = ArrayList<VodItem>()
-        Net.open(api + if (kind == MOVIES) "get_vod_streams" else "get_series", 60_000).use { s ->
-            val r = JsonReader(InputStreamReader(s, Charsets.UTF_8))
-            r.beginArray()
-            while (r.hasNext()) {
-                var id = ""; var name = ""; var poster = ""; var cat = ""; var rating = 0f; var year = 0; var ext = "mp4"; var added = 0L; var tmdb = ""
-                val more = ArrayList<String>(0)
-                r.beginObject()
-                while (r.hasNext()) when (r.nextName()) {
-                    "stream_id", "series_id" -> id = Sources.str(r)
-                    "name" -> name = Sources.str(r)
-                    "stream_icon", "cover" -> poster = Sources.str(r)
-                    "category_id" -> cat = Sources.str(r)
-                    "category_ids" -> when (r.peek()) {
-                        android.util.JsonToken.BEGIN_ARRAY -> { r.beginArray(); while (r.hasNext()) Sources.str(r).trim().takeIf { it.isNotEmpty() }?.let { more.add(it) }; r.endArray() }
-                        else -> Sources.str(r).split(',').map { it.trim() }.filter { it.isNotEmpty() }.let { more.addAll(it) }
-                    }
-                    "rating" -> rating = Sources.str(r).toFloatOrNull() ?: 0f
-                    "year", "releaseDate", "release_date" -> { val y = yearOf(Sources.str(r)); if (year == 0) year = y }
-                    "container_extension" -> ext = Sources.str(r).ifBlank { "mp4" }
-                    "added", "last_modified" -> added = Sources.str(r).toLongOrNull() ?: 0L
-                    "tmdb", "tmdb_id" -> tmdb = Sources.str(r).trim().takeIf { t -> t.isNotEmpty() && t != "0" && t.all { it.isDigit() } } ?: tmdb
-                    else -> r.skipValue()
-                }
-                r.endObject()
-                if (id.isEmpty()) continue
-                // Its categories, the main one first; the hidden ones left out (and the film too, if all of them are).
-                val all = (listOf(cat) + more).filter { it.isNotEmpty() }.distinct().ifEmpty { listOf(cat) }
-                val shown = all.filter { !Store.isHidden("$kind:$it") }
-                if (shown.isEmpty()) continue // (hidden categories aren't kept: less to save and sort)
-                if (year == 0) year = yearOf(name)
-                items.add(VodItem(id, clean(name).ifEmpty { "Untitled" }, poster.ifBlank { null }, shown.first(), rating, year, ext, added, tmdb, shown))
-            }
-            r.endArray()
+        val listAction = if (kind == MOVIES) "get_vod_streams" else "get_series"
+        // The whole list first (one request)…
+        var full: List<VodItem>? = null
+        try { full = Net.open(api + listAction, 90_000).use { readList(it, kind, null) } }
+        catch (e: Exception) { Log.w("Dingus", "whole $kind list", e) }
+        // Whole list in hand: shown straight away, and each category's own list checked in the background (below).
+        // Without it: the categories' own lists now.
+        val items = if (full != null) full.filter { m -> m.categories.any { !Store.isHidden("$kind:$it") } }.map { m ->
+            val c = m.categories.filter { !Store.isHidden("$kind:$it") }
+            if (c == m.categories) m else VodItem(m.id, m.name, m.poster, c.first(), m.rating, m.year, m.ext, m.added, m.tmdb, c)
+        } else byCategories(api + listAction, kind, cats, emptyList()) ?: throw java.io.IOException("Couldn't get the list")
+        val at = System.currentTimeMillis()
+        if (full != null) Background.scope.launch(Dispatchers.IO) {
+            // (Once this library's in use: it's handed back and saved first.)
+            repeat(300) { if (libs[kind]?.loadedAt == at) return@repeat; kotlinx.coroutines.delay(200) }
+            if (libs[kind]?.loadedAt == at) enrich(kind, api + listAction)
         }
-        return Library(cats, items, System.currentTimeMillis())
+        return Library(cats, items, at)
+    }
+
+    /**
+     * Each category's own list, as other apps fetch them, merged into [base]: some providers leave films out of the
+     * whole list, or name only one of a film's categories there – so categories came up short of what other apps
+     * show. Null when there were too many categories to ask (or none).
+     */
+    private fun byCategories(listUrl: String, kind: String, cats: List<Category>, base: List<VodItem>): List<VodItem>? {
+        val wanted = cats.filter { !Store.isHidden("$kind:${it.id}") }
+        if (wanted.isEmpty() || wanted.size > 800) return null
+        val ids = LinkedHashMap<String, VodItem>()
+        val inCats = HashMap<String, LinkedHashSet<String>>()
+        for (m in base) { ids[m.id] = m; inCats[m.id] = LinkedHashSet(m.categories) }
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(4)
+        val jobs = wanted.map { c -> c.id to pool.submit<List<VodItem>?> {
+            try { Net.open(listUrl + "&category_id=" + Sources.enc(c.id), 45_000).use { readList(it, kind, c.id) } } catch (e: Exception) { null }
+        } }
+        var added = 0; var failed = 0
+        val until = System.currentTimeMillis() + 240_000
+        for ((cid, f) in jobs) {
+            val got = try { f.get(maxOf(1_000L, until - System.currentTimeMillis()), java.util.concurrent.TimeUnit.MILLISECONDS) } catch (e: Exception) { f.cancel(true); null }
+            if (got == null) { failed++; continue }
+            for (m in got) {
+                if (ids[m.id] == null) { ids[m.id] = m; added++ }
+                inCats.getOrPut(m.id) { LinkedHashSet() }.add(cid)
+            }
+        }
+        pool.shutdownNow()
+        Ui.test("vod-categories $kind ${wanted.size} had ${base.size} added $added failed $failed")
+        if (failed == wanted.size) return null
+        val out = ArrayList<VodItem>(ids.size)
+        for ((id, m) in ids) {
+            val c = inCats[id]?.filter { !Store.isHidden("$kind:$it") }?.ifEmpty { null } ?: continue
+            out.add(if (c == m.categories) m else VodItem(m.id, m.name, m.poster, c.first(), m.rating, m.year, m.ext, m.added, m.tmdb, c))
+        }
+        return out
+    }
+
+    /** After the whole list: each category's own list, and the library (and its saved copy) updated if anything came in. */
+    private fun enrich(kind: String, listUrl: String) {
+        val lib = libs[kind] ?: return
+        val more = byCategories(listUrl, kind, lib.categories, lib.items) ?: return
+        val changed = more.size != lib.items.size || more.zip(lib.items).any { (a, b) -> a.id != b.id || a.categories != b.categories }
+        if (!changed || libs[kind] !== lib) return
+        val fresh = Library(lib.categories, more, lib.loadedAt)
+        libs = HashMap(libs).apply { put(kind, fresh) }
+        warm(kind, fresh)
+        try { write(kind, fresh) } catch (e: Exception) { Log.w("Dingus", "save $kind", e) }
+        changedListeners.forEach { try { it(kind) } catch (_: Exception) {} }
+    }
+
+    /** Told when a library's had more filled in by itself (Films / TV Shows redraw). */
+    val changedListeners = java.util.concurrent.CopyOnWriteArrayList<(String) -> Unit>()
+
+    /** One list of films or shows from the provider ([forced]: the category it was asked for, which they're all in). */
+    private fun readList(st: java.io.InputStream, kind: String, forced: String?): List<VodItem> {
+        val out = ArrayList<VodItem>()
+        val r = JsonReader(InputStreamReader(st, Charsets.UTF_8))
+        if (r.peek() != android.util.JsonToken.BEGIN_ARRAY) return out
+        r.beginArray()
+        while (r.hasNext()) {
+            var id = ""; var name = ""; var poster = ""; var cat = ""; var rating = 0f; var year = 0; var ext = "mp4"; var added = 0L; var tmdb = ""
+            val more = ArrayList<String>(0)
+            r.beginObject()
+            while (r.hasNext()) when (r.nextName()) {
+                "stream_id", "series_id" -> id = Sources.str(r)
+                "name" -> name = Sources.str(r)
+                "stream_icon", "cover" -> poster = Sources.str(r)
+                "category_id" -> cat = Sources.str(r)
+                "category_ids" -> when (r.peek()) {
+                    android.util.JsonToken.BEGIN_ARRAY -> { r.beginArray(); while (r.hasNext()) Sources.str(r).trim().takeIf { it.isNotEmpty() }?.let { more.add(it) }; r.endArray() }
+                    else -> Sources.str(r).split(',').map { it.trim() }.filter { it.isNotEmpty() }.let { more.addAll(it) }
+                }
+                "rating" -> rating = Sources.str(r).toFloatOrNull() ?: 0f
+                "year", "releaseDate", "release_date" -> { val y = yearOf(Sources.str(r)); if (year == 0) year = y }
+                "container_extension" -> ext = Sources.str(r).ifBlank { "mp4" }
+                "added", "last_modified" -> added = Sources.str(r).toLongOrNull() ?: 0L
+                "tmdb", "tmdb_id" -> tmdb = Sources.str(r).trim().takeIf { t -> t.isNotEmpty() && t != "0" && t.all { it.isDigit() } } ?: tmdb
+                else -> r.skipValue()
+            }
+            r.endObject()
+            if (id.isEmpty()) continue
+            // Its categories, the main one first (and the one asked for, when it's a category's own list).
+            val all = (listOfNotNull(forced) + listOf(cat) + more).filter { it.isNotEmpty() }.distinct().ifEmpty { listOf(cat) }
+            if (year == 0) year = yearOf(name)
+            out.add(VodItem(id, clean(name).ifEmpty { "Untitled" }, poster.ifBlank { null }, all.first(), rating, year, ext, added, tmdb, all))
+        }
+        r.endArray()
+        return out
     }
 
     private val yearRx = Regex("""(19|20)\d\d""")
@@ -580,7 +651,7 @@ object Vod {
     private fun write(kind: String, lib: Library) {
         val tmp = File(dir, "vod_$kind.bin.tmp")
         DataOutputStream(BufferedOutputStream(FileOutputStream(tmp), 1 shl 16)).use { o ->
-            o.writeInt(3); o.writeLong(lib.loadedAt)
+            o.writeInt(4); o.writeLong(lib.loadedAt)
             o.writeInt(lib.categories.size)
             for (c in lib.categories) { o.writeUTF(c.id); o.writeUTF(c.name) }
             o.writeInt(lib.items.size)
@@ -598,10 +669,10 @@ object Vod {
         if (!f.exists()) return null
         DataInputStream(BufferedInputStream(FileInputStream(f), 1 shl 16)).use { i ->
             val v = i.readInt()
-            if (v !in 1..3) return null
+            if (v !in 1..4) return null
             // (An older copy doesn't know films filed under several categories: counted as out of date, so it's
             // fetched again straight away.)
-            val at = i.readLong().let { if (v < 3) 0L else it }
+            val at = i.readLong().let { if (v < 4) 0L else it }
             val cats = List(i.readInt()) { Category(i.readUTF(), i.readUTF()) }
             val items = List(i.readInt()) {
                 // (Names are saved already tidied: no tidying again here, which made a big library slow to open.)

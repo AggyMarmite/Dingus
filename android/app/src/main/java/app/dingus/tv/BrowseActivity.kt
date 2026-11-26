@@ -148,6 +148,8 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
 
         current = intent.getStringExtra(CATEGORY) ?: Vod.FEATURED
         load()
+        // More films filled in by themselves (each category's own list, after the whole list): put in where you are.
+        Vod.changedListeners.add(onMore)
     }
 
     private fun load() {
@@ -165,6 +167,20 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
             } catch (e: Exception) {
                 if (lib == null) { empty.text = "Couldn't load the library.\n${Net.friendly(e)}"; empty.visibility = View.VISIBLE }
                 Ui.test("library-failed ${e.message}")
+            }
+        }
+    }
+
+    private val onMore: (String) -> Unit = { k ->
+        if (k == kind) runOnUiThread {
+            val fresh = Vod.cached(kind) ?: return@runOnUiThread
+            if (isDestroyed || fresh === lib) return@runOnUiThread
+            lib = fresh
+            Ui.test("library-more $kind ${fresh.items.size}")
+            when (current) {
+                Vod.FEATURED -> build()
+                Vod.COMING -> {}
+                else -> posters.addFrom(Vod.itemsIn(kind, fresh, current))
             }
         }
     }
@@ -484,7 +500,7 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
     // (No clock here: it's in the side menu, under the logo.)
 
     override fun onStop() { super.onStop(); Posters.trim(); Backdrops.trim() }
-    override fun onDestroy() { scope.cancel(); super.onDestroy() }
+    override fun onDestroy() { Vod.changedListeners.remove(onMore); scope.cancel(); super.onDestroy() }
 
     private fun open(card: Card) {
         when (card) {
