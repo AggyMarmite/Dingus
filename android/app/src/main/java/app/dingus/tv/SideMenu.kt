@@ -138,7 +138,9 @@ class SideMenu(
             t.setPaddingRelative(pad[0], pad[1], pad[2], pad[3])
             t.setOnFocusChangeListener { v, has ->
                 tintRows()
-                // The highlighted pill lifts with the same soft bounce as the cards and buttons.
+                // The highlighted pill lifts with the same soft bounce as the cards and buttons – growing from its left
+                // end, which sits at the screen's edge (growing from the middle pushed that end off the screen).
+                v.pivotX = 0f; v.pivotY = v.height / 2f
                 if (isOpen || !has) Motion.lift(v, has && isOpen, 1.05f, shine = false)
             }
         }

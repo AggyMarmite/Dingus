@@ -485,23 +485,27 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
             canvas.drawRoundRect(r, d, d, fill)
             fill.alpha = 255
         }
-        val avail = x1 - x0 - 2 * pad
+        // The writing starts just after the red "now" line when that crosses the start of the programme (it was drawn
+        // over the first letters – "rogramme", "0:00").
+        val nowX = xOf(System.currentTimeMillis())
+        val tx = if (airing && nowX > x0 && nowX + 6 * d < x1 - 40 * d) maxOf(x0 + pad, nowX + 6 * d) else x0 + pad
+        val avail = x1 - tx - pad
         if (avail < 12 * d || text.isEmpty()) return
         titleP.color = if (on) 0xFF0B0E14.toInt() else if (past && !catchUp) cMuted else cText
         if (p == null) {
             subP.color = if (on) 0xFF4B5565.toInt() else cMuted
-            canvas.drawText(fit(text, subP, avail, 's'), x0 + pad, (y0 + y1) / 2 + 4 * d, subP)
+            canvas.drawText(fit(text, subP, avail, 's'), tx, (y0 + y1) / 2 + 4 * d, subP)
             subP.color = cMuted
             return
         }
         val bell = reminder?.invoke(p) == true
-        canvas.drawText(fit(text, titleP, avail - if (bell) 18 * d else 0f, 't'), x0 + pad, y0 + 18 * d, titleP)
+        canvas.drawText(fit(text, titleP, avail - if (bell) 18 * d else 0f, 't'), tx, y0 + 18 * d, titleP)
         if (bell) { // a small bell: white, dark on the white highlight
             fill.color = if (on) 0xFF0B0E14.toInt() else 0xFFFFFFFF.toInt()
             canvas.save(); canvas.translate(x1 - gap - 17 * d, y0 + 5 * d); canvas.drawPath(bellPath, fill); canvas.restore()
         }
         subP.color = if (on) 0xFF4B5565.toInt() else cMuted
-        canvas.drawText(fit((if (catchUp) "↺  " else "") + Ui.span(p), subP, avail, 's'), x0 + pad, y0 + 34 * d, subP)
+        canvas.drawText(fit((if (catchUp) "↺  " else "") + Ui.span(p), subP, avail, 's'), tx, y0 + 34 * d, subP)
         subP.color = cMuted
     }
 }

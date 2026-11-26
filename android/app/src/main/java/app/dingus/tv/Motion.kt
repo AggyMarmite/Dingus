@@ -62,8 +62,10 @@ object Motion {
      */
     private fun checkRoom(v: View, scale: Float) {
         if (v.width == 0) return
-        val growX = v.width * (scale - 1f) / 2f; val growY = v.height * (scale - 1f) / 2f
-        var l = v.left - growX; var t = v.top - growY; var r = v.right + growX; var b = v.bottom + growY
+        // (Grown about its pivot: the middle unless the view says otherwise.)
+        val px = v.pivotX; val py = v.pivotY
+        var l = v.left + px * (1 - scale); var r = v.left + px + (v.width - px) * scale
+        var t = v.top + py * (1 - scale); var b = v.top + py + (v.height - py) * scale
         var p = v.parent
         var depth = 0
         while (p is android.view.ViewGroup && depth < 6) {
@@ -79,6 +81,9 @@ object Motion {
             if (p.clipChildren && (t < ct - 1 || b > cb + 1) && p !is androidx.recyclerview.widget.RecyclerView && p !is android.widget.ScrollView) {
                 Ui.test("clip-risk ${name(v)} in ${name(p)}"); return
             }
+            // A clip set on the parent itself (the side menu clips its panel while it slides).
+            // (Its left edge: the right one moves while the panel opens.)
+            p.clipBounds?.let { cb -> if (l - p.scrollX < cb.left - 1) { Ui.test("clip-risk ${name(v)} in ${name(p)} (clip)"); return } }
             l += p.left - p.scrollX; r += p.left - p.scrollX; t += p.top - p.scrollY; b += p.top - p.scrollY
             p = p.parent; depth++
         }
