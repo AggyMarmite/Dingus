@@ -1,3 +1,11 @@
+## What's new in Dingus 0.15.33
+
+* Fire TV: tidier Films and TV Shows categories.
+* Fire TV: search by voice from the search box.
+* Fire TV: Live TV opens on the first category.
+* Fire TV: smarter switching to another source when a channel buffers.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.32
 
 * Fire TV: every film and show your provider has now shows up in its categories.
