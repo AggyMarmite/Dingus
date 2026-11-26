@@ -60,7 +60,7 @@
                     android:scrollbars="none" android:descendantFocusability="afterDescendants" />
                 <androidx.recyclerview.widget.RecyclerView android:id="@+id/grid" android:layout_width="match_parent"
                     android:layout_height="match_parent" android:clipToPadding="false" android:visibility="gone"
-                    android:paddingStart="40dp" android:paddingEnd="16dp" android:paddingTop="4dp" android:paddingBottom="40dp"
+                    android:paddingStart="40dp" android:paddingEnd="16dp" android:paddingTop="16dp" android:paddingBottom="40dp"
                     android:scrollbars="none" android:descendantFocusability="afterDescendants" />
                 <TextView android:id="@+id/empty" android:layout_width="wrap_content" android:layout_height="wrap_content"
                     android:layout_gravity="center" android:gravity="center" android:textSize="18sp"
