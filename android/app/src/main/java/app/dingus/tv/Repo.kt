@@ -124,12 +124,49 @@ object Repo {
         return listOf(c) + channels.filter { it.id != c.id && it.id !in hiddenIds && it.categoryId !in h && sourceKey(it.name) == k }
     }
 
-    /** Sources showing exactly the same thing (the same guide listing): safe to switch to by themselves. */
+    /**
+     * Sources showing exactly the same thing (the same guide listing): safe to switch to by themselves. Any channel
+     * with exactly the same guide id counts, whatever it's called ("UK| DISCOVERY TURBO" and "D+| DISCOVERY TURBO"),
+     * including ones in hidden categories.
+     */
     fun sameAs(c: Channel): List<Channel> {
         val epg = c.epgId?.takeIf { it.isNotBlank() }
         val gk = c.guideKey
         if (epg == null && gk == null) return emptyList()
-        return sources(c).drop(1).filter { (epg != null && it.epgId == epg) || (gk != null && it.guideKey == gk) }
+        val h = hiddenCategoryIds(rawCategories)
+        val sameName = sources(c).drop(1).filter { (epg != null && it.epgId == epg) || (gk != null && it.guideKey == gk) }
+        val sameGuide = if (epg == null) emptyList() else channels.filter { it.id != c.id && it.id !in hiddenIds && it.categoryId !in h && it.epgId == epg }
+        val stand = if (epg == null) emptyList() else synchronized(backupsLock) { if (backupsFor == Store.activeId) backups[epg] else null } ?: emptyList()
+        return (sameName + sameGuide + stand).filter { it.id != c.id }.distinctBy { it.id }
+    }
+
+    // ------------------------------------------------------------------ stand-ins from hidden categories
+
+    private val backupsLock = Any()
+    private var backups: Map<String, List<Channel>> = emptyMap()
+    private var backupsRead = false
+    /** Which playlist the stand-ins belong to. */
+    private var backupsFor = ""
+
+    private fun setBackups(list: List<Channel>) {
+        synchronized(backupsLock) { backups = list.groupBy { it.epgId!! }; backupsRead = true; backupsFor = Store.activeId }
+        try {
+            val a = org.json.JSONArray()
+            for (c in list) a.put(org.json.JSONObject().put("i", c.id).put("n", c.name).put("c", c.categoryId).put("e", c.epgId).put("u", c.url).put("a", c.archiveDays))
+            File(dir, "standins.json").writeText(a.toString())
+        } catch (e: Exception) { Log.w("Dingus", "save stand-ins", e) }
+    }
+
+    /** The saved stand-ins, read once (after a restart, before the next playlist update). */
+    fun loadBackups() {
+        if (synchronized(backupsLock) { backupsRead && backupsFor == Store.activeId }) return
+        try {
+            val f = File(dir, "standins.json")
+            val list = if (!f.exists()) emptyList() else org.json.JSONArray(f.readText()).let { a -> (0 until a.length()).map { i -> a.getJSONObject(i) }.map { o ->
+                Channel(o.getString("i"), o.optString("n"), 0, o.optString("c"), null, o.optString("e"), o.optString("u"), o.optInt("a"))
+            } }
+            synchronized(backupsLock) { backups = list.filter { !it.epgId.isNullOrBlank() }.groupBy { it.epgId!! }; backupsRead = true; backupsFor = Store.activeId }
+        } catch (e: Exception) { synchronized(backupsLock) { backups = emptyMap(); backupsRead = true; backupsFor = Store.activeId } }
     }
 
     fun categoryName(id: String) = categories.firstOrNull { it.id == id }?.name ?: ""
@@ -293,7 +330,7 @@ object Repo {
 
     /** Just the saved channels (quick), so a screen can show something before the saved guide's read. */
     suspend fun loadSavedChannels(): Boolean = withContext(Dispatchers.IO) {
-        (try { readChannels() } catch (e: Exception) { Log.w("Dingus", "saved channels", e); false }).also { if (it) channelsIn(ALL) }
+        (try { readChannels() } catch (e: Exception) { Log.w("Dingus", "saved channels", e); false }).also { if (it) channelsIn(ALL); loadBackups() }
     }
 
     /** Then the saved guide (can take a moment for a big one). */
@@ -356,6 +393,10 @@ object Repo {
         // category again updates the playlist to bring them back.
         val hid = hiddenCategoryIds(r.categories)
         val kept = if (hid.isEmpty()) r.channels else r.channels.filter { it.categoryId !in hid }
+        // …except as stand-ins: one with exactly the same guide id as a kept channel can still take over when that
+        // one keeps buffering (it's the same channel, filed under a category you've hidden).
+        val wanted = kept.mapNotNullTo(HashSet()) { it.epgId?.takeIf { e -> e.isNotBlank() } }
+        setBackups(r.channels.filter { it.categoryId in hid && it.epgId?.let { e -> e in wanted } == true })
         // Keep guide matches from before, so now/next shows straight away until the guide's read again.
         val oldKeys = channels.associate { it.id to it.guideKey }
         kept.forEach { it.guideKey = oldKeys[it.id]; it.guideLogo = guideLogos[it.id] }
@@ -496,6 +537,7 @@ object Repo {
     fun clear() {
         set(emptyList(), emptyList(), null)
         guide = emptyMap()
+        synchronized(backupsLock) { backups = emptyMap(); backupsRead = false }
         File(dir, "channels.bin").delete()
         File(dir, "guide.bin").delete()
         File(dir, "guide-logos.json").delete()
