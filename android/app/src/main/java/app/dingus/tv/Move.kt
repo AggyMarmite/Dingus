@@ -78,7 +78,7 @@ object Move {
 
     /** What's on offer, for the receiver's list: the name, the version and how many playlists. */
     private fun info(ctx: Context) = JSONObject().put("name", deviceName(ctx)).put("version", BuildConfig.VERSION_NAME)
-        .put("playlists", Store.playlists.size).put("reminders", JSONArray(Store.prefsString("reminders", "[]")).length())
+        .put("playlists", Store.playlists.size).put("reminders", try { Reminders.all().size } catch (_: Exception) { 0 })
 
     /** Takes [data] in place of what's here (what this Fire TV had is replaced). Call off the main thread. */
     fun import(ctx: Context, data: JSONObject) {
