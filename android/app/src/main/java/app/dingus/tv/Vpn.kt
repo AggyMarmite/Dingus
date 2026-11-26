@@ -465,7 +465,9 @@ object Vpn {
                 // Only "connected" once the VPN server has actually answered (its first handshake). The tunnel being
                 // set up proves nothing: it showed connected while nothing got through – no IP address, and the
                 // playlist offline.
-                if (!answered(10_000)) {
+                // …and only once something has actually come back through it: a DNS question answered via the tunnel.
+                // A server can say hello and still pass nothing on.
+                if (!answered(10_000) || !works()) {
                     try { backend.setState(tunnel, Tunnel.State.DOWN, null) } catch (_: Throwable) {}
                     Ui.test("vpn-no-answer ${target.label}")
                     return@withContext "${target.label} didn't answer".also { set(Status.ERROR, it); if (wanted && !fixing && !quiet && !VpnFallback.running) keepTrying() }
@@ -617,22 +619,24 @@ object Vpn {
     @Volatile private var fixing = false
 
     /**
-     * While connected: every 30 seconds, is the server still answering, and does anything actually get through? No
-     * handshake for over three minutes (WireGuard renews it every two while there's traffic, and Dingus sends a
-     * keep-alive every 25 seconds), or two checks in a row with nothing getting through, means it has dropped – a
-     * tunnel can stay "connected" while carrying nothing, which looked like the playlist's servers being offline.
+     * While connected: every 10 seconds, does anything actually get through (and is the server still answering)?
+     * Nothing getting through (two quick tries inside one check), or no handshake for over three minutes (WireGuard
+     * renews it every two while there's traffic, and Dingus sends a keep-alive every 25 seconds), means it isn't
+     * connected – it stops saying "connected" there and then, and reconnects. A tunnel can stay "connected" while
+     * carrying nothing, which looked like the playlist's servers being offline.
      */
     private fun watch() {
         watcher?.cancel()
         watcher = scope.launch {
-            var misses = 0
             while (true) {
-                kotlinx.coroutines.delay(30_000)
-                if (status != Status.ON || fixing) { misses = 0; continue }
+                kotlinx.coroutines.delay(10_000)
+                if (status != Status.ON || fixing) continue
                 val last = try { backend.getStatistics(tunnel).peers().firstOrNull()?.let { backend.getStatistics(tunnel).peer(it)?.latestHandshakeEpochMillis } } catch (_: Throwable) { null } ?: continue
                 val stale = last <= 0 || System.currentTimeMillis() - last > 180_000
-                misses = if (stale || !works()) misses + 1 else 0
-                if (stale || misses >= 2) { misses = 0; Ui.test("vpn-not-working"); set(Status.ERROR, "VPN dropped"); dropped() }
+                if (stale || !works()) {
+                    if (status != Status.ON || fixing) continue // (changed meanwhile: switched, or turned off)
+                    Ui.test("vpn-not-working"); set(Status.ERROR, "VPN dropped"); dropped()
+                }
             }
         }
     }
