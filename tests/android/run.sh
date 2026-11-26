@@ -305,11 +305,13 @@ press_until KEYCODE_DPAD_DOWN "focus navFilms" 6 0.5; key KEYCODE_DPAD_CENTER 3 
 check "library movies 23" 30 "Films opens from the side menu"
 sleep 3; shot 18-films-rows
 # Along a row and back, down a row and back up: every move glides (no jumps), and the row doesn't keep re-laying out.
+# (Down to Recently added first: the top row can be Continue watching with a single film, after the film test.)
 fresh
+key KEYCODE_DPAD_DOWN 1.2
 for _ in 1 2 3 4 5 6; do key KEYCODE_DPAD_RIGHT 0.7; done
 sleep 1; shot 18a-films-along
 for _ in 1 2 3 4 5 6; do key KEYCODE_DPAD_LEFT 0.7; done
-key KEYCODE_DPAD_DOWN 1.2; key KEYCODE_DPAD_UP 1.2
+key KEYCODE_DPAD_UP 1.2; key KEYCODE_DPAD_DOWN 1.2
 check_none "scroll-jump" "Films rows glide every way (along, back, down and up)"
 key KEYCODE_DPAD_DOWN 3; shot 19-films-rows-2
 fresh
