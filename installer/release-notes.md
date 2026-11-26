@@ -1,3 +1,8 @@
+## What's new in Dingus 0.15.38
+
+* Fire TV: stays on the main server.
+* Fire TV: Full refresh now starts completely fresh.
+
 ## What's new in Dingus 0.15.37
 
 * Fire TV: connects to the main server more reliably.
