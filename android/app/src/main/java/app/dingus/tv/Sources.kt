@@ -24,11 +24,10 @@ object Sources {
     fun xtreamBase(server: String): String {
         var s = server.trim()
         if (!s.startsWith("http://", true) && !s.startsWith("https://", true)) s = "http://$s"
-        // Tidied the way other apps do: an address pasted with a page or a login on the end ("…/get.php?username=…",
-        // "…/player_api.php", "…/c/") still means the server itself.
-        s = s.substringBefore('?').substringBefore('#').trimEnd('/')
+        // Only what can never be part of a server's address is taken off: a login or a page pasted on the end
+        // ("…/get.php?username=…", "…/player_api.php"). Anything else is used exactly as typed.
+        s = s.substringBefore('?').trimEnd('/')
         s = s.replace(Regex("""/(get|player_api|panel_api|xmltv)\.php$""", RegexOption.IGNORE_CASE), "")
-        s = s.replace(Regex("""/c$""", RegexOption.IGNORE_CASE), "")
         return s.trimEnd('/')
     }
 

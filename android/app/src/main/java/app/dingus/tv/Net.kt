@@ -9,17 +9,33 @@ import java.util.zip.GZIPInputStream
 
 /** Plain web requests, the way IPTV servers expect them (they often only answer a media player's name). */
 object Net {
-    const val USER_AGENT = "VLC/3.0.21 LibVLC/3.0.21"
+    private const val VLC = "VLC/3.0.21 LibVLC/3.0.21"
+    private val OWN = "Dingus/${BuildConfig.VERSION_NAME} (Android TV)"
+    /**
+     * The name Dingus gives servers. VLC's by default (widely recognised), but some providers turn VLC away – often
+     * with "not found" – so when a playlist request is refused under VLC's name it's tried once under Dingus's own,
+     * and if that works, Dingus's own name is used from then on (remembered).
+     */
+    val USER_AGENT: String get() = if (Store.prefsString("ownUserAgent", "0") == "1") OWN else VLC
+    private fun useOwn() { if (Store.prefsString("ownUserAgent", "0") != "1") { Store.putString("ownUserAgent", "1"); android.util.Log.i("Dingus", "using Dingus's own name with servers") } }
 
     /** Opens an address for reading (following redirects, unpacking gzip). The caller closes it. */
-    fun open(url: String, timeoutMs: Int = 20_000): InputStream {
+    fun open(url: String, timeoutMs: Int = 20_000): InputStream = try { openAs(url, timeoutMs, USER_AGENT) } catch (e: IOException) {
+        // Refused under VLC's name on a playlist request: once more under Dingus's own.
+        val refused = Regex("""answered 404|refused the login""").containsMatchIn(e.message ?: "")
+        if (refused && USER_AGENT == VLC && Regex("""(player_api|get|xmltv|panel_api)\.php""").containsMatchIn(url)) {
+            val r = openAs(url, timeoutMs, OWN); useOwn(); r
+        } else throw e
+    }
+
+    private fun openAs(url: String, timeoutMs: Int, agent: String): InputStream {
         var u = URL(url)
         repeat(6) {
             val c = (u.openConnection() as HttpURLConnection).apply {
                 connectTimeout = timeoutMs
                 readTimeout = 60_000
                 instanceFollowRedirects = false
-                setRequestProperty("User-Agent", USER_AGENT)
+                setRequestProperty("User-Agent", agent)
                 setRequestProperty("Accept-Encoding", "gzip")
             }
             val code = c.responseCode
