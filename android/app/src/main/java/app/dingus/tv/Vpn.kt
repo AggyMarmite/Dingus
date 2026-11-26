@@ -489,6 +489,7 @@ object Vpn {
                 val config = configFor(target)
                 lastRx = -1L
                 tunnelDns = try { config.`interface`.dnsServers.firstOrNull() } catch (_: Throwable) { null }
+                probeTarget = probeTargetFor(config); probeProven = false
                 // (What was playing starts again only once this location is known to work – see the end. Started
                 // straight away, it went out through a location not yet checked, and while a channel was being tried
                 // through each place it took the one connection a plan allows, so the try was refused.)
@@ -593,15 +594,38 @@ object Vpn {
     private fun works(): Boolean {
         val rx = received()
         val before = lastRx; lastRx = rx
-        if (rx > 0 && before >= 0 && rx > before) return true
-        val one = tunnelDns
-        val cf = try { java.net.InetAddress.getByAddress(byteArrayOf(1, 1, 1, 1)) } catch (_: Throwable) { null }
+        if (rx > 0 && before >= 0 && rx > before) { probeProven = true; return true }
+        val to = probeTarget ?: return true // (nothing to ask: the handshake check alone)
+        // The question goes through the tunnel, and anything at all coming back through it (the answer, or even
+        // "nothing here") shows up as received – unlike just getting an answer, which with a tunnel that only carries
+        // some addresses could come the ordinary way and prove nothing.
         repeat(2) {
-            if (one != null && ask(one, 3_000)) return true
-            if (cf != null && cf != one && ask(cf, 3_000)) return true
+            val rx0 = received()
+            val answered = ask(to, 3_000)
+            val now = received()
+            if (now > rx0 || (answered && rx0 < 0)) { lastRx = now; probeProven = true; return true }
         }
-        return false
+        // Never once had anything back from that address (it ignores questions altogether): can't tell this way.
+        return !probeProven
     }
+
+    /** Where [works] sends its question: the tunnel's DNS, else 1.1.1.1 when it carries everything, else its server. */
+    @Volatile private var probeTarget: java.net.InetAddress? = null
+    /** Something has come back through this tunnel since it opened (so silence from [probeTarget] now means a problem). */
+    @Volatile private var probeProven = false
+
+    private fun probeTargetFor(config: Config): java.net.InetAddress? = try {
+        val dns = config.`interface`.dnsServers.firstOrNull()
+        val nets = config.peers.flatMap { it.allowedIps }
+        val everything = nets.any { it.mask == 0 && it.address is java.net.Inet4Address }
+        when {
+            dns != null -> dns
+            everything -> java.net.InetAddress.getByAddress(byteArrayOf(1, 1, 1, 1))
+            else -> nets.firstOrNull { it.address is java.net.Inet4Address && it.mask in 8..30 }?.let { n ->
+                val b = n.address.address.clone(); b[3] = (b[3].toInt() or 1).toByte(); java.net.InetAddress.getByAddress(b)
+            }
+        }
+    } catch (_: Throwable) { null }
 
     /** Waits up to [ms] for the server's first answer, nudging it with a small DNS question through the tunnel. */
     private fun answered(ms: Long): Boolean {
@@ -612,7 +636,7 @@ object Vpn {
             if (System.currentTimeMillis() - nudged > 2_000) {
                 nudged = System.currentTimeMillis()
                 // (Any traffic makes WireGuard say hello to the server.)
-                val to = tunnelDns ?: try { java.net.InetAddress.getByAddress(byteArrayOf(1, 1, 1, 1)) } catch (_: Throwable) { null }
+                val to = probeTarget ?: tunnelDns ?: try { java.net.InetAddress.getByAddress(byteArrayOf(1, 1, 1, 1)) } catch (_: Throwable) { null }
                 if (to != null) try { java.net.DatagramSocket().use { val q = dnsQuestion(); it.send(java.net.DatagramPacket(q, q.size, to, 53)) } } catch (_: Throwable) {}
             }
             Thread.sleep(200)
