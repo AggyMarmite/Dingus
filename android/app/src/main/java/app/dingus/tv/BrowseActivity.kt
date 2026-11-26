@@ -405,6 +405,7 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
             (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN || event.keyCode == KeyEvent.KEYCODE_DPAD_UP)) { gridStep(f, event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN); return true }
         if (side.onKey(event)) return true
         if (down && event.keyCode == KeyEvent.KEYCODE_DPAD_UP && (current == Vod.FEATURED || current == Vod.COMING) && RowNav.up(rows, currentFocus)) return true
+        if (down && event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && (current == Vod.FEATURED || current == Vod.COMING) && RowNav.down(rows, currentFocus)) return true
         return super.dispatchKeyEvent(event)
     }
 

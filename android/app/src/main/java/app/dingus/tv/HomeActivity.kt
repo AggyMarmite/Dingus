@@ -146,6 +146,10 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
             }
             if (p > 0) { focusItem(p - 1); return true }
         }
+        // DOWN likewise: onto the next row's first title, not whichever is nearest below.
+        if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && RowNav.down(rows, currentFocus)) {
+            Ui.test("home-down ${focusedItem()}"); return true
+        }
         return super.dispatchKeyEvent(event)
     }
 

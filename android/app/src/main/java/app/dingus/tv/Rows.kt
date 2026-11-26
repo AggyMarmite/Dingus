@@ -356,12 +356,21 @@ object RowNav {
         val list = (rows.getChildViewHolder(v) as? RowsAdapter.H)?.list ?: return null
         // The title in the row's first place (the ones before it peek in at the edge).
         val edge = list.paddingLeft - 8 * rows.resources.displayMetrics.density
-        for (i in 0 until list.childCount) { val c = list.getChildAt(i); if (c.left >= edge && c.isFocusable) return c }
-        return list.getChildAt(0)
+        // (The leftmost of them: the list's children aren't necessarily in order.)
+        var best: View? = null
+        for (i in 0 until list.childCount) { val c = list.getChildAt(i); if (c.left >= edge && c.isFocusable && (best == null || c.left < best.left)) best = c }
+        return best ?: list.getChildAt(0)
+    }
+
+    /** (Self-test: which title in the row the highlight landed on – 0 is the first.) */
+    private fun landed(rows: RecyclerView, pos: Int, v: View) {
+        if (!BuildConfig.DEBUG) return
+        val list = v.parent as? RecyclerView ?: return
+        Ui.test("row-land $pos title ${list.getChildAdapterPosition(v)}")
     }
 
     fun focus(rows: RecyclerView, pos: Int) {
-        target(rows, pos)?.let { if (it.requestFocus()) return }
+        target(rows, pos)?.let { if (it.requestFocus()) { landed(rows, pos, it); return } }
         if (Ui.lite) {
             rows.scrollToPosition(pos)
             rows.post { if (target(rows, pos)?.requestFocus() != true) rows.postDelayed({ target(rows, pos)?.requestFocus() }, 80) }
@@ -369,7 +378,7 @@ object RowNav {
         }
         // The row above has scrolled out of sight: glide back up to it (as going down does), then move onto it.
         var done = false
-        fun land() { if (!done) { done = true; target(rows, pos)?.requestFocus() } }
+        fun land() { if (!done) { done = true; target(rows, pos)?.let { if (it.requestFocus()) landed(rows, pos, it) } } }
         rows.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(rv: RecyclerView, state: Int) {
                 if (state == RecyclerView.SCROLL_STATE_IDLE) { rv.removeOnScrollListener(this); land() }
@@ -377,6 +386,14 @@ object RowNav {
         })
         rows.smoothScrollToPosition(pos)
         rows.postDelayed({ land() }, 700) // (in case it didn't need to move)
+    }
+
+    /** Handles DOWN when the focus is in a row: always onto the next row's first title (never the one nearest). */
+    fun down(rows: RecyclerView, focus: View?): Boolean {
+        val p = position(rows, focus)
+        if (p < 0) return false
+        if (p + 1 >= (rows.adapter?.itemCount ?: 0)) return true // (the last row: stay put)
+        focus(rows, p + 1); return true
     }
 
     /** Handles UP when the focus is in a row below the first; true when it did. */

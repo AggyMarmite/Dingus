@@ -294,7 +294,12 @@ fresh
 adb shell am start -n $PKG/.HomeActivity
 check "home rows [1-9]" 30 "Home shows its rows"
 sleep 4; shot 16-home
+fresh
 key KEYCODE_DPAD_DOWN 3; shot 17-home-row2
+check "row-land 1 title 0" 5 "DOWN from the top lands on the first title of the row (not the second)"
+key KEYCODE_DPAD_DOWN 2
+check "row-land 2 title 0" 5 "DOWN again lands on the first title of the next row"
+key KEYCODE_DPAD_UP 2
 fresh
 key KEYCODE_DPAD_UP 1
 check "home-focus row 0 heroWatch" 5 "UP from the rows goes back up to the top"
