@@ -268,6 +268,21 @@ class RowsAdapter(
  */
 class RowsLayoutManager(ctx: Context, private val centered: Boolean = false) : LinearLayoutManager(ctx) {
     init { initialPrefetchItemCount = 3 }
+    private var rv: RecyclerView? = null
+    override fun onAttachedToWindow(view: RecyclerView) { super.onAttachedToWindow(view); rv = view }
+    override fun onDetachedFromWindow(view: RecyclerView, recycler: RecyclerView.Recycler) { super.onDetachedFromWindow(view, recycler); rv = null }
+
+    // The rows just above and below are kept ready, so UP glides back to the row above as DOWN glides on (without
+    // it, the row above had gone and moving back up to it jumped).
+    override fun calculateExtraLayoutSpace(state: RecyclerView.State, extraLayoutSpace: IntArray) {
+        val e = height / 2; extraLayoutSpace[0] = e; extraLayoutSpace[1] = e
+    }
+
+    override fun scrollVerticallyBy(dy: Int, recycler: RecyclerView.Recycler, state: RecyclerView.State): Int {
+        val done = super.scrollVerticallyBy(dy, recycler, state)
+        if (BuildConfig.DEBUG && kotlin.math.abs(done) > height / 6 && rv?.scrollState != RecyclerView.SCROLL_STATE_SETTLING) Ui.test("scroll-jump rows $done")
+        return done
+    }
 
     override fun requestChildRectangleOnScreen(parent: RecyclerView, child: View, rect: android.graphics.Rect, immediate: Boolean, focusedChildVisible: Boolean): Boolean {
         val dy = when {
@@ -327,7 +342,9 @@ object RowNav {
         val v = rows.findViewHolderForAdapterPosition(pos)?.itemView ?: return null
         v.findViewById<View>(R.id.heroWatch)?.let { return it }
         val list = (rows.getChildViewHolder(v) as? RowsAdapter.H)?.list ?: return null
-        for (i in 0 until list.childCount) { val c = list.getChildAt(i); if (c.right > 0 && c.isFocusable) return c }
+        // The title in the row's first place (the ones before it peek in at the edge).
+        val edge = list.paddingLeft - 8 * rows.resources.displayMetrics.density
+        for (i in 0 until list.childCount) { val c = list.getChildAt(i); if (c.left >= edge && c.isFocusable) return c }
         return list.getChildAt(0)
     }
 
@@ -388,14 +405,27 @@ class RowLayoutManager(ctx: Context) : LinearLayoutManager(ctx, HORIZONTAL, fals
         val e = width / 2; extraLayoutSpace[0] = e; extraLayoutSpace[1] = e
     }
 
+    // Room at the end, so the last title can reach the first place too. Worked out once (and again only if the row's
+    // width changes): working it out after every layout set off a loop near the end of a row – the row flickered.
+    private var roomFor = -1
     override fun onLayoutCompleted(state: RecyclerView.State?) {
         super.onLayoutCompleted(state)
         val v = rv ?: return
+        if (v.width <= 0 || v.width == roomFor) return
         val first = getChildAt(0) ?: return
         val lp = first.layoutParams as? RecyclerView.LayoutParams
         val card = first.width + (lp?.leftMargin ?: 0) + (lp?.rightMargin ?: 0)
+        if (card <= 0) return
+        roomFor = v.width
         val room = (v.width - v.paddingLeft - card).coerceAtLeast(v.paddingLeft)
-        if (v.width > 0 && v.paddingRight != room) v.post { v.setPadding(v.paddingLeft, v.paddingTop, room, v.paddingBottom) }
+        if (v.paddingRight != room) v.post { v.setPadding(v.paddingLeft, v.paddingTop, room, v.paddingBottom) }
+    }
+
+    override fun scrollHorizontallyBy(dx: Int, recycler: RecyclerView.Recycler, state: RecyclerView.State): Int {
+        val done = super.scrollHorizontallyBy(dx, recycler, state)
+        // (Self-test: a big step in one go, not gliding, is a jump.)
+        if (BuildConfig.DEBUG && kotlin.math.abs(done) > width / 6 && rv?.scrollState != RecyclerView.SCROLL_STATE_SETTLING) Ui.test("scroll-jump row $done")
+        return done
     }
 
     override fun requestChildRectangleOnScreen(parent: RecyclerView, child: View, rect: android.graphics.Rect, immediate: Boolean, focusedChildVisible: Boolean): Boolean {

@@ -36,6 +36,8 @@ press_until() {
 # Quick mode: ONLY="xtream,home" runs just those sections (after the first playlist loads). Sections: backup, xtream,
 # home, numbers, reminder, phone, vpn. Home and the films/shows checks need xtream (the login) before them.
 section() { [ -z "${ONLY:-}" ] || [[ ",${ONLY// /}," == *",$1,"* ]]; }
+# check_none <pattern> <what>: passes when nothing matching was logged since the last fresh.
+check_none() { if adb logcat -d -s DINGUS-TEST:I | grep -qE "$1"; then echo "::error title=android self-test::$2"; echo "FAIL $2" >> "$OUT/result.txt"; adb logcat -d -s DINGUS-TEST:I | grep -E "$1" | head -5; fail=1; else echo "PASS $2"; echo "PASS $2" >> "$OUT/result.txt"; fi; }
 
 adb install -r "$APK" || exit 1
 fresh
@@ -281,6 +283,13 @@ shot 17b-home-menu
 press_until KEYCODE_DPAD_DOWN "focus navFilms" 6 0.5; key KEYCODE_DPAD_CENTER 3     # down the menu to Films
 check "library movies 23" 30 "Films opens from the side menu"
 sleep 3; shot 18-films-rows
+# Along a row and back, down a row and back up: every move glides (no jumps), and the row doesn't keep re-laying out.
+fresh
+for _ in 1 2 3 4 5 6; do key KEYCODE_DPAD_RIGHT 0.7; done
+sleep 1; shot 18a-films-along
+for _ in 1 2 3 4 5 6; do key KEYCODE_DPAD_LEFT 0.7; done
+key KEYCODE_DPAD_DOWN 1.2; key KEYCODE_DPAD_UP 1.2
+check_none "scroll-jump" "Films rows glide every way (along, back, down and up)"
 key KEYCODE_DPAD_DOWN 3; shot 19-films-rows-2
 fresh
 key KEYCODE_DPAD_LEFT 1.5
