@@ -30,19 +30,21 @@ import java.text.Normalizer
 /** One search box for channels, what's on, films and TV shows. */
 class SearchActivity : BaseActivity() {
     private lateinit var side: SideMenu
-    private sealed class Row {
-        class Heading(val text: String) : Row()
-        class Live(val c: Channel, val p: Programme?) : Row()
-        class Item(val kind: String, val m: VodItem) : Row()
-    }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var query: EditText
     private lateinit var status: TextView
     private lateinit var results: RecyclerView
     private lateinit var voice: TextView
-    private val adapter = ResultAdapter()
+    private lateinit var adapter: RowsAdapter
     private var job: Job? = null
+    /** The latest results, by kind (the filter chips pick which show). */
+    private var found: Map<String, List<Card>> = emptyMap()
+    private var filter = ALL
+    private var top: Card? = null
+    companion object {
+        const val ALL = "All"; const val LIVE = "Live TV"; const val FILMS = "Films"; const val SHOWS = "TV Shows"; const val LATER = "On later"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,9 +53,12 @@ class SearchActivity : BaseActivity() {
         query = findViewById(R.id.query)
         status = findViewById(R.id.status)
         results = findViewById(R.id.results)
-        results.layoutManager = LinearLayoutManager(this)
+        // Results as picture rows (Live now, Films, TV Shows, On later), the same cards and motion as Home.
+        adapter = RowsAdapter(this, onFocus = { c -> prefetch(c) }, onClick = { c -> open(c) })
+        results.layoutManager = RowsLayoutManager(this)
         results.adapter = adapter
         results.itemAnimator = null
+        findViewById<View>(R.id.topResult).setOnClickListener { top?.let { open(it) } }
 
         query.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
@@ -95,7 +100,7 @@ class SearchActivity : BaseActivity() {
         scope.launch {
             withContext(Dispatchers.Default) { SearchIndex.channels(); SearchIndex.onTv() }
             if (Vod.available) for (k in listOf(Vod.MOVIES, Vod.SERIES)) try { Vod.library(k); withContext(Dispatchers.Default) { SearchIndex.vod(k) } } catch (_: Exception) {}
-            if (query.text.isNotEmpty()) search(query.text.toString(), 0)
+            if (query.text.isNotEmpty()) search(query.text.toString(), 0) else showRecent()
         }
         voice.requestFocus()
         showRecent()
@@ -105,48 +110,130 @@ class SearchActivity : BaseActivity() {
     private fun search(text: String, wait: Long) {
         job?.cancel()
         val words = SearchIndex.norm(text).split(' ').filter { it.isNotBlank() }
-        if (words.isEmpty() || words.sumOf { it.length } < 2) { adapter.set(emptyList()); status.text = ""; showRecent(); return }
+        if (words.isEmpty() || words.sumOf { it.length } < 2) { found = emptyMap(); top = null; showResults(); status.text = ""; showRecent(); return }
         findViewById<View>(R.id.recentBox).visibility = View.GONE
         job = scope.launch {
             if (wait > 0) delay(wait)
             val rows = withContext(Dispatchers.Default) {
                 fun hit(n: String): Boolean { for (w in words) if (!n.contains(w)) return false; return true }
-                val out = ArrayList<Row>()
                 val ci = SearchIndex.channels()
                 val chans = ArrayList<Channel>()
                 for (i in ci.names.indices) { if (hit(ci.names[i])) { chans.add(ci.items[i]); if (chans.size >= 40) break } }
                 ensureActive()
                 // What's on: programmes on now or later today whose title matches (one per channel).
                 val tv = SearchIndex.onTv()
-                val progs = ArrayList<Row.Live>()
+                val progs = ArrayList<Pair<Channel, Programme?>>()
                 val seen = HashSet<String>()
                 for (i in tv.titles.indices) {
                     if (progs.size >= 40) break
                     val c = tv.channels[i]
-                    if (c.id !in seen && hit(tv.titles[i])) { seen.add(c.id); progs.add(Row.Live(c, tv.programmes[i])) }
+                    if (c.id !in seen && hit(tv.titles[i])) { seen.add(c.id); progs.add(c to tv.programmes[i]) }
                 }
                 ensureActive()
-                if (chans.isNotEmpty()) { out.add(Row.Heading("Channels  ·  ${chans.size}")); chans.forEach { out.add(Row.Live(it, Repo.nowNext(it).first)) } }
-                if (progs.isNotEmpty()) { out.add(Row.Heading("On TV today  ·  ${progs.size}")); out.addAll(progs) }
+                val now = System.currentTimeMillis()
+                val live = ArrayList<Card>(); val later = ArrayList<Card>()
+                chans.forEach { live.add(Card.Live(it)) }
+                progs.forEach { (ch, p) -> if (p != null && p.start > now) later.add(Card.Show(ch, p, Ui.time(p.start))) else live.add(Card.Show(ch, p)) }
+                val films = ArrayList<Card>(); val shows = ArrayList<Card>()
                 for (k in listOf(Vod.MOVIES, Vod.SERIES)) {
                     val vi = SearchIndex.vod(k) ?: continue
-                    val hits = ArrayList<VodItem>()
-                    for (i in vi.names.indices) { if (hit(vi.names[i])) { hits.add(vi.items[i]); if (hits.size >= 60) break } }
+                    for (i in vi.names.indices) { if (hit(vi.names[i])) { (if (k == Vod.MOVIES) films else shows).add(Card.Title(k, vi.items[i])); if ((if (k == Vod.MOVIES) films else shows).size >= 60) break } }
                     ensureActive()
-                    if (hits.isNotEmpty()) { out.add(Row.Heading((if (k == Vod.MOVIES) "Films" else "TV Shows") + "  ·  ${hits.size}")); hits.forEach { out.add(Row.Item(k, it)) } }
                 }
-                out
+                // The top result: a name that starts with what you typed (a film or show first, then a channel), else the first found.
+                val q = words.joinToString(" ")
+                fun nameOf(c: Card) = when (c) { is Card.Title -> c.item.name; is Card.Live -> c.channel.name; is Card.Show -> c.programme?.title ?: c.channel.name; else -> "" }
+                val best = (films + shows + live).firstOrNull { SearchIndex.norm(nameOf(it)).startsWith(q) } ?: (films + shows + live + later).firstOrNull()
+                linkedMapOf(LIVE to live as List<Card>, FILMS to films, SHOWS to shows, LATER to later).filterValues { it.isNotEmpty() } to best
             }
-            adapter.set(rows)
-            val n = rows.count { it !is Row.Heading }
-            status.text = if (n == 0) "Nothing found for “$text”." else "$n results"
+            found = rows.first; top = rows.second
+            if (filter != ALL && filter !in found) filter = ALL
+            showResults()
+            val n = found.values.sumOf { it.size }
+            status.text = if (n == 0) "Nothing found for “$text”." else ""
             Ui.test("search \"$text\" $n")
+        }
+    }
+
+    /** The rows for the chosen filter, the filter chips, and the top result. */
+    private fun showResults() {
+        val title = mapOf(LIVE to "Live now", FILMS to "Films", SHOWS to "TV Shows", LATER to "On later")
+        adapter.set(found.filterKeys { filter == ALL || it == filter }.map { (k, v) -> Row(title[k] ?: k, v) })
+        val chipsRow = findViewById<android.widget.LinearLayout>(R.id.chips)
+        chipsRow.removeAllViews()
+        findViewById<View>(R.id.chipsBox).visibility = if (found.isEmpty()) View.GONE else View.VISIBLE
+        for (k in listOf(ALL) + found.keys) {
+            val chip = TextView(android.view.ContextThemeWrapper(this, R.style.Choice), null, 0, R.style.Choice)
+            chip.text = if (k == ALL) ALL else "$k  ·  ${found[k]?.size}"
+            chip.textSize = 13f
+            chip.setPadding(Ui.dp(this, 16), Ui.dp(this, 7), Ui.dp(this, 16), Ui.dp(this, 7))
+            chip.layoutParams = android.widget.LinearLayout.LayoutParams(-2, -2).apply { marginEnd = Ui.dp(this@SearchActivity, 8) }
+            chip.isActivated = k == filter
+            chip.setOnClickListener { filter = k; showResults(); Ui.test("search-filter $k") }
+            chipsRow.addView(chip)
+        }
+        showTop(if (filter == ALL) top else null)
+    }
+
+    private fun showTop(c: Card?) {
+        val box = findViewById<View>(R.id.topResult)
+        if (c == null) { box.visibility = View.GONE; return }
+        box.visibility = View.VISIBLE
+        val img = findViewById<ImageView>(R.id.topImage); val ini = findViewById<TextView>(R.id.topInitials)
+        val k = findViewById<TextView>(R.id.topKicker); val t = findViewById<TextView>(R.id.topTitle); val m = findViewById<TextView>(R.id.topMeta)
+        img.clipToOutline = true
+        when (c) {
+            is Card.Title -> {
+                k.text = "TOP RESULT  ·  " + if (c.kind == Vod.MOVIES) "FILM" else "TV SHOW"
+                t.text = c.item.name; ini.text = Ui.initials(c.item.name)
+                val det = Vod.cachedDetails(c.kind, c.item.id)
+                m.text = listOfNotNull(c.item.year.takeIf { it > 0 }?.toString(), det?.genre?.split(',')?.firstOrNull()?.trim(), c.item.rating.takeIf { it > 0 }?.let { "★ %.1f".format(it) }).joinToString("  ·  ")
+                val bg = TitleLogos.cachedBackdrop(c.kind, c.item) ?: det?.backdrop
+                Posters.load(img, bg ?: c.item.poster, Ui.dp(this, 112), ini, wide = bg != null)
+                prefetch(c)
+            }
+            is Card.Live -> {
+                k.text = "TOP RESULT  ·  CHANNEL"; t.text = c.channel.name; ini.text = Ui.initials(c.channel.name)
+                m.text = Repo.nowNext(c.channel).first?.let { "Now: ${it.title}" } ?: ""
+                img.scaleType = ImageView.ScaleType.FIT_CENTER
+                Logos.load(img, c.channel.logo, Ui.dp(this, 80), ini)
+            }
+            is Card.Show -> {
+                val p = c.programme
+                k.text = "TOP RESULT  ·  " + c.channel.name.uppercase(); t.text = p?.title ?: c.channel.name; ini.text = Ui.initials(c.channel.name)
+                m.text = p?.let { Ui.span(it) + "  ·  " + Ui.minutesLeft(it) } ?: ""
+                img.scaleType = ImageView.ScaleType.FIT_CENTER
+                Logos.load(img, c.channel.logo, Ui.dp(this, 80), ini)
+            }
+            else -> box.visibility = View.GONE
+        }
+    }
+
+    /** Resting on a film or show fetches its details, so its page opens with them. */
+    private fun prefetch(c: Card) {
+        val t = c as? Card.Title ?: return
+        if (Vod.cachedDetails(t.kind, t.item.id) != null) return
+        scope.launch { delay(250); try { Vod.details(t.kind, t.item) } catch (_: Exception) {} }
+    }
+
+    private fun open(c: Card) {
+        Store.addRecentSearch(query.text.toString())
+        when (c) {
+            is Card.Title -> startActivity(Intent(this, DetailActivity::class.java).putExtra(DetailActivity.KIND, c.kind).putExtra(DetailActivity.ID, c.item.id), Motion.from(currentFocus))
+            is Card.Live -> startActivity(Intent(this, MainActivity::class.java).putExtra(MainActivity.PLAY, c.channel.id).putExtra(MainActivity.PLAY_CATEGORY, Repo.ALL))
+            is Card.Show -> {
+                val p = c.programme
+                if (p != null && p.start > System.currentTimeMillis()) Reminders.ask(this, c.channel, p, watch = { open(Card.Live(c.channel)) }) { msg -> Notice.done(msg, 2_500) }
+                else open(Card.Live(c.channel))
+            }
+            else -> {}
         }
     }
 
     override fun onDestroy() { scope.cancel(); super.onDestroy() }
 
-    private fun firstResult(): View? = (0 until results.childCount).map { results.getChildAt(it) }.firstOrNull { it.isFocusable }
+    private fun firstResult(): View? = findViewById<View>(R.id.topResult).takeIf { it.visibility == View.VISIBLE }
+        ?: (results.findViewHolderForAdapterPosition(0) as? RowsAdapter.H)?.list?.getChildAt(0)
 
     // ------------------------------------------------------------------ the keyboard and voice
 
@@ -185,8 +272,12 @@ class SearchActivity : BaseActivity() {
 
     private fun type(s: String) { query.append(s); Ui.test("search-key $s") }
 
-    /** Before you type: what you searched for lately, as chips. */
+    /** Before you type: what you searched for lately, as chips, and what's popular right now. */
     private fun showRecent() {
+        if (found.isEmpty()) {
+            val pop = (Vod.trending(Vod.MOVIES).take(8).map { Card.Title(Vod.MOVIES, it) } + Vod.trending(Vod.SERIES).take(8).map { Card.Title(Vod.SERIES, it) })
+            adapter.set(if (pop.size >= 3) listOf(Row("Popular right now", pop)) else emptyList())
+        }
         val box = findViewById<View>(R.id.recentBox)
         val row = findViewById<android.widget.LinearLayout>(R.id.recent)
         val list = Store.recentSearches
@@ -212,74 +303,6 @@ class SearchActivity : BaseActivity() {
     }
     override fun onStart() { super.onStart(); findViewById<View>(R.id.clock)?.removeCallbacks(tick); tick.run() }
     override fun onStop() { super.onStop(); findViewById<View>(R.id.clock)?.removeCallbacks(tick) }
-
-    private inner class ResultAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-        var rows: List<Row> = emptyList()
-        fun set(list: List<Row>) { rows = list; notifyDataSetChanged() }
-        private val logoH by lazy { (50 * resources.displayMetrics.density).toInt() }
-
-        inner class H(v: View) : RecyclerView.ViewHolder(v) {
-            val image: ImageView = v.findViewById(R.id.image)
-            val initials: TextView = v.findViewById(R.id.initials)
-            val title: TextView = v.findViewById(R.id.title)
-            val subtitle: TextView = v.findViewById(R.id.subtitle)
-        }
-        inner class Head(val v: TextView) : RecyclerView.ViewHolder(v)
-
-        override fun getItemCount() = rows.size
-        override fun getItemViewType(position: Int) = if (rows[position] is Row.Heading) 0 else 1
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-            val inf = LayoutInflater.from(parent.context)
-            if (viewType == 0) return Head(inf.inflate(R.layout.item_search_heading, parent, false) as TextView)
-            val v = inf.inflate(R.layout.item_result, parent, false)
-            val h = H(v)
-            v.setOnClickListener {
-                Store.addRecentSearch(query.text.toString())
-                when (val r = rows.getOrNull(h.bindingAdapterPosition)) {
-                    is Row.Live -> startActivity(Intent(this@SearchActivity, MainActivity::class.java)
-                        .putExtra(MainActivity.PLAY, r.c.id).putExtra(MainActivity.PLAY_CATEGORY, Repo.ALL))
-                    is Row.Item -> startActivity(Intent(this@SearchActivity, DetailActivity::class.java)
-                        .putExtra(DetailActivity.KIND, r.kind).putExtra(DetailActivity.ID, r.m.id), Motion.from(currentFocus))
-                    else -> {}
-                }
-            }
-            return h
-        }
-
-        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-            when (val r = rows[position]) {
-                is Row.Heading -> (holder as Head).v.text = r.text
-                is Row.Live -> {
-                    val h = holder as H
-                    h.title.text = (if (Store.showNumbers && r.c.number > 0) "${r.c.number}   " else "") + r.c.name
-                    val p = r.p
-                    h.subtitle.text = when {
-                        p == null -> ""
-                        p.start <= System.currentTimeMillis() -> "Now: ${p.title}"
-                        else -> "${Ui.time(p.start)}  ${p.title}"
-                    }
-                    h.initials.text = Ui.initials(r.c.name)
-                    h.image.scaleType = ImageView.ScaleType.FIT_CENTER
-                    Logos.load(h.image, r.c.logo, logoH, h.initials)
-                    h.itemView.onFocusChangeListener = null
-                }
-                is Row.Item -> {
-                    val h = holder as H
-                    h.title.text = r.m.name
-                    h.subtitle.text = listOfNotNull(if (r.kind == Vod.MOVIES) "Film" else "TV show", r.m.year.takeIf { it > 0 }?.toString()).joinToString("  ·  ")
-                    h.initials.text = Ui.initials(r.m.name)
-                    h.image.scaleType = ImageView.ScaleType.CENTER_CROP
-                    Posters.load(h.image, r.m.poster, logoH, h.initials)
-                    // Resting on a film or show fetches its details in the background, so its page opens with them.
-                    h.itemView.onFocusChangeListener = android.view.View.OnFocusChangeListener { v, has ->
-                        if (!has || Vod.cachedDetails(r.kind, r.m.id) != null) return@OnFocusChangeListener
-                        scope.launch { delay(250); if (v.isFocused) try { Vod.details(r.kind, r.m) } catch (_: Exception) {} }
-                    }
-                }
-            }
-        }
-    }
 
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean = backHold(event) || side.onKey(event) || super.dispatchKeyEvent(event)
 
