@@ -18,7 +18,16 @@ object Net {
      */
     private val API = "Mozilla/5.0 (Linux; Android ${android.os.Build.VERSION.RELEASE}) Dingus/${BuildConfig.VERSION_NAME}"
 
-    fun open(url: String, timeoutMs: Int = 20_000): InputStream = try { openAs(url, timeoutMs, API) } catch (e: IOException) {
+    /** For films and shows lists: the app name that's been found to get the fullest lists from this provider, if any. */
+    @Volatile var listAgent: String? = null
+
+    /** [open], as a particular app ([agent]). */
+    fun openAs(url: String, timeoutMs: Int, agent: String, public: Boolean): InputStream = openAs(url, timeoutMs, agent)
+
+    fun open(url: String, timeoutMs: Int = 20_000): InputStream = try {
+        val la = listAgent
+        if (la != null && Regex("""action=get_(vod_streams|series)\b""").containsMatchIn(url)) openAs(url, timeoutMs, la) else openAs(url, timeoutMs, API)
+    } catch (e: IOException) {
         val refused = Regex("""answered 404|refused the login""").containsMatchIn(e.message ?: "")
         if (refused && Regex("""(player_api|get|xmltv|panel_api)\.php""").containsMatchIn(url)) openAs(url, timeoutMs, USER_AGENT) else throw e
     }

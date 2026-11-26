@@ -85,7 +85,7 @@ object Vod {
         return progressPrefs!!
     }
 
-    fun init(ctx: Context) { app = ctx.applicationContext }
+    fun init(ctx: Context) { app = ctx.applicationContext; Net.listAgent = Store.prefsString("listAgent", "").ifEmpty { null } }
 
     /** After switching playlist: forget what's in memory (saved copies stay). */
     fun reset() { libs = HashMap() }
@@ -361,7 +361,10 @@ object Vod {
         if (full != null) Background.scope.launch(Dispatchers.IO) {
             // (Once this library's in use: it's handed back and saved first.)
             repeat(300) { if (libs[kind]?.loadedAt == at) return@repeat; kotlinx.coroutines.delay(200) }
-            if (libs[kind]?.loadedAt == at) enrich(kind, api + listAction)
+            if (libs[kind]?.loadedAt == at) {
+                if (kind == MOVIES) probeAgents(api + listAction, full!!.size)
+                enrich(kind, api + listAction)
+            }
         }
         return Library(cats, items, at)
     }
@@ -415,6 +418,35 @@ object Vod {
             out.add(if (c == m.categories) m else VodItem(m.id, m.name, m.poster, c.first(), m.rating, m.year, m.ext, m.added, m.tmdb, c))
         }
         return out
+    }
+
+    /**
+     * Whether this provider hands a fuller films list to other apps: the whole list asked for as a few common ones,
+     * once a day. If one gets noticeably more, films and shows are asked for as that one from then on, and fetched
+     * again now. (Same login, same address – the lists came back shorter for Dingus than for another app.)
+     */
+    private val probeAgentsList = listOf("okhttp/4.12.0", "IPTVSmartersPlayer", "TiviMate/5.1.6 (Android 11)", "Dalvik/2.1.0 (Linux; U; Android 9; AFTMM Build/PS7633)")
+    private fun probeAgents(listUrl: String, have: Int) {
+        val at = Store.prefsString("listAgentAt", "0").toLongOrNull() ?: 0L
+        if (System.currentTimeMillis() - at < 24 * 3_600_000L) return
+        Store.putString("listAgentAt", System.currentTimeMillis().toString())
+        val counts = LinkedHashMap<String, Int>()
+        for (a in probeAgentsList) {
+            if (a == Net.listAgent) continue
+            counts[a] = try { Net.openAs(listUrl, 90_000, a, true).use { readList(it, MOVIES, null).size } } catch (e: Exception) { -1 }
+        }
+        fetchInfo["agents"] = "as other apps: " + counts.entries.joinToString(", ") { (a, n) -> "${a.substringBefore('/').substringBefore(' ')} ${if (n < 0) "–" else Ui.count(n)}" }
+        Ui.test("vod-agents have $have ${counts.entries.joinToString(" ") { "${it.key.substringBefore('/')}=${it.value}" }}")
+        val best = counts.maxByOrNull { it.value } ?: return
+        if (best.value > have + maxOf(20, have / 50)) {
+            Net.listAgent = best.key
+            Store.putString("listAgent", best.key)
+            Log.i("Dingus", "films: ${best.key} gets ${best.value}, Dingus got $have – using it")
+            Background.scope.launch(Dispatchers.IO) {
+                try { library(MOVIES, fresh = true) } catch (_: Exception) {}
+                try { library(SERIES, fresh = true) } catch (_: Exception) {}
+            }
+        }
     }
 
     /** How many categories' lists couldn't be read, last time. */
