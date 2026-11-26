@@ -1,3 +1,8 @@
+## What's new in Dingus 0.15.35
+
+* Fire TV: the full films and shows library now loads.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.34
 
 * Fire TV: films and shows categories fill in fully.
