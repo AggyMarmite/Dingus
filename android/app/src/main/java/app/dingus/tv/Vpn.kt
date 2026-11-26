@@ -432,6 +432,14 @@ object Vpn {
                 set(Status.CONNECTING, target.label)
                 // Close what's playing first, so the provider sees it end instead of counting it for minutes.
                 Streams.closeAll("vpn connecting")
+                // Already connected somewhere (switching location, or a drop being put right): close that tunnel and
+                // wait for the VPN service to finish closing before opening the new one. Opened straight away, the old
+                // service's closing came a moment later and shut the new tunnel down with it – so changing location
+                // didn't stick (it hung, said the place didn't answer, or ended up somewhere else).
+                if (try { backend.getState(tunnel) == Tunnel.State.UP } catch (_: Throwable) { false }) {
+                    try { backend.setState(tunnel, Tunnel.State.DOWN, null) } catch (e: Throwable) { Log.w("Dingus", "vpn down for switch", e) }
+                    waitServiceClosed(4_000)
+                }
                 try { backend.setState(tunnel, Tunnel.State.UP, configFor(target)) } finally { Streams.reopenAll() }
                 // Only "connected" once the VPN server has actually answered (its first handshake). The tunnel being
                 // set up proves nothing: it showed connected while nothing got through – no IP address, and the
@@ -459,6 +467,22 @@ object Vpn {
                 msg
             }
         }
+    }
+
+    /** Waits (up to [ms]) until the VPN service has stopped, after the tunnel was taken down. */
+    @Suppress("DEPRECATION")
+    private fun waitServiceClosed(ms: Long) {
+        val am = app.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val until = System.currentTimeMillis() + ms
+        while (System.currentTimeMillis() < until) {
+            val running = try {
+                am.getRunningServices(50).any { it.service.packageName == app.packageName && it.service.className.contains("VpnService") }
+            } catch (_: Throwable) { false }
+            if (!running) break
+            Thread.sleep(100)
+        }
+        Thread.sleep(300) // (and a moment for it to finish tidying up)
+        Ui.test("vpn-service-closed")
     }
 
     /** When the VPN server last answered (0: not yet). */

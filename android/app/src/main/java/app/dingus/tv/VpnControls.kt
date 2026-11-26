@@ -199,11 +199,14 @@ class VpnControls(
             .show()
     }
 
-    /** Picking a location connects to it straight away (or just remembers it while the VPN is off). */
+    /**
+     * Picking a location connects to it straight away when the VPN is on – or meant to be on and being put right
+     * after a drop (it only remembered it then) – and just remembers it while the VPN is off.
+     */
     private fun select(loc: Vpn.Location) {
         Vpn.locationId = loc.id
         update()
-        if (Vpn.status == Vpn.Status.ON) connect(loc)
+        if (Vpn.status == Vpn.Status.ON || (Vpn.wanted && Vpn.status != Vpn.Status.OFF)) connect(loc)
     }
 
     /** Speed test: about 10 seconds, through the VPN when it's on (your normal connection otherwise). */
