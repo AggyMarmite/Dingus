@@ -53,7 +53,8 @@ object Motion {
         }
         v.animate().scaleX(scale).scaleY(scale).rotationX(0f).rotationY(0f).setDuration(420).setInterpolator(spring).start()
         if (shine) sheen(v)
-        if (BuildConfig.DEBUG) { checkRoom(v, scale); v.postDelayed({ if (v.hasFocus()) checkOnScreen(v) }, 700) }
+        // (Checked once it's settled: the page may still be moving it into view.)
+        if (BuildConfig.DEBUG) v.postDelayed({ if (v.hasFocus()) { checkRoom(v, scale); checkOnScreen(v) } }, 700)
     }
 
     /** (Self-test only.) Once it's settled, the highlighted thing is wholly on the screen, top to bottom. */

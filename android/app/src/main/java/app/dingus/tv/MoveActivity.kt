@@ -153,6 +153,11 @@ class MoveActivity : BaseActivity() {
         codeBoxes(s.code, typing = false)
         waiting("Waiting for the other Fire TV…  (both need to be on the same Wi-Fi)")
         buttons(button("Cancel", primary = true) { finish() })
+        // (Self-test: copy from this one, on the same Fire TV, as if from another.)
+        if (BuildConfig.DEBUG && intent.getBooleanExtra("dingus_test_loop", false)) panel.postDelayed({
+            startActivity(android.content.Intent(this, MoveActivity::class.java).putExtra(SEND, false)
+                .putExtra("dingus_test_from", "127.0.0.1:${s.port}").putExtra("dingus_test_no_restart", true))
+        }, 1_500)
     }
 
     private fun sent(to: String) {
@@ -167,7 +172,7 @@ class MoveActivity : BaseActivity() {
 
     private fun startFinding() {
         step = "find"
-        finder = Move.Finder(this) { f -> if (found.none { it.host == f.host && it.port == f.port }) { found.add(f); Ui.test("move-found ${f.name}"); if (step == "find") showFound() } }.also { it.start() }
+        finder = Move.Finder(this) { f -> if (found.none { (it.host == f.host || it.name == f.name) && it.port == f.port }) { found.add(f); Ui.test("move-found ${f.name}"); if (step == "find") showFound() } }.also { it.start() }
         showFound()
     }
 

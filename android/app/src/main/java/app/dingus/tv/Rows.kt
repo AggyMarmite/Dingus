@@ -65,6 +65,8 @@ class RowsAdapter(
     var rows: List<Row> = emptyList(); private set
     private val pool = RecyclerView.RecycledViewPool().apply { setMaxRecycledViews(0, 24); setMaxRecycledViews(1, 16) }
     private val scroll = HashMap<String, Int>()
+    /** Each kind of row's height (by the kinds of card in it), once it's been laid out the first time. */
+    private val heights = HashMap<String, Int>()
     private val d = ctx.resources.displayMetrics.density
 
     fun set(list: List<Row>) {
@@ -111,6 +113,20 @@ class RowsAdapter(
         h.cards?.wide = wideRow(row.title)
         h.cards?.set(row.cards)
         h.list.scrollToPosition(scroll[row.title] ?: 0)
+        // The row's height, fixed once known for its kind of cards. Left to size itself, the row laid its cards out
+        // again every time the screen was measured – and drew them again each time: the posters flickered, and
+        // scrolling stuttered, even with nothing moving.
+        val kind = h.cards?.let { c -> (0 until c.itemCount).map { c.getItemViewType(it) }.distinct().sorted().joinToString(",") } ?: ""
+        val known = heights[kind]
+        val lp = h.list.layoutParams
+        val want = known ?: ViewGroup.LayoutParams.WRAP_CONTENT
+        if (lp.height != want) { lp.height = want; h.list.layoutParams = lp }
+        if (known == null) h.list.post {
+            if (h.key == row.title && h.list.height > 0 && heights[kind] == null) {
+                heights[kind] = h.list.height
+                h.list.layoutParams = h.list.layoutParams.apply { height = h.list.height }
+            }
+        }
     }
 
     /** Continue watching: wide cards (a still from the episode you're on, or the film's background picture, with its logo, where you are and a progress bar); every other row uses posters. */

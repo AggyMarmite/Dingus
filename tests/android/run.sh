@@ -395,9 +395,8 @@ fresh
 adb shell am start -n $PKG/.MainActivity --ez dingus_test_move_send true
 check "move-send code [0-9]{4} port [0-9]+" 10 "Move to another Fire TV shows a code and waits"
 sleep 1; shot 24-move-send
-mv_line=$(adb logcat -d -s DINGUS-TEST:I | grep -oE "move-send code [0-9]{4} port [0-9]+" | tail -1)
-mv_code=$(echo "$mv_line" | awk '{print $3}'); mv_port=$(echo "$mv_line" | awk '{print $5}')
-adb shell am start -n $PKG/.MainActivity --es dingus_test_move_from "127.0.0.1:$mv_port"
+mv_code=$(adb logcat -d -s DINGUS-TEST:I | grep -oE "move-send code [0-9]{4}" | tail -1 | awk '{print $3}')
+# (The sending screen opens the copying one by itself in self-test builds, pointed at its own address.)
 check "move-found" 10 "Copy from another Fire TV finds it"
 sleep 1; key KEYCODE_DPAD_CENTER 1
 for ch in $(echo "$mv_code" | grep -o .); do key KEYCODE_$ch 0.4; done

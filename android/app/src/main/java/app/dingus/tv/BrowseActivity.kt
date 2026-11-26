@@ -234,7 +234,7 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
                 if (lib !== l || current != id) { lib = fresh; return@launch }
                 lib = fresh
                 val more = Vod.itemsIn(kind, fresh, id)
-                posters.set(more)
+                posters.addFrom(more)
                 gridCount.text = "·  ${Ui.count(more.size)} ${if (kind == Vod.MOVIES) (if (more.size == 1) "film" else "films") else (if (more.size == 1) "show" else "shows")}  ·  ◀ categories"
                 empty.visibility = if (more.isEmpty()) View.VISIBLE else View.GONE
                 setCategories()
@@ -497,6 +497,14 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
     private inner class PosterAdapter : RecyclerView.Adapter<PosterAdapter.H>() {
         var items: List<VodItem> = emptyList()
         fun set(list: List<VodItem>) { items = list; notifyDataSetChanged() }
+        /** More titles in the same list (the category's own list from the provider): put in where they go, so the
+         *  highlight stays where it is (redrawing the whole grid lost it). */
+        fun addFrom(list: List<VodItem>) {
+            val had = items.mapTo(HashSet()) { it.id }
+            if (list.size < items.size || items.any { m -> list.none { it.id == m.id } }) return set(list)
+            items = list
+            for ((i, m) in list.withIndex()) if (m.id !in had) notifyItemInserted(i)
+        }
         private val h by lazy { (189 * resources.displayMetrics.density).toInt() }
 
         inner class H(v: View) : RecyclerView.ViewHolder(v) {

@@ -169,7 +169,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         if (i.getBooleanExtra("dingus_test_vpn_off", false)) scope.launch { Vpn.disconnect() }
         if (i.getBooleanExtra("dingus_test_reminder", false)) Reminders.testSoon()
         if (i.getBooleanExtra("dingus_test_numbers_off", false)) { Store.showNumbers = false; grid.showNumbers = false; Ui.test("numbers false") }
-        if (i.getBooleanExtra("dingus_test_move_send", false)) startActivity(Intent(this, MoveActivity::class.java).putExtra(MoveActivity.SEND, true))
+        if (i.getBooleanExtra("dingus_test_move_send", false)) startActivity(Intent(this, MoveActivity::class.java).putExtra(MoveActivity.SEND, true).putExtra("dingus_test_loop", true))
         i.getStringExtra("dingus_test_move_from")?.let { a ->
             startActivity(Intent(this, MoveActivity::class.java).putExtra(MoveActivity.SEND, false).putExtra("dingus_test_from", a).putExtra("dingus_test_no_restart", true))
         }
