@@ -287,6 +287,14 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
     /** The showcase's trending films and show get their plot, genre and picture (looked up once, then kept). */
     private fun slideDetails() {
         if (!Vod.available) return
+        // The shows you're part-way through: their episodes fetched quietly in the background, one at a time, so
+        // opening one is instant (the provider can take a while over a show's episodes).
+        scope.launch {
+            kotlinx.coroutines.delay(4_000)
+            val lib = Vod.cached(Vod.SERIES) ?: return@launch
+            val shows = kotlinx.coroutines.withContext(Dispatchers.Default) { Vod.continueList(Vod.SERIES, lib).take(5) }
+            for (m in shows) try { Vod.details(Vod.SERIES, m) } catch (_: Exception) {}
+        }
         scope.launch {
             // (Matching the charts to the library is worked out off the main thread.)
             val missing = kotlinx.coroutines.withContext(Dispatchers.Default) {
