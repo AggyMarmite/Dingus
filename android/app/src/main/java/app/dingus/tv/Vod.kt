@@ -605,6 +605,21 @@ object Vod {
         return d.await()
     }
 
+    private val prefetchHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var prefetchNext: Runnable? = null
+    /**
+     * A film or show you've paused on (not just passed over while scrolling): its details fetched in the background,
+     * so its page opens with everything there rather than "Loading details…" while the provider answers.
+     */
+    fun prefetchSoon(kind: String, item: VodItem) {
+        prefetchNext?.let { prefetchHandler.removeCallbacks(it) }
+        val key = "$kind:${item.id}"
+        if (detailsCache.get(key) != null && (kind == MOVIES || System.currentTimeMillis() - (synchronized(detailsAt) { detailsAt[key] } ?: 0L) < SHOW_FRESH_MS)) return
+        val r = Runnable { detailsScope.launch { try { details(kind, item) } catch (_: Exception) {} } }
+        prefetchNext = r
+        prefetchHandler.postDelayed(r, 400)
+    }
+
     /**
      * Details from memory, else the copy saved on disk the last time they were fetched (any age): for showing a page
      * straight away while [details] checks with the provider. Null when it's never been opened.

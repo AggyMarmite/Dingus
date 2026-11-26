@@ -48,7 +48,7 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
         rows = findViewById(R.id.rows)
         empty = findViewById(R.id.empty)
         hero = Hero(this, scope)
-        adapter = RowsAdapter(this, onFocus = { if (lite) hero.show(it) }, onClick = { open(it) }, onLong = { MyList.toggle(it) { build() } })
+        adapter = RowsAdapter(this, onFocus = { if (lite) hero.show(it); (it as? Card.Title)?.let { t -> Vod.prefetchSoon(t.kind, t.item) } }, onClick = { open(it) }, onLong = { MyList.toggle(it) { build() } })
         rows.layoutManager = RowsLayoutManager(this, centered = true)
         setUpCentredRows()
         if (lite) rows.adapter = adapter

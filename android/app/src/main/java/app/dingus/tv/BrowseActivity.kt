@@ -100,7 +100,7 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
         heroBody = findViewById(R.id.heroBody)
         compact = true; setCompact(false) // (the full size banner: taller here than Home's)
 
-        adapter = RowsAdapter(this, onFocus = { hero.show(it) }, onClick = { open(it) }, onLong = { MyList.toggle(it) { build() } })
+        adapter = RowsAdapter(this, onFocus = { hero.show(it); (it as? Card.Title)?.let { t -> Vod.prefetchSoon(t.kind, t.item) } }, onClick = { open(it) }, onLong = { MyList.toggle(it) { build() } })
         // The row you're on sits right under the banner, fully in view (the next one peeking below); moving down slides
         // the rows up one, so nothing jumps about or gets cut off.
         rows.layoutManager = RowsLayoutManager(this, centered = false)
@@ -568,8 +568,7 @@ class BrowseActivity : BaseActivity(), SideMenu.ToTop {
             v.setOnFocusChangeListener { view, has ->
                 Ui.grow(view, has, 120)
                 val p = holder.bindingAdapterPosition
-                if (has && p >= 0) {
-                }
+                if (has && p >= 0) Vod.prefetchSoon(kind, items[p])
             }
             return holder
         }
