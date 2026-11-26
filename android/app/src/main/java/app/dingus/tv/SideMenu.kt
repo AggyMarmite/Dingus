@@ -80,7 +80,7 @@ class SideMenu(
 
     private val root = a.findViewById<FrameLayout>(android.R.id.content)
     private val d = a.resources.displayMetrics.density
-    private val strip = (60 * d).toInt()
+    private val strip = (52 * d).toInt() // (slim: the round buttons are 34dp)
     private val full = (200 * d).toInt()
     /** Darkens the left of the screen behind the open menu (fading out across it); the rest stays bright and live. */
     private val scrim = View(a).apply {
@@ -176,17 +176,17 @@ class SideMenu(
         override fun draw(c: android.graphics.Canvas) {
             val p = fraction
             val b = bounds
-            val inset = 2 * d * (1 - p)
-            val w = 40 * d + (b.width() - 40 * d) * p
+            val inset = 5 * d * (1 - p)
+            val w = 34 * d + (b.width() - 34 * d) * p
             r.set(b.left + inset, b.top + inset, b.left + inset + w, b.bottom - inset)
             val rad = r.height() / 2
             val focused = v.isFocused && isOpen
-            // Closed: soft round frosted buttons. Open: the list goes calm – no boxes, just icons and names – with a
+            // Closed: small round buttons, three-quarters see-through so the page shows through. Open: the list goes calm – no boxes, just icons and names – with a
             // soft white pill for the screen you're on and a white one on the highlight.
             paint.color = when {
                 focused -> ((0.35f + 0.65f * p) * 255).toInt() shl 24 or 0xFFFFFF
-                v.isActivated -> ((0.20f - 0.06f * p) * 255).toInt() shl 24 or 0xFFFFFF
-                else -> ((0.55f * (1 - p)) * 255).toInt() shl 24 or 0x1E2636
+                v.isActivated -> ((0.18f - 0.04f * p) * 255).toInt() shl 24 or 0xFFFFFF
+                else -> ((0.25f * (1 - p)) * 255).toInt() shl 24 or 0x1E2636
             }
             if (paint.alpha > 0) c.drawRoundRect(r, rad, rad, paint)
             if (!focused && !v.isActivated && p < 1f) { edgePaint.alpha = (0x14 * (1 - p)).toInt(); c.drawRoundRect(r, rad, rad, edgePaint) }

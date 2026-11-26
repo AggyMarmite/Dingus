@@ -110,8 +110,8 @@ class RowsAdapter(
         h.list.scrollToPosition(scroll[row.title] ?: 0)
     }
 
-    /** Trending and Because you watched: wide cards with the title's art (the other rows keep posters). */
-    @Suppress("UNUSED_PARAMETER") private fun wideRow(title: String) = false // (every row uses posters)
+    /** Continue watching: wide cards (a still from the episode you're on, or the film's background picture, with its logo, where you are and a progress bar); every other row uses posters. */
+    private fun wideRow(title: String) = !Ui.lite && title.startsWith("Continue watching")
 
     /** Pictures and logos not known yet: looked up once each in the background, then the card's drawn again. */
     private val asked = HashSet<String>()
@@ -180,6 +180,22 @@ class RowsAdapter(
             return c
         }
 
+        /** A wide card's picture (the episode's still, or the background picture) and the title's logo (or its name). */
+        private fun wideArt(c: C, card: Card.Title) {
+            val m = card.item
+            val det = Vod.cachedDetails(card.kind, m.id)
+            val still = if (card.kind == Vod.SERIES) card.label?.let { l ->
+                Regex("""S(\d+)\s*E(\d+)""").find(l)?.let { r -> det?.episodes?.firstOrNull { it.season == r.groupValues[1].toInt() && it.number == r.groupValues[2].toInt() }?.image?.takeIf { it.isNotBlank() } }
+            } else null
+            val bg = still ?: TitleLogos.cachedBackdrop(card.kind, m) ?: det?.backdrop
+            c.poster?.let { Posters.load(it, bg ?: m.poster, (164 * d).toInt(), c.fallback, wide = bg != null) }
+            val logo = TitleLogos.cached(card.kind, m)
+            c.titleText?.text = m.name
+            c.titleText?.visibility = if (logo == null) View.VISIBLE else View.GONE
+            c.titleArt?.visibility = if (logo == null) View.GONE else View.VISIBLE
+            if (logo != null) Logos.load(c.titleArt!!, logo, (52 * d).toInt(), null, wide = true)
+        }
+
         override fun onBindViewHolder(c: C, position: Int) {
             when (val card = cards[position]) {
                 is Card.Title -> {
@@ -188,15 +204,11 @@ class RowsAdapter(
                     c.fallback?.text = m.name
                     c.meta?.text = card.label ?: listOfNotNull(m.year.takeIf { it > 0 }?.toString(), m.rating.takeIf { it > 0 }?.let { "★ %.1f".format(it) }).joinToString("   ")
                     if (c.titleArt != null) {
-                        // Wide: the background picture, and the title's logo on it (or its name in bold).
-                        val bg = TitleLogos.cachedBackdrop(card.kind, m) ?: Vod.cachedDetails(card.kind, m.id)?.backdrop
-                        c.poster?.let { Posters.load(it, bg ?: m.poster, (164 * d).toInt(), c.fallback, wide = bg != null) }
-                        val logo = TitleLogos.cached(card.kind, m)
-                        c.titleText?.text = m.name
-                        c.titleText?.visibility = if (logo == null) View.VISIBLE else View.GONE
-                        c.titleArt?.visibility = if (logo == null) View.GONE else View.VISIBLE
-                        if (logo != null) Logos.load(c.titleArt!!, logo, (52 * d).toInt(), null, wide = true)
-                        if (!TitleLogos.knowsBackdrop(card.kind, m)) lookUp(card.kind, m) { if (position < cards.size && cards[position] === card) notifyItemChanged(position) }
+                        c.itemView.tag = card
+                        wideArt(c, card)
+                        // Once its picture and logo are found, they're put on this card where it is – not by redrawing
+                        // the card, which reset its highlight (the lift went, so moving along looked like a jump).
+                        if (!TitleLogos.knowsBackdrop(card.kind, m)) lookUp(card.kind, m) { if (c.itemView.tag === card) wideArt(c, card) }
                     } else c.poster?.let { Posters.load(it, m.poster, (164 * d).toInt(), c.fallback) }
                     c.progress?.apply {
                         visibility = if (card.progress >= 0) View.VISIBLE else View.GONE
