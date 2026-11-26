@@ -51,7 +51,9 @@ object Failover {
         if (e is java.net.UnknownHostException || e is java.net.SocketTimeoutException || e is java.net.ConnectException ||
             e is java.net.NoRouteToHostException || e is javax.net.ssl.SSLException || e is java.net.SocketException || e is java.io.EOFException) return true
         val m = e.message ?: return false
-        return e is IOException && Regex("""answered (5\d\d|404)""").containsMatchIn(m)
+        // (403 – "refused the login (403)": what a provider answers a VPN location it blocks; a wrong password is
+        // answered differently, "wasn't accepted". As good as down from here.)
+        return e is IOException && Regex("""answered (5\d\d|404)|refused the login \(403\)""").containsMatchIn(m)
     }
 
     private fun wrongLogin(e: Throwable) = e.message?.contains("wasn't accepted") == true
@@ -85,7 +87,11 @@ object Failover {
     /** [load] with the main address, then each backup (only skipping ahead when the server can't be reached). */
     fun <T> load(p: Playlist, load: (Playlist) -> T): T {
         val all = addresses(p)
-        if (all.size == 1) return load(p)
+        if (all.size == 1) return try { load(p) } catch (e: Exception) {
+            // The only address isn't answering through this VPN location: try others (it was only done with backups).
+            if (!wrongLogin(e) && isDown(e)) vpnElsewhere(p)
+            throw e
+        }
         var first: Exception? = null
         for ((i, a) in all.withIndex()) {
             if (a.isBlank()) continue
@@ -106,7 +112,7 @@ object Failover {
                 if (first == null) first = e
             }
         }
-        if (Vpn.status == Vpn.Status.ON) VpnFallback.start(p) // (nothing answered: maybe another VPN location gets through)
+        vpnElsewhere(p) // (nothing answered: maybe another VPN location gets through)
         throw first ?: IOException("Couldn't connect to the server")
     }
 
@@ -134,6 +140,12 @@ object Failover {
             } catch (e: Exception) { android.util.Log.w("Dingus", "server check after network change", e) }
             try { Account.check(p) } catch (e: Exception) { android.util.Log.w("Dingus", "account check after network change", e) }
         }
+    }
+
+    /** Nothing answering with the VPN on: Settings → VPN → Find a location that works takes over (when it's on). */
+    fun vpnElsewhere(p: Playlist? = Store.playlist) {
+        p ?: return
+        if (Vpn.status == Vpn.Status.ON) { Ui.test("vpn-elsewhere"); VpnFallback.start(p) }
     }
 
     /**

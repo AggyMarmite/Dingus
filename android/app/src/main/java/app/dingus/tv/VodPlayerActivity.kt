@@ -181,9 +181,9 @@ class VodPlayerActivity : BaseActivity() {
                     message.text = "Trying a backup server…"
                     Thread {
                         val ok = Failover.recover()
-                        runOnUiThread { if (ok) { retries = 0; open(pos) } else message.text = cantPlay(error) }
+                        runOnUiThread { if (ok) { retries = 0; open(pos) } else { message.text = cantPlay(error); Failover.vpnElsewhere() } }
                     }.start()
-                } else message.text = cantPlay(error)
+                } else { message.text = cantPlay(error); if (Players.serverDown(error)) Failover.vpnElsewhere() }
             }
         })
         video.player = p

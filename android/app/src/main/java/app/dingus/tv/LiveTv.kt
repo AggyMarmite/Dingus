@@ -279,7 +279,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
                     message.text = "Trying a backup server…"
                     Thread {
                         val ok = Failover.recover()
-                        handler.post { if (ok) { retries = 0; startChannel() } else giveUp(error) }
+                        handler.post { if (ok) { retries = 0; startChannel() } else { Failover.vpnElsewhere(); giveUp(error) } }
                     }.start()
                     return
                 }
@@ -356,7 +356,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
             Ui.test("fallback ${next.name}")
             handler.postDelayed({ startChannel() }, 500)
         } else if (!slotWaited) { slotWaited = true; waitForFreeConnection(error) }
-        else showFailed(error)
+        else { showFailed(error); if (Players.serverDown(error)) Failover.vpnElsewhere() }
     }
 
     private fun showFailed(error: PlaybackException) {
