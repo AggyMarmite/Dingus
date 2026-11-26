@@ -24,7 +24,10 @@ import java.util.concurrent.TimeUnit
 /** Channel logos (kept sharp, with transparency). */
 val Logos = ImageCache("logos", 16, Bitmap.Config.ARGB_8888, threads = 6, exact = true)
 /** Film and show artwork: bigger, so stored at half the memory per pixel. */
-val Posters = ImageCache("posters", 16, Bitmap.Config.RGB_565, threads = 4).apply { shimmer = true }
+val Posters = ImageCache("posters", 24, Bitmap.Config.RGB_565, threads = 4).apply { shimmer = true }
+/** The big pictures behind a screen, kept apart from the posters: one full-screen picture is the size of thirty posters,
+ *  and sharing the space pushed the posters out – so they kept loading again, flickering. */
+val Backdrops = ImageCache("backdrops", 16, Bitmap.Config.RGB_565, threads = 2)
 
 /**
  * Pictures from the internet: downloaded once (kept on the device), shrunk to the size they're shown at, and held
@@ -125,12 +128,17 @@ class ImageCache(private val name: String, megabytes: Int, private val config: B
 
     /** Shows the logo in [view]; [fallback] (e.g. the channel's initials) is shown only while there's no logo. */
     fun load(view: ImageView, url: String?, heightPx: Int, fallback: View? = null, wide: Boolean = false, keep: Boolean = false) {
+        // The same picture already showing (a card drawn again): left as it is – clearing it first made it flash.
+        if (!keep && url != null && view.tag == url && view.getTag(R.id.imageShown) == key(url, heightPx) && view.drawable != null && view.drawable !is Shimmer) {
+            fallback?.visibility = View.GONE; return
+        }
+        view.setTag(R.id.imageShown, null)
         view.tag = url
         if (keep) { loadKeeping(view, url, heightPx, wide); return }
         view.setImageDrawable(null)
         fallback?.visibility = View.VISIBLE
         if (url.isNullOrBlank() || hasFailed(url)) return
-        cache.get(key(url, heightPx))?.let { view.setImageBitmap(it); fallback?.visibility = View.GONE; return }
+        cache.get(key(url, heightPx))?.let { view.setImageBitmap(it); view.setTag(R.id.imageShown, key(url, heightPx)); fallback?.visibility = View.GONE; return }
         val placeholder = if (shimmer && !Ui.lite) Shimmer() else null
         if (placeholder != null) { view.setImageDrawable(placeholder); fallback?.visibility = View.GONE }
         val ref = WeakReference(view)
@@ -144,6 +152,7 @@ class ImageCache(private val name: String, megabytes: Int, private val config: B
                     val t = android.graphics.drawable.TransitionDrawable(arrayOf(placeholder, android.graphics.drawable.BitmapDrawable(v.resources, bmp))).apply { isCrossFadeEnabled = true }
                     v.setImageDrawable(t); t.startTransition(200)
                 } else v.setImageBitmap(bmp)
+                v.setTag(R.id.imageShown, key(url, heightPx))
                 fb.get()?.visibility = View.GONE
             } else if (placeholder != null) { placeholder.stop(); v.setImageDrawable(null); fb.get()?.visibility = View.VISIBLE }
         }

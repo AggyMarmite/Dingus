@@ -4,4 +4,5 @@
     <item name="vpnPulse" type="id" />
     <item name="motionLifted" type="id" />
     <item name="motionOwn" type="id" />
+    <item name="imageShown" type="id" />
 </resources>

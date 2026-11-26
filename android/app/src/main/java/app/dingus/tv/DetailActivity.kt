@@ -184,7 +184,7 @@ class DetailActivity : BaseActivity() {
         val people = findViewById<TextView>(R.id.people)
         people.text = d.director?.let { "Director: $it" } ?: d.cast?.let { "Cast: $it" } ?: ""
         people.visibility = if (people.text.isEmpty()) View.GONE else View.VISIBLE
-        d.backdrop?.let { Posters.load(findViewById<ImageView>(R.id.backdrop), it, resources.displayMetrics.heightPixels, wide = true) } // (full screen: full size)
+        d.backdrop?.let { Backdrops.load(findViewById<ImageView>(R.id.backdrop), it, resources.displayMetrics.heightPixels, wide = true) } // (full screen: full size)
         // The official title logo (from TMDB), in place of the plain title.
         TitleLogos.cached(kind, m)?.let { TitleLogos.show(findViewById(R.id.titleLogo), findViewById(R.id.title), it) }
         // The cast: under the buttons on a film; under the episodes on a show (the page scrolls down to it).

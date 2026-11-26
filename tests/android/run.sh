@@ -309,6 +309,9 @@ shot 17b-home-menu
 press_until KEYCODE_DPAD_DOWN "focus navFilms" 6 0.5; key KEYCODE_DPAD_CENTER 3     # down the menu to Films
 check "library movies 23" 30 "Films opens from the side menu"
 sleep 3; shot 18-films-rows
+# Sitting still: no poster keeps being drawn again (that's what flickered).
+sleep 2; fresh; sleep 4
+check_none "card-binds [1-9]" "Films sitting still doesn't keep redrawing its posters"
 # Along a row and back, down a row and back up: every move glides (no jumps), and the row doesn't keep re-laying out.
 # (Down to Recently added first: the top row can be Continue watching with a single film, after the film test.)
 fresh

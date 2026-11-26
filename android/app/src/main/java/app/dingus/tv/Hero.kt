@@ -29,7 +29,7 @@ class Hero(
     private var job: Job? = null
     private var showing: Card? = null
     private var pendingArt: String? = null
-    private val loadArt = Runnable { val p = pendingArt; if (art.tag != p) Posters.load(art, p, artH, wide = true, keep = true) }
+    private val loadArt = Runnable { val p = pendingArt; if (art.tag != p) Backdrops.load(art, p, artH, wide = true, keep = true) }
 
     init {
         // Fades the artwork into the background colour (left and bottom), drawn in code so it suits every theme.

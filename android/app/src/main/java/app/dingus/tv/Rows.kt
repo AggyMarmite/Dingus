@@ -113,6 +113,11 @@ class RowsAdapter(
     /** Continue watching: wide cards (a still from the episode you're on, or the film's background picture, with its logo, where you are and a progress bar); every other row uses posters. */
     private fun wideRow(title: String) = !Ui.lite && title.startsWith("Continue watching")
 
+    // (Self-test: cards being drawn again, summed up every half second – a screen sitting still should draw none.)
+    private var binds = 0
+    private val bindLog = Runnable { Ui.test("card-binds $binds"); binds = 0 }
+    private fun countBind() { if (binds++ == 0) android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(bindLog, 500) }
+
     /** Pictures and logos not known yet: looked up once each in the background, then the card's drawn again. */
     private val asked = HashSet<String>()
     private fun lookUp(kind: String, item: VodItem, redraw: () -> Unit) {
@@ -197,6 +202,7 @@ class RowsAdapter(
         }
 
         override fun onBindViewHolder(c: C, position: Int) {
+            if (BuildConfig.DEBUG) countBind()
             when (val card = cards[position]) {
                 is Card.Title -> {
                     val m = card.item
