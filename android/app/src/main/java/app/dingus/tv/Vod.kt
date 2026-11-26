@@ -213,7 +213,21 @@ object Vod {
 
     // ------------------------------------------------------------------ addresses
 
-    private fun base(p: Playlist) = Failover.base(p)
+    /**
+     * The address films and shows come from: the playlist's usual one, unless another of its addresses (a backup, or the
+     * same server without the path that was typed after it) was found to give the fuller films list – then that one.
+     */
+    private fun base(p: Playlist): String {
+        val usual = Failover.base(p)
+        val pick = Store.prefsString("listServer_${Store.activeId}", "")
+        return if (pick.isNotEmpty() && pick in serverChoices(p)) pick else usual
+    }
+    /** Every address this playlist could be asked at: each one as typed, and each one as just its server and port. */
+    private fun serverChoices(p: Playlist): List<String> = (listOf(p.server) + p.backupUrls).flatMap { a ->
+        val typed = Sources.xtreamBase(a)
+        val bare = try { java.net.URL(typed).let { u -> "${u.protocol}://${u.host}${if (u.port > 0) ":${u.port}" else ""}" } } catch (_: Exception) { typed }
+        listOf(typed, bare)
+    }.distinct()
     fun movieUrl(m: VodItem): String { val p = Store.playlist!!; return "${base(p)}/movie/${Sources.enc(p.user)}/${Sources.enc(p.pass)}/${m.id}.${m.ext}" }
     fun episodeUrl(e: Episode): String { val p = Store.playlist!!; return "${base(p)}/series/${Sources.enc(p.user)}/${Sources.enc(p.pass)}/${e.id}.${e.ext}" }
 
@@ -377,7 +391,7 @@ object Vod {
             // (Once this library's in use: it's handed back and saved first.)
             repeat(300) { if (libs[kind]?.loadedAt == at) return@repeat; kotlinx.coroutines.delay(200) }
             if (libs[kind]?.loadedAt == at) {
-                if (kind == MOVIES) probeAgents(api + listAction, full!!.size)
+                if (kind == MOVIES) probeAgents(p, auth, api + listAction, full!!.size)
                 enrich(kind, api + listAction)
             }
         }
@@ -442,14 +456,34 @@ object Vod {
      */
     private val probeAgentsList = listOf(WINDOWS_AGENT, "okhttp/4.12.0", "IPTVSmartersPlayer", "TiviMate/5.1.6 (Android 11)", "Dalvik/2.1.0 (Linux; U; Android 9; AFTMM Build/PS7633)")
     fun agentName(a: String) = when { a.contains("Windows") -> "Windows"; else -> a.substringBefore('/').substringBefore(' ') }
-    private fun probeAgents(listUrl: String, have: Int) {
-        val at = Store.prefsString("listAgentAt", "0").toLongOrNull() ?: 0L
+    private fun probeAgents(p: Playlist, auth: String, listUrl: String, have: Int) {
+        val key = "listProbeAt_${Store.activeId}"
+        val at = Store.prefsString(key, "0").toLongOrNull() ?: 0L
         if (System.currentTimeMillis() - at < 24 * 3_600_000L) return
-        Store.putString("listAgentAt", System.currentTimeMillis().toString())
+        Store.putString(key, System.currentTimeMillis().toString())
+        fun count(url: String, agent: String) = try { Net.openAs(url, 90_000, agent, true).use { readList(it, MOVIES, null).size } } catch (e: Exception) { -1 }
+        val me = Net.listAgent ?: WINDOWS_AGENT
+        // The playlist's other addresses (backups, and the server without any path after it), asked the usual way.
+        val now = base(p)
+        val servers = LinkedHashMap<String, Int>()
+        for (b in serverChoices(p)) if (b != now) servers[b] = count("$b/player_api.php?$auth&action=get_vod_streams", me)
+        fetchInfo["servers"] = if (servers.isEmpty()) "one address" else "at its other addresses: " +
+            servers.entries.joinToString(", ") { (b, n) -> "${b.substringAfter("://")} ${if (n < 0) "–" else Ui.count(n)}" }
+        val bestServer = servers.maxByOrNull { it.value }
+        if (bestServer != null && bestServer.value > have + maxOf(20, have / 50)) {
+            Store.putString("listServer_${Store.activeId}", bestServer.key)
+            Log.i("Dingus", "films: ${bestServer.key} gets ${bestServer.value}, ${now} got $have – using it")
+            Background.scope.launch(Dispatchers.IO) {
+                try { library(MOVIES, fresh = true) } catch (_: Exception) {}
+                try { library(SERIES, fresh = true) } catch (_: Exception) {}
+            }
+            return
+        }
+        // The same address, asked as other apps.
         val counts = LinkedHashMap<String, Int>()
         for (a in probeAgentsList) {
-            if (a == Net.listAgent) continue
-            counts[a] = try { Net.openAs(listUrl, 90_000, a, true).use { readList(it, MOVIES, null).size } } catch (e: Exception) { -1 }
+            if (a == me) continue
+            counts[a] = count(listUrl, a)
         }
         fetchInfo["agents"] = "as other apps: " + counts.entries.joinToString(", ") { (a, n) -> "${agentName(a)} ${if (n < 0) "–" else Ui.count(n)}" }
         Ui.test("vod-agents have $have ${counts.entries.joinToString(" ") { "${it.key.substringBefore('/')}=${it.value}" }}")
