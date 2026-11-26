@@ -69,7 +69,7 @@ object VpnFallback {
     }
 
     /** Ones that worked before, then the same country, then the same part of the world, then the rest (least busy first). */
-    private fun order(all: List<Vpn.Location>, from: Vpn.Location?, good: List<String>): List<Vpn.Location> {
+    fun order(all: List<Vpn.Location>, from: Vpn.Location?, good: List<String>): List<Vpn.Location> {
         val rest = all.filter { it.id != from?.id }
         val worked = good.mapNotNull { id -> rest.firstOrNull { it.id == id } }
         val cc = from?.countryCode?.uppercase() ?: ""
