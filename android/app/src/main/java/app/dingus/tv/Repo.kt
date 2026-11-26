@@ -152,7 +152,7 @@ object Repo {
         synchronized(backupsLock) { backups = list.groupBy { it.epgId!! }; backupsRead = true; backupsFor = Store.activeId }
         try {
             val a = org.json.JSONArray()
-            for (c in list) a.put(org.json.JSONObject().put("i", c.id).put("n", c.name).put("c", c.categoryId).put("e", c.epgId).put("u", c.url).put("a", c.archiveDays))
+            for (c in list) a.put(org.json.JSONObject().put("i", c.id).put("n", c.name).put("c", c.categoryId).put("e", c.epgId).put("u", c.url).put("a", c.archiveDays).put("l", c.playlistLogo ?: ""))
             File(dir, "standins.json").writeText(a.toString())
         } catch (e: Exception) { Log.w("Dingus", "save stand-ins", e) }
     }
@@ -163,7 +163,7 @@ object Repo {
         try {
             val f = File(dir, "standins.json")
             val list = if (!f.exists()) emptyList() else org.json.JSONArray(f.readText()).let { a -> (0 until a.length()).map { i -> a.getJSONObject(i) }.map { o ->
-                Channel(o.getString("i"), o.optString("n"), 0, o.optString("c"), null, o.optString("e"), o.optString("u"), o.optInt("a"))
+                Channel(o.getString("i"), o.optString("n"), 0, o.optString("c"), o.optString("l").ifEmpty { null }, o.optString("e"), o.optString("u"), o.optInt("a"))
             } }
             synchronized(backupsLock) { backups = list.filter { !it.epgId.isNullOrBlank() }.groupBy { it.epgId!! }; backupsRead = true; backupsFor = Store.activeId }
         } catch (e: Exception) { synchronized(backupsLock) { backups = emptyMap(); backupsRead = true; backupsFor = Store.activeId } }

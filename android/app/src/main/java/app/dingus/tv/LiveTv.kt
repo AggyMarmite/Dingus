@@ -342,6 +342,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         val shown = message.text
         handler.postDelayed({ if (message.text == shown) message.text = "" }, 4_000)
         startChannel()
+        showInfo() // (the info bar shows the channel it's switched to)
         return true
     }
 
@@ -354,7 +355,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
             version = next; retries = 0
             message.text = "Trying another version…"
             Ui.test("fallback ${next.name}")
-            handler.postDelayed({ startChannel() }, 500)
+            handler.postDelayed({ startChannel(); showInfo() }, 500)
         } else if (!slotWaited) { slotWaited = true; waitForFreeConnection(error) }
         else { showFailed(error); if (Players.serverDown(error)) Failover.vpnElsewhere() }
     }
@@ -539,14 +540,17 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
      * its description and the stream stats; OK adds what's next and the keys.
      */
     fun showInfo(full: Boolean = false, delay: Long = 0) {
-        val c = list.getOrNull(index) ?: return
+        // The source that's actually playing (after a switch, or one chosen), shown as the channel – its name,
+        // number and logo – with its own listings (the one it stands in for's, if it has none).
+        val orig = list.getOrNull(index) ?: return
+        val c = version ?: orig
         infoFull = full
         overlay.findViewById<TextView>(R.id.name).text = c.name
         overlay.findViewById<TextView>(R.id.number).text = if (Store.showNumbers && c.number > 0) c.number.toString() else ""
         overlay.findViewById<View>(R.id.fav).visibility = if (Store.isFavourite(c.id)) View.VISIBLE else View.GONE
         overlay.findViewById<TextView>(R.id.initials).text = Ui.initials(c.name)
         Logos.load(overlay.findViewById<ImageView>(R.id.logo), c.logo, Ui.dp(a, 56), overlay.findViewById(R.id.initials))
-        val (now, next) = Repo.nowNext(c)
+        val (now, next) = Repo.nowNext(c).let { if (it.first == null && c !== orig) Repo.nowNext(orig) else it }
         overlay.findViewById<View>(R.id.liveChip)?.visibility = if (now != null) View.VISIBLE else View.GONE
         val nowV = overlay.findViewById<TextView>(R.id.now)
         val times = overlay.findViewById<TextView>(R.id.times)
@@ -660,7 +664,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     fun replayVersion() { version = null; versionTry = 0; slotWaited = false; retries = 0; startChannel() }
 
     /** ≡ → Sources…: plays the same channel from another category (in place of this one). */
-    fun playSource(s: Channel) { version = s; versionTry = 0; slotWaited = false; retries = 0; startChannel() }
+    fun playSource(s: Channel) { version = s; versionTry = 0; slotWaited = false; retries = 0; startChannel(); showInfo() }
 
     private fun options() {
         val c = list.getOrNull(index) ?: return
