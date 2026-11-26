@@ -24,6 +24,11 @@ object Streams {
     private val main = Handler(Looper.getMainLooper())
     private var closed = false
 
+    /** When a stream last received anything from the provider (what's playing filling its buffer). */
+    @Volatile var dataAt = 0L
+    /** Something is coming in from the provider right now: the server's plainly online, whatever a check says. */
+    val flowing: Boolean get() = System.currentTimeMillis() - dataAt < 20_000
+
     fun add(p: Playing) { synchronized(playing) { playing.add(p) } }
     fun remove(p: Playing) { synchronized(playing) { playing.remove(p) } }
 

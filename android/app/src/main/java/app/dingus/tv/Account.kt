@@ -37,9 +37,14 @@ object Account {
                 i.expires < System.currentTimeMillis() -> "Expired ${date(i.expires)}"
                 else -> "Expires ${date(i.expires)}"
             } to 0)
-            if (i.maxConnections > 0) out.add(
-                if (i.activeConnections >= i.maxConnections) "Active connections ${i.activeConnections}/${i.maxConnections}  ·  all in use" to 0xFFFBBF24.toInt()
-                else "Active connections ${i.activeConnections}/${i.maxConnections}" to 0)
+            // (Only counts from the last few minutes: an older one is whatever was true then – shown as unknown
+            // rather than a stale "all in use".)
+            val fresh = System.currentTimeMillis() - i.checkedAt < 5 * 60_000L
+            if (i.maxConnections > 0) out.add(when {
+                !fresh -> "Active connections ?/${i.maxConnections}  ·  couldn't check just now" to 0
+                i.activeConnections >= i.maxConnections -> "Active connections ${i.activeConnections}/${i.maxConnections}  ·  all in use" to 0xFFFBBF24.toInt()
+                else -> "Active connections ${i.activeConnections}/${i.maxConnections}" to 0
+            })
         }
         out.add(when (online(p)) {
             true -> "Status  ● Online" to 0xFF4ADE80.toInt()
@@ -58,9 +63,13 @@ object Account {
             Ui.test("account ${info?.activeConnections}/${info?.maxConnections} online")
             info
         } catch (e: Exception) {
-            online = p.id to false
-            Ui.test("account offline ${e.message}")
-            null
+            // Not offline when it plainly isn't: the server answered (some answer this account question 404 yet
+            // play and list everything fine), or what you're watching is still coming in from it.
+            val answered = e.message?.contains("answered 404") == true
+            val up = answered || Streams.flowing
+            online = p.id to up
+            Ui.test("account ${if (up) "online (check: ${e.message})" else "offline ${e.message}"}")
+            if (up) saved() else null
         }
     }
 
@@ -114,7 +123,14 @@ object Account {
     /** Asks the provider again. Null when the playlist doesn't come from an Xtream panel. */
     suspend fun refresh(p: Playlist): Info? = withContext(Dispatchers.IO) {
         val (base, user, pass) = login(p) ?: return@withContext null
-        val text = Net.open("$base/player_api.php?username=${Sources.enc(user)}&password=${Sources.enc(pass)}", 15_000).use { it.readBytes().toString(Charsets.UTF_8) }
+        val auth = "username=${Sources.enc(user)}&password=${Sources.enc(pass)}"
+        // Some servers won't answer this question through a VPN (404) while playing everything fine: the panel's other
+        // address for the same answer is asked then. (Without either, the connections shown were stale – "all in
+        // use" from whenever it last got through – until the VPN was turned off.)
+        val text = try { Net.open("$base/player_api.php?$auth", 15_000).use { it.readBytes().toString(Charsets.UTF_8) } }
+        catch (e: Exception) {
+            try { Net.open("$base/panel_api.php?$auth", 15_000).use { it.readBytes().toString(Charsets.UTF_8) } } catch (_: Exception) { throw e }
+        }
         val info = JSONObject(text).optJSONObject("user_info") ?: return@withContext null
         remember(info)
         saved()

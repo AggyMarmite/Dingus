@@ -436,8 +436,11 @@ class VodPlayerActivity : BaseActivity() {
         override fun run() { tickNow(); handler.postDelayed(this, 500) }
     }
 
+    private var lastBuf = -1L
     private fun tickNow() {
         val p = player ?: return
+        if (p.bufferedPosition != lastBuf && lastBuf >= 0 && p.playWhenReady) Streams.dataAt = System.currentTimeMillis()
+        lastBuf = p.bufferedPosition
         val len = p.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: 0L
         val pos = if (skipTo >= 0) skipTo else p.currentPosition // (while skipping: where you're going)
         bar.duration = len; bar.position = pos; bar.buffered = p.bufferedPosition; bar.playing = p.playWhenReady

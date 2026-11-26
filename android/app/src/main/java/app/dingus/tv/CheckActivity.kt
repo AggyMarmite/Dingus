@@ -114,7 +114,9 @@ class CheckActivity : BaseActivity() {
                     info.status.isNotBlank() && !info.status.equals("active", true) -> set(1, State.WARN, info.summary(), "The provider says \"${info.status}\": check with them")
                     else -> set(1, State.OK, "${p.name}  ·  ${info.summary().substringBefore("  ·  Active connections")}")
                 }
-                if (info != null && info.maxConnections > 0) {
+                if (info != null && info.maxConnections > 0 && System.currentTimeMillis() - info.checkedAt > 5 * 60_000L)
+                    set(3, State.SKIP, "Couldn't check just now (the provider didn't say)")
+                else if (info != null && info.maxConnections > 0) {
                     if (info.activeConnections >= info.maxConnections) set(3, State.WARN, "${info.activeConnections} of ${info.maxConnections} in use (all of them)", "Stop watching on another device, or wait a minute for a closed one to clear")
                     else set(3, State.OK, "${info.activeConnections} of ${info.maxConnections} in use")
                 } else set(3, State.SKIP, "Your provider doesn't say")

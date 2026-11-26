@@ -37,6 +37,11 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
     var listener: Listener? = null
     /** Marks programmes with a reminder (a dot in the corner). */
     private var reminder: ((Programme) -> Boolean)? = null
+    /** The channel playing right now: a small play sign beside its name. */
+    var playingId: String? = null
+        set(v) { if (field != v) { field = v; invalidate() } }
+    private val playSign = Path()
+
     /** Channel numbers beside the logos (Settings). */
     var showNumbers = true
         set(v) { if (field != v) { field = v; lines.clear(); invalidate() } }
@@ -441,14 +446,23 @@ class GuideGrid(ctx: Context, attrs: AttributeSet?) : View(ctx, attrs) {
             subP.textAlign = Paint.Align.LEFT
         }
         val fav = Store.isFavourite(c.id)
+        val playing = c.id == playingId
         val nameX = logoX + logoW + 10 * d
-        val nameW = chanW - nameX - pad - (if (fav) 16 * d else 0f)
+        val nameW = chanW - nameX - pad - (if (fav) 16 * d else 0f) - (if (playing) 16 * d else 0f)
         nameP.typeface = if (selected) interBold else inter
         // Names get two lines, so long ones aren't cut short.
         val (l1, l2) = twoLines(c.name, nameW, selected)
         if (l2 == null) canvas.drawText(l1, nameX, mid + 4 * d, nameP)
         else { canvas.drawText(l1, nameX, mid - 3 * d, nameP); canvas.drawText(l2, nameX, mid + 12 * d, nameP) }
         if (fav) canvas.drawText("★", chanW - pad - 12 * d, mid + 4 * d, starP)
+        if (playing) {
+            // A small filled triangle, in the live colour: what's playing now.
+            val px = chanW - pad - (if (fav) 28 * d else 12 * d)
+            playSign.reset()
+            playSign.moveTo(px, mid - 5.5f * d); playSign.lineTo(px + 9 * d, mid); playSign.lineTo(px, mid + 5.5f * d); playSign.close()
+            fill.color = cLive
+            canvas.drawPath(playSign, fill)
+        }
 
         // Programmes.
         val list = Repo.programmes(c)

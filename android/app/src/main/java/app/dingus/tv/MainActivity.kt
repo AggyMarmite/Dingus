@@ -703,6 +703,11 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         grid.current?.let { goFullScreen(it) }
     }
 
+    /** The play sign in the guide follows whatever's playing (in the window or full screen, changed by any route). */
+    private val playingSync = object : Runnable {
+        override fun run() { grid.playingId = live.current?.id; handler.postDelayed(this, 1_000) }
+    }
+
     private val tick = object : Runnable {
         override fun run() {
             grid.refresh()
@@ -719,6 +724,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
 
     override fun onResume() {
         super.onResume()
+        handler.removeCallbacks(playingSync); handler.post(playingSync)
         Ui.test("main-shown")
         if (started) Ui.test("guide-showing ${gridIds.size}")
         grid.genreColours = Store.genreColours
@@ -747,7 +753,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
 
     override fun onPause() {
         super.onPause()
-        handler.removeCallbacks(tick)
+        handler.removeCallbacks(tick); handler.removeCallbacks(playingSync)
         resumePreview = live.current?.id
         stopPreview() // (in full screen too: it picks up again when you come back)
     }

@@ -93,6 +93,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
                 val active = p.playWhenReady && (p.playbackState == Player.STATE_READY || p.playbackState == Player.STATE_BUFFERING)
                 val pos = p.currentPosition; val buf = p.bufferedPosition
                 if (active && pos == lastPos && buf == lastBuffered) stuckFor++ else stuckFor = 0
+                if (active && buf != lastBuffered && lastBuffered >= 0) Streams.dataAt = System.currentTimeMillis()
                 lastPos = pos; lastBuffered = buf
                 if (stuckFor >= 4) {
                     stuckFor = 0
