@@ -59,7 +59,7 @@ class SearchActivity : BaseActivity() {
         results.adapter = adapter
         results.itemAnimator = null
         findViewById<View>(R.id.topResult).apply {
-            setOnClickListener { top?.let { open(it) } }
+            setOnClickListener { this@SearchActivity.top?.let { open(it) } }
             // Drawn above the results under it: lifted when highlighted, it reaches down over the first row, and the
             // results (drawn after it) covered its bottom edge. No shadow from this – it only decides what's on top.
             outlineProvider = null; translationZ = 2f
