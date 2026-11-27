@@ -489,21 +489,12 @@ class SettingsActivity : BaseActivity() {
 
     private fun typeName(p: Playlist) = if (p.type == "xtream") "Xtream Codes login" else "M3U link"
 
-    /** "Home ● Online · Xtream Codes login": the status in green (red when offline) beside the name, as in the side
-     *  menu – a darker shade when the row's highlighted, so it reads on white. */
+    /** "Home · Xtream Codes login", then which server's in use and the subscription. */
     private fun playlistsSummary(): CharSequence {
         val all = Store.playlists
         val p = Store.playlist ?: return "Add your playlist"
+        // (No Online / Offline beside the name any more: it flickered between the two while everything was working.)
         val sb = android.text.SpannableStringBuilder(p.name)
-        when (Account.online(p)) {
-            true -> Triple("  ● Online", 0xFF4ADE80.toInt(), 0xFF15803D.toInt())
-            false -> Triple("  ● Offline", 0xFFF87171.toInt(), 0xFFB91C1C.toInt())
-            null -> null
-        }?.let { (t, light, dark) ->
-            val at = sb.length; sb.append(t)
-            val c = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()), intArrayOf(dark, light))
-            sb.setSpan(android.text.style.TextAppearanceSpan(null, android.graphics.Typeface.BOLD, 0, c, null), at, sb.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        }
         sb.append("  ·  ${typeName(p)}" + (if (all.size > 1) "  ·  ${all.size} playlists" else "") +
             (Failover.status(p)?.let { "\n$it" } ?: "") +
             (Account.saved()?.let { "\n" + it.summary() } ?: ""))

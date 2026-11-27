@@ -46,11 +46,7 @@ object Account {
                 else -> "Active connections ${i.activeConnections}/${i.maxConnections}" to 0
             })
         }
-        out.add(when (online(p)) {
-            true -> "Status  ● Online" to 0xFF4ADE80.toInt()
-            false -> "Status  ● Offline" to 0xFFF87171.toInt()
-            null -> "Status  checking…" to 0
-        })
+        // (No Online / Offline line: it flickered between the two while everything was working.)
         return out
     }
 

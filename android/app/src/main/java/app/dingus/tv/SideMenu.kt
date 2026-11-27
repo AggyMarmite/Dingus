@@ -276,16 +276,11 @@ class SideMenu(
         }
     }
 
-    /** The playlist's name with "● Online" in green beside it (red "● Offline"), then expiry and "Active connections 1/2". */
+    /** The playlist's name, then expiry and "Active connections 1/2". */
     private fun showAccount() {
         val p = Store.playlist
-        val name = android.text.SpannableStringBuilder((p?.name ?: "") + if (Store.playlists.size > 1) "  ▾" else "")
-        when (Account.online(p)) {
-            true -> "  ● Online" to 0xFF4ADE80.toInt()
-            false -> "  ● Offline" to 0xFFF87171.toInt()
-            null -> null
-        }?.let { (t, c) -> val at = name.length; name.append(t); name.setSpan(android.text.style.ForegroundColorSpan(c), at, name.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
-        playlistRow.text = name
+        // (No Online / Offline beside the name any more: it flickered between the two while everything was working.)
+        playlistRow.text = (p?.name ?: "") + if (Store.playlists.size > 1) "  ▾" else ""
         if (p == null) { accountRow.text = ""; return }
         val sb = android.text.SpannableStringBuilder()
         for ((line, colour) in Account.lines(Account.saved(), p).filter { !it.first.startsWith("Status") }) {
