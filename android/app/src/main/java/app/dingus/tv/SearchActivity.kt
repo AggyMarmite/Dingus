@@ -81,7 +81,9 @@ class SearchActivity : BaseActivity() {
             } else false
         }
         // Speaking or typing into the box (Fire TV's keyboard): BACK or DOWN once it's closed comes back out.
-        (query as? SearchBox)?.onBack = { endTyping(); home.requestFocus() }
+        // (Off the box once it's closed – onto the results, or the letters: left on the box, some keyboards stay up
+        // and keep the remote's buttons.)
+        (query as? SearchBox)?.onBack = { endTyping(); afterTyping().requestFocus() }
         // The box is highlighted to start with (there's no "Voice search" any more): OK on it brings up Fire TV's keyboard
         // for speaking the search. Only then – highlighting it alone doesn't pop the keyboard up.
         query.showSoftInputOnFocus = false
@@ -94,12 +96,14 @@ class SearchActivity : BaseActivity() {
                 return@setOnKeyListener true
             }
             if (!typing && code == KeyEvent.KEYCODE_DPAD_DOWN && ev.action == KeyEvent.ACTION_DOWN) { findViewById<android.view.ViewGroup>(R.id.keys).getChildAt(0)?.requestFocus(); return@setOnKeyListener true }
+            // (Not typing: ◀ opens the side menu.)
+            if (!typing && code == KeyEvent.KEYCODE_DPAD_LEFT) { if (ev.action == KeyEvent.ACTION_DOWN) side.open(); return@setOnKeyListener true }
             // (Not typing: ◀ ▶ don't wander through the text.)
             if (!typing && (code == KeyEvent.KEYCODE_DPAD_LEFT || code == KeyEvent.KEYCODE_DPAD_RIGHT)) return@setOnKeyListener code == KeyEvent.KEYCODE_DPAD_RIGHT
             if (ev.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
             when (code) {
                 KeyEvent.KEYCODE_DPAD_DOWN -> { endTyping(); (firstResult() ?: findViewById<android.view.ViewGroup>(R.id.keys).getChildAt(0) ?: home).requestFocus(); true }
-                KeyEvent.KEYCODE_BACK -> { endTyping(); home.requestFocus(); true }
+                KeyEvent.KEYCODE_BACK -> { endTyping(); afterTyping().requestFocus(); true }
                 else -> false
             }
         }
@@ -251,6 +255,9 @@ class SearchActivity : BaseActivity() {
     }
 
     override fun onDestroy() { scope.cancel(); super.onDestroy() }
+
+    /** Where the highlight goes once the keyboard's closed: the first result, else the first letter. */
+    private fun afterTyping(): View = firstResult() ?: findViewById<android.view.ViewGroup>(R.id.keys).getChildAt(0) ?: home
 
     private fun firstResult(): View? = findViewById<View>(R.id.topResult).takeIf { it.visibility == View.VISIBLE }
         ?: (results.findViewHolderForAdapterPosition(0) as? RowsAdapter.H)?.list?.getChildAt(0)
