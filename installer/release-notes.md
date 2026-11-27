@@ -1,3 +1,8 @@
+## What's new in Dingus 0.15.53
+
+* Fire TV: channels that won't start switch source sooner.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.52
 
 * Fire TV: Search opens straight away.
