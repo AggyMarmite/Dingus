@@ -77,6 +77,15 @@ object Notice {
         current?.let { if (!it.working && now > it.until) current = null }
         extras.removeAll { now > it.until }
         val showing = extras + listOfNotNull(current)
+        // One "working" note following another ("Updating Live TV…" → "Updating Live TV & TV guide…" →
+        // "Saving…"): the same note, its words changed in place. (Each step used to slide a whole new note in while
+        // the last slid away, so updating the playlist glitched every time a step started or finished.)
+        val cur = current
+        if (cur != null && cur.working && views[cur] == null) {
+            val old = views.keys.firstOrNull { it.working && it !in showing }
+            val v = old?.let { views.remove(it) }
+            if (v != null) { retext(v, cur); views[cur] = v }
+        }
         // Gone ones fade and slide away.
         for ((n, v) in views.entries.toList()) if (n !in showing) {
             views.remove(n)
@@ -146,6 +155,23 @@ object Notice {
         row.addView(col)
         row.tag = "text" // (the self-test reads notes by their words)
         return row.also { it.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = (10 * d).toInt(); gravity = Gravity.END } }
+    }
+
+    /** A note's words changed in place (its title, and the line under it after "  ·  "). */
+    private fun retext(v: View, n: Note) {
+        val col = ((v as? ViewGroup)?.getChildAt(1) as? LinearLayout) ?: return
+        val clean = n.text.removePrefix("⛨").trim()
+        val cut = clean.indexOf("  ·  ")
+        val title = if (cut > 0) clean.substring(0, cut) else clean
+        val sub = if (cut > 0) clean.substring(cut + 5) else null
+        (col.getChildAt(0) as? TextView)?.text = title
+        val subView = col.getChildAt(1) as? TextView
+        when {
+            sub == null -> if (subView != null) col.removeView(subView)
+            subView != null -> subView.text = sub
+            else -> col.addView(TextView(v.context).apply { text = sub; textSize = 12f; setTextColor(0xFF94A3B8.toInt()); maxLines = 2 })
+        }
+        Ui.test("notice-retext ${n.text}")
     }
 
     private fun build(a: Activity): LinearLayout {
