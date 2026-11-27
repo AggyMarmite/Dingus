@@ -1,3 +1,10 @@
+## What's new in Dingus 0.15.49
+
+* Fire TV: the VPN only settles on locations where channels actually play.
+* Fire TV: channels wait while a working VPN location is found, then start by themselves.
+* Fire TV: removed the Online/Offline status.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.48
 
 * Fire TV: channels get going again by themselves after the VPN changes location.
