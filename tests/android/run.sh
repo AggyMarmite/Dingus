@@ -276,18 +276,15 @@ fresh
 adb shell am start -n $PKG/.SearchActivity
 sleep 3; key KEYCODE_DPAD_CENTER 2
 check "search-typing" 10 "OK on the search box opens the keyboard"
-adb logcat -d -s DINGUS-TEST:I | grep -E "search-focus" | tail -3 | sed 's/^/  search-log: /'
 shot 15a-search-keyboard
 key KEYCODE_BACK 1.5
 check "search-typing-done" 10 "BACK closes the keyboard"
-adb shell dumpsys window | grep -E "mCurrentFocus" | head -1 | sed 's/^/  search-log: /'
 shot 15b-search-keyboard-closed
 # The side menu on Search: UP and DOWN move through it.
+# (After the keyboard the highlight's on the results: ◀ goes into the search panel first, then opens the menu.)
 fresh
-key KEYCODE_DPAD_LEFT 1.5
+press_until KEYCODE_DPAD_LEFT "menu-open" 3 1.2
 check "menu-open" 5 "LEFT on Search opens the side menu"
-adb logcat -d -s DINGUS-TEST:I | grep -E "search-key|search-focus|search-typing|menu" | tail -6 | sed 's/^/  search-log: /'
-adb shell dumpsys input_method | grep -E "mInputShown|mShowRequested" | head -2 | sed 's/^/  search-log: /'
 key KEYCODE_DPAD_UP 0.8
 check "menu-row TV Shows" 5 "UP moves up the side menu on Search"
 key KEYCODE_DPAD_DOWN 0.8; key KEYCODE_DPAD_DOWN 0.8
