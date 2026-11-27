@@ -307,9 +307,13 @@ class SearchActivity : BaseActivity() {
 
     /** Before you type: what you searched for lately, as chips, and what's popular right now. */
     private fun showRecent() {
-        if (found.isEmpty()) {
-            val pop = (Vod.trending(Vod.MOVIES).take(8).map { Card.Title(Vod.MOVIES, it) } + Vod.trending(Vod.SERIES).take(8).map { Card.Title(Vod.SERIES, it) })
-            adapter.set(if (pop.size >= 3) listOf(Row("Popular right now", pop)) else emptyList())
+        if (found.isEmpty()) scope.launch {
+            // Worked out in the background: the first time, matching the chart against thousands of films and shows
+            // took long enough on the screen's own thread that Search opened blank for a while.
+            val pop = withContext(Dispatchers.Default) {
+                Vod.trending(Vod.MOVIES).take(8).map { Card.Title(Vod.MOVIES, it) } + Vod.trending(Vod.SERIES).take(8).map { Card.Title(Vod.SERIES, it) }
+            }
+            if (found.isEmpty()) adapter.set(if (pop.size >= 3) listOf(Row("Popular right now", pop)) else emptyList())
         }
         val box = findViewById<View>(R.id.recentBox)
         val row = findViewById<android.widget.LinearLayout>(R.id.recent)

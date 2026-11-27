@@ -55,7 +55,7 @@ object SearchIndex {
     }
 
     /** Works everything out ahead of time (when Search opens). */
-    fun warm() { channels(); onTv(); vod(Vod.MOVIES); vod(Vod.SERIES) }
+    fun warm() { channels(); onTv(); vod(Vod.MOVIES); vod(Vod.SERIES); Vod.trending(Vod.MOVIES); Vod.trending(Vod.SERIES) }
 
     @Volatile private var prewarming = false
     /**
