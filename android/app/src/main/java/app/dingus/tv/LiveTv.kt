@@ -146,7 +146,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     /** Stops and lets go of the stream (leaving the screen). */
     fun release() {
         Streams.remove(stream)
-        Vpn.offSearch(vpnSearchListener); blockedAt = null
+        Vpn.offSearch(vpnSearchListener); Vpn.removeListener(vpnStatusListener); blockedAt = null
         mini.hide()
         if (player != null) Account.soon()
         handler.removeCallbacksAndMessages(null)
@@ -237,6 +237,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         if (player != null) return
         Streams.add(stream)
         Vpn.offSearch(vpnSearchListener); Vpn.onSearch(vpnSearchListener)
+        Vpn.removeListener(vpnStatusListener); Vpn.onChanged(vpnStatusListener)
         val p = Players.create(a)
         dropped = 0; lastBytes = -1; lastFrames = -1; mbps = 0.0; measuredFps = 0.0
         p.addAnalyticsListener(object : androidx.media3.exoplayer.analytics.AnalyticsListener {
@@ -379,6 +380,10 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     /** Where the channel was refused, while the VPN looks for a location it plays through (null: not waiting). */
     private var blockedAt: String? = null
     private val vpnSearchListener: () -> Unit = { if (blockedAt != null) showVpnSearch() }
+    /** Waiting on the VPN and it's now connected somewhere (whichever way it got there): the channel starts again. */
+    private val vpnStatusListener: () -> Unit = {
+        if (blockedAt != null && Vpn.status == Vpn.Status.ON && !Vpn.searching) handler.postDelayed({ if (blockedAt != null) startChannel() }, 1_500)
+    }
 
     /** The player's message while it waits: which location the VPN is trying, kept up to date. */
     private fun showVpnSearch() {

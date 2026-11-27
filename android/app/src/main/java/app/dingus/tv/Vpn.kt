@@ -519,7 +519,11 @@ object Vpn {
                 connectedTo = target
                 wanted = true
                 set(Status.ON, target.label)
-                if (reopen) Streams.reopenAll() // (held while switching: the kill switch keeps them until it's on)
+                // What was playing starts again – also a channel or film that had given up (refused, or couldn't reach
+                // the server, with nothing playing since): before, after a switch it stayed on its error until you
+                // went into it again. And the menu's status and connections are checked again straight away.
+                if (reopen) Streams.reopenAll(force = Streams.failing)
+                Account.soon()
                 watch()
                 null
             } catch (e: Throwable) {
