@@ -250,7 +250,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
                 when (state) {
                     Player.STATE_BUFFERING -> onBuffering()
                     Player.STATE_READY -> {
-                        handler.removeCallbacks(bufferCheck); playedOnce = true
+                        handler.removeCallbacks(bufferCheck); handler.removeCallbacks(bufferingNote); playedOnce = true
                         retries = 0; triedBackup = false
                         message.text = ""
                         val name = list.getOrNull(index)?.name
@@ -334,8 +334,25 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     /** Until when buffering is expected (just rewound, paused or caught up): not a reason to change version. */
     private var quietUntil = 0L
 
+    /**
+     * Buffering for more than a moment while watching: says what happens next – a different source (another version
+     * of the channel) if it doesn't pick up, or, with only the one source and the VPN on, a different VPN server.
+     */
+    private val bufferingNote = Runnable {
+        val p = player ?: return@Runnable
+        if (p.playbackState != Player.STATE_BUFFERING || !p.playWhenReady || behindMs > 0 || System.currentTimeMillis() < quietUntil) return@Runnable
+        if (message.text.isNotEmpty()) return@Runnable // (something else is being said)
+        message.text = when {
+            hasOtherVersion() -> "Buffering…  switching to a different source if it doesn't pick up"
+            Vpn.status == Vpn.Status.ON && Store.vpnSwitchSlow -> "Buffering…  if it keeps on, a different VPN server will be found"
+            else -> return@Runnable
+        }
+        Ui.test("buffering-note ${message.text}")
+    }
+
     private fun onBuffering() {
         val p = player ?: return
+        if (playedOnce) { handler.removeCallbacks(bufferingNote); handler.postDelayed(bufferingNote, 1_000) }
         if (playedOnce && p.playWhenReady && behindMs == 0L && System.currentTimeMillis() >= quietUntil)
             list.getOrNull(index)?.let { SlowVpn.onBuffering(a, "live:${it.id}") }
         if (!p.playWhenReady || !hasOtherVersion()) return
