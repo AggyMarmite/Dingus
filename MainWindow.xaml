@@ -97,6 +97,15 @@
                         <!-- Playlist, lock, refresh, settings, window buttons -->
                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Stretch">
                             <TextBlock x:Name="PageTitle" Visibility="Collapsed"/>
+                            <Button x:Name="VpnChip" Click="VpnChip_Click" ToolTip="VPN – Settings → VPN" Visibility="Collapsed" Cursor="Hand"
+                                    VerticalAlignment="Center" Margin="0,0,6,0" WindowChrome.IsHitTestVisibleInChrome="True" Background="#264ADE80">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}" CornerRadius="12" Padding="10,4"><ContentPresenter/></Border>
+                                    </ControlTemplate>
+                                </Button.Template>
+                                <TextBlock x:Name="VpnChipText" FontSize="11.5" FontWeight="SemiBold" Foreground="#4ADE80" MaxWidth="320" TextTrimming="CharacterEllipsis"/>
+                            </Button>
                             <Button x:Name="PlaylistButton" Style="{StaticResource GhostButton}" Click="PlaylistButton_Click" ToolTip="Switch playlist"
                                     VerticalAlignment="Center" Padding="10,6" WindowChrome.IsHitTestVisibleInChrome="True">
                                 <StackPanel Orientation="Horizontal">

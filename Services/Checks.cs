@@ -92,6 +92,17 @@ public static class Checks
             ? new Result("Film details", "Title logos, ratings and cast are on", State.Ok)
             : new Result("Film details", SettingsStore.Current.OnlineArtwork ? "Not available in this version" : "Off – turn on online artwork in Settings to get title logos, ratings and cast", State.Warn));
 
+        // VPN
+        if (SettingsStore.Current.VpnOn)
+            add(Vpn.Status switch
+            {
+                Vpn.State.On => new Result("VPN", $"Connected  ·  {Vpn.Note}", State.Ok),
+                Vpn.State.Searching => new Result("VPN", $"{Vpn.Note}  ·  it carries on by itself until one works", State.Warn),
+                _ => new Result("VPN", $"Not connected ({Vpn.Note})  ·  try another location in Settings → VPN", State.Fail),
+            });
+        else if (Vpn.Locations().Count > 0)
+            add(new Result("VPN", "Off", State.Ok));
+
         // Updates
         try
         {

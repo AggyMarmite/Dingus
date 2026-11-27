@@ -92,7 +92,13 @@ public sealed class DataService
     CancellationTokenSource _cts = new();
     readonly DispatcherTimer _catDebounce;
 
-    readonly DispatcherTimer _autoTimer;
+    readonly DispatcherTimer _autoTimer, _vpnRetry;
+    /// <summary>Runs something on the UI thread (the VPN reports from the background).</summary>
+#if LINUX
+    static readonly Action<Action> _uiPost = a => Avalonia.Threading.Dispatcher.UIThread.Post(a);
+#else
+    static readonly Action<Action> _uiPost = a => System.Windows.Application.Current?.Dispatcher.BeginInvoke(a);
+#endif
 
     DataService()
     {
@@ -105,6 +111,11 @@ public sealed class DataService
             // Hidden live categories aren't matched in the guide (saves memory), so re-match after changes.
             if (_liveHiddenChanged) { _liveHiddenChanged = false; await ReloadEpgAsync(); }
         };
+
+        // The VPN found a location that works: try a failed update again.
+        _vpnRetry = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _vpnRetry.Tick += async (_, _) => { _vpnRetry.Stop(); if (_refreshFailed && !IsBusy) await RefreshAsync(includeGuide: false); };
+        Vpn.Switched += () => _uiPost(OnVpnSwitched);
 
         // While the app stays open, refresh on the interval chosen in Settings.
         _autoTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(15) };
@@ -262,9 +273,18 @@ public sealed class DataService
         catch (Exception ex)
         {
             Log.Error(ex);
-            Message?.Invoke("Refresh failed: " + Http.Friendly(ex));
+            _refreshFailed = true;
+            if (S.VpnOn && (Failover.IsDown(ex) || Failover.Refused(ex)))
+            {
+                // Most likely the VPN location is blocked: find one that works – the playlist updates by itself then.
+                Vpn.Blocked();
+                Message?.Invoke($"Couldn't update through {Vpn.Current?.Name ?? "the VPN"}  ·  " +
+                    (S.VpnAutoFind ? "looking for a location that works – it updates by itself then" : "try another location in Settings → VPN"));
+            }
+            else Message?.Invoke("Refresh failed: " + Http.Friendly(ex));
         }
         finally { SetBusy(false, null); }
+        if (ok) _refreshFailed = false;
 
         if (!ok || gen != _gen) return;
         bool guideDue = includeGuide || !File.Exists(EpgFile(p)) ||
@@ -292,6 +312,16 @@ public sealed class DataService
         p.LastEpgRefreshUtc = default;
         SettingsStore.Save();
         await LoadActiveAsync(refreshNow: true);
+    }
+
+    bool _refreshFailed;
+
+    /// <summary>The VPN moved to a location that works: an update that failed through the old one is tried again.</summary>
+    void OnVpnSwitched()
+    {
+        if (!_refreshFailed) return;
+        _vpnRetry.Stop();
+        _vpnRetry.Start(); // (on the UI thread, a moment after the switch)
     }
 
     /// <summary>Whether the playlist in use has backup server addresses.</summary>
