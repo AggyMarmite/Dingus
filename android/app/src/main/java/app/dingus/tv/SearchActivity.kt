@@ -120,6 +120,9 @@ class SearchActivity : BaseActivity() {
             if (query.text.isNotEmpty()) search(query.text.toString(), 0) else showRecent()
         }
         home.requestFocus()
+        // (And again once the screen's laid out: asked for this early, the box didn't always take the highlight, so
+        // nothing was highlighted – OK and ◀ did nothing.)
+        query.post { if (currentFocus == null || currentFocus === window.decorView) { home.requestFocus(); Ui.test("search-focus box (again)") } }
         showRecent()
         if (BuildConfig.DEBUG) intent.getStringExtra("dingus_test_query")?.let { query.setText(it) }
     }
@@ -326,6 +329,13 @@ class SearchActivity : BaseActivity() {
     }
     override fun onStart() { super.onStart(); findViewById<View>(R.id.clock)?.removeCallbacks(tick); tick.run() }
     override fun onStop() { super.onStop(); findViewById<View>(R.id.clock)?.removeCallbacks(tick) }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        // Nothing highlighted (on opening, or back from the keyboard): the box takes it.
+        if (hasFocus && currentFocus == null && !side.isOpen) home.requestFocus()
+        if (hasFocus) Ui.test("search-focus ${currentFocus?.let { resources.getResourceEntryName(it.id.takeIf { i -> i > 0 } ?: return@let it.javaClass.simpleName) }}")
+    }
 
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
         // The remote's search / voice button, when Fire TV passes it on: straight to the keyboard and its mic.
