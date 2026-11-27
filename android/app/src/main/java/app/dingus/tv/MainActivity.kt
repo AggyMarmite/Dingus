@@ -101,7 +101,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
         categories.itemAnimator = null
         current = Store.lastCategory ?: Repo.ALL
         Repo.onChanged(repoListener)
-        handleTestExtras(intent)
+        if (savedInstanceState == null) handleTestExtras(intent) // (not again when the screen's only being made again)
         takePlayRequest(intent)
     }
 
@@ -148,6 +148,18 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
 
     private fun handleTestExtras(i: Intent) {
         if (!BuildConfig.DEBUG) return
+        // (Test builds only. Each test request is acted on once: the screen being made again later must not replay
+        // an old one – an old "VPN off" then "connect" came back in the middle of a later test.)
+        val keys = i.extras?.keySet()?.filter { it.startsWith("dingus_test") }.orEmpty()
+        if (keys.isNotEmpty()) {
+            val copy = Intent(i)
+            handleTestExtrasOnce(copy)
+            keys.forEach { i.removeExtra(it) }
+            return
+        }
+    }
+
+    private fun handleTestExtrasOnce(i: Intent) {
         i.getStringExtra("dingus_test_m3u")?.let { url ->
             Store.playlist = Playlist("Test M3U", "m3u", m3uUrl = url, id = "test-m3u")
             Store.lastCategory = null
