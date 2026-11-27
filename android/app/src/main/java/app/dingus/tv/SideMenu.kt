@@ -54,7 +54,7 @@ object PlaylistUpdate {
                 try { Repo.refreshGuide(); Notice.updateDone("Playlist & TV guide updated") }
                 catch (e: Exception) { Notice.updateDone("Playlist updated  ·  TV guide: ${Net.friendly(e)}", 6_000) }
             } catch (e: Exception) {
-                Notice.updateDone("Couldn't update the playlist: ${Net.friendly(e)}", 6_000)
+                Notice.updateDone(Failover.updateFailed(e, "update the playlist"), 8_000)
             } finally { running = false }
         }
     }

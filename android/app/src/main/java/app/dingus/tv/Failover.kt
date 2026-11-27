@@ -162,9 +162,24 @@ object Failover {
     }
 
     /** Nothing answering with the VPN on: Settings → VPN → Find a location that works takes over (when it's on). */
+    /**
+     * What a failed playlist update says. Through the VPN, with the server refusing or not answering (most likely a
+     * blocked location): that it's looking for a location that works – it updates by itself once one's found –
+     * rather than only "Couldn't update: the server refused the login (403)".
+     */
+    fun updateFailed(e: Throwable, what: String = "update"): String =
+        if (Vpn.status == Vpn.Status.ON && !wrongLogin(e) && isDown(e))
+            "⛨  Couldn't $what through ${Vpn.connectedTo?.label ?: "this VPN location"}  ·  looking for a location that works – it updates by itself then"
+        else "Couldn't $what: ${Net.friendly(e)}"
+
     fun vpnElsewhere(p: Playlist? = Store.playlist) {
         p ?: return
-        if (Vpn.status == Vpn.Status.ON) { Ui.test("vpn-elsewhere"); VpnFallback.start(p) }
+        if (Vpn.status == Vpn.Status.ON) {
+            Ui.test("vpn-elsewhere")
+            // (Already looking in the background: it carries on; otherwise Find a location that works starts, and
+            // goes on to the endless search if its first few don't work.)
+            if (!Vpn.searching) VpnFallback.start(p)
+        }
     }
 
     /**

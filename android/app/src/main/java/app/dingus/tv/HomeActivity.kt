@@ -377,7 +377,7 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
                     Notice.working("Updating playlist & TV guide…")
                     Vod.refreshInBackground() // films and shows download alongside, not afterwards
                     try { Repo.refreshChannels(p); Repo.refreshGuide(); Notice.updateDone("Playlist & TV guide updated") }
-                    catch (e: Exception) { Notice.updateDone("Couldn't update: ${Net.friendly(e)}", 6_000) }
+                    catch (e: Exception) { Notice.updateDone(Failover.updateFailed(e), 8_000) }
                     build()
                 }
                 if (Vod.available) {

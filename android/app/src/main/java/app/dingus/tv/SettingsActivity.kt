@@ -696,7 +696,7 @@ class SettingsActivity : BaseActivity() {
                 update()
             } catch (e: Exception) {
                 refreshing = false
-                Notice.updateDone("Couldn't update: ${Net.friendly(e)}", 6_000)
+                Notice.updateDone(Failover.updateFailed(e), 8_000)
                 sub(row, Net.friendly(e))
             }
         }

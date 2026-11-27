@@ -641,7 +641,7 @@ object Vpn {
             Ui.test("vpn-retry-update")
             Notice.working("Updating playlist & TV guide…")
             try { Repo.refreshChannels(p); Repo.refreshGuide(); Notice.updateDone("Playlist & TV guide updated") }
-            catch (e: Exception) { Notice.updateDone("Couldn't update: ${Net.friendly(e)}", 6_000) }
+            catch (e: Exception) { Notice.updateDone(Failover.updateFailed(e), 8_000) }
         }
     }
 

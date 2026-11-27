@@ -259,7 +259,7 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
                 }
                 if (Repo.channels.isEmpty()) showEmpty(Empty.text(this@MainActivity, Empty.OFFLINE, "Couldn't load your playlist", "${Net.friendly(e)}\n\nPress ◀ for settings."))
                 setStatus(Net.friendly(e))
-                Notice.updateDone("Couldn't update the playlist: ${Net.friendly(e)}", 6_000)
+                Notice.updateDone(Failover.updateFailed(e, "update the playlist"), 8_000)
                 return
             }
             Ui.test("channels ${Repo.channels.size} categories ${Repo.categories.size}")
