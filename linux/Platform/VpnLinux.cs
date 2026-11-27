@@ -4,7 +4,7 @@ namespace Dingus.Services;
 
 public static partial class Vpn
 {
-    static partial IVpnBackend CreateBackend() => new LinuxVpn();
+    private static partial IVpnBackend CreateBackend() => new LinuxVpn();
 }
 
 /// <summary>

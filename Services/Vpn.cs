@@ -31,7 +31,7 @@ public static partial class Vpn
 
     public record Location(string Name, string File);
 
-    static partial IVpnBackend CreateBackend();
+    private static partial IVpnBackend CreateBackend();
     static IVpnBackend _backend;
     public static IVpnBackend Backend => _backend ??= CreateBackend();
 
