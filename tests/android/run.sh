@@ -515,7 +515,8 @@ adb logcat -d -v brief '*:W' | grep -v "com.android.tv\|AsyncDvr" | tail -1500 >
 kill %1 2>/dev/null
 if grep -A1 "FATAL EXCEPTION" "$OUT/log-all.txt" | grep -q "Process: $PKG"; then echo "::error title=android self-test::app crashed"; fail=1; fi
 # Films: every category's own list was checked in the background (the whole list can leave films out).
-if grep -q "vod-categories movies 3 had 23 added 0 failed 0" "$OUT/log-all.txt"; then echo "PASS every film category's own list is checked" >> "$OUT/result.txt"
+if [ -n "${ONLY:-}" ]; then :  # (quick runs of other sections: the films check doesn't apply)
+elif grep -q "vod-categories movies 3 had 23 added 0 failed 0" "$OUT/log-all.txt"; then echo "PASS every film category's own list is checked" >> "$OUT/result.txt"
 else echo "::error title=android self-test::film categories not checked"; echo "FAIL every film category's own list is checked" >> "$OUT/result.txt"; grep "vod-categories" "$OUT/log-all.txt" | head -3 >> "$OUT/result.txt"; fail=1; fi
 # Every highlight anywhere in the run, at its full lifted size: nothing cut off at an edge.
 if grep -q "clip-risk" "$OUT/log-all.txt"; then echo "::error title=android self-test::a highlight is cut off"; echo "FAIL no highlight is cut off (clip-risk)" >> "$OUT/result.txt"; grep "clip-risk" "$OUT/log-all.txt" | sed 's/.*DINGUS-TEST: //' | sort | uniq -c | sort -rn | head -15 | tee -a "$OUT/result.txt"; fail=1

@@ -1,3 +1,9 @@
+## What's new in Dingus 0.15.48
+
+* Fire TV: channels get going again by themselves after the VPN changes location.
+* Fire TV: playlist updates work more reliably through the VPN.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.47
 
 * Fire TV: shows which VPN location it's trying while it looks for one that works.
