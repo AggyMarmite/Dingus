@@ -33,6 +33,7 @@ object VpnFallback {
 
     /** Called when nothing answered: off it goes, in the background (once at a time). */
     fun start(p: Playlist) {
+        Ui.test("vpn-fallback-start running=$running enabled=$enabled status=${Vpn.status} searching=${Vpn.searching} wanted=${Vpn.wanted}")
         if (running || !enabled || Vpn.status != Vpn.Status.ON || Vpn.searching) return
         running = true
         Background.scope.launch(Dispatchers.IO) {

@@ -466,6 +466,8 @@ object Vpn {
      * error ends with [NO_PLAYLIST], so another is tried.
      */
     suspend fun connect(loc: Location? = null, auto: Boolean = false, needPlaylist: Boolean = true, reopen: Boolean = true): String? = lock.withLock {
+        if (BuildConfig.DEBUG) Ui.test("vpn connect-call ${loc?.label} auto=$auto need=$needPlaylist wanted=$wanted fixing=$fixing quiet=$quiet fb=${VpnFallback.running} search=${searcher?.isActive} keep=${keeper?.isActive} from=" +
+            Throwable().stackTrace.drop(1).filter { it.className.startsWith("app.dingus") }.take(4).joinToString(">") { it.className.substringAfterLast('.') + "." + it.methodName + ":" + it.lineNumber })
         // (Carries on to the end even if the screen that asked closes: cut off half way, it left the tunnel up but
         // the VPN saying it couldn't connect.)
         withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) {
@@ -682,6 +684,7 @@ object Vpn {
     }
 
     suspend fun disconnect() = lock.withLock {
+        Ui.test("vpn disconnect-call")
         withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) {
             // Turned off on purpose: not "wanted" before the tunnel goes down, so that isn't taken for a drop.
             wanted = false
