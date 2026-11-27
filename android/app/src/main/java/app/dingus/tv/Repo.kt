@@ -373,12 +373,15 @@ object Repo {
     @Volatile private var guideVersion = -1
     fun settingsChanged() { settingsVersion++ }
 
+    /** The last playlist update failed (and nothing's updated it since): tried again once the VPN connects. */
+    @Volatile var updateFailed = false
+
     suspend fun refreshChannels(p: Playlist, already: Sources.Result? = null) = withContext(Dispatchers.IO) {
         val asked = System.currentTimeMillis()
         channelsLock.withLock {
             if (already == null && channelsDone.first >= asked && channelsDone.second == p.id && channelsVersion == settingsVersion) return@withLock
             val v = settingsVersion
-            refreshChannelsNow(p, already)
+            try { refreshChannelsNow(p, already); updateFailed = false } catch (e: Exception) { updateFailed = true; throw e }
             channelsDone = System.currentTimeMillis() to p.id; channelsVersion = v
             Store.channelsLoadedAt = System.currentTimeMillis()
         }

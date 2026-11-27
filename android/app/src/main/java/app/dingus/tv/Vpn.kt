@@ -524,6 +524,7 @@ object Vpn {
                 // went into it again. And the menu's status and connections are checked again straight away.
                 if (reopen) Streams.reopenAll(force = Streams.failing)
                 Account.soon()
+                retryUpdate()
                 watch()
                 null
             } catch (e: Throwable) {
@@ -614,6 +615,24 @@ object Vpn {
         }
         // Never once had anything back from that address (it ignores questions altogether): can't tell this way.
         return !probeProven
+    }
+
+    /**
+     * The last playlist update failed (the server wouldn't answer, say, before the VPN found a location that works):
+     * now it's connected, the update's tried again by itself – channels and TV guide, with the usual note – instead
+     * of waiting for the next one or for you to ask.
+     */
+    private fun retryUpdate() {
+        if (!Repo.updateFailed) return
+        val p = Store.playlist ?: return
+        Background.scope.launch {
+            kotlinx.coroutines.delay(1_500)
+            if (!Repo.updateFailed || status != Status.ON) return@launch
+            Ui.test("vpn-retry-update")
+            Notice.working("Updating playlist & TV guide…")
+            try { Repo.refreshChannels(p); Repo.refreshGuide(); Notice.updateDone("Playlist & TV guide updated") }
+            catch (e: Exception) { Notice.updateDone("Couldn't update: ${Net.friendly(e)}", 6_000) }
+        }
     }
 
     /** Counts tunnels opened, so a check that spanned a reconnect is ignored. */

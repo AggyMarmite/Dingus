@@ -40,10 +40,16 @@ object Sources {
         // The login, the categories and the channel list don't need each other, so they come down together (a wrong
         // login still stops everything: the login's error is the one shown, as before).
         return runBlocking { supervisorScope {
-            val login = async(Dispatchers.IO) { xtreamLogin(base, auth) }
+            // A 404 to the login question on its own doesn't stop the update: some servers answer it that way (through
+            // a VPN, say) while giving the categories and channels perfectly well – if those come, the login was fine.
+            // A wrong login still stops it ("auth": 0, or the lists refused too).
+            val login = async(Dispatchers.IO) {
+                try { xtreamLogin(base, auth); null }
+                catch (e: Exception) { if (e.message?.contains("answered 404") == true) e else throw e }
+            }
             val cats = async(Dispatchers.IO) { xtreamCategories(base, auth) }
             val chans = async(Dispatchers.IO) { xtreamChannels(p, base, auth) }
-            login.await()
+            login.await()?.let { Ui.test("login 404 – carrying on with the lists") }
             Result(cats.await(), chans.await(), "$base/xmltv.php?$auth")
         } }
     }
