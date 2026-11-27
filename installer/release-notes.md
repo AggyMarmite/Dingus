@@ -1,3 +1,8 @@
+## What's new in Dingus 0.15.46
+
+* Fire TV: more reliable VPN reconnecting and location finding.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.45
 
 * Fire TV: channels that won't play through the VPN find a location that works by themselves.
