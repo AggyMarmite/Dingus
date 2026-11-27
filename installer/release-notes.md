@@ -1,3 +1,10 @@
+## What's new in Dingus 0.15.50
+
+* Fire TV: the film and TV show info fades away, and OK brings it up before pausing.
+* Fire TV: Search opens faster.
+* Fire TV: tidier Search screen.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.49
 
 * Fire TV: the VPN only settles on locations where channels actually play.
