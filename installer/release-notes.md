@@ -1,3 +1,8 @@
+## What's new in Dingus 0.15.51
+
+* Fire TV: Search fixes – the keyboard only appears when you ask for it.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.50
 
 * Fire TV: the film and TV show info fades away, and OK brings it up before pausing.
