@@ -479,7 +479,10 @@ if [ -n "${WG_CONF:-}" ] && [ -f "$WG_CONF" ]; then
     adb shell am start -n $PKG/.MainActivity --es dingus_test_m3u http://10.66.0.1:8000/playlist.m3u
     adb shell am start -n $PKG/.MainActivity --es dingus_test_vpn_connect Test
     if check "vpn on Test" 40 "VPN: connects with the playlist reachable through it"; then
-      sleep 3; fresh
+      # (Settled first: its own check passing, so the server going away is what's tested – not a late connect.)
+      fresh
+      check "vpn-check ok" 30 "VPN: its traffic check passes while connected"
+      sleep 1; fresh
       sudo ip link set wg0 down
       # (Noticed by its own check, or by the playlist not answering through it – either way it stops saying connected.)
       check "vpn-not-working|vpn connecting|vpn error" 45 "VPN: notices within seconds when nothing gets through, and stops saying connected"
