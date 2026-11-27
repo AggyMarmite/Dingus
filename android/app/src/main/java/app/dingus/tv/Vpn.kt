@@ -749,6 +749,7 @@ object Vpn {
      * while you want it on; you're told once that it's still trying.
      */
     fun keepTrying() {
+        Ui.test("vpn-keep-trying wanted=$wanted active=${keeper?.isActive} searching=${searcher?.isActive} fixing=$fixing")
         if (!wanted || !Store.vpnReconnect) return
         if (keeper?.isActive == true) { tryNow = true; return }
         if (searcher?.isActive == true && fixing) return // (in the middle of trying places: it parks back on one itself)
@@ -782,6 +783,7 @@ object Vpn {
                         VpnFallback.order(all, here, good).filter { it.id !in noPlaylist }.take(5)
                     }
                     var onlyPlaylist = true
+                    Ui.test("vpn-keep round $round tries ${tries.joinToString(",") { it.label }}")
                     for (loc in tries) {
                         if (!wanted || status == Status.ON) break
                         val err = connect(loc, auto = true)

@@ -485,7 +485,7 @@ if [ -n "${WG_CONF:-}" ] && [ -f "$WG_CONF" ]; then
       check "vpn-not-working|vpn connecting|vpn error" 45 "VPN: notices within seconds when nothing gets through, and stops saying connected"
       sleep 5; sudo ip link set wg0 up
       check "vpn-reconnected" 90 "VPN: reconnects by itself once the server answers again"
-      adb logcat -d -s DINGUS-TEST:I | grep -E "vpn|streams" | tail -25 | sed 's/^/  vpn-log: /' 
+      adb logcat -d -s DINGUS-TEST:I | grep -E "vpn|streams|failover|server" | tail -60 | sed 's/^/  vpn-log: /' 
       adb shell am start -n $PKG/.MainActivity --ez dingus_test_vpn_off true
       check "vpn off" 15 "VPN: off after the reconnect"
     fi
