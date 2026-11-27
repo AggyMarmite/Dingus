@@ -322,7 +322,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
 
     /**
      * A merged channel that keeps buffering moves to its next version by itself (and says so): buffering for
-     * 5 seconds while playing, not starting within 15, or buffering 3 times in a minute. Each version is tried once.
+     * 3 seconds while playing, not starting within 10, or buffering 3 times in a minute. Each version is tried once.
      */
     private var playedOnce = false
     private val rebuffers = ArrayList<Long>()
@@ -341,7 +341,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         if (!p.playWhenReady || !hasOtherVersion()) return
         if (behindMs > 0 || buffer != null && pausedAt > 0 || System.currentTimeMillis() < quietUntil) return
         handler.removeCallbacks(bufferCheck)
-        handler.postDelayed(bufferCheck, if (playedOnce) 5_000 else 15_000)
+        handler.postDelayed(bufferCheck, if (playedOnce) 3_000 else 10_000)
         if (!playedOnce) return
         val now = System.currentTimeMillis()
         rebuffers.add(now); rebuffers.removeAll { now - it > 60_000 }
