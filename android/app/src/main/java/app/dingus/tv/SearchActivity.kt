@@ -35,7 +35,8 @@ class SearchActivity : BaseActivity() {
     private lateinit var query: EditText
     private lateinit var status: TextView
     private lateinit var results: RecyclerView
-    private lateinit var voice: TextView
+    /** Where the highlight rests in the search panel: the box (OK on it brings up the Fire TV keyboard). */
+    private val home: View get() = query
     private lateinit var adapter: RowsAdapter
     private var job: Job? = null
     /** The latest results, by kind (the filter chips pick which show). */
@@ -75,13 +76,13 @@ class SearchActivity : BaseActivity() {
                 endTyping()
                 search(query.text.toString(), 0)
                 Store.addRecentSearch(query.text.toString())
-                results.post { firstResult()?.requestFocus() ?: voice.requestFocus() }
+                results.post { firstResult()?.requestFocus() ?: home.requestFocus() }
                 true
             } else false
         }
         // Speaking or typing into the box (Fire TV's keyboard): BACK or DOWN once it's closed comes back out.
-        (query as? SearchBox)?.onBack = { endTyping(); voice.requestFocus() }
-        // The box itself can be highlighted (UP from Voice search): OK on it brings up Fire TV's keyboard, with its mic
+        (query as? SearchBox)?.onBack = { endTyping(); home.requestFocus() }
+        // The box is highlighted to start with (there's no "Voice search" any more): OK on it brings up Fire TV's keyboard
         // for speaking the search. Only then – highlighting it alone doesn't pop the keyboard up.
         query.showSoftInputOnFocus = false
         query.setOnClickListener { if (!typing) startTyping() }
@@ -92,18 +93,16 @@ class SearchActivity : BaseActivity() {
                 if (ev.action == KeyEvent.ACTION_UP) startTyping()
                 return@setOnKeyListener true
             }
-            if (!typing && code == KeyEvent.KEYCODE_DPAD_DOWN && ev.action == KeyEvent.ACTION_DOWN) { voice.requestFocus(); return@setOnKeyListener true }
+            if (!typing && code == KeyEvent.KEYCODE_DPAD_DOWN && ev.action == KeyEvent.ACTION_DOWN) { findViewById<android.view.ViewGroup>(R.id.keys).getChildAt(0)?.requestFocus(); return@setOnKeyListener true }
             // (Not typing: ◀ ▶ don't wander through the text.)
             if (!typing && (code == KeyEvent.KEYCODE_DPAD_LEFT || code == KeyEvent.KEYCODE_DPAD_RIGHT)) return@setOnKeyListener code == KeyEvent.KEYCODE_DPAD_RIGHT
             if (ev.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
             when (code) {
-                KeyEvent.KEYCODE_DPAD_DOWN -> { endTyping(); (firstResult() ?: voice).requestFocus(); true }
-                KeyEvent.KEYCODE_BACK -> { endTyping(); voice.requestFocus(); true }
+                KeyEvent.KEYCODE_DPAD_DOWN -> { endTyping(); (firstResult() ?: findViewById<android.view.ViewGroup>(R.id.keys).getChildAt(0) ?: home).requestFocus(); true }
+                KeyEvent.KEYCODE_BACK -> { endTyping(); home.requestFocus(); true }
                 else -> false
             }
         }
-        voice = findViewById(R.id.voice)
-        voice.setOnClickListener { startTyping() }
         buildKeys()
         val accent = Themes.color(this, R.attr.dAccent)
         findViewById<View>(R.id.searchGlow).background = android.graphics.drawable.GradientDrawable().apply {
@@ -120,7 +119,7 @@ class SearchActivity : BaseActivity() {
             if (Vod.available) for (k in listOf(Vod.MOVIES, Vod.SERIES)) try { Vod.library(k); withContext(Dispatchers.Default) { SearchIndex.vod(k) } } catch (_: Exception) {}
             if (query.text.isNotEmpty()) search(query.text.toString(), 0) else showRecent()
         }
-        voice.requestFocus()
+        home.requestFocus()
         showRecent()
         if (BuildConfig.DEBUG) intent.getStringExtra("dingus_test_query")?.let { query.setText(it) }
     }
@@ -255,7 +254,7 @@ class SearchActivity : BaseActivity() {
 
     // ------------------------------------------------------------------ the keyboard and voice
 
-    /** Voice search: the box takes the Fire TV keyboard (hold the remote's mic to speak, or type). */
+    /** Typing: the box takes the Fire TV keyboard. */
     private var typing = false
 
     private fun startTyping() {
@@ -265,7 +264,7 @@ class SearchActivity : BaseActivity() {
         query.requestFocus()
         query.setSelection(query.text.length)
         (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(query, InputMethodManager.SHOW_FORCED)
-        Ui.test("search-voice")
+        Ui.test("search-typing")
     }
 
     private fun endTyping() {
