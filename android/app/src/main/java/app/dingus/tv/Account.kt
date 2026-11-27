@@ -75,6 +75,17 @@ object Account {
     }
 
     /** Something started or stopped playing: ask again in a few seconds, so "Active connections" keeps up. */
+    /**
+     * Something was refused (a channel, a film, the playlist): checks the subscription right now – exactly what
+     * Settings → Playlists → your playlist → Check subscription does, which is what got things working again by hand
+     * (some providers only let an address play while it has signed in recently). Blocking: call off the main thread.
+     */
+    fun signInNow() {
+        val p = Store.playlist ?: return
+        try { kotlinx.coroutines.runBlocking { kotlinx.coroutines.withTimeoutOrNull(15_000) { check(p) } } } catch (_: Throwable) {}
+        Ui.test("account signed in after a refusal")
+    }
+
     fun soon() {
         val p = Store.playlist ?: return
         // Twice: providers can take a few seconds to notice a stream has closed.

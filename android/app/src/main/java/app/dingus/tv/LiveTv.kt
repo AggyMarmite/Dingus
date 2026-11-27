@@ -78,6 +78,8 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     /** Whether the info bar is on screen (and not already on its way out). */
     val infoShowing: Boolean get() = info.visibility == View.VISIBLE && info.alpha > 0.3f
     private val retry = Runnable { startChannel() }
+    /** Signed in again after this channel was refused (once per channel). */
+    private var signedInRetry = false
 
     /**
      * A stream that stops moving (the picture frozen, no error from the player – it happens with some providers after
@@ -123,7 +125,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
         list = if (i >= 0) channels else listOf(c) + channels
         index = if (i >= 0) i else 0
         if (playingSame) return
-        version = null; versionTry = 0; retries = 0; triedBackup = false; guess = 0; slotWaited = false; playedOnce = false; rebuffers.clear()
+        version = null; versionTry = 0; retries = 0; triedBackup = false; guess = 0; slotWaited = false; playedOnce = false; rebuffers.clear(); signedInRetry = false
         makePlayer()
         startChannel()
         startWatchdog()
@@ -279,6 +281,17 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
                 // Refused through the VPN (403 – a blocked location): one more try, then straight to finding a
                 // location it plays through, rather than three retries, the backups and a wait for a free connection
                 // first (around 40 seconds of "Reconnecting…" before the search even started).
+                // Refused (403), the first time for this channel: check the subscription – what fixed it by hand
+                // (Settings → Playlists → Check subscription, then back to the channel) – and start it again.
+                if (Players.refused(error) && !signedInRetry) {
+                    signedInRetry = true
+                    message.text = "Reconnecting…"
+                    Background.scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                        Account.signInNow()
+                        handler.post { if (player != null) startChannel() }
+                    }
+                    return
+                }
                 if (Vpn.status == Vpn.Status.ON && Players.refused(error)) {
                     // Just switched location: the provider can take a little while to let the new address play (it
                     // still counts the old one's connection for a bit) – a few more tries, about half a minute,

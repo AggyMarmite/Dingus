@@ -72,6 +72,8 @@ object Failover {
     }
 
     private fun wrongLogin(e: Throwable) = e.message?.contains("wasn't accepted") == true
+    /** The server refused (401/403) – not a wrong login, which says so itself. */
+    private fun refused(e: Throwable) = e.message?.contains("refused the login") == true
 
     /** How long a server gets to answer before Dingus tries the next one (some are slow to pick up). */
     const val PATIENCE_MS = 15_000
@@ -106,7 +108,9 @@ object Failover {
     /** [load] with the main address, then each backup (only skipping ahead when the server can't be reached). */
     fun <T> load(p: Playlist, load: (Playlist) -> T): T {
         val all = addresses(p)
-        if (all.size == 1) return try { load(p) } catch (e: Exception) {
+        if (all.size == 1) return try { load(p) } catch (e0: Exception) {
+            // Refused (403): check the subscription, as you'd do by hand, and try once more before anything else.
+            val e = if (refused(e0)) { Account.signInNow(); try { return load(p) } catch (e1: Exception) { e1 } } else e0
             // The only address isn't answering through this VPN location: try others (it was only done with backups).
             if (!wrongLogin(e) && isDown(e)) vpnElsewhere(p)
             throw e
@@ -117,7 +121,10 @@ object Failover {
             if (!reachable(p, a)) { if (first == null) first = IOException("Couldn't connect to the server"); continue }
             val q = if (p.type == "xtream") p.copy(server = a) else p.copy(m3uUrl = a)
             try {
-                val r = load(q)
+                val r = try { load(q) } catch (e0: Exception) {
+                    // Refused (403): check the subscription, as you'd do by hand, then once more.
+                    if (refused(e0)) { Account.signInNow(); load(q) } else throw e0
+                }
                 setIndex(p, i)
                 Ui.test("server-in-use $i")
                 return r
