@@ -97,7 +97,8 @@ abstract class BaseActivity : Activity() {
 
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean = backHold(event) || super.dispatchKeyEvent(event)
 
-    private fun backToLive() {
+    /** Holding BACK: Live TV full screen, on the channel last watched. (The TV guide does its own – see MainActivity.) */
+    protected open fun backToLive() {
         val id = Store.lastChannel ?: return
         Ui.test("back-held live $id")
         startActivity(android.content.Intent(this, MainActivity::class.java).putExtra(MainActivity.PLAY, id).putExtra(MainActivity.PLAY_CATEGORY, if (Store.isFavourite(id)) Repo.FAV else Repo.ALL)

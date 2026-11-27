@@ -496,6 +496,18 @@ class MainActivity : BaseActivity(), GuideGrid.Listener {
     private val hideSide = Runnable { if (live.fullScreen) side.setHidden(true) }
 
     /** The preview grows to fill the screen while the guide fades out, then the info bar fades in. */
+    /**
+     * Holding BACK in the TV guide: full screen on the channel that's on now (in the window), not the one last
+     * watched full screen – which it used to switch to. Already full screen: nothing to do.
+     */
+    override fun backToLive() {
+        val c = live.current
+        if (c == null) { super.backToLive(); return }
+        if (live.fullScreen) return
+        Ui.test("back-held fullscreen ${c.name}")
+        goFullScreen(c, live.list.takeIf { l -> l.any { it.id == c.id } } ?: Repo.channelsIn(current))
+    }
+
     private fun goFullScreen(c: Channel, list: List<Channel> = Repo.channelsIn(current), animate: Boolean = true) {
         handler.removeCallbacks(startPreview)
         handler.removeCallbacks(hideSide)
