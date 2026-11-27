@@ -447,6 +447,11 @@ object Vpn {
      */
     private fun playlistAnswers(): Boolean {
         val p = Store.playlist ?: return true
+        // Each location tried signs in first – the subscription checked through it, as Check subscription does – so
+        // the provider has seen this address before the playlist (and any channel) is tried.
+        if (p.type == "xtream") try {
+            Net.open(Sources.xtreamBase(p.server) + "/player_api.php?username=${Sources.enc(p.user)}&password=${Sources.enc(p.pass)}", 8_000).use { it.readBytes() }
+        } catch (_: Throwable) {}
         val all = Failover.addresses(p).filter { it.isNotBlank() }
         if (all.isEmpty()) return true
         val done = java.util.concurrent.CountDownLatch(1)
@@ -754,9 +759,13 @@ object Vpn {
     private fun watch() {
         watcher?.cancel()
         watcher = scope.launch {
+            var ticks = 0
             while (true) {
                 kotlinx.coroutines.delay(10_000)
                 if (status != Status.ON || fixing) continue
+                // Every two minutes while connected: the subscription checked through the VPN too (status, connections,
+                // and the provider keeps seeing this address signed in).
+                if (++ticks % 12 == 0) Store.playlist?.let { p -> scope.launch { try { Account.check(p) } catch (_: Throwable) {} } }
                 val last = try { backend.getStatistics(tunnel).peers().firstOrNull()?.let { backend.getStatistics(tunnel).peer(it)?.latestHandshakeEpochMillis } } catch (_: Throwable) { null }
                     ?: run { Ui.test("vpn-check no stats"); null } ?: continue
                 val stale = last <= 0 || System.currentTimeMillis() - last > 180_000
