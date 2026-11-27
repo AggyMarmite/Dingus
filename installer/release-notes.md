@@ -1,3 +1,10 @@
+## What's new in Dingus 0.15.47
+
+* Fire TV: shows which VPN location it's trying while it looks for one that works.
+* Fire TV: channels start again by themselves after the VPN switches.
+* Fire TV: holding BACK simply goes full screen.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.46
 
 * Fire TV: more reliable VPN reconnecting and location finding.
