@@ -1,3 +1,9 @@
+## What's new in Dingus 0.15.52
+
+* Fire TV: Search opens straight away.
+* Fire TV: buffering channels switch source sooner, and say what's happening.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.51
 
 * Fire TV: Search fixes – the keyboard only appears when you ask for it.
