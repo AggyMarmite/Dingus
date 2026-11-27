@@ -481,7 +481,8 @@ if [ -n "${WG_CONF:-}" ] && [ -f "$WG_CONF" ]; then
     if check "vpn on Test" 40 "VPN: connects with the playlist reachable through it"; then
       sleep 3; fresh
       sudo ip link set wg0 down
-      check "vpn-not-working" 45 "VPN: notices within seconds when nothing gets through, and stops saying connected"
+      # (Noticed by its own check, or by the playlist not answering through it – either way it stops saying connected.)
+      check "vpn-not-working|vpn connecting|vpn error" 45 "VPN: notices within seconds when nothing gets through, and stops saying connected"
       sleep 5; sudo ip link set wg0 up
       check "vpn-reconnected" 90 "VPN: reconnects by itself once the server answers again"
       adb logcat -d -s DINGUS-TEST:I | grep -E "vpn|streams" | tail -25 | sed 's/^/  vpn-log: /' 

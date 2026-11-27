@@ -487,6 +487,7 @@ object Vpn {
                     waitServiceClosed(4_000)
                 }
                 val config = configFor(target)
+                connections++
                 lastRx = -1L
                 tunnelDns = try { config.`interface`.dnsServers.firstOrNull() } catch (_: Throwable) { null }
                 probeTarget = probeTargetFor(config); probeProven = false
@@ -609,6 +610,9 @@ object Vpn {
         return !probeProven
     }
 
+    /** Counts tunnels opened, so a check that spanned a reconnect is ignored. */
+    @Volatile private var connections = 0
+
     /** Where [works] sends its question: the tunnel's DNS, else 1.1.1.1 when it carries everything, else its server. */
     @Volatile private var probeTarget: java.net.InetAddress? = null
     /** Something has come back through this tunnel since it opened (so silence from [probeTarget] now means a problem). */
@@ -712,7 +716,10 @@ object Vpn {
                 val last = try { backend.getStatistics(tunnel).peers().firstOrNull()?.let { backend.getStatistics(tunnel).peer(it)?.latestHandshakeEpochMillis } } catch (_: Throwable) { null }
                     ?: run { Ui.test("vpn-check no stats"); null } ?: continue
                 val stale = last <= 0 || System.currentTimeMillis() - last > 180_000
+                val gen = connections
                 val ok = !stale && works()
+                // (Reconnected somewhere meanwhile – by a search, say: this check was about the old tunnel.)
+                if (gen != connections || status != Status.ON || fixing) continue
                 Ui.test("vpn-check ${if (ok) "ok" else "fail"} stale=$stale proven=$probeProven to=${probeTarget?.hostAddress} rx=${received()}")
                 if (!ok) {
                     if (status != Status.ON || fixing) continue // (changed meanwhile: switched, or turned off)
