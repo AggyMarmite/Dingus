@@ -1,0 +1,66 @@
+== first failure: LEFT on Search opens the side menu
+    mFocusedApp=Token{847a5a1 ActivityRecord{51fca08 u0 app.dingus.tv/.SearchActivity t6}}
+  mCurrentFocus=Window{2935652 u0 app.dingus.tv/app.dingus.tv.SearchActivity}
+  mFocusedApp=AppWindowToken{67ec3c6 token=Token{847a5a1 ActivityRecord{51fca08 u0 app.dingus.tv/.SearchActivity t6}}}
+pid 13917
+trace trace_00
+"main" prio=5 tid=1 Native
+  | group="main" sCount=1 dsCount=0 flags=1 obj=0x75084760 self=0xec34c000
+  | sysTid=13917 nice=-10 cgrp=default sched=0/0 handle=0xf0f6e494
+  | state=S schedstat=( 784239404 638654099 884 ) utm=73 stm=5 core=1 HZ=100
+  | stack=0xff515000-0xff517000 stackSize=8MB
+  | held mutexes=
+  kernel: ep_poll+0x28e/0x33f
+  kernel: SyS_epoll_wait+0x96/0xb4
+  kernel: SyS_epoll_pwait+0x93/0x114
+  kernel: do_fast_syscall_32+0xd5/0x148
+  kernel: entry_SYSCALL_compat+0x61/0x69
+  native: #00 pc 00000b39  [vdso] (__kernel_vsyscall+9)
+  native: #01 pc 0007621b  /system/lib/libc.so (__epoll_pwait+43)
+  native: #02 pc 00031e8d  /system/lib/libc.so (epoll_wait+45)
+  native: #03 pc 00013567  /system/lib/libutils.so (android::Looper::pollInner(int)+183)
+  native: #04 pc 0001340b  /system/lib/libutils.so (android::Looper::pollOnce(int, int*, int*, void**)+43)
+  native: #05 pc 000e415b  /system/lib/libandroid_runtime.so (android::android_os_MessageQueue_nativePollOnce(_JNIEnv*, _jobject*, long long, int)+59)
+  at android.os.MessageQueue.nativePollOnce(Native method)
+  at android.os.MessageQueue.next(MessageQueue.java:326)
+  at android.os.Looper.loop(Looper.java:160)
+  at android.app.ActivityThread.main(ActivityThread.java:6669)
+  at java.lang.reflect.Method.invoke(Native method)
+  at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:493)
+  at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:858)
+
+  | group="main" sCount=1 dsCount=0 flags=1 obj=0x15780b20 self=0xe6195600
+  | sysTid=13924 nice=9 cgrp=default sched=0/0 handle=0xe617f970
+  | state=S schedstat=( 492425269 1088191480 707 ) utm=19 stm=30 core=1 HZ=100
+  | stack=0xe6081000-0xe6083000 stackSize=1022KB
+  | held mutexes=
+  kernel: futex_wait_queue_me+0xcb/0x11b
+  kernel: futex_wait+0x120/0x25e
+  kernel: do_futex+0xbe/0x468
+  kernel: compat_SyS_futex+0xb9/0x13b
+  kernel: do_fast_syscall_32+0xd5/0x148
+  kernel: entry_SYSCALL_compat+0x61/0x69
+  native: #00 pc 00000b37  [vdso] (__kernel_vsyscall+7)
+  native: #01 pc 0001fdf8  /system/lib/libc.so (syscall+40)
+  native: #02 pc 000aba5e  /system/lib/libart.so (art::ConditionVariable::WaitHoldingLocks(art::Thread*)+110)
+  native: #03 pc 000ab9e3  /system/lib/libart.so (art::ConditionVariable::Wait(art::Thread*)+35)
+  native: #04 pc 0052ff85  /system/lib/libart.so (art::ThreadPool::GetTask(art::Thread*)+261)
+  native: #05 pc 0052f355  /system/lib/libart.so (art::ThreadPoolWorker::Run()+117)
+  native: #06 pc 0052ed7b  /system/lib/libart.so (art::ThreadPoolWorker::Callback(void*)+139)
+  native: #07 pc 0008f065  /system/lib/libc.so (__pthread_start(void*)+53)
+  native: #08 pc 0002485b  /system/lib/libc.so (__start_thread+75)
+  (no managed stack frames)
+
+  | group="main" sCount=1 dsCount=0 flags=1 obj=0x15780d40 self=0xe6193200
+  | sysTid=13932 nice=0 cgrp=default sched=0/0 handle=0xd58fa970
+  | state=S schedstat=( 11530118 34667067 55 ) utm=1 stm=0 core=0 HZ=100
+  | stack=0xd57ff000-0xd5801000 stackSize=1010KB
+  | held mutexes=
+  kernel: binder_thread_read+0x36c/0xda1
+  kernel: binder_ioctl_write_read.constprop.43+0x15e/0x250
+  kernel: binder_ioctl+0x195/0x4e5
+  kernel: compat_SyS_ioctl+0x1cb/0xced
+  kernel: do_fast_syscall_32+0xd5/0x148
+  kernel: entry_SYSCALL_compat+0x61/0x69
+  native: #00 pc 00000b37  [vdso] (__kernel_vsyscall+7)
+  native: #01 pc 0007649c  /system/lib/libc.so (__ioctl+28)

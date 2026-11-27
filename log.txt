@@ -1,0 +1,29 @@
+--------- beginning of system
+--------- beginning of main
+11-27 16:13:55.765 15117 15117 I DINGUS-TEST: main-shown
+11-27 16:13:55.765 15117 15117 I DINGUS-TEST: guide-showing 1
+11-27 16:13:55.790 15117 15117 I DINGUS-TEST: guide-filled 0
+11-27 16:13:55.790 15117 15117 I DINGUS-TEST: guide-listings 0
+11-27 16:13:55.795 15117 15117 I DINGUS-TEST: guide-filled 0
+11-27 16:13:55.795 15117 15117 I DINGUS-TEST: guide-listings 0
+11-27 16:13:55.798 15117 15117 I DINGUS-TEST: notice-working Updating playlist & TV guide…
+11-27 16:13:55.812 15117 15117 I DINGUS-TEST: focus categories
+11-27 16:13:55.814 15117 15117 I DINGUS-TEST: category-focus All channels
+11-27 16:13:55.832 15117 15147 I DINGUS-TEST: progress Updating Live TV…
+11-27 16:13:55.841 15117 15148 I DINGUS-TEST: account null/null online
+11-27 16:13:55.845 15117 15117 I DINGUS-TEST: notice-retext Updating Live TV…
+11-27 16:13:55.845 15117 15117 I DINGUS-TEST: notice-working Updating Live TV…
+11-27 16:13:56.687 15117 15175 I DINGUS-TEST: account null/null online
+11-27 16:13:58.796 15117 15117 I DINGUS-TEST: main-shown
+11-27 16:13:58.796 15117 15117 I DINGUS-TEST: guide-showing 0
+11-27 16:13:58.798 15117 15117 I DINGUS-TEST: vpn connect-call Test auto=false need=true wanted=false fixing=false quiet=false fb=false search=null keep=false from=Vpn.connect$default:481>MainActivity$handleTestExtrasOnce$5$1.invokeSuspend:187
+11-27 16:13:58.800 15117 15175 I DINGUS-TEST: vpn connecting Test
+11-27 16:13:58.811 15117 15117 I DINGUS-TEST: notice-retext ⛨  VPN connecting to Test…
+11-27 16:13:58.811 15117 15117 I DINGUS-TEST: notice-working ⛨  VPN connecting to Test…
+11-27 16:14:07.780 15117 15117 I DINGUS-TEST: account null/null online
+11-27 16:14:10.171 15117 15175 I DINGUS-TEST: vpn-no-playlist Test
+11-27 16:14:10.172 15117 15175 I DINGUS-TEST: vpn error Test doesn't work with your playlist
+11-27 16:14:11.182 15117 15117 I DINGUS-TEST: main-shown
+11-27 16:14:11.182 15117 15117 I DINGUS-TEST: guide-showing 0
+11-27 16:14:11.182 15117 15117 I DINGUS-TEST: vpn disconnect-call
+11-27 16:14:11.183 15117 15175 I DINGUS-TEST: vpn off 
