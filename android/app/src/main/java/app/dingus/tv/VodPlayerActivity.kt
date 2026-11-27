@@ -175,12 +175,12 @@ class VodPlayerActivity : BaseActivity() {
                 Ui.test("vod-error ${error.errorCodeName}")
                 val pos = player?.currentPosition ?: 0
                 if (Players.unrecognised(error) && guess < 2) { guess++; Ui.test("vod-format-guess $guess"); open(pos); return }
-                if (Vpn.status == Vpn.Status.ON && Players.refused(error) && retries >= 1) {
+                if (Vpn.status == Vpn.Status.ON && Players.refused(error) && retries >= (if (System.currentTimeMillis() - Vpn.connectedAt < 60_000) 4 else 1)) {
                     // Refused through the VPN again (a blocked location): find one it plays through (picks up here).
                     message.text = cantPlay(error)
                     Streams.failedAt = System.currentTimeMillis(); Account.soon()
                     closedAt = pos; Vpn.streamBlocked(Failover.rewrite(urls[index]))
-                } else if (retries++ < 2) {
+                } else if (retries++ < (if (Vpn.status == Vpn.Status.ON && System.currentTimeMillis() - Vpn.connectedAt < 60_000) 4 else 2)) {
                     message.text = "Reconnecting…"
                     handler.postDelayed({ open(pos) }, 1_500L * retries)
                 } else if (!triedBackup && Failover.hasBackups() && Players.serverDown(error)) {

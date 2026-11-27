@@ -280,7 +280,11 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
                 // location it plays through, rather than three retries, the backups and a wait for a free connection
                 // first (around 40 seconds of "Reconnecting…" before the search even started).
                 if (Vpn.status == Vpn.Status.ON && Players.refused(error)) {
-                    if (retries < 1) { scheduleRetry("Reconnecting…"); return }
+                    // Just switched location: the provider can take a little while to let the new address play (it
+                    // still counts the old one's connection for a bit) – a few more tries, about half a minute,
+                    // before deciding this location's blocked.
+                    val justSwitched = System.currentTimeMillis() - Vpn.connectedAt < 60_000
+                    if (retries < (if (justSwitched) 5 else 1)) { scheduleRetry("Reconnecting…"); return }
                     failed(error); return
                 }
                 if (retries < 3) { scheduleRetry("Reconnecting…"); return }

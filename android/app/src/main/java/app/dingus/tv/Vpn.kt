@@ -522,6 +522,11 @@ object Vpn {
                 // What was playing starts again – also a channel or film that had given up (refused, or couldn't reach
                 // the server, with nothing playing since): before, after a switch it stayed on its error until you
                 // went into it again. And the menu's status and connections are checked again straight away.
+                // Signed in through the new location first – the same as Settings → Playlists → your playlist → Check
+                // subscription, which is what used to get channels going again by hand: some providers only let a
+                // new address play once it has signed in (and that frees what the old address was holding).
+                connectedAt = System.currentTimeMillis()
+                signInHere()
                 if (reopen) Streams.reopenAll(force = Streams.failing)
                 Account.soon()
                 retryUpdate()
@@ -633,6 +638,19 @@ object Vpn {
             try { Repo.refreshChannels(p); Repo.refreshGuide(); Notice.updateDone("Playlist & TV guide updated") }
             catch (e: Exception) { Notice.updateDone("Couldn't update: ${Net.friendly(e)}", 6_000) }
         }
+    }
+
+    /** When the VPN last connected somewhere (a just-switched channel gets a little longer to start). */
+    @Volatile var connectedAt = 0L
+        private set
+
+    /** Checks the subscription through the tunnel now (the provider sees this address sign in). Up to ~15 s. */
+    private fun signInHere() {
+        val p = Store.playlist ?: return
+        try {
+            kotlinx.coroutines.runBlocking { kotlinx.coroutines.withTimeoutOrNull(15_000) { Account.check(p) } }
+            Ui.test("vpn-signed-in")
+        } catch (_: Throwable) {}
     }
 
     /** Counts tunnels opened, so a check that spanned a reconnect is ignored. */
