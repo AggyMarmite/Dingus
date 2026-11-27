@@ -65,6 +65,16 @@ public class PlaylistConfig
 public class AppSettings
 {
     public List<PlaylistConfig> Playlists { get; set; } = new();
+    /// <summary>Dingus's VPN: on, the location in use, and its settings (Settings → VPN).</summary>
+    public bool VpnOn { get; set; }
+    public string VpnLocation { get; set; }
+    public bool VpnAutoFind { get; set; } = true;
+    public bool VpnConnectOnStart { get; set; } = true;
+    public bool VpnKillSwitch { get; set; }
+    /// <summary>"own" (the VPN company's), "cloudflare", "google", "quad9", or addresses typed in.</summary>
+    public string VpnDns { get; set; } = "own";
+    /// <summary>Locations that have worked with the playlist, most recent first (tried first when searching).</summary>
+    public List<string> VpnWorked { get; set; } = new();
     /// <summary>What you've searched for and opened, newest first (Search shows them before you type).</summary>
     public List<string> RecentSearches { get; set; } = new();
     public string ActivePlaylistId { get; set; }

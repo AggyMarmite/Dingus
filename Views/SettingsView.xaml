@@ -87,6 +87,64 @@
                 </StackPanel>
             </Border>
 
+            <!-- VPN -->
+            <TextBlock Style="{StaticResource SectionHeader}" Text="VPN"/>
+            <Border x:Name="VpnCard" Style="{StaticResource Card}" AllowDrop="True" Drop="VpnCard_Drop" DragOver="VpnCard_DragOver">
+                <StackPanel>
+                    <DockPanel>
+                        <CheckBox x:Name="VpnToggle" DockPanel.Dock="Right" Style="{StaticResource Toggle}" Checked="VpnToggle_Changed" Unchecked="VpnToggle_Changed" VerticalAlignment="Center"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="VPN" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="VpnStatus" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,14"/>
+                    <DockPanel>
+                        <Button x:Name="VpnLocationButton" DockPanel.Dock="Right" Style="{StaticResource BaseButton}" Click="VpnLocation_Click" VerticalAlignment="Center" Content="Choose ⌄"/>
+                        <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="Location" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="VpnLocCount" Text="Add config files below" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,14"/>
+                    <DockPanel>
+                        <Button x:Name="VpnAddButton" DockPanel.Dock="Right" Style="{StaticResource BaseButton}" Click="VpnAdd_Click" VerticalAlignment="Center" Content="Add files…"/>
+                        <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="Config files" FontWeight="SemiBold"/>
+                            <TextBlock Text="Your VPN company's WireGuard .conf files, one per location – drag them here, or" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,14"/>
+                    <CheckBox x:Name="VpnAutoToggle" Style="{StaticResource Toggle}" Checked="VpnOption_Changed" Unchecked="VpnOption_Changed">
+                        <StackPanel>
+                            <TextBlock Text="Find a location that works by itself" FontWeight="SemiBold"/>
+                            <TextBlock Text="When your playlist or channels stop working through a location, keeps trying others until one does" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,14"/>
+                    <CheckBox x:Name="VpnStartToggle" Style="{StaticResource Toggle}" Checked="VpnOption_Changed" Unchecked="VpnOption_Changed">
+                        <StackPanel>
+                            <TextBlock Text="Connect when Dingus starts" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,14"/>
+                    <CheckBox x:Name="VpnKillToggle" Style="{StaticResource Toggle}" Checked="VpnOption_Changed" Unchecked="VpnOption_Changed">
+                        <StackPanel>
+                            <TextBlock Text="Stop streams if the VPN drops" FontWeight="SemiBold"/>
+                            <TextBlock Text="Nothing plays outside the VPN" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,14"/>
+                    <DockPanel>
+                        <Button x:Name="VpnDnsButton" DockPanel.Dock="Right" Style="{StaticResource BaseButton}" Click="VpnDns_Click" VerticalAlignment="Center" Content="VPN company's own ⌄"/>
+                        <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="DNS" FontWeight="SemiBold"/>
+                            <TextBlock Text="Which DNS the VPN uses" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+
             <!-- Help -->
             <TextBlock Style="{StaticResource SectionHeader}" Text="HELP"/>
             <Border Style="{StaticResource Card}">

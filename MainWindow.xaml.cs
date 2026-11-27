@@ -149,6 +149,9 @@ public partial class MainWindow : Window
         var ds = DataService.Instance;
         ds.BusyChanged += OnBusyChanged;
         ds.Message += ShowToast;
+        Vpn.Changed += () => Dispatcher.BeginInvoke(OnVpnChanged);
+        Vpn.Switched += () => Dispatcher.BeginInvoke(OnVpnSwitched);
+        Vpn.Startup();
         NetworkWatch.Changed += () => Dispatcher.InvokeAsync(OnNetworkChanged);
         NetworkWatch.Start();
         ds.CatalogChanged += () => { if (_nowLive && _nowChannel != null && !ds.Catalog.Channels.Any(c => c.Id == _nowChannel.Id)) StopPlayback(); };
@@ -1841,6 +1844,7 @@ public partial class MainWindow : Window
         _cpuWarned = false;
         _rateMatched = false;
         _trimmedThisStream = false;
+        _waitingForVpn = false;
         _streamStartedUtc = DateTime.UtcNow;
         _reconnects = 0;
         _triedBackup = false;
@@ -2253,6 +2257,15 @@ public partial class MainWindow : Window
             {
                 _slotWaited = true;
                 if (await WaitForFreeConnection(url) || _currentUrl != url) return;
+            }
+            // Through the VPN: most likely this location is blocked – find one that works and carry on from there.
+            if (SettingsStore.Current.VpnOn && SettingsStore.Current.VpnAutoFind && !url.StartsWith("file:"))
+            {
+                _waitingForVpn = true;
+                _reconnecting = true;
+                Vpn.Blocked();
+                SetBuffering("Finding a VPN location that works with your playlist…\n" + Vpn.Note);
+                return;
             }
             _reconnecting = false;
             SetBuffering(null);
@@ -2743,4 +2756,57 @@ public partial class MainWindow : Window
         _menuOpen = true;
         menu.IsOpen = true;
     }
+
+    // ------------------------------------------------------------------ VPN
+
+    bool _waitingForVpn;
+    string _lastVpnNote;
+
+    /// <summary>The title bar's VPN chip, the search's progress, and the kill switch.</summary>
+    void OnVpnChanged()
+    {
+        var s = SettingsStore.Current;
+        bool show = s.VpnOn || Vpn.HoldStreams;
+        if (!show) { VpnChip.Visibility = Visibility.Collapsed; }
+        else
+        {
+            VpnChip.Visibility = Visibility.Visible;
+            VpnChipText.Text = "⛨  " + (s.VpnOn ? Vpn.Note : "VPN off");
+            var (r, g, b) = Vpn.Status switch
+            {
+                Vpn.State.On => ((byte)0x4A, (byte)0xDE, (byte)0x80),
+                Vpn.State.Off => ((byte)0xF8, (byte)0x71, (byte)0x71),
+                _ => ((byte)0xFB, (byte)0xBF, (byte)0x24),
+            };
+            VpnChipText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(r, g, b));
+            VpnChip.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x26, r, g, b));
+        }
+        if (Vpn.Status == Vpn.State.Searching && Vpn.Note != _lastVpnNote) ShowToast("⛨  " + Vpn.Note);
+        _lastVpnNote = Vpn.Note;
+        if (_waitingForVpn && _currentUrl != null) SetBuffering("Finding a VPN location that works with your playlist…\n" + Vpn.Note);
+        // Kill switch: nothing plays outside the VPN.
+        if (Vpn.HoldStreams && _currentUrl != null && !_currentUrl.StartsWith("file:") && Vpn.Status is Vpn.State.Off or Vpn.State.Dropped)
+        {
+            _svc?.Stop();
+            SetBuffering("Waiting for the VPN – nothing plays outside it (Settings → VPN)");
+            _waitingForVpn = true;
+        }
+    }
+
+    /// <summary>Connected to a location that works: a stream that was waiting (or stopped) starts again.</summary>
+    void OnVpnSwitched()
+    {
+        OnVpnChanged();
+        if (_currentUrl == null) { _waitingForVpn = false; return; }
+        if (_waitingForVpn || _reconnecting)
+        {
+            _waitingForVpn = false;
+            _reconnecting = false;
+            _reconnects = 0;
+            _slotWaited = false;
+            Reconnect();
+        }
+    }
+
+    void VpnChip_Click(object sender, RoutedEventArgs e) { NavSettings.IsChecked = true; }
 }

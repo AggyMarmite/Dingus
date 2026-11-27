@@ -68,6 +68,10 @@
                     <Border x:Name="DragArea" Grid.Column="1" Background="Transparent" ZIndex="-1"/>
 
                     <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <Button x:Name="VpnChip" Click="VpnChip_Click" ToolTip.Tip="VPN – Settings → VPN" IsVisible="False" Cursor="Hand"
+                                VerticalAlignment="Center" Margin="0,0,6,0" Background="#264ADE80" CornerRadius="12" Padding="10,4">
+                            <TextBlock x:Name="VpnChipText" FontSize="11.5" FontWeight="SemiBold" Foreground="#4ADE80" MaxWidth="320" TextTrimming="CharacterEllipsis"/>
+                        </Button>
                         <Button x:Name="PlaylistButton" Classes="ghost" Click="PlaylistButton_Click" ToolTip.Tip="Switch playlist"
                                 VerticalAlignment="Center" Padding="10,6">
                             <StackPanel Orientation="Horizontal">

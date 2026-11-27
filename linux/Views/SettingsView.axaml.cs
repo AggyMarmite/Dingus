@@ -25,6 +25,7 @@ public partial class SettingsView : UserControl, IPage
         DataService.Instance.CatalogChanged += () => { if (IsEffectivelyVisible) Populate(); };
         DataService.Instance.EpgChanged += () => { if (IsEffectivelyVisible) PopulateStatus(); };
         DataService.Instance.BusyChanged += (busy, _) => { if (!busy && IsVisible) PopulateStatus(); };
+        VpnCard.AddHandler(Avalonia.Input.DragDrop.DropEvent, VpnCard_Drop);
 
     }
 
@@ -50,6 +51,7 @@ public partial class SettingsView : UserControl, IPage
         {
             PopulatePlaylists();
             PopulateStatus();
+            PopulateVpn();
 
             var p = DataService.Instance.Active;
             EpgUrlBox.Text = p?.EpgUrl ?? "";
@@ -652,5 +654,133 @@ public partial class SettingsView : UserControl, IPage
     {
         value = 0;
         return sender is RadioButton { IsChecked: true, Tag: string s } && int.TryParse(s, out value);
+    }
+
+    // ------------------------------------------------------------------ VPN
+
+    bool _vpnSync, _vpnHooked;
+
+    void PopulateVpn()
+    {
+        if (!_vpnHooked) { _vpnHooked = true; Vpn.Changed += () => UI(() => { if (IsVisibleNow) PopulateVpn(); }); }
+        _vpnSync = true;
+        try
+        {
+            var locs = Vpn.Locations();
+            VpnToggle.IsChecked = S.VpnOn;
+            VpnStatus.Text = !S.VpnOn ? (locs.Count == 0 ? "Off  ·  add your VPN company's config files first" : "Off")
+                : Vpn.Status == Vpn.State.On ? $"● Connected  ·  {Vpn.Note}" : Vpn.Note;
+            VpnLocCount.Text = locs.Count == 0 ? "Add config files below" : $"{locs.Count} location{(locs.Count == 1 ? "" : "s")} from your config files";
+            VpnLocationButton.Content = (locs.FirstOrDefault(l => l.Name == (Vpn.Current?.Name ?? S.VpnLocation))?.Name ?? (locs.Count > 0 ? locs[0].Name : "None")) + "  ⌄";
+            VpnAutoToggle.IsChecked = S.VpnAutoFind;
+            VpnStartToggle.IsChecked = S.VpnConnectOnStart;
+            VpnKillToggle.IsChecked = S.VpnKillSwitch;
+            VpnDnsButton.Content = DnsName(S.VpnDns) + "  ⌄";
+        }
+        finally { _vpnSync = false; }
+    }
+
+    static string DnsName(string d) => d switch { "cloudflare" => "Cloudflare", "google" => "Google", "quad9" => "Quad9", null or "" or "own" => "VPN company's own", var x => x };
+
+    async void VpnToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_vpnSync) return;
+        if (VpnToggle.IsChecked == true)
+        {
+            var problem = await Vpn.TurnOnAsync();
+            if (problem != null) { await ShowVpnProblem(problem); }
+        }
+        else await Vpn.TurnOffAsync();
+        PopulateVpn();
+    }
+
+    void VpnOption_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_vpnSync) return;
+        S.VpnAutoFind = VpnAutoToggle.IsChecked == true;
+        S.VpnConnectOnStart = VpnStartToggle.IsChecked == true;
+        S.VpnKillSwitch = VpnKillToggle.IsChecked == true;
+        SettingsStore.Save();
+    }
+
+    async void PickLocation(Vpn.Location l)
+    {
+        S.VpnLocation = l.Name;
+        SettingsStore.Save();
+        if (S.VpnOn) { var problem = await Vpn.TurnOnAsync(l); if (problem != null) await ShowVpnProblem(problem); }
+        PopulateVpn();
+    }
+
+    async void PickDns(string d)
+    {
+        S.VpnDns = d;
+        SettingsStore.Save();
+        if (S.VpnOn && Vpn.Current != null) await Vpn.TurnOnAsync(Vpn.Current);
+        PopulateVpn();
+    }
+
+    bool IsVisibleNow => IsEffectivelyVisible;
+    void UI(Action a) => Avalonia.Threading.Dispatcher.UIThread.Post(a);
+
+    async Task ShowVpnProblem(string problem) => await Dialogs.Message(Owner, "VPN", problem);
+
+    void VpnLocation_Click(object sender, RoutedEventArgs e)
+    {
+        var locs = Vpn.Locations();
+        if (locs.Count == 0) { VpnAdd_Click(sender, e); return; }
+        var menu = new ContextMenu();
+        var cur = Vpn.Current?.Name ?? S.VpnLocation;
+        foreach (var l in locs)
+        {
+            var item = new MenuItem { Header = (l.Name == cur ? "✓  " : "     ") + l.Name };
+            item.Click += (_, _) => PickLocation(l);
+            menu.Items.Add(item);
+        }
+        menu.Items.Add(new Separator());
+        var remove = new MenuItem { Header = "Remove a location" };
+        foreach (var l in locs)
+        {
+            var item = new MenuItem { Header = l.Name };
+            item.Click += (_, _) => { Vpn.RemoveLocation(l); PopulateVpn(); };
+            remove.Items.Add(item);
+        }
+        menu.Items.Add(remove);
+        menu.Open(VpnLocationButton);
+    }
+
+    void VpnDns_Click(object sender, RoutedEventArgs e)
+    {
+        var menu = new ContextMenu();
+        foreach (var d in new[] { "own", "cloudflare", "google", "quad9" })
+        {
+            var item = new MenuItem { Header = ((S.VpnDns ?? "own") == d ? "✓  " : "     ") + DnsName(d) };
+            item.Click += (_, _) => PickDns(d);
+            menu.Items.Add(item);
+        }
+        menu.Open(VpnDnsButton);
+    }
+
+    async void VpnAdd_Click(object sender, RoutedEventArgs e)
+    {
+        var files = await Owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Add your VPN company's WireGuard config files",
+            AllowMultiple = true,
+            FileTypeFilter = new[] { new FilePickerFileType("WireGuard config") { Patterns = new[] { "*.conf" } } },
+        });
+        AddVpnFiles(files.Select(f => f.TryGetLocalPath()).Where(p => p != null));
+    }
+
+    void VpnCard_Drop(object sender, Avalonia.Input.DragEventArgs e)
+    {
+        var files = Avalonia.Input.DataObjectExtensions.GetFiles(e.Data)?.Select(f => f.TryGetLocalPath()).Where(p => p != null).ToList();
+        if (files is { Count: > 0 }) AddVpnFiles(files);
+    }
+
+    void AddVpnFiles(IEnumerable<string> files)
+    {
+        int n = Vpn.AddFiles(files);
+        MainWindow.Instance?.ShowToast(n == 0 ? "Those weren't WireGuard config files." : $"Added {n} VPN location{(n == 1 ? "" : "s")}");
+        PopulateVpn();
     }
 }
