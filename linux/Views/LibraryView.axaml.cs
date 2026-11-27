@@ -350,6 +350,12 @@ public partial class LibraryView : UserControl, IPage
         catch (Exception ex) { Log.Error(ex); }
         if (token == _rowsToken && rows.Count == 0)
         {
+            // Nothing to show here (no charts or history yet): straight to All instead.
+            if (_all.Count > 0 && _cat == HomeId && _search.Length == 0 && CategoryList.ItemsSource is IEnumerable<CategoryItem> cats && cats.FirstOrDefault(c => c.Id == AllId) is { } allCat)
+            {
+                CategoryList.SelectedItem = allCat;
+                return;
+            }
             EmptyState.IsVisible = true;
             EmptyTitle.Text = _all.Count == 0 ? (_mode == LibraryMode.Movies ? "No films yet" : "No TV shows yet") : "Pick a category";
             EmptyBody.Text = _all.Count == 0 ? "Your playlist doesn't include any, or it hasn't been loaded yet." : "Choose a category on the left, or All to see everything.";
