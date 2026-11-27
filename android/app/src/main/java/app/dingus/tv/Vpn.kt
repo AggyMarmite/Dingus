@@ -828,7 +828,7 @@ object Vpn {
 
     /** Whether [url] (a channel or film) starts coming in through the VPN as it is now: its first bytes, then closed. */
     private fun streamPlays(url: String): Boolean = try {
-        Net.open(url, 8_000).use { it.read() >= 0 }
+        Net.open(url, 6_000).use { it.read() >= 0 }
     } catch (_: Throwable) { false }
 
     /**
@@ -841,6 +841,19 @@ object Vpn {
         Ui.test("vpn-stream-blocked")
         Notice.done("⛨  That didn't play through ${connectedTo?.label ?: "this VPN location"}  ·  looking for one it plays through…", 6_000)
         keepSearching(connectedTo, setOfNotNull(connectedTo?.id), url)
+    }
+
+    /** What the search for a working location is doing right now ("Trying UK Manchester…  ·  4 tried"), or null. */
+    @Volatile var searchNote: String? = null
+        private set
+    private val searchListeners = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
+    fun onSearch(l: () -> Unit) { searchListeners.add(l) }
+    fun offSearch(l: () -> Unit) { searchListeners.remove(l) }
+    /** Keeps you posted while it looks: a note on screen everywhere, and the player's message while a channel waits. */
+    private fun searchNote(t: String?) {
+        searchNote = t
+        if (t != null) Notice.working("⛨  $t") else Notice.endWorking("⛨")
+        android.os.Handler(android.os.Looper.getMainLooper()).post { searchListeners.forEach { it() } }
     }
 
     /** Handed from [keepTrying] to [keepSearching] once it's on (without the playlist) somewhere. */
@@ -862,12 +875,14 @@ object Vpn {
         // With a [stream]: it's that (a channel or film that was refused) that has to work, not just the playlist.
         val works: () -> Boolean = if (stream != null) { { playlistAnswers() && streamPlays(stream) } } else { { playlistAnswers() } }
         searcher = scope.launch {
+          try {
             val tried = LinkedHashSet(alreadyTried)
             var home = park
             var first = stream != null // (a refused stream: the first look straight away)
             Ui.test("vpn-search-start ${tried.size}${if (stream != null) " (stream)" else ""}")
             while (wanted) {
-                if (!first) kotlinx.coroutines.delay(60_000)
+                // A channel or film waiting on it: straight on to the next few (a short breather), not a minute's wait.
+                if (!first) kotlinx.coroutines.delay(if (stream != null) 3_000 else 60_000)
                 first = false
                 if (!wanted) break
                 if (fixing || keeper?.isActive == true) continue // (something else is putting it right)
@@ -892,15 +907,20 @@ object Vpn {
                 try {
                     for (loc in batch) {
                         if (!wanted) break
+                        if (stream != null && (Streams.flowing || !Streams.any)) break // (see below)
                         tried.add(loc.id)
+                        searchNote("Trying ${loc.label}…  ·  ${tried.size} tried so far")
+                        Ui.test("vpn-search-try ${loc.label}")
                         if (connect(loc, auto = true, reopen = stream == null) == null && (stream == null || streamPlays(stream))) { found = loc; break }
                     }
+                    if (found == null) searchNote("Still looking  ·  ${tried.size} tried so far")
                     // (Parked back where it was. Looking for a place a refused channel plays through: it isn't
                     // started again there – it'd only be refused again, using up the connection each minute.)
                     if (found == null && wanted) connect(home, auto = true, needPlaylist = false, reopen = stream == null)
                 } finally { fixing = false }
                 if (found != null) {
                     Ui.test("vpn-search-found ${found.label} after ${tried.size}")
+                    searchNote(null)
                     Notice.done("⛨  Found one that works  ·  now through ${found.label}", 6_000)
                     Failover.networkChanged()
                     Streams.reopenAll(force = true) // (what was refused starts again)
@@ -908,6 +928,7 @@ object Vpn {
                 }
                 Ui.test("vpn-search-tried ${tried.size}")
             }
+          } finally { if (searchNote != null) searchNote(null) }
         }
     }
 

@@ -146,6 +146,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     /** Stops and lets go of the stream (leaving the screen). */
     fun release() {
         Streams.remove(stream)
+        Vpn.offSearch(vpnSearchListener); blockedAt = null
         mini.hide()
         if (player != null) Account.soon()
         handler.removeCallbacksAndMessages(null)
@@ -235,6 +236,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     private fun makePlayer() {
         if (player != null) return
         Streams.add(stream)
+        Vpn.offSearch(vpnSearchListener); Vpn.onSearch(vpnSearchListener)
         val p = Players.create(a)
         dropped = 0; lastBytes = -1; lastFrames = -1; mbps = 0.0; measuredFps = 0.0
         p.addAnalyticsListener(object : androidx.media3.exoplayer.analytics.AnalyticsListener {
@@ -374,6 +376,18 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
      * itself once found). Also where waiting for a free connection couldn't find out how many are in use (through a
      * VPN the provider often won't say), which used to end there without trying another location.
      */
+    /** Where the channel was refused, while the VPN looks for a location it plays through (null: not waiting). */
+    private var blockedAt: String? = null
+    private val vpnSearchListener: () -> Unit = { if (blockedAt != null) showVpnSearch() }
+
+    /** The player's message while it waits: which location the VPN is trying, kept up to date. */
+    private fun showVpnSearch() {
+        val at = blockedAt ?: return
+        if (!Vpn.searching && Vpn.searchNote == null && Streams.flowing) { blockedAt = null; return }
+        val now = Vpn.searchNote ?: "Looking for a VPN location it plays through…"
+        message.text = (if (fullScreen) "This channel isn't playing through $at.\n" else "Not playing\n") + now
+    }
+
     private fun failed(error: PlaybackException) {
         handler.post {
             showFailed(error)
@@ -381,9 +395,9 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
                 if (Players.unreachable(error)) { Streams.failedAt = System.currentTimeMillis(); Account.soon() } // (the menu's status says so)
                 val c = list.getOrNull(index)
                 if (Vpn.status == Vpn.Status.ON && c != null && Players.blockedLike(error)) {
+                    blockedAt = Vpn.connectedTo?.label ?: "this VPN location"
                     Vpn.streamBlocked(Players.liveUrl(version ?: c))
-                    message.text = (if (fullScreen) "This channel isn't playing through ${Vpn.connectedTo?.label ?: "this VPN location"}.\n" else "Not playing\n") +
-                        "Looking for a VPN location it plays through…"
+                    showVpnSearch()
                 } else Failover.vpnElsewhere()
             }
         }
@@ -438,6 +452,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     }
 
     private fun startChannel() {
+        blockedAt = null // (a fresh start: not waiting on the VPN any more)
         val p = player ?: return
         // The VPN dropped and the kill switch is on: nothing plays until it's back (Streams reopens this then).
         if (Vpn.holding) { p.stop(); message.text = "Waiting for the VPN to reconnect…"; Ui.test("vpn-holding"); return }
