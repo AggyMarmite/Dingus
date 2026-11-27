@@ -345,6 +345,8 @@ class SearchActivity : BaseActivity() {
     }
 
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        if (BuildConfig.DEBUG && event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT)
+            Ui.test("search-key left focus=${currentFocus?.javaClass?.simpleName}/${currentFocus?.id?.takeIf { it > 0 }?.let { resources.getResourceEntryName(it) }} typing=$typing menu=${side.isOpen}")
         // The remote's search / voice button, when Fire TV passes it on: straight to the keyboard and its mic.
         if (!typing && event.action == KeyEvent.ACTION_UP && (event.keyCode == KeyEvent.KEYCODE_SEARCH || event.keyCode == KeyEvent.KEYCODE_VOICE_ASSIST)) { startTyping(); return true }
         return backHold(event) || side.onKey(event) || super.dispatchKeyEvent(event)
