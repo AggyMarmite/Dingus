@@ -7,6 +7,7 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Themes/Theme.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
             <!-- The Dingus logo (Assets/Dingus-icon.svg): a white "D" with a play button, on a purple-to-blue gradient -->
             <DrawingImage x:Key="DingusLogo">

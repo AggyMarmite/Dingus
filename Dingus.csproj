@@ -85,4 +85,11 @@
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The film database key (a GitHub secret, TMDB_KEY, read from the environment at build time). -->
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>TmdbKey</_Parameter1>
+      <_Parameter2>$(TMDB_KEY)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
 </Project>

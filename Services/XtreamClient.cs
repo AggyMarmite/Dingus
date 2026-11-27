@@ -254,6 +254,8 @@ public class XtreamClient
             };
         }, ct);
 
+    static string TmdbNumber(string s) => !string.IsNullOrWhiteSpace(s) && s.Trim() != "0" && s.Trim().All(char.IsDigit) ? s.Trim() : null;
+
     public async Task<MediaDetails> GetVodInfoAsync(string id, CancellationToken ct = default)
     {
         using var doc = await GetJsonAsync(Api("get_vod_info", "&vod_id=" + Uri.EscapeDataString(id)), ct);
@@ -272,6 +274,7 @@ public class XtreamClient
             d.Poster = info.NonEmpty("movie_image") ?? info.NonEmpty("cover_big");
             d.Backdrop = info.FirstString("backdrop_path");
             d.Trailer = Trailer.Url(info.Str("youtube_trailer")) ?? Trailer.Url(info.Str("trailer"));
+            d.TmdbId = TmdbNumber(info.Str("tmdb_id")) ?? TmdbNumber(info.Str("tmdb"));
         }
         return d;
     }
@@ -295,6 +298,7 @@ public class XtreamClient
             d.Poster = info.NonEmpty("cover");
             d.Backdrop = info.FirstString("backdrop_path");
             d.Trailer = Trailer.Url(info.Str("youtube_trailer")) ?? Trailer.Url(info.Str("trailer"));
+            d.TmdbId = TmdbNumber(info.Str("tmdb_id")) ?? TmdbNumber(info.Str("tmdb"));
         }
 
         if (root.TryGetProperty("episodes", out var eps))

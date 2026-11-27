@@ -62,6 +62,46 @@ public partial class HomeView : UserControl, IPage
         _refresh.Start();
         _advance.Start();
         RefreshAccount();
+        BuildTitleRows();
+    }
+
+    int _titleRowsToken;
+
+    /// <summary>Trending films and shows and "Because you watched…", from the film database (each shown when it's ready).</summary>
+    async void BuildTitleRows()
+    {
+        int token = ++_titleRowsToken;
+        void Ui(Action a) => Dispatcher.BeginInvoke(a, DispatcherPriority.Background);
+        async Task Fill(Task<List<WideCard>> t, ItemsControl list, FrameworkElement section)
+        {
+            List<WideCard> cards;
+            try { cards = await t; } catch (Exception ex) { Log.Error(ex); return; }
+            if (token != _titleRowsToken || !_shown) return;
+            list.ItemsSource = cards;
+            section.Visibility = cards.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            TitleRows.FillImages(cards, Ui);
+        }
+        await Fill(TitleRows.ChartAsync(Tmdb.Trending, false), TrendFilmsList, TrendFilmsSection);
+        await Fill(TitleRows.ChartAsync(Tmdb.Trending, true), TrendShowsList, TrendShowsSection);
+        try
+        {
+            // The film or show you watched most recently.
+            var lastFilm = HistoryStore.Recent("movie").FirstOrDefault()?.UpdatedUtc ?? DateTime.MinValue;
+            var lastEp = HistoryStore.Recent("episode").FirstOrDefault()?.UpdatedUtc ?? DateTime.MinValue;
+            var (title, cards) = await TitleRows.BecauseAsync(lastEp > lastFilm);
+            if (title == null && cards.Count == 0) (title, cards) = await TitleRows.BecauseAsync(lastEp <= lastFilm);
+            if (token != _titleRowsToken || !_shown) return;
+            BecauseList.ItemsSource = cards;
+            BecauseHeader.Text = $"Because you watched {title}";
+            BecauseSection.Visibility = title != null && cards.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            TitleRows.FillImages(cards, Ui);
+        }
+        catch (Exception ex) { Log.Error(ex); }
+    }
+
+    void Wide_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is WideCard c) MainWindow.Instance?.OpenLibraryItem(c.IsMovie, c.Id);
     }
 
     public void OnHidden()
@@ -69,7 +109,7 @@ public partial class HomeView : UserControl, IPage
         _shown = false;
         _refresh.Stop();
         _advance.Stop();
-        foreach (var list in new ItemsControl[] { NextList, SportList, RemindList, PicksList, ResumeList, MyListList, RecentList, FavList, NewFilmsList, NewShowsList })
+        foreach (var list in new ItemsControl[] { NextList, SportList, RemindList, PicksList, ResumeList, MyListList, RecentList, FavList, NewFilmsList, NewShowsList, TrendFilmsList, TrendShowsList, BecauseList })
             list.ItemsSource = null;
         HeroArt.Children.Clear();
         _layer = null;

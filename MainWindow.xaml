@@ -252,6 +252,102 @@
                 <TextBlock x:Name="BufferText" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="14"
                            Foreground="White" Visibility="Collapsed" TextAlignment="Center"/>
 
+                <!-- Pause screen: a few seconds after pausing a film or episode, its details over the dimmed picture -->
+                <Grid x:Name="PauseScreen" Visibility="Collapsed" IsHitTestVisible="False">
+                    <Rectangle>
+                        <Rectangle.Fill>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                <GradientStop Color="#E006090E" Offset="0"/>
+                                <GradientStop Color="#8C06090E" Offset="0.45"/>
+                                <GradientStop Color="#2606090E" Offset="0.8"/>
+                            </LinearGradientBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
+                    <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,32,36,0" Padding="16,9" CornerRadius="20" Background="#D9141821">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE769;" FontFamily="{StaticResource IconFont}" FontSize="13" Foreground="White" VerticalAlignment="Center"/>
+                            <TextBlock Text="Paused" FontSize="14" FontWeight="Bold" Foreground="White" Margin="9,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left" Margin="72,0,0,40" MaxWidth="720">
+                        <WrapPanel>
+                            <TextBlock x:Name="PauseKind" FontSize="13" FontWeight="Bold" Foreground="#C7CEDB" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <Border x:Name="PauseAge" CornerRadius="4" Padding="6,1" Background="#29FFFFFF" Margin="0,0,8,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="PauseAgeText" FontSize="12" FontWeight="Bold" Foreground="White"/>
+                            </Border>
+                            <Border x:Name="PauseScore" CornerRadius="4" Padding="7,1" Background="#2E01B4E4" VerticalAlignment="Center">
+                                <TextBlock x:Name="PauseScoreText" FontSize="12" FontWeight="Bold" Foreground="#7FDCF5"/>
+                            </Border>
+                        </WrapPanel>
+                        <Image x:Name="PauseLogo" Stretch="Uniform" MaxHeight="130" MaxWidth="440" HorizontalAlignment="Left" Margin="0,14,0,0"
+                               svc:ImageLoader.DecodeWidth="880"/>
+                        <TextBlock x:Name="PauseTitle" FontSize="44" FontWeight="Bold" Foreground="White" TextWrapping="Wrap" Margin="0,12,0,0"/>
+                        <TextBlock x:Name="PausePlot" FontSize="16" Foreground="#E0E6EE" TextWrapping="Wrap" LineHeight="24" Margin="0,14,0,0"
+                                   MaxHeight="96" TextTrimming="WordEllipsis"/>
+                        <TextBlock x:Name="PauseLeft" FontSize="15" FontWeight="SemiBold" Foreground="White" Margin="0,14,0,0"/>
+                    </StackPanel>
+                    <ProgressBar x:Name="PauseProgress" Style="{StaticResource ThinProgress}" Maximum="1" VerticalAlignment="Bottom" Margin="72,0,72,44"/>
+                </Grid>
+
+                <!-- Skip intro / recap / credits (episodes) -->
+                <Button x:Name="SkipButton" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,36,140" Visibility="Collapsed"
+                        Click="Skip_Click" Cursor="Hand" Focusable="False">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="#D2141821" BorderBrush="#40FFFFFF" BorderThickness="1" CornerRadius="9" Padding="18,10">
+                                <ContentPresenter/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Background" Value="#F01E2533"/></Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE893;" FontFamily="{StaticResource IconFont}" FontSize="13" Foreground="White" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="SkipText" Text="Skip intro" FontSize="14" FontWeight="SemiBold" Foreground="White" Margin="9,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <!-- Choose source (merged live channels) -->
+                <Border x:Name="SourcesPanel" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,24,96" Width="320" Padding="10"
+                        CornerRadius="12" Background="#F0121721" BorderBrush="#1AFFFFFF" BorderThickness="1" Visibility="Collapsed">
+                    <StackPanel>
+                        <TextBlock Text="Choose source" FontSize="14" FontWeight="Bold" Foreground="White" Margin="8,2,0,8"/>
+                        <ItemsControl x:Name="SourcesList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Click="Source_Click" Cursor="Hand" HorizontalContentAlignment="Stretch">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="10,8"><ContentPresenter/></Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Background" Value="#14FFFFFF"/></Trigger>
+                                                    <DataTrigger Binding="{Binding Playing}" Value="True"><Setter TargetName="Bd" Property="Background" Value="#2E3B82F6"/></DataTrigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                        <DockPanel>
+                                            <Border DockPanel.Dock="Right" CornerRadius="5" Padding="6,2" Background="#14FFFFFF" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Label}" FontSize="11" FontWeight="Bold" Foreground="#CBD3DF"/>
+                                            </Border>
+                                            <Ellipse x:Name="Dot" Width="8" Height="8" Fill="#5B6478" VerticalAlignment="Center" Margin="0,0,11,0"/>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}" FontSize="13" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding Note}" FontSize="11" Foreground="#8B94A7"
+                                                           Visibility="{Binding Playing, Converter={StaticResource BoolToVis}}"/>
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </Button>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding Playing}" Value="True"><Setter TargetName="Dot" Property="Fill" Value="#4ADE80"/></DataTrigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Text="If the one playing buffers, the next takes over by itself" FontSize="11" Foreground="#8B94A7" TextWrapping="Wrap" Margin="8,6,8,2"/>
+                    </StackPanel>
+                </Border>
+
                 <!-- Controls on the Guide / Home preview -->
                 <Border x:Name="PreviewHint" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8" Padding="2"
                         CornerRadius="8" Background="#99000000" Visibility="Collapsed">
@@ -475,8 +571,13 @@
                                             ToolTip="Sleep timer (S)" Click="Sleep_Click"/>
                                     <Button x:Name="InfoButton" Style="{StaticResource OverlayIconButton}" Content="&#xE946;"
                                             ToolTip="Stream info (I)" Click="Info_Click"/>
-                                    <Button x:Name="QualityButton" Style="{StaticResource OverlayIconButton}" Content="&#xE7F4;"
-                                            ToolTip="Version / quality" Click="Quality_Click" Visibility="Collapsed"/>
+                                    <Button x:Name="QualityButton" Style="{StaticResource OverlayIconButton}" Width="Auto" Padding="12,0"
+                                            ToolTip="Choose source – this channel's other versions" Click="Quality_Click" Visibility="Collapsed">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE8AB;" FontFamily="{StaticResource IconFont}" FontSize="14" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Sources" FontFamily="{StaticResource UiFont}" FontSize="13" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
                                     <Button x:Name="PictureButton" Style="{StaticResource OverlayIconButton}" Content="&#xE790;"
                                             ToolTip="Picture &amp; sound – aspect ratio, crop, audio sync, night mode" Click="Picture_Click"/>
                                     <Button x:Name="AudioButton" Style="{StaticResource OverlayIconButton}" Content="&#xE8D6;"

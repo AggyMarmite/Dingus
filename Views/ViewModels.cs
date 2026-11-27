@@ -328,11 +328,84 @@ public class PosterItem : Observable
     bool _saved;
     /// <summary>On My List (a small bookmark on the poster).</summary>
     public bool Saved { get => _saved; set => Set(ref _saved, value); }
+
+    string _age, _score;
+    /// <summary>The UK certificate ("12A"), from the film database – a small tag on the poster.</summary>
+    public string Age { get => _age; set { if (Set(ref _age, value)) Raise(nameof(HasAge)); } }
+    /// <summary>The film database's score ("7.4") – a small tag on the poster.</summary>
+    public string Score { get => _score; set { if (Set(ref _score, value)) Raise(nameof(HasScore)); } }
+    public bool HasAge => !string.IsNullOrEmpty(_age);
+    public bool HasScore => !string.IsNullOrEmpty(_score);
+}
+
+/// <summary>A wide title-art card (Trending, Top rated, Because you watched, Continue watching).</summary>
+public class WideCard : Observable
+{
+    public string Id { get; init; }
+    public bool IsMovie { get; init; }
+    public string Title { get; init; }
+    public string Year { get; init; }
+    public string TmdbId { get; init; }
+    /// <summary>"1", "2"… on a chart, else empty.</summary>
+    public string Number { get; init; }
+    public bool HasNumber => !string.IsNullOrEmpty(Number);
+    /// <summary>0..1 watched (Continue watching).</summary>
+    public double Progress { get; init; }
+    public bool HasProgress => Progress > 0.01;
+    /// <summary>A resume entry to play straight away (Continue watching), else the title opens.</summary>
+    public ResumeEntry Resume { get; init; }
+
+    string _image, _logo;
+    /// <summary>The background picture (the poster until one's found).</summary>
+    public string Image { get => _image; set => Set(ref _image, value); }
+    /// <summary>The title logo (the title is written instead until one's found).</summary>
+    public string Logo { get => _logo; set { if (Set(ref _logo, value)) Raise(nameof(HasLogo)); } }
+    public bool HasLogo => !string.IsNullOrEmpty(_logo);
+}
+
+/// <summary>A row of wide cards on the Films / TV Shows "Home".</summary>
+public class TitleRowItem
+{
+    public string Header { get; init; }
+    public List<WideCard> Cards { get; init; }
+}
+
+/// <summary>Someone in the cast row on a film or show's page.</summary>
+public class ActorItem
+{
+    public string Id { get; init; }
+    public string Name { get; init; }
+    public string Role { get; init; }
+    public string Photo { get; init; }
+    public bool HasPhoto => !string.IsNullOrEmpty(Photo);
+    public string Initials => string.Concat((Name ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpperInvariant(w[0])));
 }
 
 public class PosterRow
 {
     public PosterItem[] Items { get; set; }
+}
+
+/// <summary>A row on Settings → Check everything.</summary>
+public class CheckItem
+{
+    public string Title { get; init; }
+    public string Detail { get; init; }
+    public Dingus.Services.Checks.State State { get; init; }
+    public string Mark => State switch { Dingus.Services.Checks.State.Ok => "✓", Dingus.Services.Checks.State.Warn => "!", _ => "✕" };
+    public bool IsOk => State == Dingus.Services.Checks.State.Ok;
+    public bool IsWarn => State == Dingus.Services.Checks.State.Warn;
+    public bool IsFail => State == Dingus.Services.Checks.State.Fail;
+}
+
+/// <summary>One version of a merged live channel in the player's Choose source list.</summary>
+public class SourceItem
+{
+    public int Index { get; init; }
+    public string Name { get; init; }
+    public string Label { get; init; }
+    public bool Playing { get; init; }
+    public string Note => Playing ? "Playing" : "";
 }
 
 public class SeasonItem

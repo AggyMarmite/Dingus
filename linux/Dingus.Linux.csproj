@@ -35,7 +35,7 @@
   <ItemGroup>
     <Compile Include="../Models/*.cs" LinkBase="Shared/Models" />
     <Compile Include="../Views/ViewModels.cs" LinkBase="Shared/Views" />
-    <Compile Include="../Services/ArtworkService.cs;../Services/Backup.cs;../Services/ChannelMerger.cs;../Services/EpgService.cs;../Services/JsonExt.cs;../Services/M3uParser.cs;../Services/PlayerService.cs;../Services/Timeshift.cs;../Services/XtreamClient.cs;../Services/Core.cs;../Services/DataService.cs;../Services/HistoryStore.cs;../Services/RecordingService.cs;../Services/ReminderService.cs;../Services/Genres.cs;../Services/Parental.cs;../Services/CategoryOrder.cs;../Services/Updater.cs;../Services/TsTimeline.cs;../Services/CatalogFile.cs;../Services/Trailer.cs;../Services/HomeData.cs;../Services/GuideRows.cs;../Services/VlcSound.cs;../Services/Events.cs;../Services/TeamCrests.cs;../Services/ImageFiles.cs;../Services/TestServer.cs;../Services/Titles.cs;../Services/DownloadService.cs;../Services/FolderCheck.cs;../Services/Failover.cs;../Services/ConnectionSlot.cs"
+    <Compile Include="../Services/ArtworkService.cs;../Services/Backup.cs;../Services/ChannelMerger.cs;../Services/EpgService.cs;../Services/JsonExt.cs;../Services/M3uParser.cs;../Services/PlayerService.cs;../Services/Timeshift.cs;../Services/XtreamClient.cs;../Services/Core.cs;../Services/DataService.cs;../Services/HistoryStore.cs;../Services/RecordingService.cs;../Services/ReminderService.cs;../Services/Genres.cs;../Services/Parental.cs;../Services/CategoryOrder.cs;../Services/Updater.cs;../Services/TsTimeline.cs;../Services/CatalogFile.cs;../Services/Trailer.cs;../Services/HomeData.cs;../Services/GuideRows.cs;../Services/VlcSound.cs;../Services/Events.cs;../Services/TeamCrests.cs;../Services/ImageFiles.cs;../Services/TestServer.cs;../Services/Titles.cs;../Services/DownloadService.cs;../Services/FolderCheck.cs;../Services/Failover.cs;../Services/ConnectionSlot.cs;../Services/Tmdb.cs;../Services/TitleRows.cs;../Services/PlayerExtras.cs;../Services/Checks.cs"
              LinkBase="Shared/Services" />
   </ItemGroup>
 
@@ -52,4 +52,11 @@
     <PackageReference Include="LibVLCSharp.Avalonia" Version="3.9.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The film database key (a GitHub secret, TMDB_KEY, read from the environment at build time). -->
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>TmdbKey</_Parameter1>
+      <_Parameter2>$(TMDB_KEY)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
 </Project>

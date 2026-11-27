@@ -12,6 +12,8 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      TMDB_KEY: ${{ secrets.TMDB_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -144,6 +146,8 @@ jobs:
   # Run twice: the first time (nothing saved) and the next time (opening on the saved copy while it refreshes).
   perf:
     runs-on: windows-latest
+    env:
+      TMDB_KEY: ${{ secrets.TMDB_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -199,6 +203,8 @@ jobs:
   # The Linux version: builds the AppImage, then runs it on a virtual screen (with a real test video) and saves screenshots.
   linux:
     runs-on: ubuntu-22.04
+    env:
+      TMDB_KEY: ${{ secrets.TMDB_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -281,6 +287,8 @@ jobs:
   mac:
     if: github.event_name == 'workflow_dispatch'
     runs-on: macos-14
+    env:
+      TMDB_KEY: ${{ secrets.TMDB_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4

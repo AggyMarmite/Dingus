@@ -540,6 +540,40 @@ public partial class SettingsView : UserControl, IPage
     // ------------------------------------------------------------------ refresh
 
     async void RefreshPlaylist_Click(object sender, RoutedEventArgs e) => await DataService.Instance.RefreshAsync();
+
+    async void FullRefresh_Click(object sender, RoutedEventArgs e)
+    {
+        if (MessageBox.Show(Window.GetWindow(this), "Clear everything saved for this playlist and download it all again from the main server?\n\nContinue watching and My List are kept.",
+                "Full refresh", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
+        await DataService.Instance.FullRefreshAsync();
+    }
+
+    CancellationTokenSource _checkCts;
+
+    async void CheckEverything_Click(object sender, RoutedEventArgs e)
+    {
+        _checkCts?.Cancel();
+        _checkCts = new CancellationTokenSource();
+        var ct = _checkCts.Token;
+        var items = new System.Collections.ObjectModel.ObservableCollection<CheckItem>();
+        CheckList.ItemsSource = items;
+        CheckSummary.Text = "Checking…";
+        CheckAgainButton.Visibility = Visibility.Collapsed;
+        SettingsScroll.Visibility = Visibility.Collapsed;
+        Motion.FadeIn(CheckPage, fromY: 8);
+        await Checks.RunAsync(r => Dispatcher.Invoke(() => { if (!ct.IsCancellationRequested) items.Add(new CheckItem { Title = r.Title, Detail = r.Detail, State = r.State }); }), ct);
+        if (ct.IsCancellationRequested) return;
+        int fine = items.Count(i => i.IsOk), look = items.Count - fine;
+        CheckSummary.Text = $"Finished {DateTime.Now:HH:mm}  ·  {fine} fine" + (look > 0 ? $", {look} to look at" : "");
+        CheckAgainButton.Visibility = Visibility.Visible;
+    }
+
+    void CheckBack_Click(object sender, RoutedEventArgs e)
+    {
+        _checkCts?.Cancel();
+        CheckPage.Visibility = Visibility.Collapsed;
+        SettingsScroll.Visibility = Visibility.Visible;
+    }
     async void RefreshEpg_Click(object sender, RoutedEventArgs e) => await DataService.Instance.RefreshEpgAsync();
 
     void AutoRefresh_Changed(object sender, RoutedEventArgs e)

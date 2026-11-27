@@ -648,6 +648,13 @@ public partial class MainWindow : Window
 
     public void SetSearchHint(string hint) => SearchBox.Tag = hint;
 
+    /// <summary>Puts a search in the search bar (a recent search on the Search page).</summary>
+    public void SearchFor(string q)
+    {
+        SearchBox.Text = q ?? "";
+        FocusSearchCaretEnd();
+    }
+
     const string GlobalSearchHint = "Search channels, programmes, films and shows";
     IPage _beforeSearch;
 
@@ -984,6 +991,7 @@ public partial class MainWindow : Window
         _nowChannel = identity;
         ch = identity;
         _vod = null;
+        StopExtras();
         SettingsStore.Current.LastChannelId = ch.Id;
         _guide.SetPreviewPlaying(true);
         _home.SetPreviewPlaying(true);
@@ -1026,20 +1034,147 @@ public partial class MainWindow : Window
 
     void Quality_Click(object sender, RoutedEventArgs e)
     {
+        if (SourcesPanel.Visibility == Visibility.Visible) { CloseSources(); return; }
         if (_variants.Count < 2) return;
-        var menu = new ContextMenu { PlacementTarget = QualityButton, Placement = System.Windows.Controls.Primitives.PlacementMode.Top };
-        for (int i = 0; i < _variants.Count; i++)
+        SourcesList.ItemsSource = _variants.Select((v, i) => new SourceItem
         {
-            var v = _variants[i];
-            var item = new MenuItem { Header = $"{ChannelMerger.Label(v)}  –  {v.Name}", IsChecked = i == _variantIdx };
-            int idx = i;
-            item.Click += (_, _) => SwitchVariant(idx, null);
-            menu.Items.Add(item);
-        }
+            Index = i, Name = GuideRow.CleanName(v.Name) ?? v.Name, Label = ChannelMerger.Label(v), Playing = i == _variantIdx,
+        }).ToList();
         _hideTimer.Stop();
-        menu.Closed += (_, _) => { _menuOpen = false; if (_playerMode) _hideTimer.Start(); };
         _menuOpen = true;
-        menu.IsOpen = true;
+        Motion.FadeIn(SourcesPanel, fromY: 8);
+    }
+
+    void Source_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not SourceItem s) return;
+        CloseSources();
+        if (s.Index != _variantIdx) SwitchVariant(s.Index, null);
+    }
+
+    void CloseSources()
+    {
+        if (SourcesPanel.Visibility != Visibility.Visible) return;
+        Motion.FadeOut(SourcesPanel, toY: 8);
+        _menuOpen = false;
+        if (_playerMode) { _hideTimer.Stop(); _hideTimer.Start(); }
+    }
+
+    // ------------------------------------------------------------------ Skip intro and the pause screen
+
+    PlayerExtras _extras;
+    CancellationTokenSource _extrasCts;
+    PlayerExtras.Skip _skip;
+    long _skipPart = -1;
+    DateTime _skipShownUtc, _pausedSinceUtc;
+    bool _pauseScreenUp;
+
+    void StartExtras(VodItem item)
+    {
+        _extrasCts?.Cancel();
+        _extrasCts = new CancellationTokenSource();
+        _extras = new PlayerExtras(item);
+        _skip = null; _skipPart = -1;
+        Motion.HideNow(SkipButton);
+        HidePauseScreen();
+        _ = _extras.LoadAsync(_extrasCts.Token);
+    }
+
+    void StopExtras()
+    {
+        _extrasCts?.Cancel();
+        _extras = null;
+        _skip = null; _skipPart = -1;
+        Motion.HideNow(SkipButton);
+        HidePauseScreen();
+    }
+
+    /// <summary>Each second while a film or episode plays: the Skip button and the pause screen.</summary>
+    void UpdateExtras(StreamHealth h)
+    {
+        var now = DateTime.UtcNow;
+        bool full = _vod != null && _extras != null && _playerMode && !_mini;
+        var sk = full && h.State == VLCState.Playing ? _extras.SkipAt(h.TimeMs, h.LengthMs) : null;
+        if (sk == null)
+        {
+            if (_skip != null) { Motion.FadeOut(SkipButton); _skip = null; }
+        }
+        else
+        {
+            if (sk.PartStartMs != _skipPart) { _skipPart = sk.PartStartMs; _skipShownUtc = now; }
+            // Shown for 10 seconds when the part starts, and again whenever the controls are up.
+            bool show = now - _skipShownUtc < TimeSpan.FromSeconds(10) || PlayerChrome.Visibility == Visibility.Visible;
+            _skip = sk;
+            SkipText.Text = sk.Text;
+            if (show && SkipButton.Visibility != Visibility.Visible) Motion.FadeIn(SkipButton, fromY: 8);
+            else if (!show && SkipButton.Visibility == Visibility.Visible) Motion.FadeOut(SkipButton);
+        }
+
+        if (full && h.State == VLCState.Paused)
+        {
+            if (_pausedSinceUtc == default) _pausedSinceUtc = now;
+            if (!_pauseScreenUp && now - _pausedSinceUtc > TimeSpan.FromSeconds(4) && PlayerChrome.Visibility != Visibility.Visible && !_menuOpen)
+                ShowPauseScreen(h);
+            else if (_pauseScreenUp) PauseLeft.Text = PlayerExtras.Left(h.TimeMs, h.LengthMs);
+        }
+        else
+        {
+            _pausedSinceUtc = default;
+            if (_pauseScreenUp) HidePauseScreen();
+        }
+    }
+
+    void ShowPauseScreen(StreamHealth h)
+    {
+        var x = _extras;
+        if (x == null) return;
+        _pauseScreenUp = true;
+        PauseKind.Text = x.KindLine();
+        PauseAge.Visibility = x.Ratings?.Age != null ? Visibility.Visible : Visibility.Collapsed;
+        PauseAgeText.Text = x.Ratings?.Age ?? "";
+        var score = Tmdb.ScoreText(x.Ratings);
+        PauseScore.Visibility = score != null ? Visibility.Visible : Visibility.Collapsed;
+        PauseScoreText.Text = score == null ? "" : "★ " + score;
+        ImageLoader.SetUrl(PauseLogo, x.Logo);
+        PauseLogo.Visibility = x.Logo != null ? Visibility.Visible : Visibility.Collapsed;
+        PauseTitle.Text = x.Item.Kind == "episode" && x.Logo != null ? "" : Titles.Clean(x.Item.Title);
+        if (x.Item.Kind == "episode")
+        {
+            var sub = x.Item.Subtitle ?? "";
+            var i = sub.IndexOf('·');
+            var epTitle = i >= 0 ? sub[(i + 1)..].Trim() : "";
+            PauseTitle.Text = x.Logo == null ? Titles.Clean(x.Item.Title) + (epTitle.Length > 0 ? "\n" + epTitle : "") : epTitle;
+            PauseTitle.FontSize = x.Logo == null ? 44 : 26;
+        }
+        else PauseTitle.FontSize = 44;
+        PauseTitle.Visibility = string.IsNullOrEmpty(PauseTitle.Text) ? Visibility.Collapsed : Visibility.Visible;
+        PausePlot.Text = x.Item.Plot ?? "";
+        PausePlot.Visibility = string.IsNullOrWhiteSpace(x.Item.Plot) ? Visibility.Collapsed : Visibility.Visible;
+        PauseLeft.Text = PlayerExtras.Left(h.TimeMs, h.LengthMs);
+        PauseProgress.Value = h.LengthMs > 0 ? (double)h.TimeMs / h.LengthMs : 0;
+        Motion.FadeIn(PauseScreen, ms: 420);
+    }
+
+    void HidePauseScreen()
+    {
+        if (!_pauseScreenUp) return;
+        _pauseScreenUp = false;
+        _pausedSinceUtc = DateTime.UtcNow; // (back again after a few more seconds with nothing touched)
+        Motion.FadeOut(PauseScreen, ms: 200);
+    }
+
+    void Skip_Click(object sender, RoutedEventArgs e) => DoSkip();
+
+    void DoSkip()
+    {
+        var sk = _skip;
+        if (sk == null) return;
+        Motion.FadeOut(SkipButton);
+        _skip = null;
+        _skipShownUtc = DateTime.MinValue;
+        if (sk.PlaysNext) { PlayNextEpisodeNow(); return; }
+        if (sk.ToMs < 0) { _svc?.SeekTo(Math.Max(0, _lastVodLen - 1000)); return; }
+        _svc?.SeekTo(sk.ToMs);
     }
 
     /// <summary>Plays a film, episode or catch-up programme full screen.</summary>
@@ -1052,7 +1187,7 @@ public partial class MainWindow : Window
             item = new VodItem
             {
                 Kind = item.Kind, Title = item.Title, Subtitle = item.Subtitle, Url = local, Image = item.Image, ResumeKey = item.ResumeKey,
-                ItemId = item.ItemId, SeriesId = item.SeriesId, Next = item.Next, NextLabel = item.NextLabel, Ext = item.Ext,
+                ItemId = item.ItemId, SeriesId = item.SeriesId, Next = item.Next, NextLabel = item.NextLabel, Ext = item.Ext, Plot = item.Plot, Year = item.Year,
             };
 
         long start = 0;
@@ -1067,6 +1202,7 @@ public partial class MainWindow : Window
         _nowLive = false;
         _nowChannel = null;
         _vod = item;
+        StartExtras(item);
         _currentUrl = item.Url;
         _lastVodTime = start;
         _lastVodLen = h?.DurationMs ?? 0;
@@ -1098,6 +1234,8 @@ public partial class MainWindow : Window
         _nowLive = false;
         _nowChannel = null;
         _vod = null;
+        StopExtras();
+        CloseSources();
         _currentUrl = null;
         DownloadService.Nudge(); // a download waiting for the connection can carry on
         _mediaKeys?.Enable(false);
@@ -1777,6 +1915,7 @@ public partial class MainWindow : Window
         }
 
         // Remember where you are in films/episodes.
+        if (_vod != null) UpdateExtras(h);
         if (_vod != null && h.LengthMs > 0 && h.State == VLCState.Playing)
         {
             _lastVodTime = h.TimeMs;
@@ -2282,6 +2421,8 @@ public partial class MainWindow : Window
         if (Browsing && HandleBrowseKey(key)) return true;
         if (_panelOpen && HandlePanelKey(key)) return true;
         if (_nowLive && !_mini && (key == Key.Up || key == Key.Down)) { Browse(key == Key.Up ? -1 : 1); return true; }
+        if (_pauseScreenUp) HidePauseScreen();
+        if (key == Key.Escape && SourcesPanel.Visibility == Visibility.Visible) { CloseSources(); return true; }
         ShowChrome();
 
         if (_nowLive && DigitOf(key) is int d) { TypeDigit(d); return true; }
@@ -2315,6 +2456,7 @@ public partial class MainWindow : Window
                 ToggleHealthPinned();
                 return true;
             case Key.S:
+                if (_skip != null && SkipButton.Visibility == Visibility.Visible) { DoSkip(); return true; }
                 if (!_mini) { ShowSleepMenu(); return true; }
                 break;
             case Key.R:
@@ -2488,8 +2630,16 @@ public partial class MainWindow : Window
     void Overlay_MouseMove(object sender, MouseEventArgs e)
     {
         if (!_playerMode) return;
+        if (_pauseScreenUp) HidePauseScreen();
         if (_mini || PlayerChrome.Visibility != Visibility.Visible) ShowChrome();
         else { _hideTimer.Stop(); _hideTimer.Start(); }
+    }
+
+    static bool IsInside(DependencyObject d, DependencyObject parent)
+    {
+        for (; d != null; d = d is System.Windows.Media.Visual || d is System.Windows.Media.Media3D.Visual3D ? System.Windows.Media.VisualTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d))
+            if (d == parent) return true;
+        return false;
     }
 
     void Overlay_MouseLeave(object sender, MouseEventArgs e)
@@ -2510,6 +2660,7 @@ public partial class MainWindow : Window
             e.Handled = true;
             return;
         }
+        if (SourcesPanel.Visibility == Visibility.Visible && !(e.OriginalSource is DependencyObject src && IsInside(src, SourcesPanel))) { CloseSources(); e.Handled = true; return; }
         if (e.ClickCount == 2)
         {
             if (!_playerMode) { if (_nowLive) EnterPlayer(true); }

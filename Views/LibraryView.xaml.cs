@@ -11,7 +11,7 @@ public enum LibraryMode { Movies, Series }
 /// <summary>Films and TV Shows share this page: category rail, poster grid and a details view.</summary>
 public partial class LibraryView : UserControl, IPage
 {
-    public const string AllId = "__all", ContinueId = "__continue", MyListId = "__mylist";
+    public const string AllId = "__all", ContinueId = "__continue", MyListId = "__mylist", HomeId = "__home", PersonId = "__person";
     const double CardWidth = 172; // 156 + margins
 
     readonly LibraryMode _mode;
@@ -19,7 +19,11 @@ public partial class LibraryView : UserControl, IPage
     Dictionary<string, PosterItem> _byId = new();
     List<PosterItem> _filtered = new();
     CategoryItem _continueCat, _myListCat;
-    string _cat = AllId, _search = "", _sort;
+    string _cat = HomeId, _search = "", _sort;
+    /// <summary>Someone's titles in the playlist (from their photo in a cast row), and their name.</summary>
+    List<PosterItem> _personItems;
+    string _personName;
+    int _rowsToken;
     int _cols;
     bool _suppress, _dirty = true, _shown;
 
@@ -50,7 +54,11 @@ public partial class LibraryView : UserControl, IPage
         HistoryStore.Changed += OnHistoryChanged;
         DownloadService.Changed += () => Dispatcher.BeginInvoke(() => { if (_current != null) UpdateDownloads(); }, System.Windows.Threading.DispatcherPriority.Background);
         PosterList.SizeChanged += (_, _) => Regroup(false);
+        PosterList.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler((_, _) => FillVisibleRatings()));
     }
+
+    bool IsTv => _mode == LibraryMode.Series;
+    void Ui(Action a) => Dispatcher.BeginInvoke(a, System.Windows.Threading.DispatcherPriority.Background);
 
     // ------------------------------------------------------------------ IPage
 
@@ -122,6 +130,7 @@ public partial class LibraryView : UserControl, IPage
         _myListCat = new CategoryItem { Id = MyListId, Name = "My List", Count = MyListItems().Count };
         var items = new List<CategoryItem>
         {
+            new() { Id = HomeId, Name = "Home" },
             new() { Id = AllId, Name = _mode == LibraryMode.Movies ? "All films" : "All shows", Count = _all.Count },
             _continueCat,
             _myListCat,
@@ -204,7 +213,20 @@ public partial class LibraryView : UserControl, IPage
     {
         IEnumerable<PosterItem> q;
         bool keepOrder = false;
+        bool home = _cat == HomeId && _search.Length == 0;
+        RowsPane.Visibility = home ? Visibility.Visible : Visibility.Collapsed;
+        PosterList.Visibility = home ? Visibility.Collapsed : Visibility.Visible;
+        SortPanel.Visibility = home ? Visibility.Collapsed : Visibility.Visible;
+        if (home)
+        {
+            HeaderText.Text = Title;
+            CountText.Text = "";
+            EmptyState.Visibility = Visibility.Collapsed;
+            BuildRows();
+            return;
+        }
         if (_search.Length > 0) q = _all.Where(p => p.Title.Contains(_search, StringComparison.OrdinalIgnoreCase));
+        else if (_cat == PersonId && _personItems != null) { q = _personItems; keepOrder = true; }
         else if (_cat == ContinueId) { q = ContinueItems(); keepOrder = true; }
         else if (_cat == MyListId) { q = MyListItems(); keepOrder = _sort == "added"; }
         else if (_cat != AllId) q = _all.Where(p => p.CategoryId == _cat);
@@ -221,6 +243,7 @@ public partial class LibraryView : UserControl, IPage
 
         HeaderText.Text = _search.Length > 0
             ? $"Results for “{_search}”"
+            : _cat == PersonId ? $"With {_personName}"
             : (CategoryList.SelectedItem as CategoryItem)?.Name ?? Title;
         CountText.Text = _filtered.Count == 1 ? "1 title" : $"{_filtered.Count:N0} titles";
 
@@ -266,6 +289,115 @@ public partial class LibraryView : UserControl, IPage
         var rows = _filtered.Chunk(cols).Select(c => new PosterRow { Items = c }).ToList();
         PosterList.ItemsSource = rows;
         if (force && rows.Count > 0) PosterList.ScrollIntoView(rows[0]);
+        FillVisibleRatings();
+    }
+
+    /// <summary>The age and score tags for the posters on screen (and a little beyond), looked up as you scroll.</summary>
+    void FillVisibleRatings()
+    {
+        if (_filtered.Count == 0 || _cols <= 0) return;
+        var sv = FindScroll(PosterList);
+        double rowH = 310;
+        int first = sv == null ? 0 : Math.Max(0, (int)(sv.VerticalOffset / rowH) - 1);
+        int rows = sv == null ? 4 : (int)Math.Ceiling(sv.ViewportHeight / rowH) + 3;
+        TitleRows.FillRatings(_filtered.Skip(first * _cols).Take(rows * _cols), IsTv, Ui);
+    }
+
+    static ScrollViewer FindScroll(DependencyObject d)
+    {
+        if (d is ScrollViewer s) return s;
+        for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(d); i++)
+            if (FindScroll(System.Windows.Media.VisualTreeHelper.GetChild(d, i)) is { } f) return f;
+        return null;
+    }
+
+    // ------------------------------------------------------------------ Home: rows of wide cards
+
+    /// <summary>Continue watching, Trending this week, Top rated and Because you watched, each added as it's ready.</summary>
+    async void BuildRows()
+    {
+        int token = ++_rowsToken;
+        var rows = new List<TitleRowItem>();
+        var cont = ContinueItems().Take(20).Select(p => new WideCard
+        {
+            Id = p.Id, IsMovie = !IsTv, Title = Titles.Clean(p.Title), Year = (p.Source as Movie)?.Year ?? (p.Source as Series)?.Year,
+            Image = Tmdb.CachedBackdrop(IsTv, p.Id) ?? p.Image, Logo = Tmdb.CachedLogo(IsTv, p.Id), Progress = p.Progress,
+        }).ToList();
+        if (cont.Count > 0) rows.Add(new TitleRowItem { Header = "Continue watching", Cards = cont });
+        RowsList.ItemsSource = rows.ToList();
+        TitleRows.FillImages(cont, Ui);
+
+        async Task Add(Task<List<WideCard>> t, string header)
+        {
+            List<WideCard> cards;
+            try { cards = await t; } catch (Exception ex) { Log.Error(ex); return; }
+            if (token != _rowsToken || cards.Count == 0) return;
+            rows.Add(new TitleRowItem { Header = header, Cards = cards });
+            RowsList.ItemsSource = rows.ToList();
+            TitleRows.FillImages(cards, Ui);
+        }
+        await Add(TitleRows.ChartAsync(Tmdb.Trending, IsTv), "Trending this week");
+        await Add(TitleRows.ChartAsync(Tmdb.TopRated, IsTv), IsTv ? "Top rated shows" : "Top rated films");
+        try
+        {
+            var (title, cards) = await TitleRows.BecauseAsync(IsTv);
+            if (token == _rowsToken && title != null && cards.Count > 0)
+            {
+                rows.Add(new TitleRowItem { Header = $"Because you watched {title}", Cards = cards });
+                RowsList.ItemsSource = rows.ToList();
+                TitleRows.FillImages(cards, Ui);
+            }
+        }
+        catch (Exception ex) { Log.Error(ex); }
+        if (token == _rowsToken && rows.Count == 0)
+        {
+            EmptyState.Visibility = Visibility.Visible;
+            EmptyTitle.Text = _all.Count == 0 ? (_mode == LibraryMode.Movies ? "No films yet" : "No TV shows yet") : "Pick a category";
+            EmptyBody.Text = _all.Count == 0 ? "Your playlist doesn't include any, or it hasn't been loaded yet." : "Choose a category on the left, or All to see everything.";
+        }
+    }
+
+    void Wide_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is WideCard c && _byId.TryGetValue(c.Id, out var item)) OpenDetail(item);
+    }
+
+    /// <summary>Mouse wheel scrolls the page (not the row it's over); Shift + wheel scrolls the row sideways.</summary>
+    void Row_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (sender is not ScrollViewer row) return;
+        e.Handled = true;
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) row.ScrollToHorizontalOffset(row.HorizontalOffset - e.Delta);
+        else SmoothScroll.ScrollBy(RowsPane, -e.Delta * 1.1);
+    }
+
+    // ------------------------------------------------------------------ cast
+
+    async void Actor_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not ActorItem a) return;
+        MainWindow.Instance?.ShowToast($"Finding {a.Name}’s films and shows in your playlist…");
+        var (films, shows) = await TitleRows.PersonAsync(a.Id);
+        var ids = (IsTv ? shows.Select(x => x.Id) : films.Select(x => x.Id)).ToList();
+        var items = ids.Where(_byId.ContainsKey).Select(id => _byId[id]).ToList();
+        int other = IsTv ? films.Count : shows.Count;
+        if (items.Count == 0)
+        {
+            MainWindow.Instance?.ShowToast(other > 0
+                ? $"{a.Name} is in {other} {(IsTv ? "film" : "show")}{(other == 1 ? "" : "s")} in your playlist – see {(IsTv ? "Films" : "TV Shows")}"
+                : $"Nothing else with {a.Name} in your playlist.");
+            return;
+        }
+        _personItems = items;
+        _personName = a.Name;
+        _cat = PersonId;
+        _suppress = true;
+        CategoryList.SelectedItem = null;
+        _suppress = false;
+        CloseDetail();
+        if (_search.Length > 0) MainWindow.Instance?.ClearSearch();
+        ApplyFilter();
+        if (other > 0) MainWindow.Instance?.ShowToast($"Also in {other} {(IsTv ? "film" : "show")}{(other == 1 ? "" : "s")} – see {(IsTv ? "Films" : "TV Shows")}");
     }
 
 
@@ -416,9 +548,16 @@ public partial class LibraryView : UserControl, IPage
         _current = item;
         bool movie = _mode == LibraryMode.Movies;
         DetailPane.Visibility = Visibility.Visible;
-        BackText.Text = _search.Length > 0 ? "Results" : (CategoryList.SelectedItem as CategoryItem)?.Name ?? (movie ? "Films" : "TV Shows"); // back to where you came from
+        BackText.Text = _search.Length > 0 ? "Results" : _cat == PersonId ? $"With {_personName}" : (CategoryList.SelectedItem as CategoryItem)?.Name ?? (movie ? "Films" : "TV Shows"); // back to where you came from
         DetailTitle.Text = Titles.Clean(item.Title); // "EN | The Long Journey (2021) 4K" → "The Long Journey" (the year is underneath)
+        DetailTitle.Visibility = Visibility.Visible;
+        DetailLogo.Visibility = Visibility.Collapsed;
+        ImageLoader.SetUrl(DetailLogo, null);
         DetailMeta.Text = item.Subtitle;
+        ShowRatings(Tmdb.CachedRatings(!movie, item.Id));
+        CastSection.Visibility = Visibility.Collapsed;
+        CastList.ItemsSource = null;
+        WatchedButton.Visibility = movie ? Visibility.Visible : Visibility.Collapsed;
         DetailPlot.Text = "";
         DetailCredits.Text = "";
         DetailStatus.Text = "Loading details…";
@@ -469,9 +608,11 @@ public partial class LibraryView : UserControl, IPage
             _trailer = d.Trailer;
             TrailerButton.Visibility = d.Trailer != null ? Visibility.Visible : Visibility.Collapsed;
             if (!string.IsNullOrEmpty(d.Backdrop)) ImageLoader.SetUrl(DetailBackdrop, d.Backdrop);
+            else if (!string.IsNullOrEmpty(item.Image)) ImageLoader.SetUrl(DetailBackdrop, item.Image);
             if (string.IsNullOrEmpty(item.Image) && !string.IsNullOrEmpty(d.Poster)) ImageLoader.SetUrl(DetailPoster, d.Poster);
 
             if (!movie) ShowEpisodes(d.Episodes);
+            _ = LoadExtrasAsync(item, d, ct);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -479,6 +620,73 @@ public partial class LibraryView : UserControl, IPage
             Log.Error(ex);
             if (_current == item) DetailStatus.Text = "Couldn't load details: " + Http.Friendly(ex);
         }
+    }
+
+    /// <summary>The film database's extras for the page: title logo, background, age rating and score, cast photos, trailer.</summary>
+    async Task LoadExtrasAsync(PosterItem item, MediaDetails d, CancellationToken ct)
+    {
+        bool tv = IsTv;
+        var year = d.Year ?? (item.Source as Movie)?.Year ?? (item.Source as Series)?.Year;
+        try
+        {
+            var imgs = Tmdb.ImagesAsync(tv, item.Id, item.Title, year, d.TmdbId, ct);
+            var rate = Tmdb.RatingsAsync(tv, item.Id, item.Title, year, d.TmdbId, ct);
+            var cast = Tmdb.CastAsync(tv, item.Id, item.Title, year, d.TmdbId, ct);
+            var (logo, back) = await imgs;
+            if (ct.IsCancellationRequested || _current != item) return;
+            if (logo != null)
+            {
+                ImageLoader.SetUrl(DetailLogo, logo);
+                DetailLogo.Visibility = Visibility.Visible;
+                DetailTitle.Visibility = Visibility.Collapsed;
+            }
+            if (back != null && string.IsNullOrEmpty(d.Backdrop)) ImageLoader.SetUrl(DetailBackdrop, back);
+            var r = await rate;
+            if (ct.IsCancellationRequested || _current != item) return;
+            ShowRatings(r);
+            if (r != null) { item.Age = r.Age; item.Score = Tmdb.ScoreText(r); }
+            var people = await cast;
+            if (ct.IsCancellationRequested || _current != item) return;
+            if (people.Count > 0)
+            {
+                var dir = people.FirstOrDefault(p => p.Role == "Director");
+                DetailCredits.Text = dir != null ? "Director: " + dir.Name : "";
+                CastList.ItemsSource = people.Where(p => p.Role != "Director").Take(12)
+                    .Select(p => new ActorItem { Id = p.Id, Name = p.Name, Role = p.Role, Photo = p.Photo }).ToList();
+                CastSection.Visibility = Visibility.Visible;
+            }
+            if (_trailer == null)
+            {
+                var t = await Tmdb.TrailerAsync(tv, item.Id, item.Title, year, d.TmdbId, ct);
+                if (!ct.IsCancellationRequested && _current == item && t != null) { _trailer = t; TrailerButton.Visibility = Visibility.Visible; }
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { Log.Error(ex); }
+    }
+
+    void ShowRatings(Tmdb.Ratings r)
+    {
+        AgeTag.Visibility = r?.Age != null ? Visibility.Visible : Visibility.Collapsed;
+        AgeText.Text = r?.Age ?? "";
+        var score = Tmdb.ScoreText(r);
+        ScoreTag.Visibility = score != null ? Visibility.Visible : Visibility.Collapsed;
+        ScoreText.Text = score == null ? "" : $"★ {score}  ·  {Votes(r.Votes)} votes";
+    }
+
+    static string Votes(int n) => n >= 1000 ? $"{n / 1000.0:0.#}k" : n.ToString();
+
+    void Watched_Click(object sender, RoutedEventArgs e)
+    {
+        if (_current?.Source is not Movie m) return;
+        var key = "m:" + m.Id;
+        if (HistoryStore.Get(key)?.Finished == true) { HistoryStore.Forget(key); MainWindow.Instance?.ShowToast($"“{Titles.Clean(m.Name)}” marked as not watched"); }
+        else
+        {
+            HistoryStore.MarkWatched(new VodItem { Kind = "movie", Ext = m.Ext, Title = m.Name, Image = m.Poster, ResumeKey = key, ItemId = m.Id });
+            MainWindow.Instance?.ShowToast($"“{Titles.Clean(m.Name)}” marked as watched");
+        }
+        UpdateMovieButtons();
     }
 
     void ShowEpisodes(List<Episode> eps)
@@ -529,6 +737,10 @@ public partial class LibraryView : UserControl, IPage
         StartOverButton.Visibility = resume ? Visibility.Visible : Visibility.Collapsed;
         DetailProgress.Visibility = resume ? Visibility.Visible : Visibility.Collapsed;
         DetailProgress.Value = resume ? h.Fraction : 0;
+        bool watched = h?.Finished == true;
+        WatchedText.Text = watched ? "Watched" : "Mark as watched";
+        WatchedIcon.Text = watched ? "\uE73E" : "\uE8FB";
+        WatchedButton.ToolTip = watched ? "Click to mark it as not watched" : "Mark it as watched (it leaves Continue watching)";
     }
 
     static string Fmt(long ms)
@@ -624,6 +836,8 @@ public partial class LibraryView : UserControl, IPage
             Image = m.Poster,
             ResumeKey = "m:" + m.Id,
             ItemId = m.Id,
+            Plot = DetailPlot.Text,
+            Year = m.Year,
         }, resume);
     }
 
@@ -658,6 +872,8 @@ public partial class LibraryView : UserControl, IPage
             ResumeKey = "e:" + ep.Id,
             ItemId = ep.Id,
             SeriesId = s.Id,
+            Plot = ep.Plot ?? s.Plot,
+            Year = s.Year,
             Next = next == null ? null : () => BuildEpisode(list, s, index + 1),
             NextLabel = next == null ? null : $"{Code(next)}  ·  {next.Title}",
         };

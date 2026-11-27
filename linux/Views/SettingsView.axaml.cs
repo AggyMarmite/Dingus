@@ -489,6 +489,40 @@ public partial class SettingsView : UserControl, IPage
     // ------------------------------------------------------------------ refresh
 
     async void RefreshPlaylist_Click(object sender, RoutedEventArgs e) => await DataService.Instance.RefreshAsync();
+
+    async void FullRefresh_Click(object sender, RoutedEventArgs e)
+    {
+        if (!await Dialogs.Confirm(Owner, "Full refresh", "Clear everything saved for this playlist and download it all again from the main server? Continue watching and My List are kept.", "Full refresh")) return;
+        await DataService.Instance.FullRefreshAsync();
+    }
+
+    CancellationTokenSource _checkCts;
+
+    async void CheckEverything_Click(object sender, RoutedEventArgs e)
+    {
+        _checkCts?.Cancel();
+        _checkCts = new CancellationTokenSource();
+        var ct = _checkCts.Token;
+        var items = new System.Collections.ObjectModel.ObservableCollection<CheckItem>();
+        CheckList.ItemsSource = items;
+        CheckSummary.Text = "Checking…";
+        CheckAgainButton.IsVisible = false;
+        SettingsScroll.IsVisible = false;
+        Motion.FadeIn(CheckPage, fromY: 8);
+        await Checks.RunAsync(r => Avalonia.Threading.Dispatcher.UIThread.Post(() => { if (!ct.IsCancellationRequested) items.Add(new CheckItem { Title = r.Title, Detail = r.Detail, State = r.State }); }), ct);
+        await Task.Delay(50); // (the last result posted to the screen first)
+        if (ct.IsCancellationRequested) return;
+        int fine = items.Count(i => i.IsOk), look = items.Count - fine;
+        CheckSummary.Text = $"Finished {DateTime.Now:HH:mm}  ·  {fine} fine" + (look > 0 ? $", {look} to look at" : "");
+        CheckAgainButton.IsVisible = true;
+    }
+
+    void CheckBack_Click(object sender, RoutedEventArgs e)
+    {
+        _checkCts?.Cancel();
+        CheckPage.IsVisible = false;
+        SettingsScroll.IsVisible = true;
+    }
     async void RefreshEpg_Click(object sender, RoutedEventArgs e) => await DataService.Instance.RefreshEpgAsync();
 
     void AutoRefresh_Changed(object sender, RoutedEventArgs e)

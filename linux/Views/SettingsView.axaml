@@ -4,7 +4,8 @@
              xmlns:local="clr-namespace:Dingus"
              xmlns:v="clr-namespace:Dingus.Views"
              x:Class="Dingus.Views.SettingsView">
-    <ScrollViewer VerticalScrollBarVisibility="Auto" svc:SmoothScroll.Enabled="True">
+    <Panel>
+    <ScrollViewer x:Name="SettingsScroll" VerticalScrollBarVisibility="Auto" svc:SmoothScroll.Enabled="True">
         <StackPanel Margin="36,8,36,48" MaxWidth="900">
 
             <!-- Playlists -->
@@ -62,6 +63,15 @@
                         </StackPanel>
                     </DockPanel>
                     <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Full refresh" Click="FullRefresh_Click" VerticalAlignment="Center"/>
+                        <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="Full refresh" FontWeight="SemiBold"/>
+                            <TextBlock Text="Clears everything saved for this playlist and downloads it all again from the main server. Continue watching and My List are kept."
+                                       TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
                     <CheckBox x:Name="AutoRefreshToggle" Classes="toggle" IsCheckedChanged="AutoRefresh_Changed">
                         <StackPanel>
                             <TextBlock Text="Refresh automatically" FontWeight="SemiBold"/>
@@ -76,6 +86,19 @@
                         <RadioButton Classes="chip" Content="3 days" Tag="72" IsCheckedChanged="Interval_Checked"/>
                     </StackPanel>
                 </StackPanel>
+            </Border>
+
+            <!-- Help -->
+            <TextBlock Classes="section" Text="HELP"/>
+            <Border Classes="card">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Classes="primary" Content="Check everything" Click="CheckEverything_Click" VerticalAlignment="Center"/>
+                    <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                        <TextBlock Text="Check everything" FontWeight="SemiBold"/>
+                        <TextBlock Text="Tests each part of Dingus and says how to fix anything that isn't working" TextWrapping="Wrap"
+                                   Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </DockPanel>
             </Border>
 
             <!-- TV guide -->
@@ -370,4 +393,50 @@
             </Border>
         </StackPanel>
     </ScrollViewer>
+
+    <!-- Check everything -->
+    <Panel x:Name="CheckPage" Background="{StaticResource BgBrush}" IsVisible="False">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" svc:SmoothScroll.Enabled="True">
+            <StackPanel Margin="36,8,36,48" MaxWidth="900">
+                <Button Classes="ghost" HorizontalAlignment="Left" Click="CheckBack_Click" Margin="-12,8,0,0">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Classes="icon" Text="{x:Static local:Icons.Back}"/>
+                        <TextBlock Text="Settings" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <TextBlock Text="Check everything" FontSize="26" FontWeight="Bold" Margin="0,12,0,0"/>
+                <StackPanel Orientation="Horizontal" Margin="0,4,0,16">
+                    <TextBlock x:Name="CheckSummary" Foreground="{StaticResource MutedBrush}" FontSize="13" VerticalAlignment="Center"/>
+                    <Button x:Name="CheckAgainButton" Classes="ghost" Content="Check again" Click="CheckEverything_Click" Padding="8,2"
+                            Margin="8,0,0,0" Foreground="{StaticResource AccentBrush}" IsVisible="False"/>
+                </StackPanel>
+                <ItemsControl x:Name="CheckList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Classes="card" Margin="0,0,0,8" Padding="16,12">
+                                <DockPanel>
+                                    <Panel Width="28" Height="28" VerticalAlignment="Center" Margin="0,0,14,0">
+                                        <Border CornerRadius="14" Background="#264ADE80" IsVisible="{Binding IsOk}"/>
+                                        <Border CornerRadius="14" Background="#26FBBF24" IsVisible="{Binding IsWarn}"/>
+                                        <Border CornerRadius="14" Background="#26F87171" IsVisible="{Binding IsFail}"/>
+                                        <TextBlock Text="{Binding Mark}" FontWeight="Bold" FontSize="14" Foreground="#4ADE80" IsVisible="{Binding IsOk}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Mark}" FontWeight="Bold" FontSize="14" Foreground="#FBBF24" IsVisible="{Binding IsWarn}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Mark}" FontWeight="Bold" FontSize="14" Foreground="#F87171" IsVisible="{Binding IsFail}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Panel>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14"/>
+                                        <TextBlock Text="{Binding Detail}" Foreground="{StaticResource MutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </Panel>
+    </Panel>
 </UserControl>

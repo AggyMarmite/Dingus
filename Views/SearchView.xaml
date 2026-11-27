@@ -36,6 +36,72 @@
                     <RadioButton x:Name="FShows" Style="{StaticResource Chip}" GroupName="SearchFilter" Tag="shows" Checked="Filter_Checked" Margin="0,0,8,8"/>
                 </WrapPanel>
 
+                <!-- Before you type: recent searches, then what's popular -->
+                <StackPanel x:Name="Discover" Visibility="Collapsed">
+                    <StackPanel x:Name="RecentSection">
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="RECENT SEARCHES" Margin="8,14,0,8"/>
+                        <ItemsControl x:Name="RecentList" Margin="8,0,0,0">
+                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border CornerRadius="16" Background="{StaticResource Surface2Brush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
+                                            Margin="0,0,8,8" Padding="12,0,4,0" Height="32">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Style="{StaticResource GhostButton}" Padding="0" Click="Recent_Click" Tag="{Binding}" Cursor="Hand">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="&#xE81C;" FontFamily="{StaticResource IconFont}" FontSize="12" VerticalAlignment="Center" Margin="0,0,7,0"
+                                                               Foreground="{StaticResource MutedBrush}"/>
+                                                    <TextBlock Text="{Binding}" FontSize="13" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Style="{StaticResource IconButton}" Content="&#xE711;" Width="26" Height="26" FontSize="9" Margin="4,0,0,0"
+                                                    Click="RecentRemove_Click" Tag="{Binding}" ToolTip="Remove"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                    <StackPanel x:Name="NowSection">
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="POPULAR ON NOW" Margin="8,14,0,8"/>
+                        <ItemsControl x:Name="NowResults" ItemsPanel="{StaticResource Row}" ItemTemplate="{Binding ItemTemplate, ElementName=ChannelResults}"/>
+                    </StackPanel>
+                    <StackPanel x:Name="PopularSection">
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="POPULAR FILMS AND SHOWS" Margin="8,14,0,8"/>
+                        <ItemsControl x:Name="PopularResults" ItemsPanel="{StaticResource Row}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource PosterCard}" Width="272" Margin="8,6,8,12" Click="Wide_Click" ToolTip="{Binding Title}">
+                                        <Grid Width="272" Height="153">
+                                            <Grid.Clip><RectangleGeometry Rect="0,0,272,153" RadiusX="9" RadiusY="9"/></Grid.Clip>
+                                            <Border Background="{StaticResource Surface2Brush}"/>
+                                            <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="420" svc:ImageLoader.Url="{Binding Image}"/>
+                                            <Rectangle>
+                                                <Rectangle.Fill>
+                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                        <GradientStop Color="#000A0D13" Offset="0.35"/>
+                                                        <GradientStop Color="#E00A0D13" Offset="1"/>
+                                                    </LinearGradientBrush>
+                                                </Rectangle.Fill>
+                                            </Rectangle>
+                                            <Image svc:ImageLoader.Url="{Binding Logo}" svc:ImageLoader.DecodeWidth="360" Stretch="Uniform"
+                                                   MaxHeight="58" MaxWidth="190" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="12,0,0,12"
+                                                   Visibility="{Binding HasLogo, Converter={StaticResource BoolToVis}}"/>
+                                            <TextBlock x:Name="CardTitle" Text="{Binding Title}" FontSize="16" FontWeight="Bold" Foreground="White" TextWrapping="Wrap"
+                                                       MaxHeight="44" TextTrimming="CharacterEllipsis" VerticalAlignment="Bottom" Margin="12,0,12,11"/>
+                                        </Grid>
+                                    </Button>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding HasLogo}" Value="True">
+                                            <Setter TargetName="CardTitle" Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </StackPanel>
+
                 <!-- Channels -->
                 <StackPanel x:Name="ChannelSection" Visibility="Collapsed">
                     <DockPanel Margin="8,14,0,8">

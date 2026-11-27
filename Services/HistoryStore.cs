@@ -90,6 +90,15 @@ public static class HistoryStore
         Touch();
     }
 
+    /// <summary>Marks a film as watched (Mark as watched on its page).</summary>
+    public static void MarkWatched(VodItem item) => UpdateProgress(item, 0, 0, ended: true);
+
+    /// <summary>Forgets a film or episode's progress (Mark as unwatched).</summary>
+    public static void Forget(string key)
+    {
+        if (key != null && _data.Resume.Remove(key)) Touch();
+    }
+
     /// <summary>Most recently watched entries of a kind, newest first.</summary>
     public static IEnumerable<ResumeEntry> Recent(string kind) =>
         _data.Resume.Values.Where(e => e.Kind == kind).OrderByDescending(e => e.UpdatedUtc);

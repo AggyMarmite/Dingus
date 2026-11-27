@@ -65,6 +65,8 @@ public class PlaylistConfig
 public class AppSettings
 {
     public List<PlaylistConfig> Playlists { get; set; } = new();
+    /// <summary>What you've searched for and opened, newest first (Search shows them before you type).</summary>
+    public List<string> RecentSearches { get; set; } = new();
     public string ActivePlaylistId { get; set; }
     public bool HardwareDecoding { get; set; } = true;
     public int NetworkCachingMs { get; set; } = 1500;
@@ -292,6 +294,9 @@ public class VodItem
     public string NextLabel { get; set; }
     /// <summary>File type (mp4/mkv…) – lets "Continue watching" rebuild the address without storing your login.</summary>
     public string Ext { get; set; }
+    /// <summary>The description and year, for the pause screen (when the page it was played from had them).</summary>
+    public string Plot { get; set; }
+    public string Year { get; set; }
 }
 
 public class ResumeEntry
@@ -359,6 +364,8 @@ public class MediaDetails
     public string Poster { get; set; }
     /// <summary>A YouTube link to the trailer, when the provider has one.</summary>
     public string Trailer { get; set; }
+    /// <summary>The film database's number for it, when the provider gives one.</summary>
+    public string TmdbId { get; set; }
     public List<Episode> Episodes { get; set; } = new();
 }
 

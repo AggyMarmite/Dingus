@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:svc="clr-namespace:Dingus.Services"
+             xmlns:views="clr-namespace:Dingus.Views"
              xmlns:local="clr-namespace:Dingus"
              x:Class="Dingus.Views.HomeView">
     <UserControl.Styles>
@@ -98,6 +99,35 @@
                     </StackPanel>
                 </Border>
             </Button>
+        </DataTemplate>
+
+        <DataTemplate x:Key="WideCard">
+            <Panel Margin="8,6,8,10">
+                <TextBlock Text="{Binding Number}" FontSize="96" FontWeight="Black" Foreground="#24FFFFFF"
+                           Margin="-6,-30,0,0" VerticalAlignment="Top" HorizontalAlignment="Left" IsVisible="{Binding HasNumber}"/>
+                <Button Classes="card" Width="272" Click="Wide_Click" ToolTip.Tip="{Binding Title}"
+                        Margin="{Binding HasNumber, Converter={x:Static views:Converters.NumberedMargin}}">
+                    <Border Width="272" Height="153" CornerRadius="9" ClipToBounds="True" Background="{StaticResource Surface2Brush}">
+                        <Panel>
+                            <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="420" svc:ImageLoader.Url="{Binding Image}"/>
+                            <Rectangle>
+                                <Rectangle.Fill>
+                                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                        <GradientStop Color="#000A0D13" Offset="0.35"/>
+                                        <GradientStop Color="#E00A0D13" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Rectangle.Fill>
+                            </Rectangle>
+                            <Image svc:ImageLoader.Url="{Binding Logo}" svc:ImageLoader.DecodeWidth="360" Stretch="Uniform"
+                                   MaxHeight="58" MaxWidth="190" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="12,0,0,12"
+                                   IsVisible="{Binding HasLogo}"/>
+                            <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="Bold" Foreground="White" TextWrapping="Wrap"
+                                       MaxHeight="44" TextTrimming="CharacterEllipsis" VerticalAlignment="Bottom" Margin="12,0,12,11"
+                                       IsVisible="{Binding !HasLogo}"/>
+                        </Panel>
+                    </Border>
+                </Button>
+            </Panel>
         </DataTemplate>
 
         <DataTemplate x:Key="PosterCard">

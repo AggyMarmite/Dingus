@@ -90,8 +90,17 @@
                                                 </Border>
                                                 <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="240"
                                                        svc:ImageLoader.Url="{Binding Image}"/>
+                                                <!-- Age rating and score -->
+                                                <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="7,7,0,0" CornerRadius="4" Padding="5,1,5,2"
+                                                        Background="#99000000" Visibility="{Binding HasAge, Converter={StaticResource BoolToVis}}">
+                                                    <TextBlock Text="{Binding Age}" FontSize="10.5" FontWeight="Bold" Foreground="White"/>
+                                                </Border>
+                                                <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,7,7,0" CornerRadius="4" Padding="5,1,6,2"
+                                                        Background="#B3062B36" Visibility="{Binding HasScore, Converter={StaticResource BoolToVis}}">
+                                                    <TextBlock FontSize="10.5" FontWeight="Bold" Foreground="#7FDCF5"><Run Text="★ "/><Run Text="{Binding Score, Mode=OneWay}"/></TextBlock>
+                                                </Border>
                                                 <!-- On My List -->
-                                                <Border x:Name="SavedBadge" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                                                <Border x:Name="SavedBadge" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,8,12"
                                                         Width="26" Height="26" CornerRadius="13" Background="#CC0A0D13" Visibility="Collapsed"
                                                         ToolTip="On My List">
                                                     <TextBlock Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="12" Foreground="White"
@@ -124,6 +133,61 @@
                 </ListBox.ItemTemplate>
             </ListBox>
 
+            <!-- Films / TV Shows "Home": rows of wide title-art cards -->
+            <ScrollViewer x:Name="RowsPane" Grid.Row="1" VerticalScrollBarVisibility="Auto" Visibility="Collapsed" svc:SmoothScroll.Enabled="True">
+                <ItemsControl x:Name="RowsList" Margin="20,0,8,24">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="0,0,0,18">
+                                <TextBlock Text="{Binding Header}" FontSize="16" FontWeight="SemiBold" Margin="8,4,0,8"/>
+                                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Row_PreviewMouseWheel">
+                                    <ItemsControl ItemsSource="{Binding Cards}">
+                                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="8,0,8,6">
+                                                    <TextBlock x:Name="Num" Text="{Binding Number}" FontSize="96" FontWeight="Black" Foreground="#24FFFFFF"
+                                                               Margin="-6,-30,0,0" VerticalAlignment="Top" HorizontalAlignment="Left" Visibility="Collapsed"/>
+                                                    <Button x:Name="Card" Style="{StaticResource PosterCard}" Width="272" Click="Wide_Click" ToolTip="{Binding Title}">
+                                                        <Grid Width="272" Height="153">
+                                                            <Grid.Clip><RectangleGeometry Rect="0,0,272,153" RadiusX="9" RadiusY="9"/></Grid.Clip>
+                                                            <Border Background="{StaticResource Surface2Brush}"/>
+                                                            <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="420" svc:ImageLoader.Url="{Binding Image}"/>
+                                                            <Rectangle>
+                                                                <Rectangle.Fill>
+                                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                        <GradientStop Color="#000A0D13" Offset="0.35"/>
+                                                                        <GradientStop Color="#E00A0D13" Offset="1"/>
+                                                                    </LinearGradientBrush>
+                                                                </Rectangle.Fill>
+                                                            </Rectangle>
+                                                            <Image svc:ImageLoader.Url="{Binding Logo}" svc:ImageLoader.DecodeWidth="360" Stretch="Uniform"
+                                                                   MaxHeight="58" MaxWidth="190" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="12,0,0,12"
+                                                                   Visibility="{Binding HasLogo, Converter={StaticResource BoolToVis}}"/>
+                                                            <TextBlock x:Name="CardTitle" Text="{Binding Title}" FontSize="16" FontWeight="Bold" Foreground="White" TextWrapping="Wrap"
+                                                                       MaxHeight="44" TextTrimming="CharacterEllipsis" VerticalAlignment="Bottom" Margin="12,0,12,11"/>
+                                                        </Grid>
+                                                    </Button>
+                                                </Grid>
+                                                <DataTemplate.Triggers>
+                                                    <DataTrigger Binding="{Binding HasNumber}" Value="True">
+                                                        <Setter TargetName="Num" Property="Visibility" Value="Visible"/>
+                                                        <Setter TargetName="Card" Property="Margin" Value="30,0,0,0"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding HasLogo}" Value="True">
+                                                        <Setter TargetName="CardTitle" Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </DataTemplate.Triggers>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
             <StackPanel x:Name="EmptyState" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed" MaxWidth="520">
                 <TextBlock x:Name="EmptyTitle" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
                 <TextBlock x:Name="EmptyBody" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0" HorizontalAlignment="Center" TextWrapping="Wrap"
@@ -133,12 +197,12 @@
 
         <!-- ===== Details (film or show) ===== -->
         <Grid x:Name="DetailPane" Grid.Column="1" Background="{StaticResource BgBrush}" Visibility="Collapsed" ClipToBounds="True">
-            <Image x:Name="DetailBackdrop" Stretch="UniformToFill" VerticalAlignment="Top" Height="460" Opacity="0.32"
+            <Image x:Name="DetailBackdrop" Stretch="UniformToFill" VerticalAlignment="Top" Height="560" Opacity="0.7"
                    svc:ImageLoader.DecodeWidth="960"/>
-            <Rectangle Height="460" VerticalAlignment="Top">
+            <Rectangle Height="560" VerticalAlignment="Top">
                 <Rectangle.Fill>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                        <GradientStop Color="#400A0D13" Offset="0"/>
+                        <GradientStop Color="#000A0D13" Offset="0.45"/>
                         <GradientStop Color="#FF0A0D13" Offset="1"/>
                     </LinearGradientBrush>
                 </Rectangle.Fill>
@@ -166,17 +230,26 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <Grid Width="220" Height="330" VerticalAlignment="Top">
+                        <Grid x:Name="PosterBox" Width="220" Height="330" VerticalAlignment="Top" Visibility="Collapsed">
                             <Grid.Clip>
                                 <RectangleGeometry Rect="0,0,220,330" RadiusX="10" RadiusY="10"/>
                             </Grid.Clip>
                             <Border Background="{StaticResource Surface2Brush}"/>
                             <Image x:Name="DetailPoster" Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="330"/>
                         </Grid>
-                        <StackPanel Grid.Column="1" Margin="34,6,0,0">
-                            <TextBlock x:Name="DetailTitle" FontSize="34" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                            <TextBlock x:Name="DetailMeta" FontSize="14" Foreground="{StaticResource MutedBrush}" Margin="0,10,0,0"
-                                       TextWrapping="Wrap"/>
+                        <StackPanel Grid.Column="1" Margin="0,30,0,0">
+                            <TextBlock x:Name="DetailTitle" FontSize="40" FontWeight="Bold" TextWrapping="Wrap" MaxWidth="780" HorizontalAlignment="Left"/>
+                            <Image x:Name="DetailLogo" Stretch="Uniform" MaxHeight="140" MaxWidth="460" HorizontalAlignment="Left" Visibility="Collapsed"
+                                   svc:ImageLoader.DecodeWidth="920"/>
+                            <WrapPanel Margin="0,12,0,0">
+                                <TextBlock x:Name="DetailMeta" FontSize="14" FontWeight="SemiBold" Foreground="#DFE5EE" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <Border x:Name="AgeTag" CornerRadius="4" Padding="6,2" Background="#29FFFFFF" Margin="0,0,8,0" VerticalAlignment="Center" Visibility="Collapsed">
+                                    <TextBlock x:Name="AgeText" FontSize="12" FontWeight="Bold" Foreground="White"/>
+                                </Border>
+                                <Border x:Name="ScoreTag" CornerRadius="4" Padding="7,2" Background="#2E01B4E4" VerticalAlignment="Center" Visibility="Collapsed">
+                                    <TextBlock x:Name="ScoreText" FontSize="12" FontWeight="Bold" Foreground="#7FDCF5"/>
+                                </Border>
+                            </WrapPanel>
                             <TextBlock x:Name="DetailPlot" FontSize="14" TextWrapping="Wrap" MaxWidth="780" HorizontalAlignment="Left"
                                        Margin="0,18,0,0" LineHeight="22"/>
                             <TextBlock x:Name="DetailCredits" FontSize="13" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap"
@@ -215,12 +288,46 @@
                                         <TextBlock Text="Trailer"/>
                                     </StackPanel>
                                 </Button>
+                                <Button x:Name="WatchedButton" Style="{StaticResource BaseButton}" Padding="18,11" Margin="8,0,0,0" Click="Watched_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock x:Name="WatchedIcon" Text="&#xE73E;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBlock x:Name="WatchedText" Text="Mark as watched"/>
+                                    </StackPanel>
+                                </Button>
                             </WrapPanel>
                             <ProgressBar x:Name="DetailProgress" Style="{StaticResource ThinProgress}" Maximum="1" Width="300"
                                          HorizontalAlignment="Left" Margin="0,14,0,0" Visibility="Collapsed"/>
                             <TextBlock x:Name="DetailStatus" Foreground="{StaticResource MutedBrush}" Margin="0,16,0,0" FontSize="12"/>
                         </StackPanel>
                     </Grid>
+
+                    <StackPanel x:Name="CastSection" Margin="0,30,0,0" Visibility="Collapsed">
+                        <TextBlock Text="Cast" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                        <ItemsControl x:Name="CastList">
+                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource PosterCard}" Width="96" Margin="0,0,14,12" Click="Actor_Click"
+                                            ToolTip="{Binding Name, StringFormat='See {0}’s other films and shows in your playlist'}">
+                                        <StackPanel>
+                                            <Grid Width="72" Height="72" HorizontalAlignment="Center">
+                                                <Ellipse Fill="{StaticResource Surface3Brush}"/>
+                                                <TextBlock Text="{Binding Initials}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="144" svc:ImageLoader.Url="{Binding Photo}"
+                                                       Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}">
+                                                    <Image.Clip><EllipseGeometry Center="36,36" RadiusX="36" RadiusY="36"/></Image.Clip>
+                                                </Image>
+                                            </Grid>
+                                            <TextBlock Text="{Binding Name}" FontSize="12" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"
+                                                       MaxHeight="32" Margin="0,7,0,0"/>
+                                            <TextBlock Text="{Binding Role}" FontSize="11" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center"
+                                                       TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
 
                     <Grid x:Name="SeriesPart" Margin="0,34,0,0" Visibility="Collapsed">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" MaxWidth="1040"/></Grid.ColumnDefinitions>

@@ -72,8 +72,17 @@
                                                     <TextBlock Text="{Binding Title}" TextWrapping="Wrap" TextAlignment="Center" Margin="12"
                                                                VerticalAlignment="Center" Classes="muted" FontSize="12"/>
                                                     <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="240" svc:ImageLoader.Url="{Binding Image}"/>
+                                                    <!-- Age rating and score -->
+                                                    <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="7,7,0,0" CornerRadius="4" Padding="5,1,5,2"
+                                                            Background="#99000000" IsVisible="{Binding HasAge}">
+                                                        <TextBlock Text="{Binding Age}" FontSize="10.5" FontWeight="Bold" Foreground="White"/>
+                                                    </Border>
+                                                    <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,7,7,0" CornerRadius="4" Padding="5,1,6,2"
+                                                            Background="#B3062B36" IsVisible="{Binding HasScore}">
+                                                        <TextBlock Text="{Binding Score, StringFormat='★ {0}'}" FontSize="10.5" FontWeight="Bold" Foreground="#7FDCF5"/>
+                                                    </Border>
                                                     <!-- On My List -->
-                                                    <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0" Width="26" Height="26"
+                                                    <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,8,12" Width="26" Height="26"
                                                             CornerRadius="13" Background="#CC0A0D13" IsVisible="{Binding Saved}" ToolTip.Tip="On My List">
                                                         <TextBlock Classes="icon" Text="{x:Static local:Icons.Check}" FontSize="14" Foreground="White"
                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -95,6 +104,54 @@
                 </ListBox.ItemTemplate>
             </ListBox>
 
+            <!-- Films / TV Shows "Home": rows of wide title-art cards -->
+            <ScrollViewer x:Name="RowsPane" Grid.Row="1" VerticalScrollBarVisibility="Auto" IsVisible="False" svc:SmoothScroll.Enabled="True">
+                <ItemsControl x:Name="RowsList" Margin="20,0,8,24">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="0,0,0,18">
+                                <TextBlock Text="{Binding Header}" FontSize="16" FontWeight="SemiBold" Margin="8,4,0,8"/>
+                                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                                    <ItemsControl ItemsSource="{Binding Cards}">
+                                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Panel Margin="8,0,8,6">
+                                                    <TextBlock Text="{Binding Number}" FontSize="96" FontWeight="Black" Foreground="#24FFFFFF"
+                                                               Margin="-6,-30,0,0" VerticalAlignment="Top" HorizontalAlignment="Left" IsVisible="{Binding HasNumber}"/>
+                                                    <Button Classes="card" Width="272" Click="Wide_Click" ToolTip.Tip="{Binding Title}"
+                                                            Margin="{Binding HasNumber, Converter={x:Static views:Converters.NumberedMargin}}">
+                                                        <Border Width="272" Height="153" CornerRadius="9" ClipToBounds="True" Background="{StaticResource Surface2Brush}">
+                                                            <Panel>
+                                                                <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="420" svc:ImageLoader.Url="{Binding Image}"/>
+                                                                <Rectangle>
+                                                                    <Rectangle.Fill>
+                                                                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                                                            <GradientStop Color="#000A0D13" Offset="0.35"/>
+                                                                            <GradientStop Color="#E00A0D13" Offset="1"/>
+                                                                        </LinearGradientBrush>
+                                                                    </Rectangle.Fill>
+                                                                </Rectangle>
+                                                                <Image svc:ImageLoader.Url="{Binding Logo}" svc:ImageLoader.DecodeWidth="360" Stretch="Uniform"
+                                                                       MaxHeight="58" MaxWidth="190" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="12,0,0,12"
+                                                                       IsVisible="{Binding HasLogo}"/>
+                                                                <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="Bold" Foreground="White" TextWrapping="Wrap"
+                                                                           MaxHeight="44" TextTrimming="CharacterEllipsis" VerticalAlignment="Bottom" Margin="12,0,12,11"
+                                                                           IsVisible="{Binding !HasLogo}"/>
+                                                            </Panel>
+                                                        </Border>
+                                                    </Button>
+                                                </Panel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
             <StackPanel x:Name="EmptyState" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" IsVisible="False" MaxWidth="520">
                 <TextBlock x:Name="EmptyTitle" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
                 <TextBlock x:Name="EmptyBody" Classes="muted" Margin="0,6,0,0" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
@@ -103,11 +160,11 @@
 
         <!-- ===== Details (film or show) ===== -->
         <Panel x:Name="DetailPane" Grid.Column="1" Background="{StaticResource BgBrush}" IsVisible="False" ClipToBounds="True">
-            <Image x:Name="DetailBackdrop" Stretch="UniformToFill" VerticalAlignment="Top" Height="460" Opacity="0.32" svc:ImageLoader.DecodeWidth="960"/>
-            <Rectangle Height="460" VerticalAlignment="Top">
+            <Image x:Name="DetailBackdrop" Stretch="UniformToFill" VerticalAlignment="Top" Height="560" Opacity="0.7" svc:ImageLoader.DecodeWidth="960"/>
+            <Rectangle Height="560" VerticalAlignment="Top">
                 <Rectangle.Fill>
                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                        <GradientStop Color="#400A0D13" Offset="0"/>
+                        <GradientStop Color="#000A0D13" Offset="0.45"/>
                         <GradientStop Color="#FF0A0D13" Offset="1"/>
                     </LinearGradientBrush>
                 </Rectangle.Fill>
@@ -131,12 +188,22 @@
                     </Button>
 
                     <Grid Margin="0,18,0,0" ColumnDefinitions="Auto,*">
-                        <Border Width="220" Height="330" VerticalAlignment="Top" CornerRadius="10" ClipToBounds="True" Background="{StaticResource Surface2Brush}">
+                        <Border x:Name="PosterBox" Width="220" Height="330" VerticalAlignment="Top" CornerRadius="10" ClipToBounds="True" Background="{StaticResource Surface2Brush}" IsVisible="False">
                             <Image x:Name="DetailPoster" Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="330"/>
                         </Border>
-                        <StackPanel Grid.Column="1" Margin="34,6,0,0">
-                            <TextBlock x:Name="DetailTitle" FontSize="34" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                            <TextBlock x:Name="DetailMeta" FontSize="14" Classes="muted" Margin="0,10,0,0" TextWrapping="Wrap"/>
+                        <StackPanel Grid.Column="1" Margin="0,30,0,0">
+                            <TextBlock x:Name="DetailTitle" FontSize="40" FontWeight="Bold" TextWrapping="Wrap" MaxWidth="780" HorizontalAlignment="Left"/>
+                            <Image x:Name="DetailLogo" Stretch="Uniform" MaxHeight="140" MaxWidth="460" HorizontalAlignment="Left" IsVisible="False"
+                                   svc:ImageLoader.DecodeWidth="920"/>
+                            <WrapPanel Margin="0,12,0,0">
+                                <TextBlock x:Name="DetailMeta" FontSize="14" FontWeight="SemiBold" Foreground="#DFE5EE" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <Border x:Name="AgeTag" CornerRadius="4" Padding="6,2" Background="#29FFFFFF" Margin="0,0,8,0" VerticalAlignment="Center" IsVisible="False">
+                                    <TextBlock x:Name="AgeText" FontSize="12" FontWeight="Bold" Foreground="White"/>
+                                </Border>
+                                <Border x:Name="ScoreTag" CornerRadius="4" Padding="7,2" Background="#2E01B4E4" VerticalAlignment="Center" IsVisible="False">
+                                    <TextBlock x:Name="ScoreText" FontSize="12" FontWeight="Bold" Foreground="#7FDCF5"/>
+                                </Border>
+                            </WrapPanel>
                             <TextBlock x:Name="DetailPlot" FontSize="14" TextWrapping="Wrap" MaxWidth="780" HorizontalAlignment="Left"
                                        Margin="0,18,0,0" LineHeight="22"/>
                             <TextBlock x:Name="DetailCredits" FontSize="13" Classes="muted" TextWrapping="Wrap" MaxWidth="780"
@@ -176,11 +243,43 @@
                                         <TextBlock Text="Trailer" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
+                                <Button x:Name="WatchedButton" Padding="18,11" Click="Watched_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <TextBlock x:Name="WatchedIcon" Classes="icon" Text="{x:Static local:Icons.Eye}"/>
+                                        <TextBlock x:Name="WatchedText" Text="Mark as watched" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
                             </WrapPanel>
                             <ProgressBar x:Name="DetailProgress" Classes="thin" Width="300" HorizontalAlignment="Left" Margin="0,14,0,0" IsVisible="False"/>
                             <TextBlock x:Name="DetailStatus" Classes="muted" Margin="0,16,0,0" FontSize="12"/>
                         </StackPanel>
                     </Grid>
+
+                    <StackPanel x:Name="CastSection" Margin="0,30,0,0" IsVisible="False">
+                        <TextBlock Text="Cast" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                        <ItemsControl x:Name="CastList">
+                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Classes="card" Width="96" Margin="0,0,14,12" Click="Actor_Click"
+                                            ToolTip.Tip="{Binding Name, StringFormat='See {0}’s other films and shows in your playlist'}">
+                                        <StackPanel>
+                                            <Border Width="72" Height="72" CornerRadius="36" ClipToBounds="True" HorizontalAlignment="Center" Background="{StaticResource Surface3Brush}">
+                                                <Panel>
+                                                    <TextBlock Text="{Binding Initials}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    <Image Stretch="UniformToFill" svc:ImageLoader.DecodeWidth="144" svc:ImageLoader.Url="{Binding Photo}" IsVisible="{Binding HasPhoto}"/>
+                                                </Panel>
+                                            </Border>
+                                            <TextBlock Text="{Binding Name}" FontSize="12" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"
+                                                       MaxHeight="32" Margin="0,7,0,0"/>
+                                            <TextBlock Text="{Binding Role}" FontSize="11" Classes="muted" HorizontalAlignment="Center"
+                                                       TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
 
                     <Grid x:Name="SeriesPart" Margin="0,34,0,0" IsVisible="False">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" MaxWidth="1040"/></Grid.ColumnDefinitions>

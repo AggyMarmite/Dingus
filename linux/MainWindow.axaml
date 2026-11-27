@@ -233,6 +233,89 @@
                     <TextBlock x:Name="BufferText" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="14"
                                Foreground="White" IsVisible="False" TextAlignment="Center"/>
 
+                    <!-- Pause screen: a few seconds after pausing a film or episode, its details over the dimmed picture -->
+                    <Panel x:Name="PauseScreen" IsVisible="False" IsHitTestVisible="False">
+                        <Rectangle>
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                                    <GradientStop Color="#E006090E" Offset="0"/>
+                                    <GradientStop Color="#8C06090E" Offset="0.45"/>
+                                    <GradientStop Color="#2606090E" Offset="0.8"/>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                        <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,32,36,0" Padding="16,9" CornerRadius="20" Background="#D9141821">
+                            <StackPanel Orientation="Horizontal" Spacing="9">
+                                <TextBlock Classes="icon" Text="{x:Static local:Icons.Pause}" FontSize="16" Foreground="White" VerticalAlignment="Center"/>
+                                <TextBlock Text="Paused" FontSize="14" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left" Margin="72,0,0,40" MaxWidth="720">
+                            <WrapPanel>
+                                <TextBlock x:Name="PauseKind" FontSize="13" FontWeight="Bold" Foreground="#C7CEDB" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <Border x:Name="PauseAge" CornerRadius="4" Padding="6,1" Background="#29FFFFFF" Margin="0,0,8,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="PauseAgeText" FontSize="12" FontWeight="Bold" Foreground="White"/>
+                                </Border>
+                                <Border x:Name="PauseScore" CornerRadius="4" Padding="7,1" Background="#2E01B4E4" VerticalAlignment="Center">
+                                    <TextBlock x:Name="PauseScoreText" FontSize="12" FontWeight="Bold" Foreground="#7FDCF5"/>
+                                </Border>
+                            </WrapPanel>
+                            <Image x:Name="PauseLogo" Stretch="Uniform" MaxHeight="130" MaxWidth="440" HorizontalAlignment="Left" Margin="0,14,0,0"
+                                   svc:ImageLoader.DecodeWidth="880"/>
+                            <TextBlock x:Name="PauseTitle" FontSize="44" FontWeight="Bold" Foreground="White" TextWrapping="Wrap" Margin="0,12,0,0"/>
+                            <TextBlock x:Name="PausePlot" FontSize="16" Foreground="#E0E6EE" TextWrapping="Wrap" LineHeight="24" Margin="0,14,0,0"
+                                       MaxHeight="96" TextTrimming="WordEllipsis"/>
+                            <TextBlock x:Name="PauseLeft" FontSize="15" FontWeight="SemiBold" Foreground="White" Margin="0,14,0,0"/>
+                        </StackPanel>
+                        <ProgressBar x:Name="PauseProgress" Classes="thin" Maximum="1" VerticalAlignment="Bottom" Margin="72,0,72,44"/>
+                    </Panel>
+
+                    <!-- Skip intro / recap / credits (episodes) -->
+                    <Button x:Name="SkipButton" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,36,140" IsVisible="False"
+                            Click="Skip_Click" Cursor="Hand" Focusable="False" Background="#D2141821" BorderBrush="#40FFFFFF" BorderThickness="1"
+                            CornerRadius="9" Padding="18,10">
+                        <StackPanel Orientation="Horizontal" Spacing="9">
+                            <TextBlock Classes="icon" Text="{x:Static local:Icons.Next}" FontSize="16" Foreground="White" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="SkipText" Text="Skip intro" FontSize="14" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Choose source (merged live channels) -->
+                    <Border x:Name="SourcesPanel" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,24,96" Width="320" Padding="10"
+                            CornerRadius="12" Background="#F0121721" BorderBrush="#1AFFFFFF" BorderThickness="1" IsVisible="False">
+                        <StackPanel>
+                            <TextBlock Text="Choose source" FontSize="14" FontWeight="Bold" Foreground="White" Margin="8,2,0,8"/>
+                            <ItemsControl x:Name="SourcesList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Click="Source_Click" Cursor="Hand" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                                Classes.playing="{Binding Playing}" Classes="source" CornerRadius="8" Padding="10,8">
+                                            <DockPanel>
+                                                <Border DockPanel.Dock="Right" CornerRadius="5" Padding="6,2" Background="#14FFFFFF" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Label}" FontSize="11" FontWeight="Bold" Foreground="#CBD3DF"/>
+                                                </Border>
+                                                <Panel Width="8" Height="8" Margin="0,0,11,0" VerticalAlignment="Center">
+                                                    <Ellipse Fill="#5B6478"/>
+                                                    <Ellipse Fill="#4ADE80" IsVisible="{Binding Playing}"/>
+                                                </Panel>
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Name}" FontSize="13" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding Note}" FontSize="11" Foreground="#8B94A7" IsVisible="{Binding Playing}"/>
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Text="If the one playing buffers, the next takes over by itself" FontSize="11" Foreground="#8B94A7" TextWrapping="Wrap" Margin="8,6,8,2"/>
+                        </StackPanel>
+                        <Border.Styles>
+                            <Style Selector="Button.source"><Setter Property="Background" Value="Transparent"/></Style>
+                            <Style Selector="Button.source:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#14FFFFFF"/></Style>
+                            <Style Selector="Button.source.playing /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#2E3B82F6"/></Style>
+                        </Border.Styles>
+                    </Border>
+
                     <!-- Controls on the Live TV preview -->
                     <Border x:Name="PreviewHint" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8" Padding="2"
                             CornerRadius="8" Background="#99000000" IsVisible="False">
@@ -431,8 +514,13 @@
                                                 ToolTip.Tip="Sleep timer (S)" Click="Sleep_Click"/>
                                         <Button x:Name="InfoButton" Classes="overlay" Content="{x:Static local:Icons.Info}"
                                                 ToolTip.Tip="Stream info (I)" Click="Info_Click"/>
-                                        <Button x:Name="QualityButton" Classes="overlay" Content="{x:Static local:Icons.Quality}"
-                                                ToolTip.Tip="Version / quality" Click="Quality_Click" IsVisible="False"/>
+                                        <Button x:Name="QualityButton" Classes="overlay" Width="NaN" Padding="12,0" FontFamily="{StaticResource UiFont}"
+                                                ToolTip.Tip="Choose source – this channel's other versions" Click="Quality_Click" IsVisible="False">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Classes="icon" Text="{x:Static local:Icons.Quality}" FontSize="18" VerticalAlignment="Center"/>
+                                                <TextBlock Text="Sources" FontSize="13" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
                                         <Button x:Name="PictureButton" Classes="overlay" Content="{x:Static local:Icons.Picture}"
                                                 ToolTip.Tip="Picture &amp; sound – aspect ratio, crop, audio sync, night mode" Click="Picture_Click"/>
                                         <Button x:Name="AudioButton" Classes="overlay" Content="{x:Static local:Icons.Audio}"

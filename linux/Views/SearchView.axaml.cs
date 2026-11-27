@@ -32,12 +32,13 @@ public partial class SearchView : UserControl, IPage
         Run();
     }
 
-    public void OnShown() { if (_query.Length > 0) Run(); }
+    public void OnShown() => Run();
 
     /// <summary>Results can hold lots of posters – let them go when you leave.</summary>
     public void OnHidden()
     {
         ChannelResults.ItemsSource = ProgResults.ItemsSource = FilmResults.ItemsSource = ShowResults.ItemsSource = null;
+        NowResults.ItemsSource = PopularResults.ItemsSource = null;
     }
 
     string _filter = "all";
@@ -60,10 +61,12 @@ public partial class SearchView : UserControl, IPage
     void Run()
     {
         var q = _query;
+        Discover.IsVisible = false;
         if (q.Length < 2 || Guide == null)
         {
             foreach (var s in new[] { ChannelSection, ProgSection, FilmSection, ShowSection }) s.IsVisible = false;
             Filters.IsVisible = false;
+            if (Guide != null && ShowDiscover()) { EmptyState.IsVisible = false; return; }
             EmptyTitle.Text = "Search everything";
             EmptyBody.Text = "Channels, programmes in the TV guide, films and TV shows – all at once. Type at least two letters in the search bar at the top (" + (Os.Mac ? "⌘F" : "Ctrl+F") + " from anywhere).";
             EmptyState.IsVisible = true;
@@ -174,8 +177,79 @@ public partial class SearchView : UserControl, IPage
 
     // ------------------------------------------------------------------ opening results
 
+    int _discoverToken;
+
+    /// <summary>Before you type: your recent searches, what's on now on your channels, and popular films and shows. False if there's nothing to show.</summary>
+    bool ShowDiscover()
+    {
+        NowResults.ItemTemplate ??= ChannelResults.ItemTemplate;
+        var recent = RecentSearches.All.ToList();
+        RecentList.ItemsSource = recent;
+        RecentSection.IsVisible = recent.Count > 0;
+
+        var epg = DataService.Instance.Epg;
+        var now = DateTime.Now;
+        var rows = Guide.FavouriteRows().Concat(Guide.RecentlyWatchedRows()).Distinct().ToList();
+        var onNow = rows.Select(r => (r, p: epg.At(Guide.EpgIdOf(r), now))).Where(x => x.p != null).Take(6)
+            .Select(x => new HomeChannelCard { Row = x.r, ListId = GuideView.AllId, Title = $"{x.p.Title}  ·  until {x.p.End:HH:mm}" }).ToList();
+        NowResults.ItemsSource = onNow;
+        NowSection.IsVisible = onNow.Count > 0;
+
+        if (PopularResults.ItemsSource is not List<WideCard> { Count: > 0 }) PopularSection.IsVisible = false;
+        LoadPopular();
+        bool any = recent.Count > 0 || onNow.Count > 0 || PopularSection.IsVisible;
+        Discover.IsVisible = true;
+        return any || Tmdb.Enabled;
+    }
+
+    async void LoadPopular()
+    {
+        int token = ++_discoverToken;
+        try
+        {
+            var films = await TitleRows.ChartAsync(Tmdb.Trending, false, 6);
+            var shows = await TitleRows.ChartAsync(Tmdb.Trending, true, 6);
+            if (token != _discoverToken || _query.Length >= 2) return;
+            var mixed = new List<WideCard>();
+            for (int i = 0; i < Math.Max(films.Count, shows.Count); i++)
+            {
+                if (i < films.Count) mixed.Add(films[i]);
+                if (i < shows.Count) mixed.Add(shows[i]);
+            }
+            PopularResults.ItemsSource = mixed;
+            PopularSection.IsVisible = mixed.Count > 0;
+            TitleRows.FillImages(mixed, a => Avalonia.Threading.Dispatcher.UIThread.Post(a, Avalonia.Threading.DispatcherPriority.Background));
+            if (mixed.Count == 0 && !RecentSection.IsVisible && !NowSection.IsVisible)
+            {
+                Discover.IsVisible = false;
+                EmptyState.IsVisible = true;
+            }
+        }
+        catch (Exception ex) { Log.Error(ex); }
+    }
+
+    void Recent_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.Tag is string q) MainWindow.Instance?.SearchFor(q);
+    }
+
+    void RecentRemove_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.Tag is not string q) return;
+        RecentSearches.Remove(q);
+        var recent = RecentSearches.All.ToList();
+        RecentList.ItemsSource = recent;
+        RecentSection.IsVisible = recent.Count > 0;
+    }
+
+    void Wide_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is WideCard c) MainWindow.Instance?.OpenLibraryItem(c.IsMovie, c.Id);
+    }
+
     void Channel_Click(object sender, RoutedEventArgs e)
     {
+        RecentSearches.Add(_query);
         if ((sender as Control)?.DataContext is not HomeChannelCard c) return;
         Guide.ShowAndSelect(GuideView.AllId, c.Row);
         MainWindow.Instance?.PlayLive(c.Row.Channel, true);
@@ -183,6 +257,7 @@ public partial class SearchView : UserControl, IPage
 
     void Prog_Click(object sender, RoutedEventArgs e)
     {
+        RecentSearches.Add(_query);
         if ((sender as Control)?.DataContext is not NowItem it) return;
         if (it.IsLive)
         {
@@ -218,6 +293,7 @@ public partial class SearchView : UserControl, IPage
 
     void Poster_Click(object sender, RoutedEventArgs e)
     {
+        RecentSearches.Add(_query);
         if ((sender as Control)?.DataContext is not HomePosterCard c) return;
         MainWindow.Instance?.OpenLibraryItem(c.IsMovie, c.Id);
     }

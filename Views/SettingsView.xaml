@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:svc="clr-namespace:Dingus.Services"
              xmlns:v="clr-namespace:Dingus.Views">
-    <ScrollViewer VerticalScrollBarVisibility="Auto" svc:SmoothScroll.Enabled="True">
+    <Grid>
+    <ScrollViewer x:Name="SettingsScroll" VerticalScrollBarVisibility="Auto" svc:SmoothScroll.Enabled="True">
         <StackPanel Margin="36,8,36,48" MaxWidth="900">
 
             <!-- Playlists -->
@@ -61,6 +62,15 @@
                         </StackPanel>
                     </DockPanel>
                     <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource BaseButton}" Content="Full refresh" Click="FullRefresh_Click" VerticalAlignment="Center"/>
+                        <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="Full refresh" FontWeight="SemiBold"/>
+                            <TextBlock Text="Clears everything saved for this playlist and downloads it all again from the main server. Continue watching and My List are kept."
+                                       TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,16"/>
                     <CheckBox x:Name="AutoRefreshToggle" Style="{StaticResource Toggle}" Checked="AutoRefresh_Changed" Unchecked="AutoRefresh_Changed">
                         <StackPanel>
                             <TextBlock Text="Refresh automatically" FontWeight="SemiBold"/>
@@ -75,6 +85,19 @@
                         <RadioButton Style="{StaticResource Chip}" Content="3 days" Tag="72" Checked="Interval_Checked"/>
                     </StackPanel>
                 </StackPanel>
+            </Border>
+
+            <!-- Help -->
+            <TextBlock Style="{StaticResource SectionHeader}" Text="HELP"/>
+            <Border Style="{StaticResource Card}">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}" Content="Check everything" Click="CheckEverything_Click" VerticalAlignment="Center"/>
+                    <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                        <TextBlock Text="Check everything" FontWeight="SemiBold"/>
+                        <TextBlock Text="Tests each part of Dingus and says how to fix anything that isn't working" TextWrapping="Wrap"
+                                   Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </DockPanel>
             </Border>
 
             <!-- TV guide -->
@@ -407,4 +430,53 @@
             </Border>
         </StackPanel>
     </ScrollViewer>
+
+    <!-- Check everything -->
+    <Grid x:Name="CheckPage" Background="{StaticResource BgBrush}" Visibility="Collapsed">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" svc:SmoothScroll.Enabled="True">
+            <StackPanel Margin="36,8,36,48" MaxWidth="900">
+                <Button Style="{StaticResource GhostButton}" HorizontalAlignment="Left" Click="CheckBack_Click" Margin="-12,8,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE72B;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="Settings"/>
+                    </StackPanel>
+                </Button>
+                <TextBlock Text="Check everything" FontSize="26" FontWeight="Bold" Margin="0,12,0,0"/>
+                <StackPanel Orientation="Horizontal" Margin="0,4,0,16">
+                    <TextBlock x:Name="CheckSummary" Foreground="{StaticResource MutedBrush}" FontSize="13" VerticalAlignment="Center"/>
+                    <Button x:Name="CheckAgainButton" Style="{StaticResource GhostButton}" Content="Check again" Click="CheckEverything_Click" Padding="8,2"
+                            Margin="8,0,0,0" Foreground="{StaticResource AccentBrush}" Visibility="Collapsed"/>
+                </StackPanel>
+                <ItemsControl x:Name="CheckList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource Card}" Margin="0,0,0,8" Padding="16,12">
+                                <DockPanel>
+                                    <Border x:Name="Ic" Width="28" Height="28" CornerRadius="14" Background="#264ADE80" VerticalAlignment="Center" Margin="0,0,14,0">
+                                        <TextBlock x:Name="Mk" Text="{Binding Mark}" FontWeight="Bold" FontSize="14" Foreground="#4ADE80"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14"/>
+                                        <TextBlock Text="{Binding Detail}" Foreground="{StaticResource MutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsWarn}" Value="True">
+                                    <Setter TargetName="Ic" Property="Background" Value="#26FBBF24"/>
+                                    <Setter TargetName="Mk" Property="Foreground" Value="#FBBF24"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsFail}" Value="True">
+                                    <Setter TargetName="Ic" Property="Background" Value="#26F87171"/>
+                                    <Setter TargetName="Mk" Property="Foreground" Value="#F87171"/>
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+    </Grid>
 </UserControl>

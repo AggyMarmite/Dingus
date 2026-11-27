@@ -273,6 +273,27 @@ public sealed class DataService
         else if (!unchanged) await ReloadEpgAsync(); // re-match the saved guide to the updated channel list
     }
 
+    /// <summary>
+    /// Full refresh: forgets the saved channels, films, shows, TV guide and server choice for the playlist in use and
+    /// downloads it all again from the main server. Continue watching and My List are kept.
+    /// </summary>
+    public async Task FullRefreshAsync()
+    {
+        var p = Active;
+        if (p == null) return;
+        _cts.Cancel();
+        while (IsBusy) await Task.Delay(100);
+        var dir = AppPaths.PlaylistDir(p.Id);
+        foreach (var name in new[] { "catalog.json", "catalog.bin", "epg.xml" })
+            try { var path = Path.Combine(dir, name); if (File.Exists(path)) File.Delete(path); } catch (Exception ex) { Log.Error(ex); }
+        try { foreach (var f in Directory.GetFiles(dir, "epg*")) File.Delete(f); } catch { }
+        p.ActiveServerIndex = 0;
+        p.LastRefreshUtc = default;
+        p.LastEpgRefreshUtc = default;
+        SettingsStore.Save();
+        await LoadActiveAsync(refreshNow: true);
+    }
+
     /// <summary>Whether the playlist in use has backup server addresses.</summary>
     public bool HasBackups => Failover.HasBackups(Active);
 

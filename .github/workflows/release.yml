@@ -14,6 +14,8 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
+    env:
+      TMDB_KEY: ${{ secrets.TMDB_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -67,6 +69,8 @@ jobs:
   linux:
     needs: release
     runs-on: ubuntu-22.04
+    env:
+      TMDB_KEY: ${{ secrets.TMDB_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -100,6 +104,8 @@ jobs:
   android:
     needs: release
     runs-on: ubuntu-latest
+    env:
+      TMDB_KEY: ${{ secrets.TMDB_KEY }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -146,6 +152,8 @@ jobs:
     if: false
     needs: release
     runs-on: macos-14
+    env:
+      TMDB_KEY: ${{ secrets.TMDB_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
