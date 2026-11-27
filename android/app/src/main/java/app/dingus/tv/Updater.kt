@@ -52,10 +52,23 @@ object Updater {
         return false
     }
 
-    private fun latest(): Release? = try { fromApi() } catch (e: Exception) {
+    private fun latest(): Release? = (try { fromApi() } catch (e: Exception) {
         // GitHub allows 60 checks an hour per internet address – through a VPN location, shared with many others,
         // that runs out and the check is refused (403/429). The releases page's "latest" link has no such limit.
         if (api.contains("api.github.com")) fromPage() ?: throw e else throw e
+    })?.let { r -> apkVersion(r)?.let { Release(it, r.apk, r.notes) } ?: r }
+
+    /**
+     * Which Fire TV app the release carries. A Windows/Linux-only release carries the same APK as before, and says so
+     * in firetv-version.txt – so this one isn't offered an "update" to the version it already has.
+     */
+    private fun apkVersion(r: Release): String? {
+        if (!r.apk.contains("github.com/")) return null
+        val url = r.apk.substringBeforeLast('/') + "/firetv-version.txt"
+        return try {
+            open(url).inputStream.use { it.readBytes().toString(Charsets.UTF_8).trim() }
+                .takeIf { Regex("""\d+(\.\d+)+""").matches(it) }
+        } catch (e: Exception) { null } // (older releases didn't have one: the release's own number)
     }
 
     /** The latest release's tag from where github.com/…/releases/latest points, and its APK beside it. */

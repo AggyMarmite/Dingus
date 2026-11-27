@@ -102,6 +102,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # (the earlier releases' tags, to see whether the Fire TV app changed)
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -118,10 +120,27 @@ jobs:
           if gh release view "v$V" --repo ${{ github.repository }} --json assets -q '.assets[].name' | grep -qx "Dingus.apk"; then
             echo "The APK is already on v$V – nothing to do."; exit 0
           fi
-          gradle -p android assembleRelease --no-daemon
+          # Which Fire TV app the last release carried (firetv-version.txt; older releases didn't have it, so their tag).
+          git fetch --tags --force -q
+          PREV=$(git tag --list 'v*' --sort=-v:refname | grep -vx "v$V" | head -1)
+          APK_V=""
+          if [ -n "$PREV" ]; then
+            APK_V=$(curl -fsL "https://github.com/${{ github.repository }}/releases/download/$PREV/firetv-version.txt" | tr -d '[:space:]' || true)
+            [ -z "$APK_V" ] && APK_V=${PREV#v}
+          fi
+          # Nothing in the Fire TV app changed since that version: carry the same APK over, with its own version, so
+          # Fire TVs aren't asked to update for a Windows/Linux-only release.
+          if [ -n "$APK_V" ] && git rev-parse -q --verify "refs/tags/v$APK_V" >/dev/null && git diff --quiet "v$APK_V" HEAD -- android/ \
+             && gh release download "v$APK_V" --repo ${{ github.repository }} -p Dingus.apk -O Dingus.apk; then
+            echo "The Fire TV app hasn't changed since $APK_V – carrying that APK over."
+          else
+            APK_V=$V
+            gradle -p android assembleRelease --no-daemon
+            cp android/app/build/outputs/apk/release/app-release.apk Dingus.apk
+          fi
+          echo "$APK_V" > firetv-version.txt
           # Always called Dingus.apk, so .../releases/latest/download/Dingus.apk is a link that never changes.
-          cp android/app/build/outputs/apk/release/app-release.apk Dingus.apk
-          gh release upload "v$V" Dingus.apk --repo ${{ github.repository }} --clobber
+          gh release upload "v$V" Dingus.apk firetv-version.txt --repo ${{ github.repository }} --clobber
 
   # Parked until the Mac version is finished – turn on by removing the "if: false".
   mac:
