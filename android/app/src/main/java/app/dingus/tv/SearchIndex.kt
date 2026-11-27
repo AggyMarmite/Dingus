@@ -1,5 +1,7 @@
 package app.dingus.tv
 
+import kotlinx.coroutines.launch
+
 import java.text.Normalizer
 
 /**
@@ -54,4 +56,22 @@ object SearchIndex {
 
     /** Works everything out ahead of time (when Search opens). */
     fun warm() { channels(); onTv(); vod(Vod.MOVIES); vod(Vod.SERIES) }
+
+    @Volatile private var prewarming = false
+    /**
+     * Search ready before it's opened: the names worked out in the background a little after Dingus starts, and again
+     * every 15 minutes (what's on TV moves on) – rather than all at once when Search opens, which with thousands of
+     * channels, films and shows kept it "loading" for a while on a Fire Stick.
+     */
+    fun prewarm() {
+        if (prewarming) return
+        prewarming = true
+        Background.scope.launch(kotlinx.coroutines.Dispatchers.Default) {
+            kotlinx.coroutines.delay(8_000)
+            while (true) {
+                try { if (Repo.channels.isNotEmpty()) warm() } catch (_: Exception) {}
+                kotlinx.coroutines.delay(15 * 60_000L)
+            }
+        }
+    }
 }

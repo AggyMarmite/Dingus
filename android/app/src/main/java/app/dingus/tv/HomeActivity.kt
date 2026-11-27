@@ -40,6 +40,7 @@ class HomeActivity : BaseActivity(), SideMenu.ToTop {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
         if (savedInstanceState == null) { Intro.play(this); Store.appOpened() }
+        SearchIndex.prewarm() // (Search ready before it's opened)
         // Just copied from another Fire TV (Settings → About): say so, once.
         Store.prefsString("movedFrom", "").takeIf { it.isNotEmpty() }?.let { from ->
             Store.putString("movedFrom", "")

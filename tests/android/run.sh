@@ -215,9 +215,11 @@ for _ in 1 2 3 4 5; do key KEYCODE_DPAD_RIGHT 0.5; done
 check "vod-skip 10" 5 "RIGHT on the progress bar skips 10 seconds"
 sleep 3; check_none "vod-rebuffer" "skipping isn't taken for buffering"
 sleep 0.5; shot 12-film-playing
-fresh
+sleep 6; fresh   # (the info gone by itself)
 key KEYCODE_DPAD_CENTER 1
-check "vod-pause" 5 "OK on the progress bar pauses"
+check_none "vod-pause" "OK with the info hidden only brings it up – the film carries on"
+key KEYCODE_DPAD_CENTER 1
+check "vod-pause" 5 "OK with the info up pauses"
 sleep 6; check "pause-screen" 4 "a film paused for a few seconds shows the pause screen"; shot 12b-film-paused
 key KEYCODE_DPAD_CENTER 1
 check "vod-play" 5 "OK again plays"

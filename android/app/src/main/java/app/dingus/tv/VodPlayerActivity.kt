@@ -428,9 +428,17 @@ class VodPlayerActivity : BaseActivity() {
     /** The "Next episode" card comes up this long before the end. */
     private val UP_NEXT_MS = 25_000L
 
+    /** The controls are fading away (still drawn, but counted as gone: a button press brings them straight back). */
+    private var fadingOut = false
+    /** The controls are up (and not on their way out). */
+    private val controlsUp: Boolean get() = controls.visibility == View.VISIBLE && !fadingOut
+
     private fun showControls(focusBar: Boolean = false) {
         if (epPanel.visibility == View.VISIBLE) return
+        if (fadingOut) { fadingOut = false; controls.animate().cancel() }
+        if (controls.visibility != View.VISIBLE) controls.alpha = 0f
         controls.visibility = View.VISIBLE
+        if (controls.alpha < 1f) { if (Ui.lite) controls.alpha = 1f else controls.animate().alpha(1f).setDuration(160).withLayer().start() }
         pausedPill.visibility = View.GONE; pausedLine.visibility = View.GONE
         val f = currentFocus
         if (focusBar || f == null || !inside(f, controls)) { if (upNext.visibility != View.VISIBLE || !upNext.hasFocus()) bar.requestFocus() }
@@ -439,11 +447,15 @@ class VodPlayerActivity : BaseActivity() {
         tickNow()
     }
 
-    private fun hideControlsNow() {
+    /** The controls go: fading away (in a third of a second), or at once ([fade] false). */
+    private fun hideControlsNow(fade: Boolean = true) {
         handler.removeCallbacks(hideControls)
-        controls.visibility = View.GONE
-        bar.skipped = null
+        if (controls.visibility != View.VISIBLE) return
+        fun gone() { fadingOut = false; controls.visibility = View.GONE; controls.alpha = 1f; bar.skipped = null; tickNow() }
+        if (!fade || Ui.lite) { controls.animate().cancel(); gone(); return }
+        fadingOut = true
         tickNow()
+        controls.animate().alpha(0f).setDuration(320).setInterpolator(Motion.glide).withLayer().withEndAction { if (fadingOut) gone() }.start()
     }
 
     private fun inside(v: View, parent: View): Boolean {
@@ -472,7 +484,7 @@ class VodPlayerActivity : BaseActivity() {
         findViewById<TextView>(R.id.vodRemain).text = if (len > 0) "${PauseScreen.left(len - pos)}  ·  ends ${Ui.time(System.currentTimeMillis() + (len - pos))}" else ""
         findViewById<TextView>(R.id.vodClock).text = Ui.time(System.currentTimeMillis())
         // Paused with the controls hidden: the small pill and thin line.
-        val paused = !p.playWhenReady && controls.visibility != View.VISIBLE && epPanel.visibility != View.VISIBLE
+        val paused = !p.playWhenReady && !controlsUp && epPanel.visibility != View.VISIBLE
         if (!p.playWhenReady && epPanel.visibility != View.VISIBLE) { if (pausedSince == 0L) pausedSince = System.currentTimeMillis() } else pausedSince = 0L
         val rich = paused && pausedSince > 0 && System.currentTimeMillis() - pausedSince > 5_000 && upNext.visibility != View.VISIBLE
         if (rich) { if (pauseScreen?.showing != true) pauseDetails(); pauseScreen?.time(pos, len) } else pauseScreen?.hide()
@@ -606,7 +618,7 @@ class VodPlayerActivity : BaseActivity() {
             return true
         }
         // Skip intro showing and the controls hidden: OK skips.
-        if ((code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER) && controls.visibility != View.VISIBLE &&
+        if ((code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER) && !controlsUp &&
             findViewById<View>(R.id.skipIntro).visibility == View.VISIBLE) {
             if (!down && event.repeatCount == 0) skipPart()
             return true
@@ -633,11 +645,11 @@ class VodPlayerActivity : BaseActivity() {
                 KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
                 KeyEvent.KEYCODE_MENU, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD, KeyEvent.KEYCODE_MEDIA_REWIND,
                 KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY, KeyEvent.KEYCODE_MEDIA_PAUSE -> true
-                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> if (controls.visibility == View.VISIBLE && !bar.isFocused) super.dispatchKeyEvent(event) else true
+                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> if (controlsUp && !bar.isFocused) super.dispatchKeyEvent(event) else true
                 else -> super.dispatchKeyEvent(event)
             }
         }
-        val shown = controls.visibility == View.VISIBLE
+        val shown = controlsUp
         if (shown) { handler.removeCallbacks(hideControls); handler.postDelayed(hideControls, 4_500) }
         // Holding ◀ ▶ skips further each time.
         val step = when { event.repeatCount > 20 -> 60_000L; event.repeatCount > 6 -> 30_000L; else -> 10_000L }
@@ -656,8 +668,9 @@ class VodPlayerActivity : BaseActivity() {
             }
             KeyEvent.KEYCODE_DPAD_LEFT -> if (onBar) skip(-step) else return super.dispatchKeyEvent(event)
             KeyEvent.KEYCODE_DPAD_RIGHT -> if (onBar) skip(step) else return super.dispatchKeyEvent(event)
+            // OK with the info hidden just brings it up (the film carries on); OK with it up pauses or plays.
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER ->
-                if (onBar) { if (event.repeatCount == 0) { togglePause(); bar.requestFocus() } } else return super.dispatchKeyEvent(event)
+                if (onBar) { if (event.repeatCount == 0) { if (!shown) showControls(focusBar = true) else togglePause(); bar.requestFocus() } } else return super.dispatchKeyEvent(event)
             KeyEvent.KEYCODE_DPAD_DOWN -> if (!shown || bar.isFocused) {
                 // ▼ goes to the buttons (bringing the controls up first if they're hidden).
                 showControls()
@@ -685,7 +698,7 @@ class VodPlayerActivity : BaseActivity() {
     private val epAdapter = EpAdapter()
 
     private fun openEpisodes() {
-        hideControlsNow()
+        hideControlsNow(fade = false)
         upNextDismissed = index // (so the card doesn't pop back up behind the list)
         upNext.visibility = View.GONE
         epPanel.visibility = View.VISIBLE
