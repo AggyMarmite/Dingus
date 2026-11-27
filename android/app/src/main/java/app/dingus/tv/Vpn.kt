@@ -709,9 +709,12 @@ object Vpn {
             while (true) {
                 kotlinx.coroutines.delay(10_000)
                 if (status != Status.ON || fixing) continue
-                val last = try { backend.getStatistics(tunnel).peers().firstOrNull()?.let { backend.getStatistics(tunnel).peer(it)?.latestHandshakeEpochMillis } } catch (_: Throwable) { null } ?: continue
+                val last = try { backend.getStatistics(tunnel).peers().firstOrNull()?.let { backend.getStatistics(tunnel).peer(it)?.latestHandshakeEpochMillis } } catch (_: Throwable) { null }
+                    ?: run { Ui.test("vpn-check no stats"); null } ?: continue
                 val stale = last <= 0 || System.currentTimeMillis() - last > 180_000
-                if (stale || !works()) {
+                val ok = !stale && works()
+                Ui.test("vpn-check ${if (ok) "ok" else "fail"} stale=$stale proven=$probeProven to=${probeTarget?.hostAddress} rx=${received()}")
+                if (!ok) {
                     if (status != Status.ON || fixing) continue // (changed meanwhile: switched, or turned off)
                     Ui.test("vpn-not-working"); set(Status.ERROR, "VPN dropped"); dropped()
                 }
