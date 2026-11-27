@@ -100,7 +100,7 @@ public static class Failover
     public static async Task<T> LoadAsync<T>(PlaylistConfig p, Func<Task<T>> load, CancellationToken ct)
     {
         var all = Addresses(p);
-        if (all.Count == 1) return await load();
+        if (all.Count == 1) return await Twice(load, ct);
         int original = p.ActiveServerIndex;
         Exception first = null;
         for (int i = 0; i < all.Count; i++)
@@ -110,7 +110,7 @@ public static class Failover
             p.ActiveServerIndex = i;
             try
             {
-                var r = await load();
+                var r = await Twice(load, ct);
                 if (i != original) SettingsStore.Save();
                 return r;
             }
@@ -120,12 +120,31 @@ public static class Failover
         throw first ?? new HttpRequestException("Couldn't connect to the server");
     }
 
+    /// <summary>The server refused the login (401/403).</summary>
+    public static bool Refused(Exception ex) => ex is InvalidOperationException && (ex.Message ?? "").Contains("rejected the login");
+
+    /// <summary>
+    /// A refused login (often right after the network or VPN changed – the provider hasn't caught up yet) gets one more
+    /// go after a moment, as checking the subscription by hand and trying again would.
+    /// </summary>
+    static async Task<T> Twice<T>(Func<Task<T>> load, CancellationToken ct)
+    {
+        try { return await load(); }
+        catch (Exception ex) when (!ct.IsCancellationRequested && Refused(ex))
+        {
+            await Task.Delay(1500, ct);
+            return await load();
+        }
+    }
+
     /// <summary>A stream won't start because the server is unreachable: moves to the next address that answers. True if it moved.</summary>
     public static async Task<bool> RecoverAsync(PlaylistConfig p, CancellationToken ct)
     {
         var all = Addresses(p);
         if (all.Count < 2) return false;
         int cur = Index(p);
+        // The server in use still answers: it's that one stream that failed, not the server – stay.
+        if (!string.IsNullOrWhiteSpace(all[cur]) && await ReachableAsync(p, all[cur], ct)) return false;
         for (int step = 1; step < all.Count; step++)
         {
             int i = (cur + step) % all.Count;

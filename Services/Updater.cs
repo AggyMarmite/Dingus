@@ -29,6 +29,40 @@ public static partial class Updater
     /// <summary>The newest release on GitHub, or null if there isn't one with an installer.</summary>
     public static async Task<Release> LatestAsync()
     {
+        try { return await FromApiAsync(); }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            // GitHub allows 60 checks an hour per internet address – through a VPN, shared with many others, that runs
+            // out and the check is refused. The releases page's "latest" link has no such limit.
+            return await FromPageAsync() ?? throw ex;
+        }
+    }
+
+    /// <summary>The latest release's tag from where github.com/…/releases/latest points, with its installer beside it.</summary>
+    static async Task<Release> FromPageAsync()
+    {
+        try
+        {
+            using var noRedirect = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(20) };
+            noRedirect.DefaultRequestHeaders.UserAgent.ParseAdd($"Dingus/{Current.ToString(3)}");
+            using var resp = await noRedirect.GetAsync($"{ReleasesPage}/latest");
+            var loc = resp.Headers.Location?.ToString() ?? "";
+            int i = loc.IndexOf("/releases/tag/", StringComparison.Ordinal);
+            if (i < 0) return null;
+            var tag = Uri.UnescapeDataString(loc[(i + "/releases/tag/".Length)..].Split('?')[0]);
+            if (!Version.TryParse(tag.TrimStart('v', 'V'), out var v)) return null;
+#if LINUX
+            var file = $"Dingus-{v.ToString(3)}{AssetSuffix}";
+#else
+            var file = $"Dingus-Setup-{v.ToString(3)}.exe";
+#endif
+            return new Release(v, tag, "", $"{ReleasesPage}/download/{tag}/{file}", 0, $"{ReleasesPage}/tag/{tag}");
+        }
+        catch { return null; }
+    }
+
+    static async Task<Release> FromApiAsync()
+    {
         using var resp = await Client.GetAsync($"https://api.github.com/repos/{Repo}/releases/latest");
         if (resp.StatusCode == System.Net.HttpStatusCode.NotFound) return null; // no releases yet
         resp.EnsureSuccessStatusCode();

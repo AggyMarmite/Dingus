@@ -430,6 +430,25 @@ public sealed class DataService
         catch (Exception ex) { Log.Error(ex); return false; }
     }
 
+    /// <summary>
+    /// Signs in again straight away (no 5-minute wait) – what checking the subscription by hand does. A stream the
+    /// server refused after a network or VPN change often plays once this has been done. True if it signed in.
+    /// </summary>
+    public async Task<bool> SignInNowAsync()
+    {
+        if (Xtream == null) return false;
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            var acc = await Xtream.LoginAsync(cts.Token);
+            acc.ServerTimeZone ??= Catalog.Account?.ServerTimeZone;
+            Catalog.Account = acc;
+            _accountCheckedUtc = DateTime.UtcNow;
+            return true;
+        }
+        catch (Exception ex) { Log.Error(ex); return false; }
+    }
+
     /// <summary>Stores fresh subscription details (e.g. from a connection check) and lets the screens showing them know. Call on the UI thread.</summary>
     public void SetAccount(AccountInfo acc)
     {

@@ -1375,6 +1375,12 @@ public partial class MainWindow : Window
         ToolTip.SetTip(PreviewPlayPause, playing ? "Pause" : "Play");
     }
 
+    /// <summary>A live channel with another source to move on to (merged channels).</summary>
+    bool CanSwitchSource => _nowLive && _variantIdx + 1 < _variants.Count;
+
+    /// <summary>What the buffering line says: that another source takes over if it doesn't pick up.</summary>
+    string BufferingNote => CanSwitchSource ? "Buffering… switching to a different source if it doesn't pick up" : "Buffering…";
+
     void SetBuffering(string text)
     {
         BufferText.Text = text ?? "";
@@ -1400,7 +1406,7 @@ public partial class MainWindow : Window
             {
                 if (_reconnecting) return;
                 if (pct >= 100) SetBuffering(null);
-                else if (_previewActive || _playerMode) SetBuffering($"Buffering {pct:0}%");
+                else if (_previewActive || _playerMode) SetBuffering(CanSwitchSource ? BufferingNote : $"Buffering {pct:0}%");
             }, DispatcherPriority.Background);
         };
         mp.EncounteredError += (_, _) => Dispatcher.UIThread.Post(() => { if (_currentUrl != null) Reconnect(); });
@@ -1470,9 +1476,12 @@ public partial class MainWindow : Window
         }
 
         bool active = h.State is VLCState.Playing or VLCState.Buffering or VLCState.Opening;
-        // A merged channel with another version to go to waits less: buffering for 8 seconds moves on to the next one.
-        bool canSwitch = _nowLive && _variantIdx + 1 < _variants.Count;
-        var limit = h.State == VLCState.Opening ? TimeSpan.FromSeconds(canSwitch ? 15 : 20) : TimeSpan.FromSeconds(canSwitch ? 8 : 12);
+        // A merged channel with another source to go to waits much less: 3 seconds of buffering while playing, or 6
+        // seconds for one that won't start at all, moves on to the next source.
+        bool canSwitch = CanSwitchSource;
+        var limit = h.State == VLCState.Opening ? TimeSpan.FromSeconds(canSwitch ? 6 : 20) : TimeSpan.FromSeconds(canSwitch ? 3 : 12);
+        // Stuck for a second: say what happens next.
+        if (canSwitch && active && !_reconnecting && now - _lastProgressUtc > TimeSpan.FromSeconds(1) && (_previewActive || _playerMode)) SetBuffering(BufferingNote);
         // Just after a network/VPN change the stream has usually been cut off: don't wait the full 12 s to notice.
         if (h.State != VLCState.Opening && now - _netChangedUtc < TimeSpan.FromSeconds(20)) limit = TimeSpan.FromSeconds(4);
         if (active && !_reconnecting && now - _lastProgressUtc > limit) { Reconnect(); return; }
@@ -1672,6 +1681,16 @@ public partial class MainWindow : Window
             else { _svc.Stop(); _currentUrl = null; _healthTimer.Stop(); _reconnects = 0; }
             return;
         }
+        // First retry: sign in again first, as checking the subscription by hand does – after a network or VPN change
+        // the provider often refuses streams until it has.
+        if (_reconnects == 0 && !url.StartsWith("file:") && DataService.Instance.Xtream != null)
+        {
+            _backupBusy = _reconnecting = true;
+            try { await DataService.Instance.SignInNowAsync(); }
+            finally { _backupBusy = false; }
+            if (_currentUrl != url) return; // you changed channel meanwhile
+        }
+
         _reconnects++;
         _reconnecting = true;
         _lastReconnectUtc = DateTime.UtcNow;
