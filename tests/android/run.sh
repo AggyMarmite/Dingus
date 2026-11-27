@@ -281,11 +281,11 @@ key KEYCODE_BACK 1.5
 check "search-typing-done" 10 "BACK closes the keyboard"
 shot 15b-search-keyboard-closed
 # The side menu on Search: UP and DOWN move through it.
-# (After the keyboard the highlight's on the results: ◀ goes into the search panel first, then opens the menu.)
+# (A fresh Search, with the box highlighted.)
+adb shell am start -W -n $PKG/.SearchActivity >/dev/null; sleep 2
 fresh
-press_until KEYCODE_DPAD_LEFT "menu-open" 3 1.2
+key KEYCODE_DPAD_LEFT 1.5
 check "menu-open" 5 "LEFT on Search opens the side menu"
-adb logcat -d -s DINGUS-TEST:I | grep -E "search-key|focus|menu" | tail -8 | sed 's/^/  search-log: /'
 key KEYCODE_DPAD_UP 0.8
 check "menu-row TV Shows" 5 "UP moves up the side menu on Search"
 key KEYCODE_DPAD_DOWN 0.8; key KEYCODE_DPAD_DOWN 0.8
