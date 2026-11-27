@@ -447,7 +447,7 @@ object Vpn {
     fun permissionIntent(ctx: Context) = android.net.VpnService.prepare(ctx)
 
     /** The ending of the message for a location your playlist can't be reached through (see [connect]). */
-    const val NO_PLAYLIST = "can't reach your playlist"
+    const val NO_PLAYLIST = "doesn't work with your playlist"
 
     /**
      * Whether any of the playlist's addresses (main or backups) answers through the tunnel now – all asked at once,
@@ -522,7 +522,7 @@ object Vpn {
                 }
                 // …and only if your playlist can actually be reached through it: a VPN server that's fine but that
                 // your provider won't answer through is no use – it looked like the servers were offline.
-                if (needPlaylist && !playlistAnswers()) {
+                if (needPlaylist && (!playlistAnswers() || !channelsPlay())) {
                     try { backend.setState(tunnel, Tunnel.State.DOWN, null) } catch (_: Throwable) {}
                     Ui.test("vpn-no-playlist ${target.label}")
                     return@withContext "${target.label} $NO_PLAYLIST".also { set(Status.ERROR, it); afterFailure() }
@@ -774,6 +774,13 @@ object Vpn {
                 // Every two minutes while connected: the subscription checked through the VPN too (status, connections,
                 // and the provider keeps seeing this address signed in).
                 if (++ticks % 12 == 0) Store.playlist?.let { p -> scope.launch { try { Account.check(p) } catch (_: Throwable) {} } }
+                // Every five minutes with nothing open to play: does a channel still play through here? Refused (the
+                // provider's started blocking this location): it looks for one that works now, before anyone picks a
+                // channel and finds it won't play.
+                if (ticks % 30 == 0 && !Streams.any && !searching && VpnFallback.enabled && !channelsPlay()) {
+                    Ui.test("vpn-idle-check channels refused")
+                    connectedTo?.let { here -> keepSearching(here, setOf(here.id), firstNow = true) }
+                }
                 val last = try { backend.getStatistics(tunnel).peers().firstOrNull()?.let { backend.getStatistics(tunnel).peer(it)?.latestHandshakeEpochMillis } } catch (_: Throwable) { null }
                     ?: run { Ui.test("vpn-check no stats"); null } ?: continue
                 val stale = last <= 0 || System.currentTimeMillis() - last > 180_000
@@ -886,8 +893,23 @@ object Vpn {
 
     /** Whether [url] (a channel or film) starts coming in through the VPN as it is now: its first bytes, then closed. */
     private fun streamPlays(url: String): Boolean = try {
-        Net.open(url, 6_000).use { it.read() >= 0 }
+        // (Asked the way the player asks for streams – a provider can treat other apps differently.)
+        Net.openAs(url, 6_000, Net.USER_AGENT).use { it.read() >= 0 }
     } catch (_: Throwable) { false }
+
+    /**
+     * Whether channels actually play through the tunnel now: the one last watched, or failing that another from the
+     * list – one of up to two has to start coming in. (The playlist answering isn't enough: a provider can answer its
+     * questions through a VPN location and still refuse every channel, which looked "online" but nothing played.)
+     * True with no channels loaded yet.
+     */
+    private fun channelsPlay(): Boolean {
+        val all = Repo.channels
+        if (all.isEmpty()) return true
+        val last = Store.lastChannel?.let { Repo.channel(it) }
+        val picks = (listOfNotNull(last) + all.filter { it.id != last?.id }.take(40).shuffled().take(1)).take(2)
+        return picks.any { streamPlays(Players.liveUrl(it)) }
+    }
 
     /**
      * A channel or film was refused (or couldn't reach the server) through this VPN location: looks for one it plays
@@ -928,16 +950,16 @@ object Vpn {
      * playlist answers, wherever it is, or the VPN's turned off. Trying costs nothing to watch: the playlist isn't
      * working through the location it's parked on anyway.
      */
-    fun keepSearching(park: Location? = connectedTo, alreadyTried: Set<String> = emptySet(), stream: String? = null) {
+    fun keepSearching(park: Location? = connectedTo, alreadyTried: Set<String> = emptySet(), stream: String? = null, firstNow: Boolean = false) {
         if (park == null || !wanted || searcher?.isActive == true || !VpnFallback.enabled) return // (Settings → VPN → Find a location that works)
         // With a [stream]: it's that (a channel or film that was refused) that has to work, not just the playlist.
-        val works: () -> Boolean = if (stream != null) { { playlistAnswers() && streamPlays(stream) } } else { { playlistAnswers() } }
+        val works: () -> Boolean = if (stream != null) { { playlistAnswers() && streamPlays(stream) } } else { { playlistAnswers() && channelsPlay() } }
         searchHold = true
         searcher = scope.launch {
           try {
             val tried = LinkedHashSet(alreadyTried)
             var home = park
-            var first = stream != null // (a refused stream: the first look straight away)
+            var first = stream != null || firstNow // (a refused stream, or channels found refused: straight away)
             Ui.test("vpn-search-start ${tried.size}${if (stream != null) " (stream)" else ""}")
             while (wanted) {
                 // A channel or film waiting on it: straight on to the next few (a short breather), not a minute's wait.

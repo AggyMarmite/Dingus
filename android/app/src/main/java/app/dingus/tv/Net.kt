@@ -25,7 +25,7 @@ object Net {
         if (refused && Regex("""(player_api|get|xmltv|panel_api)\.php""").containsMatchIn(url)) openAs(url, timeoutMs, USER_AGENT) else throw e
     }
 
-    private fun openAs(url: String, timeoutMs: Int, agent: String): InputStream {
+    fun openAs(url: String, timeoutMs: Int, agent: String): InputStream {
         var u = URL(url)
         repeat(6) {
             val c = (u.openConnection() as HttpURLConnection).apply {
