@@ -52,43 +52,7 @@ object Updater {
         return false
     }
 
-    private fun latest(): Release? = (try { fromApi() } catch (e: Exception) {
-        // GitHub allows 60 checks an hour per internet address – through a VPN location, shared with many others,
-        // that runs out and the check is refused (403/429). The releases page's "latest" link has no such limit.
-        if (api.contains("api.github.com")) fromPage() ?: throw e else throw e
-    })?.let { r -> apkVersion(r)?.let { Release(it, r.apk, r.notes) } ?: r }
-
-    /**
-     * Which Fire TV app the release carries. A Windows/Linux-only release carries the same APK as before, and says so
-     * in firetv-version.txt – so this one isn't offered an "update" to the version it already has.
-     */
-    private fun apkVersion(r: Release): String? {
-        if (!r.apk.contains("github.com/")) return null
-        val url = r.apk.substringBeforeLast('/') + "/firetv-version.txt"
-        return try {
-            open(url).inputStream.use { it.readBytes().toString(Charsets.UTF_8).trim() }
-                .takeIf { Regex("""\d+(\.\d+)+""").matches(it) }
-        } catch (e: Exception) { null } // (older releases didn't have one: the release's own number)
-    }
-
-    /** The latest release's tag from where github.com/…/releases/latest points, and its APK beside it. */
-    private fun fromPage(): Release? {
-        val page = api.replace("https://api.github.com/repos/", "https://github.com/")
-        val c = (URL(page).openConnection() as HttpURLConnection).apply {
-            instanceFollowRedirects = false
-            connectTimeout = 15_000; readTimeout = 30_000
-            setRequestProperty("User-Agent", "Dingus-Android/${BuildConfig.VERSION_NAME}")
-        }
-        try {
-            if (c.responseCode !in 300..399) return null
-            val tag = (c.getHeaderField("Location") ?: return null).substringAfter("/releases/tag/", "").substringBefore('?').ifEmpty { return null }
-            val base = page.removeSuffix("/latest")
-            Ui.test("update-from-page $tag")
-            return Release(tag.trimStart('v', 'V'), "$base/download/$tag/Dingus.apk", "")
-        } finally { c.disconnect() }
-    }
-
-    private fun fromApi(): Release? {
+    private fun latest(): Release? {
         val c = open(api)
         val o = c.inputStream.use { JSONObject(it.readBytes().toString(Charsets.UTF_8)) }
         val tag = o.optString("tag_name").ifEmpty { return null }

@@ -128,18 +128,17 @@ jobs:
             APK_V=$(curl -fsL "https://github.com/${{ github.repository }}/releases/download/$PREV/firetv-version.txt" | tr -d '[:space:]' || true)
             [ -z "$APK_V" ] && APK_V=${PREV#v}
           fi
-          # Nothing in the Fire TV app changed since that version: carry the same APK over, with its own version, so
-          # Fire TVs aren't asked to update for a Windows/Linux-only release.
-          if [ -n "$APK_V" ] && git rev-parse -q --verify "refs/tags/v$APK_V" >/dev/null && git diff --quiet "v$APK_V" HEAD -- android/ \
-             && gh release download "v$APK_V" --repo ${{ github.repository }} -p Dingus.apk -O Dingus.apk; then
-            echo "The Fire TV app hasn't changed since $APK_V – carrying that APK over."
-          else
-            APK_V=$V
-            gradle -p android assembleRelease --no-daemon
-            cp android/app/build/outputs/apk/release/app-release.apk Dingus.apk
+          # Nothing in the Fire TV app changed since that version: no APK on this release at all (a Fire TV only offers
+          # a release that has one), just firetv-version.txt saying which release has the current app.
+          if [ -n "$APK_V" ] && git rev-parse -q --verify "refs/tags/v$APK_V" >/dev/null && git diff --quiet "v$APK_V" HEAD -- android/; then
+            echo "The Fire TV app hasn't changed since $APK_V – no APK on this release."
+            echo "$APK_V" > firetv-version.txt
+            gh release upload "v$V" firetv-version.txt --repo ${{ github.repository }} --clobber
+            exit 0
           fi
-          echo "$APK_V" > firetv-version.txt
-          # Always called Dingus.apk, so .../releases/latest/download/Dingus.apk is a link that never changes.
+          gradle -p android assembleRelease --no-daemon
+          cp android/app/build/outputs/apk/release/app-release.apk Dingus.apk
+          echo "$V" > firetv-version.txt
           gh release upload "v$V" Dingus.apk firetv-version.txt --repo ${{ github.repository }} --clobber
 
   # Parked until the Mac version is finished – turn on by removing the "if: false".
