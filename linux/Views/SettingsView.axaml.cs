@@ -773,7 +773,7 @@ public partial class SettingsView : UserControl, IPage
 
     void VpnCard_Drop(object sender, Avalonia.Input.DragEventArgs e)
     {
-        var files = e.Data.GetFiles()?.Select(f => f.TryGetLocalPath()).Where(p => p != null).ToList();
+        var files = Avalonia.Input.DataObjectExtensions.GetFiles(e.Data)?.Select(f => f.TryGetLocalPath()).Where(p => p != null).ToList();
         if (files is { Count: > 0 }) AddVpnFiles(files);
     }
 
