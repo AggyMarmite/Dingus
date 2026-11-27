@@ -399,7 +399,7 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     private val vpnSearchListener: () -> Unit = { if (blockedAt != null) showVpnSearch() }
     /** Waiting on the VPN and it's now connected somewhere (whichever way it got there): the channel starts again. */
     private val vpnStatusListener: () -> Unit = {
-        if (blockedAt != null && Vpn.status == Vpn.Status.ON && !Vpn.searching) handler.postDelayed({ if (blockedAt != null) startChannel() }, 1_500)
+        if (blockedAt != null && Vpn.status == Vpn.Status.ON && !Vpn.searching && !VpnFallback.running) handler.postDelayed({ if (blockedAt != null) startChannel() }, 1_500)
     }
 
     /** The player's message while it waits: which location the VPN is trying, kept up to date. */
@@ -474,6 +474,14 @@ class LiveTv(private val a: Activity, private val video: PlayerView, private val
     }
 
     private fun startChannel() {
+        // A VPN location that works is being looked for: no trying (and failing) meanwhile – it says where it's
+        // looking, and the channel starts once one's found.
+        if (Vpn.searchHold || VpnFallback.running) {
+            player?.stop()
+            if (blockedAt == null) blockedAt = Vpn.connectedTo?.label ?: "this VPN location"
+            showVpnSearch(); Ui.test("live-held for vpn search")
+            return
+        }
         blockedAt = null // (a fresh start: not waiting on the VPN any more)
         val p = player ?: return
         // The VPN dropped and the kill switch is on: nothing plays until it's back (Streams reopens this then).

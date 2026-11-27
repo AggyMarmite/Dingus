@@ -57,7 +57,15 @@ object Vpn {
     /** You turned the VPN on (and haven't turned it off): a drop is put right, and the kill switch holds streams. */
     @Volatile var wanted = false; private set
     /** The VPN dropped and is being put right: with the kill switch on, nothing plays meanwhile. */
-    val holding: Boolean get() = wanted && Store.vpnKillSwitch && status != Status.ON
+    /**
+     * Channels and films wait: the kill switch while the VPN's off, or while a location that works is being looked for
+     * (where it's connected doesn't work for them, so they'd only keep trying and failing – and each try takes the
+     * plan's one connection, which the search needs to check places).
+     */
+    val holding: Boolean get() = (wanted && Store.vpnKillSwitch && status != Status.ON) || searchHold || VpnFallback.running
+    /** Set while [keepSearching] runs. */
+    @Volatile var searchHold = false
+        private set
     private val listeners = ArrayList<() -> Unit>()
     private val main = Handler(Looper.getMainLooper())
     private val lock = Mutex()
@@ -924,6 +932,7 @@ object Vpn {
         if (park == null || !wanted || searcher?.isActive == true || !VpnFallback.enabled) return // (Settings → VPN → Find a location that works)
         // With a [stream]: it's that (a channel or film that was refused) that has to work, not just the playlist.
         val works: () -> Boolean = if (stream != null) { { playlistAnswers() && streamPlays(stream) } } else { { playlistAnswers() } }
+        searchHold = true
         searcher = scope.launch {
           try {
             val tried = LinkedHashSet(alreadyTried)
@@ -944,6 +953,7 @@ object Vpn {
                 if (status == Status.ON && works()) {
                     Ui.test("vpn-search-done (works now)")
                     if (stream == null) Notice.done("⛨  Your playlist's answering again  ·  ${connectedTo?.label ?: ""}", 5_000)
+                    searchHold = false
                     Streams.reopenAll(force = true)
                     break
                 }
@@ -973,12 +983,13 @@ object Vpn {
                     searchNote(null)
                     Notice.done("⛨  Found one that works  ·  now through ${found.label}", 6_000)
                     Failover.networkChanged()
+                    searchHold = false
                     Streams.reopenAll(force = true) // (what was refused starts again)
                     break
                 }
                 Ui.test("vpn-search-tried ${tried.size}")
             }
-          } finally { if (searchNote != null) searchNote(null) }
+          } finally { searchHold = false; if (searchNote != null) searchNote(null) }
         }
     }
 

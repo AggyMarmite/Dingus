@@ -64,6 +64,8 @@ object VpnFallback {
                 android.util.Log.w("Dingus", "vpn fallback", e)
             } finally {
                 running = false
+                // What was held while it looked starts again (unless the endless search took over: it holds them).
+                if (Vpn.status == Vpn.Status.ON && !Vpn.searchHold) Streams.reopenAll(force = true)
                 // (Left without the VPN while it's meant to be on: it keeps trying by itself.)
                 if (Vpn.wanted && Vpn.status != Vpn.Status.ON) Vpn.keepTrying()
             }
