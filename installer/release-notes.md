@@ -1,3 +1,11 @@
+## What's new in Dingus 0.15.55
+
+* Windows & Linux: richer film and TV pages, with logos, ratings and cast.
+* Windows & Linux: trending, top rated and recommended rows.
+* Windows & Linux: skip intro, a pause screen and source choice in the player.
+* Windows & Linux: built-in VPN that finds a working location by itself.
+* Bug fixes and other improvements.
+
 ## What's new in Dingus 0.15.54
 
 * Fire TV: the original blue Dingus logo on the home screen.
